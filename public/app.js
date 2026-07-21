@@ -5177,7 +5177,7 @@ function openPlayerCard(pid, name){
 
   // ── Header ──
   document.getElementById("pm-name").textContent=displayName;
-  document.getElementById("pm-team-name").textContent=team==="FA"?"Free Agent":team;
+  document.getElementById("pm-team-name").innerHTML=team==="FA"?"Free Agent":(teamLogo(team,17)+team);
   document.getElementById("pm-number").textContent=jersey;
   document.getElementById("pm-college").textContent=college;
   var pb=document.getElementById("pm-pos-badge");
@@ -5324,7 +5324,7 @@ function renderOutlook(text, articles){
       var m=(typeof _srcMeta==='function'&&a.source)?_srcMeta(a.source):{c:'var(--muted)',label:a.source||''};
       var hl=_esc(a.headline);
       if(a.link)hl="<a href='"+a.link+"' target='_blank' rel='noopener' style='color:var(--text);text-decoration:none'>"+hl+" ↗</a>";
-      var img=a.image?"<img src='"+a.image+"' style='width:54px;height:54px;border-radius:8px;object-fit:cover;flex-shrink:0' loading='lazy' onerror=\"this.style.display='none'\">":"";
+      var img=a.image?"<img src='"+a.image+"' style='width:54px;height:54px;border-radius:8px;object-fit:cover;flex-shrink:0' loading='lazy' onload=\"try{this.animate([{opacity:0},{opacity:1}],{duration:350,easing:'ease'})}catch(e){}\" onerror=\"this.style.display='none'\">":"";
       return "<div style='display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)'>"
         +img
         +"<div style='min-width:0;flex:1'>"
@@ -5791,7 +5791,7 @@ function renderCompare(){
     return '<div style="background:var(--surface2);border-radius:var(--radius);padding:12px;display:flex;align-items:center;gap:10px;min-width:0">'
       +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid '+col+'" onerror="this.style.visibility=\'hidden\'">'
       +'<div style="min-width:0"><div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
-      +'<div style="font-size:11px;color:var(--muted)"><span style="color:'+col+';font-weight:700">'+poss[i]+'</span> · '+((aps[i]&&aps[i].team)||'FA')+'</div></div></div>';
+      +'<div style="font-size:11px;color:var(--muted)"><span style="color:'+col+';font-weight:700">'+poss[i]+'</span> · '+teamLogo(aps[i]&&aps[i].team,13)+((aps[i]&&aps[i].team)||'FA')+'</div></div></div>';
   }).join('');
 
   var html='<div style="display:grid;grid-template-columns:88px repeat('+n+',1fr);gap:8px;margin-bottom:14px"><div></div>'+cards+'</div>';
@@ -9394,7 +9394,7 @@ function loadNewsGrid(){
     grid.innerHTML=arts.map(function(a){
       var m=_srcMeta(a.source);
       return '<a class="news-card" href="'+a.link+'" target="_blank" rel="noopener">'
-        +(a.image?'<img src="'+a.image+'" alt="" loading="lazy">':'<div class="nc-noimg">'+m.label+'</div>')
+        +(a.image?'<img src="'+a.image+'" alt="" loading="lazy" onload="try{this.animate([{opacity:0},{opacity:1}],{duration:350,easing:\'ease\'})}catch(e){}">':'<div class="nc-noimg">'+m.label+'</div>')
         +'<div class="nc-body"><div class="nc-h">'+a.headline.replace(/</g,'&lt;')+'</div>'
         +'<div class="nc-d">'+String(a.description||'').replace(/</g,'&lt;')+'</div>'
         +'<div style="font-size:10px;font-weight:700;margin-top:4px;color:'+m.c+'">'+m.label+' ↗</div></div></a>';

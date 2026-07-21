@@ -125,15 +125,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .hpart{position:absolute;border-radius:50%;animation:hpartFloat var(--d,14s) var(--del,0s) ease-in-out infinite alternate}
 @keyframes hpartFloat{0%{transform:translate(0,0) scale(1);opacity:var(--lo,.15)}100%{transform:translate(var(--dx,20px),var(--dy,-40px)) scale(var(--sc,1.3));opacity:var(--hi,.55)}}
 /* Hero inner - centered column */
-.hero-inner{text-align:center;position:relative;z-index:1;max-width:620px;padding:16px 24px 34px;display:flex;flex-direction:column;align-items:center}
-@keyframes heroEnter{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
-.hero-inner>*{animation:heroEnter .75s ease both}
-.hero-inner>.hero-badge{animation-delay:.05s}
-.hero-inner>.hero-sage-stage{animation-delay:.12s}
-.hero-inner>h1{animation-delay:.24s}
-.hero-inner>.hero-tagline{animation-delay:.36s}
-.hero-inner>.hero-cta{animation-delay:.46s}
-.hero-inner>.hero-proof{animation-delay:.58s}
+/* Hero fades in as ONE block - no element-by-element stagger, so it never reads
+   as loading in pieces (the badge/headline/tagline all appear together). */
+.hero-inner{text-align:center;position:relative;z-index:1;max-width:620px;padding:16px 24px 34px;display:flex;flex-direction:column;align-items:center;animation:heroEnter .7s ease both}
+@keyframes heroEnter{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.hero-inner{animation:none}}
 /* Sage stage - centered with rings */
 .hero-sage-stage{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-bottom:32px}
 .hero-sage-stage::before{content:'';position:absolute;inset:-50px;border-radius:50%;background:radial-gradient(circle,rgba(91,33,182,.4) 0%,transparent 68%);animation:sagePulseGlow 3.5s ease-in-out infinite;pointer-events:none}
@@ -163,7 +159,8 @@ h1 .hl{color:var(--accent-bright)}
 @keyframes tmPcFade{from{opacity:.35}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.btn-primary{animation:none}.pcwrap{animation:none!important}}
 .btn-outline{background:rgba(255,255,255,.05);color:var(--text);font-size:15px;font-weight:500;padding:15px 32px;border:1px solid rgba(255,255,255,.16);border-radius:100px;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block}
-.btn-outline:hover{color:#fff;border-color:rgba(155,114,232,.6);background:rgba(155,114,232,.1);box-shadow:0 0 20px rgba(155,114,232,.18)}
+.btn-outline:hover{color:#fff;border-color:rgba(155,114,232,.6);background:rgba(155,114,232,.1);box-shadow:0 0 20px rgba(155,114,232,.18);transform:translateY(-1px)}
+.btn-outline:active{transform:translateY(0)}
 /* Social proof strip */
 .hero-proof{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:28px;font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.01em}
 .hero-proof-sep{color:rgba(255,255,255,.2);font-size:10px}
@@ -275,7 +272,8 @@ body.ticker-on{padding-top:94px}
 .trade-header-info{font-size:13px;font-weight:600;color:var(--text)}
 .trade-header-meta{font-size:11px;color:var(--muted);margin-top:2px}
 .btn-sm{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:100px;color:var(--muted2);font-family:var(--font-body);font-size:12px;font-weight:500;padding:6px 14px;cursor:pointer;transition:all .2s;letter-spacing:-.01em;text-transform:none}
-.btn-sm:hover{color:var(--text);border-color:rgba(155,114,232,.5);background:rgba(155,114,232,.08)}
+.btn-sm:hover{color:var(--text);border-color:rgba(155,114,232,.5);background:rgba(155,114,232,.08);transform:translateY(-1px)}
+.btn-sm:active{transform:translateY(0)}
 
 .trade-sides{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;margin-bottom:1.25rem}
 .trade-sides>div:first-child{background:linear-gradient(180deg,rgba(34,197,94,.06) 0%,transparent 60%);border:1px solid rgba(34,197,94,.18);border-radius:14px;padding:14px}
@@ -819,8 +817,9 @@ footer{padding:3rem 1.5rem 2.5rem;border-top:1px solid rgba(155,114,232,.18);tex
 [data-theme="light"] #ticker-bar{background:rgba(255,255,255,.92)}
 [data-theme="light"] .hero{background:radial-gradient(ellipse at 50% -8%,rgba(124,92,191,.14) 0%,transparent 58%)}
 [data-theme="light"] .btn-outline{background:rgba(23,26,46,.04);color:var(--text);border-color:rgba(23,26,46,.15)}
-.theme-toggle{background:none;border:1px solid var(--border);border-radius:100px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--muted2);cursor:pointer;margin-left:8px;white-space:nowrap}
-.theme-toggle:hover{border-color:rgba(155,114,232,.4);color:var(--text)}
+.theme-toggle{background:none;border:1px solid var(--border);border-radius:100px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--muted2);cursor:pointer;margin-left:8px;white-space:nowrap;transition:border-color .18s,color .18s,transform .18s,box-shadow .18s}
+.theme-toggle:hover{border-color:rgba(155,114,232,.45);color:var(--text);transform:translateY(-1px);box-shadow:0 0 16px rgba(155,114,232,.14)}
+.theme-toggle:active{transform:translateY(0)}
 /* icon variant: search / alerts / theme are quiet 30px circles */
 .theme-toggle.icon{width:30px;height:30px;padding:0;margin-left:6px;display:inline-flex;align-items:center;justify-content:center;flex:none}
 .theme-toggle.icon svg{display:block}
