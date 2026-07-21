@@ -131,11 +131,17 @@ function clearRecentSearches(){
   var dd=document.getElementById('nav-search-dd');
   if(dd)dd.classList.remove('open');
 }
+// Inner HTML for one search row: player photo, name (filled via children[1]),
+// team logo, and pos / team. Shared by the results list and the recent list.
+function _searchRowInner(p){
+  var logo=(p.team&&p.team!=='FA')?'<img src="https://sleepercdn.com/images/team_logos/nfl/'+p.team.toLowerCase()+'.png" style="width:18px;height:18px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
+  return '<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" style="width:26px;height:26px;border-radius:50%;object-fit:cover" onerror="this.style.visibility=\'hidden\'"><span style="flex:1"></span>'+logo+'<span style="font-size:10px;color:var(--muted)">'+p.pos+' · '+(p.team||'FA')+'</span>';
+}
 function _renderSearchRow(dd,p,inp){
   var d=document.createElement('div');
   d.className='ac-item';
   d.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer';
-  d.innerHTML='<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" style="width:26px;height:26px;border-radius:50%;object-fit:cover" onerror="this.style.visibility=\'hidden\'"><span style="flex:1"></span><span style="font-size:10px;color:var(--muted)">'+p.pos+' · '+(p.team||'FA')+'</span>';
+  d.innerHTML=_searchRowInner(p);
   d.children[1].textContent=p.name;
   d.addEventListener('mousedown',function(ev){ev.preventDefault();dd.classList.remove('open');inp.value='';_saveRecentSearch(p);openPlayerCard(p.id,p.name);});
   dd.appendChild(d);
