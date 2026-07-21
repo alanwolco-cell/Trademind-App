@@ -1077,6 +1077,7 @@ async function loadLeague(lid,name,rosters,season){
     isDynastyLeague=(leagueInfo&&(leagueInfo.name||"").toLowerCase().indexOf("dynasty")>=0);
   }
   leagueMode=isDynastyLeague?'dynasty':'redraft';
+  try{updateModeUI();}catch(_){}  // refresh the Dynasty/Redraft badge on every league load or switch
   localStorage.setItem('tm_league_id', lid);
   localStorage.setItem('tm_league_name', name||'Unknown');
   // Always re-fetch KTC with correct format + dynasty/redraft mode
@@ -2549,8 +2550,10 @@ function renderTradeBoards(){
       var parts=a.name.split(' ');
       var short=a.kind==='k'?(a.season+' R'+a.round):a.name; // full name, tile wraps
       var faceInner=a.kind==='p'
-        ?'<span class="bb-ini">'+(parts[0].charAt(0)+(parts[1]?parts[1].charAt(0):'')).toUpperCase()+'</span>'
-          +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+a.id+'.jpg" alt="" loading="lazy" onerror="this.remove()">'
+        ?(a.pos==='DEF'
+            ?'<img class="bb-def" src="https://sleepercdn.com/images/team_logos/nfl/'+String(a.team||a.id).toLowerCase()+'.png" alt="" loading="lazy" onerror="this.remove()">'
+            :'<span class="bb-ini">'+(parts[0].charAt(0)+(parts[1]?parts[1].charAt(0):'')).toUpperCase()+'</span>'
+              +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+a.id+'.jpg" alt="" loading="lazy" onerror="this.remove()">')
         :'<span class="bb-ini">R'+(a.name.match(/Round (\d)/)||[,'?'])[1]+'</span>';
       return '<button type="button" class="bb-tile'+(on?' on':'')+'" style="--bbp:'+col+'" '
         +'aria-pressed="'+on+'" aria-label="'+a.name.replace(/"/g,'&quot;')+'" '
@@ -2561,7 +2564,6 @@ function renderTradeBoards(){
         +'<span class="bb-meta"><b style="color:'+col+'">'+(a.kind==='k'?'PICK':a.pos)+'</b>'
         +(a.kind==='p'?teamLogo(a.team,11):'')
         +(a.kind==='k'?'<span>'+(a.via?'via '+a.via.replace(/</g,'&lt;'):'your pick')+'</span>':'')
-        +(a.val?'<span>'+playerTierLabel(a.val).short+'</span>':'')
         +(a.kind==='p'&&allPlayers[a.id]&&allPlayers[a.id].age?'<span class="bb-age">Age '+allPlayers[a.id].age+'</span>':'')+'</span>'
         +'</button>';
     }).join('');
@@ -5742,8 +5744,7 @@ function cmpAcInput(input,n){
     d.innerHTML='<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--surface3)" onerror="this.style.visibility=\'hidden\'">'
       +'<span style="flex:1"></span>'
       +'<span class="ac-pos" style="color:'+col+';font-size:10px;font-weight:700">'+p.pos+'</span>'
-      +(p.team&&p.team!=='FA'?'<img src="https://sleepercdn.com/images/team_logos/nfl/'+p.team.toLowerCase()+'.png" style="width:18px;height:18px;object-fit:contain" onerror="this.style.display=\'none\'">':'<span class="ac-team" style="font-size:10px">FA</span>')
-      +(ktc?'<span class="ac-ktc">'+playerTierLabel(ktc).short+'</span>':'');
+      +(p.team&&p.team!=='FA'?'<img src="https://sleepercdn.com/images/team_logos/nfl/'+p.team.toLowerCase()+'.png" style="width:18px;height:18px;object-fit:contain" onerror="this.style.display=\'none\'">':'<span class="ac-team" style="font-size:10px">FA</span>');
     d.children[1].textContent=p.name;
     d.addEventListener('mousedown',function(){cmpSelect(n,p.id,p.name);});
     dd.appendChild(d);

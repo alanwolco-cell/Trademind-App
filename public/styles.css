@@ -588,6 +588,8 @@ html.sage-idle .hero .sage-hero-eye{
 .bb-ini{font-size:11px;font-weight:700;color:var(--bbp,var(--muted))}
 .bb-face img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;
   object-fit:cover;object-position:top center;background:var(--surface)}
+/* D/ST tiles show the team logo - contain it in the circle, don't crop it */
+.bb-face img.bb-def{object-fit:contain;object-position:center;padding:7px;background:transparent}
 .bb-nm{font-size:10px;font-weight:600;letter-spacing:-.01em;line-height:1.15;max-width:100%;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bb-meta{display:flex;align-items:center;gap:3px;font-size:8.5px;color:var(--muted);line-height:1}
