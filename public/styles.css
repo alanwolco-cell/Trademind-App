@@ -92,6 +92,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .nav-item{position:relative}
 .nav-item-btn{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--muted2);cursor:pointer;padding:6px 12px;border-radius:8px;transition:all .15s;white-space:nowrap;background:none;border:none;font-family:inherit}
 .nav-item-btn:hover,.nav-item-btn.active{color:var(--text);background:var(--surface2)}
+/* Ask Sage: the money tab - accent color + sparkle so it pulls the eye */
+.nav-item-btn.sage-hot{color:var(--accent-bright);font-weight:600}
+.nav-item-btn.sage-hot .sage-spark{color:#4fd8f5;margin-right:3px;font-size:11px}
+.nav-item-btn.sage-hot:hover,.nav-item-btn.sage-hot.active{color:#fff;background:var(--accent-bright)}
+.nav-item-btn.sage-hot:hover .sage-spark,.nav-item-btn.sage-hot.active .sage-spark{color:#fff}
 .nav-item-btn .caret{font-size:9px;opacity:.5;transition:transform .15s}
 .nav-item:hover .caret,.nav-item.open .caret{transform:rotate(180deg)}
 .nav-dropdown{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;min-width:180px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.4);padding-top:12px;margin-top:0}

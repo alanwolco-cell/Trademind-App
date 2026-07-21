@@ -4423,6 +4423,8 @@ function switchScreen(name,_noPush){
   if(hn)hn.style.display=(isHome&&hn.dataset.loaded==='1')?'block':'none';
   var hs=document.getElementById('home-story');
   if(hs)hs.style.display=isHome?'block':'none';
+  var hp=document.getElementById('home-problem');
+  if(hp)hp.style.display=isHome?'block':'none';  // the problem narrative is home-only too
   // Hide the tool section entirely on home. Its inner screens are already
   // inactive, but the <section> keeps its 60px top+bottom padding, which was
   // showing as ~120px of empty space between the hero and the story below.
@@ -8871,8 +8873,25 @@ function updateUserPill(){
     if(ddName)ddName.textContent=uname;
     if(ddLeague)ddLeague.textContent=lname?'League: '+lname:'No league loaded';
     var navCta=document.getElementById('nav-cta');if(navCta)navCta.style.display='none';
+    try{_refreshProStatus();}catch(_){}
   }
 }
+// Account dropdown "Go Pro" / "Manage Subscription": label + action follow real status
+window._isPro=window._isPro||false;
+function _applyProLabel(){
+  var l=document.getElementById('user-dd-pro-label');
+  if(l)l.textContent=window._isPro?'Manage Subscription':'Go Pro';
+}
+async function _refreshProStatus(){
+  var user=localStorage.getItem('tm_username')||'';
+  if(!user){window._isPro=false;_applyProLabel();return;}
+  try{
+    var d=await (await fetch('/api/sage/quota?user='+encodeURIComponent(user)+'&device='+encodeURIComponent(_deviceId()))).json();
+    window._isPro=!!d.pro;
+  }catch(_){}
+  _applyProLabel();
+}
+function sagePillPro(){ if(window._isPro){sageManageBilling();}else{sageUpgrade();} }
 
 // Patch switchScreen to update nav-item-btn active states
 var _origSwitchScreen=switchScreen;
@@ -8941,6 +8960,8 @@ function signOut(){
   bkUsername=null; bkBalance=0;
   var bkPill=document.getElementById('bk-pill'); if(bkPill)bkPill.style.display='none';
   var uPill=document.getElementById('user-pill'); if(uPill)uPill.style.display='none';
+  var si=document.getElementById('nav-signin'); if(si)si.style.display='inline-flex'; // show Sign in again
+  window._isPro=false;
   var navCta=document.getElementById('nav-cta');if(navCta)navCta.style.display='';
   var banner=document.getElementById('session-banner');
   if(banner)banner.remove();
