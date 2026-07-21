@@ -4421,6 +4421,11 @@ function switchScreen(name,_noPush){
   if(hn)hn.style.display=(isHome&&hn.dataset.loaded==='1')?'block':'none';
   var hs=document.getElementById('home-story');
   if(hs)hs.style.display=isHome?'block':'none';
+  // Hide the tool section entirely on home. Its inner screens are already
+  // inactive, but the <section> keeps its 60px top+bottom padding, which was
+  // showing as ~120px of empty space between the hero and the story below.
+  var az=document.getElementById('analyzer');
+  if(az)az.style.display=isHome?'none':'';
   if(!_noPush){history.pushState({screen:name},'','/'+(isHome?'':name));}
   // Scroll: home goes to the very top (hero); tool pages jump to the tool.
   // goHome sets _noAnchorOnce so the wordmark lands at the top smoothly.
