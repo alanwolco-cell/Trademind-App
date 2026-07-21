@@ -15,7 +15,15 @@ const sageRoutes = require('./routes/sage');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// CORS locked to TradeMind's own origins. A missing Origin (server-to-server,
+// the Stripe webhook, health checks) is allowed; browser requests from any other
+// website are refused, so nobody can build a front-end on top of this API.
+// NOTE: when a custom domain is added, include it in the allow check below.
+const _corsOk = (o) => !o
+  || o === 'https://trademind-starter.vercel.app'
+  || /^https:\/\/trademind-starter[a-z0-9-]*\.vercel\.app$/.test(o)
+  || /^http:\/\/localhost(:\d+)?$/.test(o);
+app.use(cors({ origin: (origin, cb) => cb(null, _corsOk(origin)) }));
 // Capture the raw body so the Stripe webhook can verify its signature (the
 // parsed JSON loses the exact bytes Stripe signed).
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
