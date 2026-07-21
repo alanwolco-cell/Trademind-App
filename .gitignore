@@ -8,3 +8,4 @@ server/cache/
 # local tooling / OS noise
 .claude-flow/
 .DS_Store
+**/.claude-flow/
