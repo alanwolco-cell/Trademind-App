@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://trademind-starter.vercel.app/sitemap.xml
