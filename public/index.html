@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en" class="v12">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeMind - Fantasy Football Trade Calculator</title>
+<meta name="description" content="The fantasy football trade calculator that actually thinks. TradeMind analyzes dynasty and redraft trades using live market values + opponent psychology - tells you if you should do it and exactly how to pitch it.">
+<meta property="og:title" content="TradeMind - Fantasy Football Trade Calculator">
+<meta property="og:description" content="The fantasy football trade calculator that actually thinks. Dynasty and redraft analysis using live market values + opponent psychology.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="TradeMind - Fantasy Football Trade Calculator">
+<meta name="twitter:description" content="The fantasy football trade calculator that actually thinks. Know the move.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c5cbf'/%3E%3Ctext x='32' y='44' text-anchor='middle' fill='%23fff' font-size='34' font-weight='900' font-family='system-ui,sans-serif'%3ETM%3C/text%3E%3C/svg%3E">
+<script defer src="/_vercel/insights/script.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
+<!-- The ?v= stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
+     v11/v12.css or app.js change, or returning visitors keep the old files. -->
+<link rel="stylesheet" href="/styles.css?v=2026072236">
+<!-- v12 (Apple design, Unbounded headings) is the live site. Applied by default via
+     class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
+<link rel="stylesheet" href="/v12.css?v=2026072236" id="skin-default">
+<script>
+// The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
+// comparison. Loading one swaps out the default v12 baseline and shows a banner so
+// a concept is never mistaken for the real site. A bare ?v12 is just the default.
+var _skin=/[?&](v2|v3|v4|v5|v6|v7|v8|v9|v10|v11)\b/.exec(location.search);
+if(_skin){
+  var _el=document.documentElement;
+  _el.classList.remove('v12');                                  // drop the default baseline
+  var _base=document.getElementById('skin-default');
+  if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
+  _el.classList.add(_skin[1]);
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072236">');
+  window.addEventListener('DOMContentLoaded',function(){
+    var pill=document.createElement('div');
+    pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
+    pill.innerHTML='DESIGN PREVIEW - not the real site <button onclick="location.href=\'/\'" style="background:#ffd648;border:none;border-radius:100px;padding:5px 14px;font-weight:800;cursor:pointer;color:#131210">Back to normal</button>';
+    document.body.appendChild(pill);
+  });
+}
+</script>
+<script>
+// Sage wakes up every time the site opens or is refreshed, then blinks forever.
+// Class goes on <html> before first paint so there's no flash.
+document.documentElement.classList.add('sage-boot');
+// Opening or refreshing always starts at the top: the first thing anyone sees
+// is the full hero, never a browser-restored scroll position halfway down.
+if('scrollRestoration' in history)history.scrollRestoration='manual';
+window.addEventListener('load',function(){window.scrollTo(0,0);});
+</script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo" onclick="goHome()" title="Home">
+    <!-- The Spark: the moment you see the move nobody else sees. No bubble. -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="26" height="26" style="flex-shrink:0" fill="none">
+      <defs>
+        <linearGradient id="tmgrad" x1="0" y1="32" x2="32" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#9b72e8"/>
+          <stop offset="100%" stop-color="#4fd8f5"/>
+        </linearGradient>
+      </defs>
+      <path d="M16 2 L19.2 12.8 L30 16 L19.2 19.2 L16 30 L12.8 19.2 L2 16 L12.8 12.8 Z" fill="url(#tmgrad)"/>
+    </svg>
+    <span class="tm-wordmark">TRADEMIND</span>
+  </div>
+  <div class="nav-links">
+    <!-- Analyze dropdown -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav active" data-screen="analyze" onclick="switchScreen('analyze')">Analyze <span class="caret">▾</span></button>
+      <div class="nav-dropdown">
+        <div class="nav-dd-label">Analyzer</div>
+        <span class="nav-dd-item active" onclick="switchScreen('analyze');closeAllDropdowns()">Trade Analyzer</span>
+        <span class="nav-dd-item" onclick="switchScreen('analyze');showAnalyzeTab('ideas');closeAllDropdowns()">Trade Ideas</span>
+      </div>
+    </div>
+    <!-- My League dropdown -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="league" onclick="switchScreen('league')">My League <span class="caret">▾</span></button>
+      <div class="nav-dropdown">
+        <div class="nav-dd-label">League Tools</div>
+        <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelector('#screen-league .inner-tab'),'tab-roster-grade','screen-league');renderRosterGrade();closeAllDropdowns()">Roster Grade</span>
+        <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelectorAll('#screen-league .inner-tab')[1],'tab-league-trades','screen-league');renderLeagueTrades();closeAllDropdowns()">League Trades</span>
+        <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelectorAll('#screen-league .inner-tab')[2],'tab-history','screen-league');closeAllDropdowns()">My History</span>
+        <div class="nav-dd-sep"></div>
+        <span class="nav-dd-item" onclick="switchScreen('analyze');showAnalyzeTab('ideas');closeAllDropdowns()">Trade Ideas</span>
+      </div>
+    </div>
+    <!-- Research dropdown -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="research" onclick="switchScreen('research')">Research <span class="caret">▾</span></button>
+      <div class="nav-dropdown">
+        <div class="nav-dd-label">Tools</div>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-buysell')">Buy / Sell</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-compare')">Compare Players</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-startsit')">Start / Sit</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-waiver')">Stash Targets</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-players-db')">Players</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-market')">Market</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-rankem');try{rankEmNext()}catch(e){}">Rank 'Em</span>
+        <div class="nav-dd-sep"></div>
+        <div class="nav-dd-label">Knowledge</div>
+        <span class="nav-dd-item" onclick="switchScreen('learn');closeAllDropdowns()">Dynasty 101</span>
+        <span class="nav-dd-item" onclick="switchScreen('learn');switchInnerTab(document.querySelectorAll('#screen-learn .inner-tab')[3],'tab-about','screen-learn');closeAllDropdowns()">About TradeMind</span>
+      </div>
+    </div>
+    <!-- Ask Sage (direct) -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="sage" onclick="switchScreen('sage')">Ask Sage</button>
+    </div>
+    <!-- Mock Draft (direct) -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="mock" onclick="switchScreen('mock');mdRenderStrats();mdPrefillFromLeague()">Draft <span class="caret">▾</span></button>
+      <div class="nav-dropdown">
+        <span class="nav-dd-item" onclick="switchScreen('mock');mdRenderStrats();mdPrefillFromLeague();mdShowSection('solo');closeAllDropdowns()">Solo Mock Draft</span>
+        <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('friends');closeAllDropdowns()">Draft with Friends</span>
+        <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('live');closeAllDropdowns()">Live Draft Assist</span>
+        <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('history');closeAllDropdowns()">Draft History</span>
+      </div>
+    </div>
+    <!-- News + Community (direct). Learn lives inside Research now - it had a
+         one-item dropdown and a whole top-level tab is too much chrome for that. -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="news" onclick="switchScreen('news');loadNewsGrid();loadAnalystCorner()">News</button>
+    </div>
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="community" onclick="switchScreen('community');loadCommunityFeed()">Community</button>
+    </div>
+  </div>
+
+  <!-- Utilities: quiet icon buttons, right zone of the symmetric grid.
+       The old "Analyze →" CTA is gone on purpose - Analyze is the first tab
+       and the hero carries the big CTA; a third one was noise. -->
+  <div class="nav-right">
+  <!-- sign in from anywhere; hidden once a session exists -->
+  <button class="btn-sm" id="nav-signin" style="display:none;margin-right:6px" onclick="goConnectLeague()">Sign in</button>
+  <!-- phone-only hamburger: the tab row hides on small screens, this opens everything -->
+  <button class="theme-toggle icon" id="nav-burger" onclick="mobMenuToggle()" title="Menu" aria-label="Menu" style="display:none">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <div style="position:relative;margin-left:4px;display:flex;align-items:center" id="nav-search-wrap">
+    <button class="theme-toggle icon" id="nav-search-btn" onclick="navSearchToggle()" title="Search players" aria-label="Search players">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg>
+    </button>
+    <input type="text" id="nav-search" class="nav-search-input" placeholder="Search players..." autocomplete="off" oninput="navSearch()" onfocus="navSearch()" onblur="navSearchBlur()">
+    <div id="nav-search-dd" class="ac-dropdown" style="left:auto;right:0;min-width:260px"></div>
+  </div>
+  <div id="alerts-wrap" style="position:relative;margin-left:6px">
+    <button class="theme-toggle icon" style="position:relative" onclick="toggleAlerts()" title="Trade alerts from your leagues" aria-label="Trade alerts">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.4 7.5-2.4 7.5h16.8S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>
+      <span id="alerts-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:8px;font-weight:800;min-width:15px;height:15px;border-radius:100px;align-items:center;justify-content:center;padding:0 3px">0</span>
+    </button>
+    <div id="alerts-dd" class="ac-dropdown" style="left:auto;right:0;min-width:280px;max-height:340px;overflow-y:auto"><div style="padding:12px;font-size:11px;color:var(--muted)">Loading...</div></div>
+  </div>
+  <button class="theme-toggle icon" id="theme-toggle" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"></button>
+
+  <!-- User account pill -->
+  <div class="user-pill" id="user-pill" onclick="toggleUserDropdown()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <span class="user-pill-name" id="user-pill-name">Account</span>
+    <span class="caret" style="font-size:9px;opacity:.5">▾</span>
+    <div class="user-dropdown" id="user-dropdown">
+      <div class="user-dd-header">
+        <div class="user-dd-name" id="user-dd-name">-</div>
+        <div class="user-dd-league" id="user-dd-league">No league loaded</div>
+      </div>
+      <div class="user-dd-item" onclick="openSwitchLeague();closeAllDropdowns()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Switch League
+      </div>
+      <div class="user-dd-item" onclick="switchScreen('analyze');showAnalyzeTab('ideas');closeAllDropdowns()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+        Trade Ideas
+      </div>
+      <div class="user-dd-item" onclick="switchScreen('community');loadCommunityFeed();closeAllDropdowns()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Community Feed
+      </div>
+      <div class="nav-dd-sep" style="margin:4px 0"></div>
+      <div class="user-dd-item danger" onclick="signOut();closeAllDropdowns()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </div>
+    </div>
+  </div>
+  </div><!-- /nav-right -->
+  <!-- phone menu overlay -->
+  <div id="mob-menu" onclick="if(event.target===this)mobMenuToggle()">
+    <div class="mob-menu-panel">
+      <div class="mob-menu-head">
+        <span style="font-family:var(--font-head);font-weight:700;font-size:15px">Menu</span>
+        <button class="theme-toggle icon" onclick="mobMenuToggle()" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <button class="mob-menu-item" onclick="mobGo('analyze')">Trade Analyzer</button>
+      <button class="mob-menu-item" onclick="mobGo('league')">My League</button>
+      <button class="mob-menu-item" onclick="mobGo('research')">Research</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-buysell')">Buy / Sell</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-compare')">Compare Players</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-startsit')">Start / Sit</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-rankem')">Rank 'Em</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-players-db')">Players</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-market')">Market</button>
+      <button class="mob-menu-item" onclick="mobGo('sage')">Ask Sage</button>
+      <button class="mob-menu-item" onclick="mobGo('mock')">Draft</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('mock','solo')">Solo Mock Draft</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('mock','friends')">Draft with Friends</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('mock','live')">Live Draft Assist</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('mock','history')">Draft History</button>
+      <button class="mob-menu-item" onclick="mobGo('news')">News</button>
+      <button class="mob-menu-item" onclick="mobGo('community')">Community</button>
+      <button class="mob-menu-item" onclick="mobGo('learn')">Learn</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('learn');switchInnerTab(document.querySelectorAll('#screen-learn .inner-tab')[3],'tab-about','screen-learn')">About TradeMind</button>
+    </div>
+  </div>
+
+</nav>
+<div id="ticker-bar"><div class="ticker" id="live-ticker"></div></div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-particles">
+    <div class="hpart" style="left:7%;top:22%;width:5px;height:5px;background:rgba(167,139,250,.5);box-shadow:0 0 8px rgba(167,139,250,.6);--d:13s;--del:-2s;--dx:22px;--dy:-38px;--sc:1.4;--lo:.15;--hi:.55"></div>
+    <div class="hpart" style="left:87%;top:58%;width:7px;height:7px;background:rgba(103,232,249,.4);box-shadow:0 0 10px rgba(103,232,249,.5);--d:17s;--del:-6s;--dx:-18px;--dy:-48px;--sc:1.2;--lo:.1;--hi:.45"></div>
+    <div class="hpart" style="left:52%;top:7%;width:4px;height:4px;background:rgba(167,139,250,.65);box-shadow:0 0 6px rgba(167,139,250,.7);--d:11s;--del:-9s;--dx:14px;--dy:32px;--sc:1.6;--lo:.2;--hi:.7"></div>
+    <div class="hpart" style="left:74%;top:14%;width:6px;height:6px;background:rgba(124,92,191,.45);box-shadow:0 0 9px rgba(124,92,191,.5);--d:19s;--del:-4s;--dx:-28px;--dy:22px;--sc:1.1;--lo:.1;--hi:.42"></div>
+    <div class="hpart" style="left:18%;top:72%;width:8px;height:8px;background:rgba(103,232,249,.3);box-shadow:0 0 12px rgba(103,232,249,.4);--d:15s;--del:-11s;--dx:38px;--dy:-22px;--sc:1.3;--lo:.12;--hi:.5"></div>
+    <div class="hpart" style="left:42%;top:85%;width:3px;height:3px;background:rgba(167,139,250,.7);box-shadow:0 0 6px rgba(167,139,250,.8);--d:9s;--del:-1s;--dx:10px;--dy:-20px;--sc:1.5;--lo:.2;--hi:.65"></div>
+  </div>
+  <div class="hero-inner">
+    <div class="hero-badge"><span class="hero-badge-dot"></span><span id="hero-badge-text">Your trusted fantasy football advisor</span></div>
+    <!-- Sage centered stage -->
+    <div class="hero-sage-stage">
+      <div class="hero-ring hero-ring-1"></div>
+      <div class="hero-ring hero-ring-2"></div>
+      <div class="hero-ring hero-ring-3"></div>
+      <svg class="sage-hero-svg" viewBox="0 0 120 106" width="150" height="150" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="shBG" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="shEG" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="shEGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="shBGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><ellipse cx="60" cy="56" rx="54" ry="47" fill="rgba(91,33,182,0.22)" filter="url(#shBGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#shBG)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#shBG)"/><rect x="4" y="43" width="112" height="27" fill="url(#shBG)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="29" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="69" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><path d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    </div>
+    <!-- Headline -->
+    <h1>Become the<br>smartest manager<br><span class="hl">in your league.</span></h1>
+    <p class="hero-tagline">Make smarter fantasy trades with AI. One clear answer before you hit Accept.</p>
+    <!-- Returning users get a fast path straight into the tool from the top.
+         Hidden for first-timers (they read the pitch, then hit the CTA below).
+         Revealed by the returning-user code when a saved username exists. -->
+    <div class="hero-cta" id="hero-cta" style="display:none">
+      <a href="#" id="hero-enter-btn" class="btn-primary" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Analyze a trade →</a>
+    </div>
+    <div class="hero-proof">
+      <span>No signup needed</span>
+      <span class="hero-proof-sep">·</span>
+      <span>Dynasty &amp; redraft</span>
+      <span class="hero-proof-sep">·</span>
+      <span>Answers in seconds</span>
+      <span class="hero-proof-sep">·</span>
+      <span>Live market values</span>
+    </div>
+  </div>
+</div>
+
+<!-- HOME NEWS RAIL -->
+
+
+<!-- MAIN -->
+<section class="section" id="analyzer">
+  <div class="wrap">
+
+    <!-- ANALYZE SCREEN -->
+    <div class="screen active" id="screen-analyze">
+    <!-- Analyze inner tabs -->
+    <div class="inner-tab-bar" id="analyze-tab-bar">
+      <div class="inner-tab active" id="atab-analyzer" onclick="showAnalyzeTab('analyzer')">Trade Analyzer</div>
+      <div class="inner-tab" id="atab-ideas" onclick="showAnalyzeTab('ideas')">Trade Ideas</div>
+    </div>
+    <div id="tab-analyzer" class="tab-content active">
+      <div class="analyzer-grid">
+
+        <!-- LEFT: CONNECT + TRADE -->
+        <div>
+
+          <!-- SLEEPER LOGIN -->
+          <div class="card" id="login-panel">
+            <div class="sleeper-connect">
+              <div class="sleeper-icon"><img src="data:image/png;base64,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" alt="Sleeper" width="34" height="34" style="border-radius:8px;display:block"></div>
+              <div class="connect-title">Connect your Sleeper account</div>
+              <div class="connect-sub">Sage reads your full roster, opponent tendencies, and trade history. Automatically.</div>
+            </div>
+            <div class="input-group">
+              <input type="text" id="sleeper-username" class="tm-input" placeholder="Your Sleeper username" onkeydown="if(event.key==='Enter')loadUser()">
+              <button class="btn-load" onclick="loadUser()">Connect league →</button>
+            </div>
+            <div class="status-msg" id="status"></div>
+            <div class="hint-row">No signup required · Username is case sensitive</div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;text-align:center">Play somewhere else?</div>
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                <button class="btn-sm" style="display:flex;align-items:center;gap:6px;padding:9px 16px;border-color:rgba(255,255,255,.14)" onclick="toggleEspnImport()"><span style="min-width:34px;height:18px;border-radius:5px;background:#d50a0a;color:#fff;font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center">ESPN</span> Import ESPN league</button>
+                <button class="btn-sm" style="display:flex;align-items:center;gap:6px;padding:9px 16px;border-color:rgba(255,255,255,.14)" onclick="startYahooLogin()"><span style="width:18px;height:18px;border-radius:5px;background:#6001d2;color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center">Y!</span> Sign in with Yahoo</button>
+              </div>
+              <div id="espn-import-box" style="display:none;margin-top:10px">
+                <div style="font-size:11px;color:var(--muted2);margin-bottom:8px;line-height:1.5">Works with <strong style="color:var(--text)">public</strong> ESPN leagues. Find your league ID in the ESPN URL: <span style="color:var(--muted)">…/league?leagueId=<strong style="color:var(--text)">123456</strong></span></div>
+                <div style="display:flex;gap:8px;margin-bottom:8px">
+                  <input type="text" id="espn-league-id" class="tm-input" style="flex:1" placeholder="ESPN League ID" inputmode="numeric">
+                  <button class="btn-load" style="width:auto;padding:10px 18px" onclick="importEspnLeague()">Import →</button>
+                </div>
+                <div id="espn-team-pick" style="display:none;margin-bottom:8px">
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Which team is yours?</div>
+                  <select id="espn-team-select" class="opp-select" style="width:100%" onchange="finishEspnImport()"><option value="">Select your team...</option></select>
+                </div>
+                <div id="espn-status" style="font-size:11px;color:var(--muted)"></div>
+              </div>
+              <div id="manual-roster-box" style="display:none;margin-top:10px">
+                <div id="yahoo-oauth-row" style="margin-bottom:2px">
+                  <div style="font-size:10px;color:var(--muted);text-align:center">Read-only. We see your roster to analyze trades, nothing else.</div>
+                  <div id="yahoo-team-pick" style="display:none;margin-top:8px">
+                    <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Which team is yours?</div>
+                    <select id="yahoo-team-select" class="opp-select" style="width:100%" onchange="finishYahooImport()"><option value="">Select your team...</option></select>
+                  </div>
+                  <div id="yahoo-status" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LEAGUE PICKER -->
+          <div class="card" id="league-panel" style="display:none">
+            <div class="field-label">Your dynasty leagues</div>
+            <div id="league-list"></div>
+          </div>
+
+          <!-- TRADE BUILDER -->
+          <div class="card" id="builder-panel" style="display:none">
+            <div class="trade-header">
+              <div>
+                <div class="trade-header-info" id="league-name"></div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <div class="trade-header-meta" id="league-meta"></div>
+                  <span style="display:inline-flex;border:1px solid var(--border);border-radius:100px;overflow:hidden;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+                    <button onclick="setLeagueModeManual('dynasty')" data-modebtn="dynasty" style="background:none;border:none;color:var(--muted2);padding:3px 9px;cursor:pointer" id="mode-dyn-btn">Dynasty</button>
+                    <button onclick="setLeagueModeManual('redraft')" data-modebtn="redraft" style="background:none;border:none;color:var(--muted2);padding:3px 9px;cursor:pointer;border-left:1px solid var(--border)" id="mode-red-btn">Redraft</button>
+                  </span><span id="mode-badge" style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(99,102,241,.15);color:var(--accent-bright);text-transform:uppercase;letter-spacing:.05em">Dynasty Mode</span>
+                </div>
+              </div>
+              <div style="position:relative" id="lg-switch-wrap">
+                <button class="btn-sm" onclick="openLeagueSwitcher()">Change league <span class="caret" style="font-size:9px;opacity:.6">▾</span></button>
+                <div id="lg-switch-dd" class="ac-dropdown" style="left:auto;right:0;min-width:270px;max-height:330px;overflow-y:auto"></div>
+              </div>
+            </div>
+            <!-- Yahoo Fantasy API attribution (required by the Yahoo API Access and
+                 Use Agreement, Cover Page): must appear wherever Yahoo Fantasy data
+                 is displayed, with a hyperlink to an official Yahoo Fantasy page.
+                 Toggled on in _showBuilderUI whenever the active roster came from Yahoo. -->
+            <div id="yahoo-attrib" style="display:none;font-size:11px;color:var(--muted);margin:0 0 12px">Fantasy data provided by <a href="https://football.fantasy.yahoo.com/" target="_blank" rel="noopener" style="color:var(--muted2);text-decoration:underline">Yahoo Fantasy</a></div>
+
+            <!-- ROSTER BOARD BUILDER: tap players on both boards, Sleeper-style.
+                 It writes into the classic builder's hidden rows below, so the
+                 value bar, the 3 questions and the analysis all work unchanged. -->
+            <div id="board-builder">
+              <div class="bb-top">
+                <div class="bb-top-cell"><button class="side-clear-btn" onclick="boardClearAll()">Clear trade</button></div>
+                <div class="bb-top-cell"><select id="opp-select" class="opp-select" onchange="loadOppRoster();renderTradeBoards()">
+                  <option value="">Select opponent...</option>
+                </select></div>
+              </div>
+              <div class="bb-boards">
+                <div class="bb-board">
+                  <div class="bb-head"><span><span class="you-dot"></span>You send</span><span class="bb-count" id="bb-count-give"></span></div>
+                  <div class="bb-grid" id="board-mine"><div class="bb-empty">Connect a league to see your roster here.</div></div>
+                </div>
+                <div class="bb-board">
+                  <div class="bb-head"><span><span class="them-dot"></span>You receive</span><span class="bb-count" id="bb-count-get"></span></div>
+                  <div class="bb-grid" id="board-opp"><div class="bb-empty">Pick an opponent above to see their roster.</div></div>
+                </div>
+              </div>
+              
+            </div>
+
+            <div id="classic-builder" style="display:none">
+            <div class="trade-sides">
+              <div>
+                <div class="trade-col-label" style="display:flex;align-items:center;justify-content:space-between"><span><span class="you-dot"></span>You give up</span><button class="side-clear-btn" onclick="clearTradeSide('give-players','give')" title="Clear your side">Clear</button></div>
+                <div id="give-players">
+                  <div class="player-row">
+                    <span class="pos-tag" style="visibility:hidden">--</span>
+                    <div class="ac-wrap"><input type="text" class="tm-input" style="width:100%" placeholder="Search your players..." data-side="give" oninput="acInput(this)" onfocus="acInput(this)" onblur="acHide(this)" autocomplete="off"><div class="ac-dropdown"></div></div>
+                    <button class="remove-btn" onclick="removeRow(this)" title="Remove">×</button>
+                  </div>
+                </div>
+                <button class="add-btn" onclick="addRow('give-players','give')">+ Add player or pick</button>
+              </div>
+
+              <div class="trade-divider">
+                <div class="trade-divider-line"></div>
+                <span>FOR</span>
+                <div class="trade-divider-line"></div>
+              </div>
+
+              <div>
+                <div class="trade-col-label" style="display:flex;align-items:center;justify-content:space-between"><span><span class="them-dot"></span>You get back</span><button class="side-clear-btn" onclick="clearTradeSide('get-players','get')" title="Clear their side">Clear</button></div>
+                <div id="get-players">
+                  <div class="player-row">
+                    <span class="pos-tag" style="visibility:hidden">--</span>
+                    <div class="ac-wrap"><input type="text" class="tm-input" style="width:100%" placeholder="Search their players..." data-side="get" oninput="acInput(this)" onfocus="acInput(this)" onblur="acHide(this)" autocomplete="off"><div class="ac-dropdown"></div></div>
+                    <button class="remove-btn" onclick="removeRow(this)" title="Remove">×</button>
+                  </div>
+                </div>
+                <button class="add-btn" onclick="addRow('get-players','get')">+ Add player or pick</button>
+              </div>
+            </div>
+            </div><!-- /classic-builder -->
+
+            <!-- LIVE KTC COUNTER -->
+            <div class="ktc-live" id="ktc-live" style="display:none">
+              <div class="ktc-live-side"><span class="you-dot" style="width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block"></span><span>You give:</span><span class="ktc-live-val" id="ktc-give-live">0</span></div>
+              <div class="ktc-live-side"><span class="them-dot" style="width:8px;height:8px;background:var(--red);border-radius:50%;display:inline-block"></span><span>You get:</span><span class="ktc-live-val" id="ktc-get-live">0</span></div>
+              <div class="ktc-live-gap" id="ktc-gap-live"></div>
+            </div>
+
+            <!-- YOUR SITUATION PROFILER -->
+            <div class="profiler-section" id="your-section" style="display:none">
+              <div class="your-title">Should YOU do this trade?</div>
+              <div class="your-sub">Answer 3 quick questions about your situation. This helps us tell you if this trade actually makes sense for where you are in your dynasty.</div>
+
+              <div class="progress-dots">
+                <div class="pdot active" id="ypip-0"></div>
+                <div class="pdot" id="ypip-1"></div>
+                <div class="pdot" id="ypip-2"></div>
+              </div>
+
+              <div class="q-step active" id="yq-0">
+                <div class="q-text" id="yq0-text">Where are you in your dynasty right now?</div>
+                <div class="q-hint" id="yq0-hint">Be honest - this changes everything about what a "good trade" means for you</div>
+                <div class="q-opts" id="yq0-opts">
+                  <div class="q-opt" onclick="selectYou(this,0,0)"><span class="q-opt-key">A</span><span class="q-opt-text">Contending - I have a good team and want to win this year</span></div>
+                  <div class="q-opt" onclick="selectYou(this,0,1)"><span class="q-opt-key">B</span><span class="q-opt-text">Building - I have young talent and a window opening in 1-2 years</span></div>
+                  <div class="q-opt" onclick="selectYou(this,0,2)"><span class="q-opt-key">C</span><span class="q-opt-text">Rebuilding - I am tearing it down and collecting picks and young players</span></div>
+                  <div class="q-opt" onclick="selectYou(this,0,3)"><span class="q-opt-key">D</span><span class="q-opt-text">Not sure - my team is somewhere in the middle</span></div>
+                </div>
+                <div class="q-nav"><button class="q-back" disabled>Back</button><span class="q-counter">1 of 3</span></div>
+              </div>
+
+              <div class="q-step" id="yq-1">
+                <div class="q-text" id="yq1-text">Why are you considering this trade?</div>
+                <div class="q-hint" id="yq1-hint">What is actually driving this - be real with yourself</div>
+                <div class="q-opts" id="yq1-opts">
+                  <div class="q-opt" onclick="selectYou(this,1,0)"><span class="q-opt-key">A</span><span class="q-opt-text">I sent the offer - I want something specific on their roster</span></div>
+                  <div class="q-opt" onclick="selectYou(this,1,1)"><span class="q-opt-key">B</span><span class="q-opt-text">They sent me an offer - I am deciding whether to accept it</span></div>
+                  <div class="q-opt" onclick="selectYou(this,1,2)"><span class="q-opt-key">C</span><span class="q-opt-text">I need to fill a position - I am weak at RB, WR, etc.</span></div>
+                  <div class="q-opt" onclick="selectYou(this,1,3)"><span class="q-opt-key">D</span><span class="q-opt-text">I want to sell high - a player of mine is at peak value right now</span></div>
+                </div>
+                <div class="q-nav"><button class="q-back" onclick="goBackYou(1)">Back</button><span class="q-counter">2 of 3</span></div>
+              </div>
+
+              <div class="q-step" id="yq-2">
+                <div class="q-text" id="yq2-text">How do you feel about giving up your side?</div>
+                <div class="q-hint" id="yq2-hint">Your gut - trust it</div>
+                <div class="q-opts" id="yq2-opts">
+                  <div class="q-opt" onclick="selectYou(this,2,0)"><span class="q-opt-key">A</span><span class="q-opt-text">Fine with it - I have been wanting to move these guys anyway</span></div>
+                  <div class="q-opt" onclick="selectYou(this,2,1)"><span class="q-opt-key">B</span><span class="q-opt-text">Slight hesitation - they are good but I can live without them</span></div>
+                  <div class="q-opt" onclick="selectYou(this,2,2)"><span class="q-opt-key">C</span><span class="q-opt-text">I would regret it - these are players I really value</span></div>
+                  <div class="q-opt" onclick="selectYou(this,2,3)"><span class="q-opt-key">D</span><span class="q-opt-text">Only doing it for the value - my gut says no</span></div>
+                </div>
+                <div class="q-nav"><button class="q-back" onclick="goBackYou(2)">Back</button><span class="q-counter">3 of 3</span></div>
+              </div>
+
+              <div class="your-badge" id="you-badge">
+                <div>
+                  <div class="yb-verdict" id="you-type"></div>
+                  <div class="yb-desc" id="you-desc"></div>
+                </div>
+              </div>
+            </div>
+
+
+            <div style="margin:14px 0 12px">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Anything else Sage should know? <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></div>
+              <textarea id="trade-context" class="tm-input" rows="2" style="width:100%;resize:vertical;font-size:13px;line-height:1.5" placeholder="e.g. He just lost his starting RB for the season, we start 3 WRs, he owes me a favor from last year's trade..."></textarea>
+            </div>
+            <button class="analyze-btn" onclick="runAnalysis()">Analyze This Trade</button>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: analysis output -->
+        <div id="right-col">
+          <div id="right-placeholder" style="display:none"></div>
+
+          <!-- ideas-panel moved to Trade Ideas tab -->
+          <div id="ideas-header" style="display:none;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px">
+            <span style="font-size:11.5px;color:var(--muted)">Trade ideas for <strong style="color:var(--text)" id="ideas-league-name"></strong></span>
+            <select class="opp-select" style="width:auto;min-width:170px;font-size:12px" id="ideas-league-switch" onchange="if(this.value)switchToLeague(this.value)"></select>
+          </div>
+          <div id="ideas-panel" style="display:none"></div>
+
+          <!-- RESULT PANEL -->
+          <div class="result-panel" id="result-panel">
+
+        <div id="vs-arena-box"></div>
+        <div class="verdict-card" id="verdict-card">
+          <div class="verdict-top">
+            <!-- REX -->
+            <div class="sage-wrap" id="sage-wrap">
+              <svg class="sage-svg" viewBox="0 0 120 106" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sageBodyGrad" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="sageEyeGrad" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="sageEyeGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="sageBodyGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><ellipse cx="60" cy="56" rx="54" ry="47" fill="rgba(91,33,182,0.22)" filter="url(#sageBodyGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#sageBodyGrad)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#sageBodyGrad)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#sageBodyGrad)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#sageBodyGrad)"/><rect x="4" y="43" width="112" height="27" fill="url(#sageBodyGrad)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-eye-l" x="29" y="65" width="22" height="6" rx="3" fill="url(#sageEyeGrad)" filter="url(#sageEyeGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-eye-r" x="69" y="65" width="22" height="6" rx="3" fill="url(#sageEyeGrad)" filter="url(#sageEyeGlow)"/><path class="sage-mouth sage-mouth-neutral" d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/><path class="sage-mouth sage-mouth-win" d="M 44 83 Q 60 95 76 83" stroke="#67e8f9" stroke-width="2.5" fill="none" stroke-linecap="round" filter="url(#sageEyeGlow)"/><path class="sage-mouth sage-mouth-reject" d="M 50 89 Q 60 82 70 89" stroke="rgba(167,139,250,0.5)" stroke-width="2" fill="none" stroke-linecap="round"/><path class="sage-mouth sage-mouth-think" d="M 48 85 Q 60 85 72 85" stroke="rgba(103,232,249,0.45)" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="3 3"/></svg>
+              <div class="sage-tag">Sage</div>
+            </div>
+            <!-- Verdict text -->
+            <div class="verdict-right">
+              <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem">Sage says...</div>
+              <div class="verdict-headline" id="verdict-headline" style="font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-.03em;margin-bottom:.5rem">-</div>
+              <div class="verdict-body" id="verdict-body" style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:.75rem">-</div>
+            </div>
+          </div>
+
+          <!-- OPPONENT PERCEPTION - how will they see this offer -->
+          <div id="opp-perception" style="display:none;margin-bottom:1rem;padding:.625rem .875rem;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)">
+            <span style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em">How they'll see it · </span>
+            <span id="opp-perception-text" style="font-size:12px;color:var(--muted2)">-</span>
+          </div>
+
+          <!-- TRADE BALANCE BAR -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Trade Balance</div>
+              <div style="font-size:12px;color:var(--muted)" id="balance-label">-</div>
+            </div>
+            <div style="position:relative;height:10px;background:var(--surface3);border-radius:5px;overflow:hidden">
+              <div id="balance-bar" style="position:absolute;top:0;height:100%;border-radius:5px;transition:all 1s cubic-bezier(.4,0,.2,1);width:50%;left:0"></div>
+              <div style="position:absolute;top:0;left:50%;width:2px;height:100%;background:var(--border2)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px">
+              <div style="font-size:11px;color:var(--muted)" id="you-give-label">You give</div>
+              <div style="font-size:11px;color:var(--muted)" id="you-get-label">You get</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="breakdown-toggle" onclick="toggleBreakdown()">
+          <span>Full breakdown</span>
+          <span id="breakdown-caret">▾</span>
+        </button>
+        <div id="breakdown-detail">
+
+        <!-- TRADE ADJUSTMENT CALLOUT (winning big / getting robbed) -->
+        <div id="trade-adjustment" style="display:none;margin-bottom:12px"></div>
+
+        <!-- ALTERNATIVE TARGETS from opp roster -->
+        <div id="alt-targets" style="display:none;margin-bottom:12px"></div>
+
+        <!-- SCENARIOS: best case / worst case -->
+        <div id="scenarios-card" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div style="background:var(--surface2);border:1px solid var(--green-dim);border-radius:var(--radius);padding:.875rem">
+            <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">✓ Best case</div>
+            <div id="scenario-best" style="font-size:12px;color:var(--muted2);line-height:1.6">-</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--red-dim);border-radius:var(--radius);padding:.875rem">
+            <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">✗ Worst case</div>
+            <div id="scenario-worst" style="font-size:12px;color:var(--muted2);line-height:1.6">-</div>
+          </div>
+        </div>
+
+        <!-- FIT CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+          <div class="bd-card" id="fit-you" style="border-left:3px solid var(--green)">
+            <div class="bd-label" style="color:var(--green)">Do YOU need this?</div>
+            <div class="bd-val" id="bc-value">-</div>
+            <div class="bd-desc" id="bc-value-desc">-</div>
+          </div>
+          <div class="bd-card" id="fit-them" style="border-left:3px solid var(--accent-bright)">
+            <div class="bd-label" style="color:var(--accent-bright)">Do THEY want this?</div>
+            <div class="bd-val" id="bc-need">-</div>
+            <div class="bd-desc" id="bc-need-desc">-</div>
+          </div>
+          <div class="bd-card" id="fit-timing" style="border-left:3px solid var(--yellow)">
+            <div class="bd-label" style="color:var(--yellow)">Good time to ask?</div>
+            <div class="bd-val" id="bc-psych">-</div>
+            <div class="bd-desc" id="bc-psych-desc">-</div>
+          </div>
+        </div>
+
+        <!-- OPPONENT READ -->
+        <div class="signals-card" style="margin-bottom:12px">
+          <div class="signal-title" style="display:flex;align-items:center;justify-content:space-between">Reading your opponent<span id="opp-explain-toggle" onclick="toggleOppExplain()" style="font-size:10px;font-weight:500;color:var(--accent-bright);cursor:pointer;letter-spacing:0;text-transform:none">How we calculate this ▾</span></div>
+          <div id="opp-explain-box" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted2);line-height:1.7;border-left:3px solid var(--accent-bright)">These are <strong style="color:var(--text)">behavioral estimates, not probabilities</strong>. We build them from two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience and total market value → which manager archetype they fit) and their <strong style="color:var(--text)">actual trade history in this league</strong> (how often they trade, whether they hoard or ship picks, and whether they win or lose value in deals).<br><strong style="color:var(--text)">Urgency</strong> - archetype baseline, pushed higher if they've been trading picks away for players (win-now behavior).<br><strong style="color:var(--text)">Stubbornness</strong> - pushed higher if they barely trade, lower if they're a high-volume dealer.<br><strong style="color:var(--text)">Hype chaser</strong> - how much their archetype historically overvalues recent performance. Use it to decide WHICH of your players to feature in the pitch.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">How bad do they need a deal?</div>
+              <div class="sig-pct" id="sig1-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">Their urgency</div>
+              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig1" style="background:var(--accent-bright);width:0%;height:100%"></div></div>
+            </div>
+            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">How attached are they to their guys?</div>
+              <div class="sig-pct" id="sig2-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">How stubborn they are</div>
+              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig2" style="background:var(--yellow);width:0%;height:100%"></div></div>
+            </div>
+            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Do they chase hype?</div>
+              <div class="sig-pct" id="sig3-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">Easy to sell to</div>
+              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig3" style="background:var(--red);width:0%;height:100%"></div></div>
+            </div>
+          </div>
+        </div>
+        </div><!-- end breakdown-detail -->
+
+        <!-- PITCH SECTION -->
+        <div class="pitch-card" id="pitch-card" style="display:none">
+          <div class="pitch-header">
+            
+            <div>
+              <div class="pitch-title">How to sell this trade</div>
+              <div class="pitch-sub">What to say when you message them - based on how they think</div>
+            </div>
+          </div>
+          <div id="pitch-angles"></div>
+          </div>
+
+        <div class="result-actions">
+          <button class="action-btn" style="background:var(--accent-dim);border-color:rgba(155,114,232,.35);color:var(--accent-bright);font-weight:600" onclick="openShareModal()">Share this trade</button>
+          <button class="action-btn" onclick="saveToHistory()">Save to history</button>
+          <button class="action-btn" onclick="newTrade()">New trade</button>
+        </div>
+        <button class="share-trade-btn" id="share-community-btn" onclick="shareTradeToForum()" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="10" r="10" fill="#0d0d1a"/><defs><linearGradient id="bkgs" x1="20%" y1="0%" x2="80%" y2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><path d="M11.5 4L7 11h3.5L8 16l8-8h-4z" fill="url(#bkgs)"/></svg>
+          Post to Community - let people vote on this trade
+        </button>
+          </div><!-- end result-panel -->
+        </div><!-- end right-col -->
+      </div><!-- end analyzer-grid -->
+
+    </div><!-- end tab-analyzer -->
+
+    <!-- TRADE IDEAS TAB -->
+    <div id="tab-ideas" class="tab-content" style="display:none">
+      <div class="ideas-card" id="ideas-panel-tab">
+        <div class="ideas-header">
+          <div>
+            <div class="ideas-title">Trade Ideas for You</div>
+            <div class="ideas-sub" id="ideas-tab-sub">Load your league to see personalized ideas</div>
+          </div>
+          <button class="ideas-refresh" onclick="refreshTradeIdeas()">New ideas ↺</button>
+        </div>
+        <div id="ideas-list-tab"><div class="ideas-empty">Load your league first, then come back here for ideas.</div></div>
+      </div>
+    </div>
+
+    </div><!-- end screen-analyze -->
+
+    <!-- MY LEAGUE SCREEN -->
+    <div class="screen" id="screen-league">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab(this,'tab-roster-grade','screen-league');renderRosterGrade()">Roster Grade</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-league-trades','screen-league');renderLeagueTrades()">League Trades</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-history','screen-league')">My History</div>
+        <div style="margin-left:auto;flex-shrink:0"><button class="btn-sm" id="sync-btn" onclick="syncRoster()">↺ Sync Roster</button></div>
+      </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" class="tab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div style="font-size:14px;font-weight:600">Saved trades</div>
+          <button class="btn-sm" onclick="clearHistory()">Clear all</button>
+        </div>
+        <div id="history-list"><div class="empty-state">No saved trades yet. Analyze a trade and click Save to history.</div></div>
+      </div>
+    </div>
+
+    <!-- LEAGUE TRADES TAB -->
+    <div id="tab-league-trades" class="tab-content">
+      <div class="card" style="margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">League personalities</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Every manager classified by their roster shape and trade behavior. Screenshot it, post it in the group chat, start the argument.</div>
+        <div id="league-personalities"><div class="empty-state">Connect a league to see who's who.</div></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+          <div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:2px">Every trade in your league</div>
+            <div style="font-size:12px;color:var(--muted)">Values are from FantasyCalc dynasty rankings. Who won each deal is based on what both sides gave up.</div>
+          </div>
+        </div>
+        <div id="league-trades-list"><div class="empty-state">Connect a league to see its trade history.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD TAB -->
+
+    <!-- ROSTER GRADE TAB -->
+    <div id="tab-roster-grade" class="tab-content active">
+      <div class="card">
+        <div id="roster-grade-content"><div class="empty-state">Connect a league to grade your roster.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div></div>
+      </div>
+    </div>
+    </div><!-- end screen-league -->
+
+    <!-- RESEARCH SCREEN -->
+    <div class="screen" id="screen-research">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab(this,'tab-buysell','screen-research');renderBuySell()">Buy / Sell</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-rankem','screen-research');rankEmNext()">Rank 'Em</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-compare','screen-research')">Compare</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-startsit','screen-research')">Start / Sit</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-waiver','screen-research');renderWaiverTargets()">Stash Targets</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-players-db','screen-research');renderPlayersDB()">Players</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-market','screen-research');renderMarketTab()">Market</div>
+      </div>
+
+
+    <!-- BUY / SELL TAB -->
+    <div id="tab-buysell" class="tab-content active">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:2px">Buy / Sell Alerts</div>
+            <div style="font-size:12px;color:var(--muted)">Based on 30-day value movement in FantasyCalc dynasty rankings</div>
+          </div>
+          <button class="btn-sm" onclick="window._bsOffset=(window._bsOffset||0)+5;renderBuySell()">New suggestions ↺</button>
+        </div>
+        <div id="buysell-content"><div class="empty-state">Loading player values...</div></div>
+      </div>
+    </div>
+
+    <!-- ASK SAGE (START/SIT) TAB -->
+    <div id="tab-rankem" class="tab-content">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+          <div style="font-size:16px;font-weight:700">Rank 'Em</div>
+          <div class="inner-tab-bar" style="margin:0;border:none">
+            <div class="inner-tab active" id="rankem-mode-dynasty" onclick="rankEmSetMode('dynasty')">Dynasty</div>
+            <div class="inner-tab" id="rankem-mode-redraft" onclick="rankEmSetMode('redraft')">Redraft</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Pick who you'd rather have. Every vote feeds a live community consensus ranking - built by the crowd, not one algorithm.</div>
+        <div id="rankem-mode-label" style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">Dynasty: who would you rather build with?</div>
+        <div id="rankem-matchup" style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:18px"></div>
+        <div style="text-align:center;margin-bottom:18px"><button class="btn-sm" onclick="rankEmNext(true)">Skip / new matchup</button></div>
+        <div style="font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Community consensus</div>
+        <div id="rankem-board"><div class="empty-state">Cast a vote to see the crowd's board.</div></div>
+      </div>
+    </div>
+
+    <!-- COMPARE TAB -->
+    <div id="tab-compare" class="tab-content">
+      <div class="card">
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px">Compare Players</div>
+        <div style="margin-bottom:10px"><span style="display:inline-flex;border:1px solid var(--border);border-radius:100px;overflow:hidden;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+          <button onclick="setLeagueModeManual('dynasty')" data-modebtn="dynasty" style="background:none;border:none;color:var(--muted2);padding:6px 12px;cursor:pointer">Dynasty</button>
+          <button onclick="setLeagueModeManual('redraft')" data-modebtn="redraft" style="background:none;border:none;color:var(--muted2);padding:6px 12px;cursor:pointer;border-left:1px solid var(--border)">Redraft</button>
+        </span></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Side-by-side dynasty value comparison</div>
+        <div id="cmp-slots" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+          <div>
+            <div class="field-label">Player 1</div>
+            <div class="ac-wrap" style="display:block">
+              <input type="text" class="tm-input" style="width:100%" id="cmp-p1" placeholder="Search player..." oninput="cmpAcInput(this,1)" onfocus="cmpAcInput(this,1)" onblur="cmpAcHide(1)" autocomplete="off">
+              <div class="ac-dropdown" id="cmp-ac1"></div>
+            </div>
+          </div>
+          <div>
+            <div class="field-label">Player 2</div>
+            <div class="ac-wrap" style="display:block">
+              <input type="text" class="tm-input" style="width:100%" id="cmp-p2" placeholder="Search player..." oninput="cmpAcInput(this,2)" onfocus="cmpAcInput(this,2)" onblur="cmpAcHide(2)" autocomplete="off">
+              <div class="ac-dropdown" id="cmp-ac2"></div>
+            </div>
+          </div>
+          <div>
+            <div class="field-label">Player 3 <span style="color:var(--muted);font-weight:400">(optional)</span></div>
+            <div class="ac-wrap" style="display:block">
+              <input type="text" class="tm-input" style="width:100%" id="cmp-p3" placeholder="Third player..." oninput="cmpAcInput(this,3)" onfocus="cmpAcInput(this,3)" onblur="cmpAcHide(3)" autocomplete="off">
+              <div class="ac-dropdown" id="cmp-ac3"></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-sm" style="margin-bottom:14px" onclick="addCompareSlot()">+ Add another player</button>
+        <div id="compare-result" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- STASH TARGETS TAB -->
+    <div id="tab-startsit" class="tab-content">
+      <div class="card" id="startsit-card">
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px">Who do I start?</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Add the players you're deciding between. Sage ranks them using live market value, 30-day momentum, usage stats, and each player's current situation.</div>
+        <div id="asksage-inputs">
+          <div class="ac-wrap" style="display:block;margin-bottom:8px;position:relative"><input type="text" class="tm-input asksage-input" style="width:100%" placeholder="Player 1..." autocomplete="off"><div class="ac-dropdown asksage-dd"></div></div>
+          <div class="ac-wrap" style="display:block;margin-bottom:8px;position:relative"><input type="text" class="tm-input asksage-input" style="width:100%" placeholder="Player 2..." autocomplete="off"><div class="ac-dropdown asksage-dd"></div></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+          <button class="btn-sm" onclick="addAskSageInput()">+ Add another player</button>
+          <select id="asksage-week" class="opp-select" style="width:auto">
+            <option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option><option value="4">Week 4</option><option value="5">Week 5</option><option value="6">Week 6</option><option value="7">Week 7</option><option value="8">Week 8</option><option value="9">Week 9</option><option value="10">Week 10</option><option value="11">Week 11</option><option value="12">Week 12</option><option value="13">Week 13</option><option value="14">Week 14</option><option value="15">Week 15</option><option value="16">Week 16</option><option value="17">Week 17</option><option value="18">Week 18</option>
+          </select>
+          <button class="btn-primary" style="font-size:13px;padding:8px 20px" onclick="askSageStartSit()">Who do I start?</button>
+        </div>
+        <div id="asksage-result"></div>
+      </div>
+    </div>
+    <div id="tab-waiver" class="tab-content">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:2px">Stash Targets</div>
+            <div style="font-size:12px;color:var(--muted)">High-value players not on any roster in your league</div>
+          </div>
+          <button class="btn-sm" onclick="renderWaiverTargets()">Refresh ↺</button>
+        </div>
+        <div id="waiver-content"><div class="empty-state">Connect a league to see stash targets.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div></div>
+      </div>
+    </div>
+    <!-- PLAYERS TAB -->
+    <div id="tab-players-db" class="tab-content">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:2px">Players</div>
+            <div style="font-size:12px;color:var(--muted)">Search any NFL player - click to see dynasty value and advanced stats</div>
+          </div>
+        </div>
+
+        <!-- Basic filters -->
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <input type="text" id="pdb-search" class="tm-input" style="flex:1;min-width:180px" placeholder="Search by name..." oninput="filterPlayersDB()">
+          <select id="pdb-pos" class="opp-select" style="width:auto;min-width:100px" onchange="filterPlayersDB()">
+            <option value="">All Positions</option>
+            <option value="QB">QB</option>
+            <option value="RB">RB</option>
+            <option value="WR">WR</option>
+            <option value="TE">TE</option>
+          </select>
+          <select id="pdb-team" class="opp-select" style="width:auto;min-width:100px" onchange="filterPlayersDB()">
+            <option value="">All Teams</option>
+          </select>
+        </div>
+
+        <!-- Quick filter chips - one tap each, stackable -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center" id="pdb-chips">
+          <select id="pdb-sort" class="opp-select" style="width:auto;min-width:150px" onchange="filterPlayersDB()">
+            <option value="value" selected>Sort: Market value</option>
+            <option value="trend">Sort: 30-day trend</option>
+            <option value="age">Sort: Youngest first</option>
+            <option value="name">Sort: A to Z</option>
+          </select>
+          <span style="display:inline-flex;border:1px solid var(--border);border-radius:100px;overflow:hidden;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+            <button onclick="setLeagueModeManual('dynasty')" data-modebtn="dynasty" style="background:none;border:none;color:var(--muted2);padding:6px 12px;cursor:pointer">Dynasty</button>
+            <button onclick="setLeagueModeManual('redraft')" data-modebtn="redraft" style="background:none;border:none;color:var(--muted2);padding:6px 12px;cursor:pointer;border-left:1px solid var(--border)">Redraft</button>
+          </span>
+          <button class="pdb-chip btn-sm" data-chip="alpha" onclick="togglePdbChip(this)" title="24%+ target share - the best predictor of weekly floor">Alpha usage</button>
+          <button class="pdb-chip btn-sm" data-chip="bellcow" onclick="togglePdbChip(this)" title="250+ touches - volume that survives bad games">Bell-cows</button>
+          <button class="pdb-chip btn-sm" data-chip="efficient" onclick="togglePdbChip(this)" title="9+ yards per target or 5.5+ YAC per catch on real volume">Efficiency kings</button>
+          <button class="pdb-chip btn-sm" data-chip="ironman" onclick="togglePdbChip(this)" title="Every game played in 2025">Iron men</button>
+          <button class="pdb-chip btn-sm" data-chip="breakout" onclick="togglePdbChip(this)" title="24 or younger with an 18%+ target share already">Breakout profile</button>
+          <button class="btn-sm" onclick="clearPdbFilters()" style="font-size:11px;color:var(--muted)">Clear</button>
+        </div>
+
+        <!-- Stat legend (shown inline when advanced panel is open) -->
+        <div id="pdb-stat-info" style="display:none;margin-bottom:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent-bright);font-size:12px;color:var(--muted2);line-height:1.7"></div>
+
+        <div id="pdb-count" style="font-size:11px;color:var(--muted);margin-bottom:4px"></div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.5">Stat chips (2025 season, from real play-by-play data): <strong style="color:var(--muted2)">Tgt</strong> = share of team targets · <strong style="color:var(--muted2)">AY</strong> = share of team air yards · <strong style="color:var(--muted2)">YAC</strong> = yards after catch per reception · <strong style="color:var(--muted2)">YPC</strong> = yards per carry. Deep dives in <span style="color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="switchScreen('learn');switchInnerTab(document.querySelectorAll('#screen-learn .inner-tab')[1],'tab-nerdstats','screen-learn')">Learn → The Nerd Stats</span>.</div>
+        <div id="pdb-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px"></div>
+      </div>
+    </div>
+    <!-- MARKET TAB -->
+    <div id="tab-market" class="tab-content">
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;margin-bottom:12px;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:10px;font-size:12px;color:var(--muted2)">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--accent-bright)"></span>
+        Values move all week as the market trades. Tune back in every Tuesday to see who spiked and who slid.
+      </div>
+      <div class="mkt-overview" id="mkt-overview">
+        <div class="mkt-stat"><div class="mkt-stat-val" id="mkt-players-tracked">-</div><div class="mkt-stat-lbl">Players Tracked</div></div>
+        <div class="mkt-stat"><div class="mkt-stat-val" id="mkt-avg-val">-</div><div class="mkt-stat-lbl">Avg Dynasty Value</div></div>
+        <div class="mkt-stat"><div class="mkt-stat-val mkt-up" id="mkt-top-riser">-</div><div class="mkt-stat-lbl">Biggest 30-Day Riser</div></div>
+        <div class="mkt-stat"><div class="mkt-stat-val mkt-down" id="mkt-top-faller">-</div><div class="mkt-stat-lbl">Biggest 30-Day Faller</div></div>
+      </div>
+      <div class="mkt-panels">
+        <div class="mkt-panel">
+          <div class="mkt-panel-title"><span class="mkt-up">▲</span> Top Risers (last 30 days - updates weekly)</div>
+          <div id="mkt-risers"></div>
+        </div>
+        <div class="mkt-panel">
+          <div class="mkt-panel-title"><span class="mkt-down">▼</span> Top Fallers (last 30 days - updates weekly)</div>
+          <div id="mkt-fallers"></div>
+        </div>
+      </div>
+      <div class="mkt-panel" style="margin-top:14px">
+        <div class="mkt-panel-title">Most Traded on TradeMind (last 30 days)</div>
+        <div id="mkt-tm-index"><div class="mkt-empty">Loading TradeMind trade data...</div></div>
+      </div>
+      <div class="mkt-panels" style="margin-top:14px">
+        <div class="mkt-panel">
+          <div class="mkt-panel-title"><span class="mkt-up">▲</span> Most Added This Week (all Sleeper leagues)</div>
+          <div id="mkt-adds"><div class="mkt-empty">Loading waiver activity...</div></div>
+        </div>
+        <div class="mkt-panel">
+          <div class="mkt-panel-title"><span class="mkt-down">▼</span> Most Dropped This Week (all Sleeper leagues)</div>
+          <div id="mkt-drops"><div class="mkt-empty">Loading waiver activity...</div></div>
+        </div>
+      </div>
+      <div class="mkt-chart-area">
+        <div class="mkt-search-row" style="position:relative">
+          <input type="text" id="mkt-search" class="tm-input" placeholder="Search any player for their 5-year dynasty value chart..." oninput="mktSearch()" onclick="mktSearch()" style="flex:1">
+          <div id="mkt-search-results" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.35)"></div>
+        </div>
+        <div id="mkt-chart-content"><div class="mkt-empty">Search a player above to see their 5-year dynasty value chart</div></div>
+      </div>
+    </div>
+    </div><!-- end screen-research -->
+
+    <!-- ASK SAGE SCREEN -->
+    <div class="screen" id="screen-sage">
+    <div id="tab-asksage" class="tab-content active">
+      <!-- SAGE AI CHAT (activates when the server has an Anthropic API key).
+           Every visit starts a fresh chat; past conversations live in the sidebar. -->
+      <div class="sage-layout">
+      <aside class="sage-side" id="sage-side" aria-label="Past chats"></aside>
+      <div class="card" id="sage-chat-card" style="margin-bottom:14px;padding-top:26px">
+        <div id="sage-greeting" style="text-align:center;margin:26px 0 30px">
+          <svg width="52" height="46" viewBox="0 0 120 106" fill="none" style="margin-bottom:12px;opacity:.9"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
+          <div style="font-family:var(--font-head);font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--text)">What's the move?</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:6px">The friend everyone texts before hitting Accept.</div>
+          <button class="btn-sm" id="sage-connect-hint" style="display:none;margin-top:12px" onclick="goConnectLeague()">Connect your Sleeper league so Sage sees your roster →</button>
+        </div>
+        <div id="sage-chat-log" class="sage-chat-log"></div>
+        <div class="sage-composer" id="sage-composer">
+          <textarea id="sage-chat-input" rows="2" placeholder="Ask Sage anything about fantasy football..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sageChatSend();}" oninput="sageGrowInput(this)" disabled></textarea>
+          <button id="sage-chat-send" onclick="sageChatSend()" title="Send" disabled>Analyze</button>
+        </div>
+        <div id="sage-quota" style="display:none;text-align:center;margin-top:8px;font-size:12px;color:var(--muted)"></div>
+        <div id="sage-suggestions" style="display:none;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-sm" id="sage-new-chat" style="display:none" onclick="sageNewChat()">New chat</button></div>
+      </div>
+      </div><!-- /sage-layout -->
+    </div>
+
+    <!-- MOCK DRAFT TAB -->
+    <!-- RANK 'EM TAB -->
+    </div><!-- end screen-sage -->
+
+    <!-- MOCK DRAFT SCREEN -->
+    <div class="screen" id="screen-mock">
+    <div id="tab-mockdraft" class="tab-content active">
+      <div class="card">
+        
+        <!-- One thing on screen at a time: pick what kind of draft you are doing -->
+        <div id="md-sections" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn-sm md-sec-btn" data-sec="solo" onclick="mdShowSection('solo')" style="border-color:var(--accent-bright);color:var(--text)">Solo mock</button>
+          <button class="btn-sm md-sec-btn" data-sec="friends" onclick="mdShowSection('friends')">With friends</button>
+          <button class="btn-sm md-sec-btn" data-sec="live" onclick="mdShowSection('live')">Live assist</button>
+          <button class="btn-sm md-sec-btn" data-sec="history" onclick="mdShowSection('history')">History</button>
+        </div>
+        <div id="ld-card" style="display:none;margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(124,92,191,.12) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.3);border-radius:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div>
+              <div style="font-size:14px;font-weight:700">Live Draft Assist <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Drafting for real on Sleeper? TradeMind follows your draft live and tells you who to take, and why.</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="ld-league-sel" class="opp-select" style="width:auto;min-width:150px;font-size:12px" onfocus="ldRenderLeaguePick()" onchange="ldSwitchLeague(this.value)"><option>Pick a league</option></select>
+              <button class="btn-load" style="width:auto;padding:10px 20px" id="ld-connect-btn" onclick="ldConnect()">Connect to my draft</button>
+            </div>
+          </div>
+          <div id="ld-body" style="display:none;margin-top:12px">
+            <div id="ld-status" style="font-size:12px;color:var(--muted2);margin-bottom:10px"></div>
+            <div id="ld-rec" style="display:none;margin-bottom:10px;padding:12px 14px;background:var(--surface);border:1px solid rgba(155,114,232,.35);border-radius:10px"></div>
+            <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px">
+              <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Best available</div><div id="ld-best"></div></div>
+              <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Latest picks</div><div id="ld-feed" style="font-size:11.5px;color:var(--muted2);line-height:1.9"></div></div>
+            </div>
+            <button class="btn-sm" style="margin-top:10px" onclick="ldStop()">Stop following</button>
+          </div>
+        </div>
+        <div id="mp-card" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:2px">Draft with friends <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
+          <!-- STEP 1: one clear choice -->
+          <div id="mp-choose">
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Live against real people. Same draft board as the solo mock below.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:520px">
+              <div onclick="mpCreate()" style="cursor:pointer;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface3);text-align:center">
+                <div style="font-size:13px;font-weight:700">Create a room</div>
+                <div style="font-size:10.5px;color:var(--muted);margin-top:3px">You get a code to share</div>
+              </div>
+              <div onclick="mpShowJoin()" style="cursor:pointer;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface3);text-align:center">
+                <div style="font-size:13px;font-weight:700">Join a room</div>
+                <div style="font-size:10.5px;color:var(--muted);margin-top:3px">Got a code? Enter it here</div>
+              </div>
+            </div>
+            <div id="mp-join-row" style="display:none;margin-top:10px;align-items:center;gap:8px">
+              <input type="text" id="mp-join-code" class="tm-input" style="width:120px;text-transform:uppercase;text-align:center;font-size:18px;font-weight:700;letter-spacing:.3em" maxlength="4" placeholder="CODE">
+              <button class="btn-load" style="width:auto;padding:10px 22px" onclick="mpJoin()">Join</button>
+            </div>
+          </div>
+          <!-- STEP 2: lobby with a big shareable code -->
+          <div id="mp-lobby" style="display:none"></div>
+          <!-- STEP 3: slim bar while drafting; the board itself is the shared one below -->
+          <div id="mp-bar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap"></div>
+        </div>
+        <div id="md-setup">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Mode</div>
+            <select id="md-mode" class="opp-select" style="width:100%" onchange="setLeagueModeManual(this.value)"><option value="redraft">Redraft</option><option value="dynasty">Dynasty</option></select></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Teams</div>
+            <select id="md-teams" class="opp-select" style="width:100%"><option>8</option><option>10</option><option selected>12</option><option>14</option></select></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Your pick</div>
+            <select id="md-slot" class="opp-select" style="width:100%"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Scoring</div>
+            <select id="md-scoring" class="opp-select" style="width:100%"><option value="1" selected>Full PPR</option><option value="0.5">Half PPR</option><option value="0">Standard</option></select></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Format</div>
+            <select id="md-format" class="opp-select" style="width:100%"><option value="1qb" selected>1 QB</option><option value="sf">Superflex</option></select></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Rounds</div>
+            <select id="md-rounds" class="opp-select" style="width:100%"><option>5</option><option selected>8</option><option>12</option><option>15</option></select></div>
+            <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Pick timer</div>
+            <select id="md-clock" class="opp-select" style="width:100%"><option value="0">Off</option><option value="30">30s</option><option value="60" selected>60s</option><option value="90">90s</option></select></div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">How does your league usually draft? <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></div>
+            <textarea id="md-context" class="tm-input" rows="2" style="width:100%;resize:vertical;font-size:13px;line-height:1.5" oninput="mdContextPreview()" placeholder="e.g. RBs fly off the board early, two or three QBs always go in round 2, everyone waits on TE..."></textarea>
+            <div id="md-context-read" style="font-size:11px;color:var(--accent-bright);margin-top:4px;min-height:14px"></div>
+            <div id="md-lg-current" style="display:none;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:12px;color:var(--muted2)">
+              <span>Drafting for <b id="md-lg-name" style="color:var(--text)"></b> <span id="md-lg-fmt" style="color:var(--muted)"></span></span>
+              <span onclick="mdSwitchLeague()" style="color:var(--accent-bright);cursor:pointer;text-decoration:underline">switch league</span>
+            </div>
+            <div id="md-lg-list" style="display:none;margin-top:6px;border:1px solid var(--border);border-radius:10px;max-height:200px;overflow-y:auto;background:var(--surface2)"></div>
+            <label id="md-uselg-row" style="display:none;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted2);cursor:pointer">
+              <input type="checkbox" id="md-uselg" checked onchange="localStorage.setItem('tm_mock_uselg',this.checked?'1':'0')" style="accent-color:var(--accent-bright)">
+              <span>Draft like my league - the room follows your league's scoring and lineup settings</span>
+            </label>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Draft strategy</div>
+          <div id="md-strats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px"></div>
+          <button class="btn-load" style="width:auto;padding:12px 30px" onclick="startMockDraft()">Start mock draft</button>
+        </div>
+        <div id="md-history-wrap" style="display:none"><div id="md-history"></div></div>
+        <div id="md-board" style="display:none">
+          <div id="md-status" style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px"></div>
+          <div id="md-lg-note" style="display:none;font-size:11px;color:var(--accent-bright);margin:-4px 0 10px;line-height:1.5"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Draft board <span style="font-weight:600;text-transform:none;letter-spacing:0">· cards show round.pick</span></div>
+            <button class="btn-sm" id="md-undo-btn" onclick="mdUndo()" title="Take back your last pick (AI picks after it come back too)">Undo my pick</button>
+            <button class="btn-sm md-solo-ctl" onclick="mdRestartDraft()" title="Same settings, fresh board">Restart</button>
+            <button class="btn-sm md-solo-ctl" onclick="mdBackToSetup()" title="Change teams, rounds, timer or strategy">Settings</button>
+            <span id="md-needs" style="display:flex;gap:6px;font-size:10px;font-weight:700"></span>
+            <span style="display:inline-flex;border:1px solid var(--border);border-radius:100px;overflow:hidden;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
+              <button class="md-view-btn" data-view="board" onclick="mdSetView('board')" style="background:var(--accent-bright);border:none;color:#0d0817;padding:5px 11px;cursor:pointer">Board</button>
+              <button class="md-view-btn" data-view="list" onclick="mdSetView('list')" style="background:none;border:none;color:var(--muted2);padding:5px 11px;cursor:pointer;border-left:1px solid var(--border)">List</button>
+            </span>
+            <select id="md-clock-live" class="opp-select" style="width:auto;font-size:11px;padding:5px 9px" onchange="mdSetClockLive(this.value)" title="Pick timer">
+              <option value="0">Timer off</option><option value="30">30s</option><option value="60">60s</option><option value="90">90s</option><option value="120">2 min</option>
+            </select>
+            <div style="display:flex;gap:10px;font-size:10px;color:var(--muted);align-items:center">
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#a78bfa;margin-right:3px"></span>QB</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#4ade80;margin-right:3px"></span>RB</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#fbbf24;margin-right:3px"></span>WR</span>
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#f87171;margin-right:3px"></span>TE</span>
+            </div>
+          </div>
+          <div id="md-draftboard" class="mdb-wrap"></div>
+          <div id="md-queue-wrap" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+            <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">My queue</span>
+            <span id="md-queue" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+          </div>
+          <div id="md-sage" style="display:none;margin:12px 0;padding:14px 16px;background:linear-gradient(135deg,rgba(124,92,191,.14) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.3);border-radius:12px"></div>
+          <div id="md-player-peek" style="display:none;margin:0 0 12px;padding:12px 16px;background:var(--surface2);border:1px solid rgba(79,216,245,.3);border-radius:12px"></div>
+          <div class="md-cols">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 6px;flex-wrap:wrap">
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Available players</div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <div id="md-pos-filter" style="display:flex;gap:4px">
+                    <button class="md-pos-chip active" data-pos="" onclick="mdSetPosFilter(this)">All</button>
+                    <button class="md-pos-chip" data-pos="QB" onclick="mdSetPosFilter(this)">QB</button>
+                    <button class="md-pos-chip" data-pos="RB" onclick="mdSetPosFilter(this)">RB</button>
+                    <button class="md-pos-chip" data-pos="WR" onclick="mdSetPosFilter(this)">WR</button>
+                    <button class="md-pos-chip" data-pos="TE" onclick="mdSetPosFilter(this)">TE</button>
+                    <button class="md-pos-chip" data-pos="K" onclick="mdSetPosFilter(this)">K</button>
+                    <button class="md-pos-chip" data-pos="DEF" onclick="mdSetPosFilter(this)">DEF</button>
+                  </div>
+                  <select id="md-sort" class="opp-select" style="width:auto;font-size:11px;padding:6px 10px" onchange="mdFilterChoices()">
+                    <option value="bpa" selected>Best available</option>
+                    <option value="fit">Fits my roster</option>
+                  </select>
+                  <input type="text" id="md-avail-search" class="tm-input" style="flex:0 1 180px;padding:7px 12px;font-size:12px" placeholder="Search..." oninput="mdFilterChoices()">
+                </div>
+              </div>
+              <div id="md-choices" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:14px;max-height:52vh;overflow-y:auto"></div>
+            </div>
+          </div>
+          <div id="md-foot" style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn-sm" onclick="mdRestartDraft()">Restart draft</button>
+            <button class="btn-sm" onclick="mdBackToSetup()">Back to setup</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- end screen-mock -->
+
+    <!-- LEARN SCREEN -->
+    <div class="screen" id="screen-learn">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab(this,'tab-dynasty101','screen-learn')">Dynasty 101</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-nerdstats','screen-learn')">The Nerd Stats</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-archetypes','screen-learn')">Manager Archetypes</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-about','screen-learn')">About</div>
+      </div>
+
+
+    <!-- DYNASTY 101 TAB -->
+    <div id="tab-dynasty101" class="tab-content active">
+      <div class="card">
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px">Dynasty 101</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1.5rem">Everything a beginner needs to know about dynasty fantasy football</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-bright);margin-bottom:12px">Key Terms</div>
+
+          <div class="d101-section">
+            <div class="d101-term">Dynasty</div>
+            <div class="d101-def">A league format where you keep your players year after year - unlike redraft where everyone picks fresh every season. Your roster is something you build year over year.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">KTC / FantasyCalc Value</div>
+            <div class="d101-def">KeepTradeCut (KTC) and FantasyCalc are crowd-sourced player value databases. Think of them as the "price guide" for what players are worth in trades. Higher number = more valuable.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Startup Draft</div>
+            <div class="d101-def">The initial draft where all players are available and everyone builds their roster from scratch. Usually a snake or auction format. This is the foundation of your dynasty.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Rookie Draft</div>
+            <div class="d101-def">After the NFL Draft each year, dynasty leagues hold a rookie draft to add incoming NFL rookies to rosters. Usually 3–5 rounds. First-round picks are the most valuable.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">SuperFlex</div>
+            <div class="d101-def">A roster spot that can be filled by any position including QB. In SuperFlex leagues, QBs become far more valuable because you can start two of them.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">PPR</div>
+            <div class="d101-def">Points Per Reception - a scoring setting that gives players a point for each catch. Full PPR = 1 point/catch. Half PPR = 0.5 points/catch. This boosts WRs and pass-catching RBs.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Trade Deadline</div>
+            <div class="d101-def">The cutoff date after which no trades can be made for that season. Before the deadline, managers scramble to either buy help for a playoff run or sell veterans for future picks.</div>
+        </div>
+      </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-bright);margin-bottom:12px">Strategy Basics</div>
+
+          <div class="d101-section">
+            <div class="d101-term">Contender vs. Rebuilder</div>
+            <div class="d101-def">A <strong style="color:var(--green)">contender</strong> has a veteran, proven core and is competing to win now. A <strong style="color:var(--accent-bright)">rebuilder</strong> is trading veterans for youth and picks, giving up on the near-term to build a future dynasty.</div>
+          </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Sell High</div>
+            <div class="d101-def">Trading a player when their perceived value peaks - often after a hot stretch or career year. The goal is to get more back in trade than they'll realistically deliver going forward.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Buy Low</div>
+            <div class="d101-def">Targeting players whose value has dipped due to injury, poor usage, or bad recent performance - but who you believe will bounce back. You get them cheaper than their true talent level.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Age Curve</div>
+            <div class="d101-def">Different positions peak and decline at different ages. RBs peak around 22–25 and fall off fast. WRs peak 24–28. QBs can last into their mid-30s. Always think about where a player is on their career arc.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Pick Capital</div>
+            <div class="d101-def">The number and quality of future draft picks you own. Strong pick capital = flexibility and upside. Rebuilders accumulate picks; contenders spend them on proven veterans.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Devy</div>
+            <div class="d101-def">Short for "developmental" - some leagues allow managers to draft college players before they enter the NFL. High risk, high reward. Not available in all leagues.</div>
+        </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">The Golden Rule</div>
+            <div class="d101-def">Never trade young talent for aging veterans unless you're competing for a championship <em>right now</em>. Youth and picks are dynasty currency - spend them wisely.</div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+
+    </div>
+
+    <div id="tab-nerdstats" class="tab-content">
+      <div class="card">
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">The Nerd Stats</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem">What the advanced metrics mean - and why they win leagues</div>
+          <div class="d101-section">
+            <div class="d101-term">Target Share</div>
+            <div class="d101-def">The % of a team's passes thrown at one player. <strong style="color:var(--text)">Why it matters:</strong> volume is the most stable predictor of fantasy points year over year - talent gets you targets, targets get you points. A WR at 25%+ target share is an alpha regardless of last week's box score. Use it to buy players whose role is elite even when their recent scoring isn't.</div>
+          </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">YPRR (Yards Per Route Run)</div>
+            <div class="d101-def">Receiving yards divided by routes run - efficiency independent of play volume. <strong style="color:var(--text)">Why it matters:</strong> it strips away offense speed and game script. A YPRR above 2.0 is genuinely good; above 2.5 is elite. It's the sharpest tool for spotting a talented receiver stuck in a bad offense - the exact player who breaks out when the situation changes.</div>
+          </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Route Participation</div>
+            <div class="d101-def">The % of team dropbacks where a player ran a route. <strong style="color:var(--text)">Why it matters:</strong> you can't catch passes from the bench. High YPRR on LOW route participation is a trap - a specialist, not a starter. Elite fantasy WRs live at 85%+. Check this before buying any "efficiency breakout."</div>
+          </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Air Yards Share</div>
+            <div class="d101-def">The share of a team's total downfield passing distance thrown at a player. <strong style="color:var(--text)">Why it matters:</strong> air yards are opportunity for BIG plays. A player with high air yards but low production is often unlucky, not bad - regression works in your favor. Buy high air yards + low TDs; sell the reverse.</div>
+          </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Snap Share</div>
+            <div class="d101-def">The % of offensive plays a player is on the field for. <strong style="color:var(--text)">Why it matters:</strong> it's the earliest signal of a role change - snaps rise BEFORE production does. A rookie RB going from 40% to 65% snaps is about to get priced up; beat the market to it.</div>
+          </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Positional Scarcity</div>
+            <div class="d101-def">Why a TE ranked #3 at his position can be worth more than the WR ranked #20. <strong style="color:var(--text)">Why it matters:</strong> you win by outscoring opponents AT EACH LINEUP SLOT. The drop-off from elite to average is massive at TE and QB (in SuperFlex), tiny at WR. Pay up for cliffs, not for depth.</div>
+          </div>
+          <div class="d101-divider"></div>
+          <div class="d101-section">
+            <div class="d101-term">Buying the Dip / Selling the Peak</div>
+            <div class="d101-def">Player values overreact to news - injuries crater prices, hot streaks inflate them. <strong style="color:var(--text)">Why it matters:</strong> a 24-year-old alpha coming off an ACL tear is the single best buy in dynasty, and a 30-year-old RB coming off a career year is the single best sell. The market always overweights the last 4 weeks.</div>
+          </div>
+        </div>
+
+    </div>
+
+    <div id="tab-archetypes" class="tab-content">
+      <div class="card">
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">The 9 Manager Archetypes</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem">How Sage reads every manager in your league</div>
+          <div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:12px">When you analyze a trade, Sage classifies your opponent by two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience + total market value) and their <strong style="color:var(--text)">actual trade history</strong> in your league. Here's each type and how to trade with them:</div>
+          <div id="archetype-guide"></div>
+        </div>
+
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:var(--radius)">
+          <div style="font-size:12px;font-weight:700;color:var(--accent-bright);margin-bottom:4px">Quick tip for beginners</div>
+          <div style="font-size:13px;color:var(--muted2);line-height:1.6">The single biggest mistake new dynasty managers make is trading young wide receivers and rookie picks too cheaply to win now. Patience is the most valuable skill in dynasty. When in doubt, don't trade - the market always comes back around.</div>
+        </div>
+    </div>
+    <div id="tab-about" class="tab-content">
+      <div class="card" style="max-width:680px">
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px">Why TradeMind exists</div>
+        <div style="font-size:14px;color:var(--muted2);line-height:1.85">
+          <p style="margin-bottom:14px">I've played fantasy football for years, in dynasty leagues and redraft leagues, with friends who take it as seriously as I do. And every time a trade came up, I did the same dance you probably do: open one site for values, another for news, a group chat for opinions, and then still make the call half on gut feeling.</p>
+          <p style="margin-bottom:14px">The tools out there show you a number. That's it. Two players, two values, a green check or a red X. But nobody trades in a vacuum. The number doesn't know that their RB1 just went down, that your league starts three receivers, that the manager you're dealing with panics after two losses, or that you needed to make this move two weeks ago. The number doesn't help you actually get the deal done either.</p>
+          <p style="margin-bottom:14px">That gap is why I built TradeMind. Sage doesn't just weigh values. He reads the situation: who left, who arrived, whose window is open, who you're negotiating with and what makes them say yes. He tells you if the trade is right, when to send it, and how to pitch it. The stuff a sharp friend would tell you, if your sharp friend never slept and watched every depth chart in the league.</p>
+          <p style="margin-bottom:14px">One promise matters more to me than any feature: accuracy. I would rather show you nothing than show you something wrong, because I know real people make real decisions with this. If you ever catch a mistake, tell me. It gets fixed.</p>
+          <p style="margin-bottom:4px">Make the move you know is right. Life is good.</p>
+          <p style="color:var(--muted);font-size:12.5px;margin-top:18px">Alan, founder of TradeMind</p>
+        </div>
+      </div>
+    </div>
+    </div><!-- end screen-learn -->
+
+    <!-- NEWS SCREEN -->
+    <div class="screen" id="screen-news">
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">Fantasy Wire</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Analyst takes and the day's stories, fantasy first.</div>
+        <div style="font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Analyst Corner <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:none">· scrolls on its own, grab it to browse</span></div>
+        <div id="analyst-corner" class="auto-rail" style="margin-bottom:20px"></div>
+        <div style="font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Headlines <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:none">· scrolls on its own, grab it to browse</span></div>
+        <div id="news-grid" class="auto-rail"><div class="empty-state">Loading headlines...</div></div>
+      </div>
+    </div>
+
+    <!-- COMMUNITY SCREEN -->
+    <div class="screen" id="screen-community">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:8px">
+              Community
+              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(167,139,250,.15);color:var(--accent-bright);text-transform:uppercase;letter-spacing:.06em">LIVE</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted)">Real trades, real takes. Post yours and let the league vote.</div>
+          </div>
+          <button class="btn-sm" id="comm-refresh-btn" onclick="refreshActiveCommunityTab()">Refresh</button>
+        </div>
+        <!-- Inner tabs -->
+        <div class="inner-tab-bar" id="community-tab-bar" style="margin-bottom:14px">
+          <div class="inner-tab active" id="ctab-trades" onclick="switchCommunityTab('trades')">Trade Feed</div>
+          <div class="inner-tab" id="ctab-forum" onclick="switchCommunityTab('forum')">Hot Takes</div>
+          <div class="inner-tab" id="ctab-block" onclick="switchCommunityTab('block')">Trade Block</div>
+
+        </div>
+        <!-- Trade Feed panel -->
+        <div id="community-tab-trades">
+          <div id="community-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading community trades...</div></div>
+          <div style="text-align:center;margin-top:8px"><button id="load-more-btn" class="btn-sm" onclick="loadMoreFeed()" style="display:none">Load more</button></div>
+        </div>
+        <!-- Trade Block panel -->
+        <div id="community-tab-block" style="display:none">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px">
+            <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Put a player on the block</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <div class="ac-wrap" style="flex:1;min-width:170px;position:relative"><input type="text" id="block-player" class="tm-input" style="width:100%" placeholder="Player name..." autocomplete="off" oninput="blockPlayerSearch()"><div class="ac-dropdown" id="block-player-dd"></div></div>
+              <select id="block-type" class="opp-select" style="width:auto"><option value="shopping">Shopping him</option><option value="wanted">Want him</option></select>
+              <input type="text" id="block-note" class="tm-input" style="flex:1.4;min-width:160px" placeholder="Note (optional) - what are you looking for?" maxlength="180">
+              <button class="btn-load" style="width:auto;padding:10px 20px" onclick="postBlockListing()">List it</button>
+            </div>
+            <div id="block-status" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:10px" id="block-filters">
+            <button class="md-pos-chip active" data-f="" onclick="setBlockFilter(this)">All</button>
+            <button class="md-pos-chip" data-f="shopping" onclick="setBlockFilter(this)">Shopping</button>
+            <button class="md-pos-chip" data-f="wanted" onclick="setBlockFilter(this)">Wanted</button>
+          </div>
+          <div id="block-list"><div class="empty-state">Loading the block...</div></div>
+        </div>
+        <!-- Hot Takes (Forum) panel -->
+        
+        <div id="community-tab-forum" style="display:none">
+          <div id="forum-post-compose" style="margin-bottom:14px">
+            <div id="forum-compose-inner">
+              <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0">Sign in with your Sleeper username to drop a hot take.</div>
+            </div>
+          </div>
+          <div id="forum-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading hot takes...</div></div>
+          <div style="text-align:center;margin-top:8px"><button id="forum-load-more-btn" class="btn-sm" onclick="loadMoreForumFeed()" style="display:none">Load more</button></div>
+        </div>
+      </div>
+    </div><!-- end screen-community -->
+
+</section>
+
+<!-- HOW IT WORKS -->
+<!-- StoryBrand narrative (from the brand blueprints): problem -> guide -> plan
+     -> transformation -> one final CTA. Lives below the product so returning
+     users hit the tool instantly and first-timers scroll into the story. -->
+<div class="wrap" id="home-story" style="padding-top:40px">
+  <!-- Compact two-card pitch: everything the old villain/guide/plan/CTA stack
+       said, in one screen. Left = who Sage is; right = why to trust him. -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;max-width:920px;margin:0 auto">
+
+    <!-- MEET SAGE -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:34px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">
+        <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.35),transparent 68%)"></div>
+        <div style="position:absolute;inset:14px;border-radius:50%;border:1px solid rgba(167,139,250,.22)"></div>
+        <svg width="80" height="72" viewBox="0 0 120 106" fill="none" style="position:relative"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
+      </div>
+      <h2 style="font-family:var(--font-head);font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;margin:0">Meet <span class="hl">Sage.</span></h2>
+      <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.14em;margin-top:12px;line-height:1.7">Your trusted fantasy<br>football advisor</div>
+      <div style="display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--accent-bright)"><span style="height:1px;width:52px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.5))"></span>&#10022;<span style="height:1px;width:52px;background:linear-gradient(90deg,rgba(167,139,250,.5),transparent)"></span></div>
+      <div style="font-size:15px;color:var(--muted2);line-height:1.7">Always in your corner<br>before every trade.</div>
+    </div>
+
+    <!-- WHY MANAGERS TRUST SAGE -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 26px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.16em;text-align:center">Why managers</div>
+      <h2 style="font-family:var(--font-head);font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.02em;text-align:center;margin:2px 0 22px">trust <span class="hl">Sage</span></h2>
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bright)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.3"/><path d="M15.5 14.5c2.8.2 5 2 5 5"/></svg>
+        <div><div style="display:flex;align-items:center;gap:7px;font-size:16px;font-weight:700;color:var(--text)"><span style="flex:none;width:18px;height:18px;border-radius:50%;background:var(--accent-bright);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">&#10003;</span>Knows your team.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Reads your entire roster, not just the players in the trade.</div></div>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bright)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M10 13v3M14 13v3M8 20h8M9 20a3 3 0 0 1 6 0"/></svg>
+        <div><div style="display:flex;align-items:center;gap:7px;font-size:16px;font-weight:700;color:var(--text)"><span style="flex:none;width:18px;height:18px;border-radius:50%;background:var(--accent-bright);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">&#10003;</span>Understands your league.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Scoring, settings, roster size, dynasty or redraft.</div></div>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bright)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1 5 3 3 0 0 0 2 4 2.5 2.5 0 0 0 5 .3V4.5A2.5 2.5 0 0 0 9 4z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1 5 3 3 0 0 1-2 4 2.5 2.5 0 0 1-5 .3"/></svg>
+        <div><div style="display:flex;align-items:center;gap:7px;font-size:16px;font-weight:700;color:var(--text)"><span style="flex:none;width:18px;height:18px;border-radius:50%;background:var(--accent-bright);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">&#10003;</span>Never gets emotional.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">No hype. No bias. Just logic.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- How it works: the old 4-step plan, compressed to one thin row -->
+  <div style="max-width:920px;margin:22px auto 0">
+    <div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.16em;text-align:center;margin-bottom:12px">How it works</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+        <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent-dim);color:var(--accent-bright);font-family:var(--font-head);font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center">1</span>
+        <div><div style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2">Drop your trade</div><div style="font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px">Tap players and picks</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+        <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent-dim);color:var(--accent-bright);font-family:var(--font-head);font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center">2</span>
+        <div><div style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2">Answer 3 questions</div><div style="font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px">Your situation, not just names</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+        <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent-dim);color:var(--accent-bright);font-family:var(--font-head);font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center">3</span>
+        <div><div style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2">Sage analyzes it all</div><div style="font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px">Roster, league, values, timing</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
+        <span style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent-dim);color:var(--accent-bright);font-family:var(--font-head);font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center">4</span>
+        <div><div style="font-size:12.5px;font-weight:700;color:var(--text);line-height:1.2">Know what to do</div><div style="font-size:11px;color:var(--muted);line-height:1.35;margin-top:2px">One clear answer</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The one action, at the persuasion peak -->
+  <div style="text-align:center;margin:26px auto 44px">
+    <a href="#" class="btn-primary" style="display:inline-block" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer');setTimeout(function(){scrollToEl(document.getElementById('analyzer'))},80)">Analyze My Trade &rarr;</a>
+    <div style="font-size:12px;color:var(--muted);margin-top:14px">Life is good when you know the move.</div>
+  </div>
+</div>
+
+<!-- Home news rail: secondary content, lives below the product -->
+<div class="wrap" id="home-news-wrap" style="display:none;padding-top:8px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)">The Latest</div>
+    <span style="font-size:11px;color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="switchScreen('news');loadNewsGrid();loadAnalystCorner()">All stories →</span>
+  </div>
+  <div id="home-news-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+  <div id="home-analyst-wrap" style="display:none">
+    <div style="font-family:var(--font-head);font-size:13px;font-weight:700;color:var(--muted2);margin:16px 0 2px">From the analysts</div>
+    <div id="home-analyst-row"></div>
+  </div>
+</div>
+
+<footer>
+  <div id="how-mini" style="display:none;margin-bottom:28px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);max-width:560px;margin-left:auto;margin-right:auto;margin-bottom:28px">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;text-align:center">How TradeMind works</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:5px">Connect Sleeper</span>
+      <span style="color:var(--border2);font-size:14px">→</span>
+      <span style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:5px"><span style="font-size:14px">⇄</span>Enter the trade</span>
+      <span style="color:var(--border2);font-size:14px">→</span>
+      <span style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:5px">Get the verdict</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="22" height="22" fill="none">
+      <defs><linearGradient id="ftgrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#7c5cbf"/></linearGradient></defs>
+      <rect width="32" height="32" rx="8" fill="url(#ftgrad)" opacity=".18"/>
+      <polyline points="5,22 11,14 16,18 21,10 27,14" stroke="url(#ftgrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="27" cy="14" r="2.5" fill="#a78bfa"/>
+    </svg>
+    <div class="footer-logo" style="margin-bottom:0"><span style="font-weight:400;color:var(--muted2)">Trade</span><span>Mind</span></div>
+  </div>
+  <div class="footer-sub">Smart trade analysis for dynasty and redraft managers. Know the move before you make it.</div>
+  <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
+    <a href="#analyzer" class="nav-link" onclick="document.getElementById('analyzer').scrollIntoView({behavior:'smooth'});return false">Trade Analyzer</a>
+    <span class="nav-link" onclick="switchScreen('community');loadCommunityFeed();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">Community</span>
+    <a href="/privacy" class="nav-link" style="pointer-events:auto">Privacy Policy</a>
+    <a href="/terms" class="nav-link" style="pointer-events:auto">Terms of Use</a>
+  </div>
+  <div style="margin-top:16px;font-size:11px;color:var(--muted)">© 2026 TradeMind · Not affiliated with Sleeper, KeepTradeCut, or FantasyCalc · Fantasy data for entertainment purposes</div>
+</footer>
+
+<div class="modal-overlay" id="share-modal">
+  <div class="modal">
+    <div class="modal-title">Share this trade</div>
+    <div style="font-size:13px;color:var(--muted2);margin-bottom:.875rem">Anyone with this link can view the trade analysis.</div>
+    <div class="modal-url" id="share-url" onclick="copyShareUrl()">-</div>
+    <div class="modal-copy-confirm" id="copy-confirm">Copied to clipboard!</div>
+    <button class="btn-sm" onclick="closeShareModal()">Close</button>
+  </div>
+</div>
+
+<script src="/app.js?v=2026072236"></script>
+
+<!-- PLAYER CARD MODAL -->
+<div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">
+  <div class="pm-card">
+    <div class="pm-header">
+      <div class="pm-photo-wrap">
+        <img id="pm-photo" class="pm-photo" src="data:," alt="" onerror="this.style.visibility='hidden'">
+        <img id="pm-team-logo" class="pm-team-logo" src="data:," alt="" onerror="this.style.display='none'">
+      </div>
+      <div class="pm-info">
+        <div id="pm-name" class="pm-name"></div>
+        <div class="pm-meta">
+          <span id="pm-pos-badge" class="pm-pos-badge"></span>
+          <span id="pm-team-name" style="color:var(--muted2)"></span>
+          <span id="pm-number" style="color:var(--muted)"></span>
+        </div>
+        <div id="pm-college" style="font-size:11px;color:var(--muted);margin-top:3px"></div>
+      </div>
+      <button class="pm-close" onclick="closePlayerCard()">✕</button>
+    </div>
+    <div class="pm-body">
+      <div id="pm-injury" class="pm-injury" style="display:none"></div>
+      <div class="pm-ktc-bar">
+        <div>
+          <div id="pm-ktc-val" class="pm-ktc-val">-</div>
+          <div class="pm-ktc-label">Market Read (FantasyCalc)</div>
+        </div>
+        <span id="pm-ktc-tier" class="pm-ktc-tier"></span>
+      </div>
+      <div class="pm-grid" id="pm-stats-grid"></div>
+      <div id="pm-outlook" style="display:none;font-size:12px;color:var(--muted2);line-height:1.6;padding:.75rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border);margin-bottom:.75rem"></div>
+      <div id="pm-trades" style="margin-bottom:.25rem"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Field error beacon: report uncaught errors so we can SEE breakage in the
+// wild (Vercel logs) instead of hearing about it from users. Throttled and
+// deduped so a loop can never spam the endpoint.
+(function(){
+  var sent={}, count=0;
+  function beacon(msg,src,line){
+    try{
+      if(count>=10)return; // hard cap per page load
+      var k=(msg||'')+'|'+(line||'');
+      if(sent[k])return; sent[k]=1; count++;
+      navigator.sendBeacon&&navigator.sendBeacon('/api/log/error',
+        new Blob([JSON.stringify({msg:msg,src:src,line:line,ua:navigator.userAgent})],{type:'application/json'}));
+    }catch(_){}
+  }
+  window.addEventListener('error',function(e){beacon(e.message,e.filename,e.lineno);});
+  window.addEventListener('unhandledrejection',function(e){beacon('unhandled promise: '+((e.reason&&e.reason.message)||e.reason),'',0);});
+})();
+</script>
+</body>
+</html>

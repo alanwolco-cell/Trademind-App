@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeMind - Dynasty Trade Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f13;
+  --surface:#1a1a2e;
+  --surface2:#22223b;
+  --surface3:#2d2d4a;
+  --border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.14);
+  --text:#f0f0ff;
+  --muted:#7c7c9e;
+  --muted2:#a8a8c8;
+  --accent:#7c5cbf;
+  --accent-bright:#9b72e8;
+  --accent-dim:rgba(124,92,191,0.15);
+  --green:#22c55e;
+  --green-dim:rgba(34,197,94,0.12);
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,0.12);
+  --yellow:#f59e0b;
+  --yellow-dim:rgba(245,158,11,0.12);
+  --font-head:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --radius:8px;
+  --radius-lg:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;font-size:15px;line-height:1.6}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(15,15,19,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;padding:0 1.5rem;gap:2rem}
+.nav-logo{font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.nav-logo span{color:var(--accent-bright)}
+.nav-links{display:flex;gap:1.5rem;margin-left:auto}
+.nav-link{font-size:13px;color:var(--muted2);cursor:pointer;transition:color .15s;text-decoration:none}
+.nav-link:hover{color:var(--text)}
+
+/* HERO */
+.hero{padding:100px 1.5rem 60px;max-width:1100px;margin:0 auto}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--accent-dim);border:1px solid rgba(124,92,191,0.3);border-radius:100px;padding:4px 14px;font-size:12px;color:var(--accent-bright);font-weight:500;margin-bottom:1.5rem}
+.hero-badge-dot{width:6px;height:6px;background:var(--accent-bright);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+h1{font-family:var(--font-head);font-size:clamp(40px,6vw,72px);font-weight:700;line-height:1.05;letter-spacing:-.03em;color:var(--text);margin-bottom:1rem}
+h1 .hl{color:var(--accent-bright)}
+.hero-sub{font-size:clamp(15px,1.8vw,18px);color:var(--muted2);max-width:580px;line-height:1.7;margin-bottom:2rem;font-weight:400}
+.hero-sub strong{color:var(--text);font-weight:500}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:3rem}
+.btn-primary{background:var(--accent-bright);color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border:none;border-radius:var(--radius);cursor:pointer;transition:all .15s;text-decoration:none;display:inline-block;letter-spacing:-.01em}
+.btn-primary:hover{background:#8a5fd4;transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--muted2);font-size:14px;font-weight:500;padding:12px 24px;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;transition:all .15s;text-decoration:none;display:inline-block}
+.btn-outline:hover{color:var(--text);border-color:rgba(255,255,255,.3)}
+
+/* STATS */
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem}
+.stat-num{font-family:var(--font-head);font-size:36px;font-weight:700;color:var(--accent-bright);line-height:1;margin-bottom:4px}
+.stat-label{font-size:12px;color:var(--muted);font-weight:400}
+
+/* SECTION */
+.section{padding:60px 0}
+.wrap{max-width:1100px;margin:0 auto;padding:0 1.5rem}
+.section-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:.5rem}
+.section-title{font-family:var(--font-head);font-size:clamp(24px,3vw,36px);font-weight:700;letter-spacing:-.02em;color:var(--text);margin-bottom:1rem}
+.section-sub{font-size:15px;color:var(--muted2);max-width:520px;line-height:1.7}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem}
+.card+.card{margin-top:12px}
+
+/* TICKER */
+.ticker-wrap{overflow:hidden;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:0 0 60px}
+.ticker{display:flex;gap:48px;white-space:nowrap;animation:ticker 28s linear infinite}
+.ticker-item{font-size:12px;color:var(--muted);letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.ticker-item .dot{width:4px;height:4px;background:var(--accent-bright);border-radius:50%;flex-shrink:0}
+.ticker-item span{color:var(--accent-bright)}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ANALYZER LAYOUT */
+.analyzer-grid{display:grid;grid-template-columns:1fr;gap:16px;}
+
+/* LOGIN */
+.sleeper-connect{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
+.sleeper-icon{width:36px;height:36px;background:#5865f2;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:700;color:#fff;font-family:var(--font-head)}
+.connect-title{font-size:15px;font-weight:600;color:var(--text)}
+.connect-sub{font-size:12px;color:var(--muted)}
+.input-group{display:flex;gap:8px}
+.tm-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--font-body);font-size:14px;padding:10px 14px;outline:none;transition:border-color .15s}
+.tm-input:focus{border-color:var(--accent-bright)}
+.tm-input::placeholder{color:var(--muted)}
+.btn-load{background:var(--accent-bright);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;padding:0 20px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.btn-load:hover{background:#8a5fd4}
+.btn-load:disabled{opacity:.5;cursor:not-allowed}
+.status-msg{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px;line-height:1.5}
+.hint-row{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+
+/* LEAGUE CARDS */
+.league-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.league-card:hover{border-color:var(--accent-bright);background:var(--accent-dim)}
+.league-card-name{font-size:14px;font-weight:600;color:var(--text)}
+.league-card-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.league-arrow{color:var(--accent-bright);font-size:16px;font-weight:700}
+
+/* TRADE BUILDER */
+.trade-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+.trade-header-info{font-size:13px;font-weight:600;color:var(--text)}
+.trade-header-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.btn-sm{background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:11px;font-weight:500;padding:4px 10px;cursor:pointer;transition:all .15s}
+.btn-sm:hover{color:var(--text);border-color:var(--muted)}
+
+.trade-sides{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:start;margin-bottom:1.25rem}
+.trade-col-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;display:flex;align-items:center;gap:6px}
+.you-dot{width:8px;height:8px;background:var(--green);border-radius:50%}
+.them-dot{width:8px;height:8px;background:var(--red);border-radius:50%}
+.trade-divider{display:flex;flex-direction:column;align-items:center;padding:2rem .75rem 0;color:var(--muted);font-size:12px;font-weight:600;gap:6px}
+.trade-divider-line{width:1px;flex:1;background:var(--border);min-height:32px}
+
+.player-row{display:flex;gap:6px;margin-bottom:6px}
+.pos-tag{font-size:10px;font-weight:700;padding:0 7px;border-radius:4px;display:flex;align-items:center;min-width:36px;justify-content:center;flex-shrink:0;border:1px solid var(--border)}
+.pos-tag.QB{background:rgba(124,92,191,0.15);color:#a78bfa;border-color:rgba(167,139,250,0.3)}
+.pos-tag.RB{background:rgba(34,197,94,0.12);color:#4ade80;border-color:rgba(74,222,128,0.3)}
+.pos-tag.WR{background:rgba(245,158,11,0.12);color:#fbbf24;border-color:rgba(251,191,36,0.3)}
+.pos-tag.TE{background:rgba(239,68,68,0.12);color:#f87171;border-color:rgba(248,113,113,0.3)}
+.add-btn{width:100%;background:transparent;border:1px dashed var(--border);border-radius:var(--radius);color:var(--muted);font-size:12px;font-weight:500;padding:8px;cursor:pointer;transition:all .15s;margin-top:2px}
+.add-btn:hover{border-color:var(--border2);color:var(--text)}
+
+.opp-select-wrap{margin-bottom:.75rem}
+.field-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.opp-select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;outline:none}
+
+/* AUTOCOMPLETE */
+.ac-wrap{position:relative;flex:1}
+.ac-dropdown{position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:9999;background:var(--surface2);border:1px solid var(--accent-bright);border-radius:var(--radius);max-height:220px;overflow-y:auto;display:none;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.ac-dropdown.open{display:block}
+.ac-item{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;transition:background .1s}
+.ac-item:hover{background:var(--surface3)}
+.ac-pos{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.ac-pos.QB{background:rgba(124,92,191,0.2);color:#a78bfa}
+.ac-pos.RB{background:rgba(34,197,94,0.15);color:#4ade80}
+.ac-pos.WR{background:rgba(245,158,11,0.15);color:#fbbf24}
+.ac-pos.TE{background:rgba(239,68,68,0.12);color:#f87171}
+.ac-team{font-size:11px;color:var(--muted);margin-left:auto}
+.ac-ktc{font-size:11px;font-weight:600;color:var(--accent-bright);margin-left:4px}
+.ac-thumb{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface3);flex-shrink:0;border:1px solid var(--border)}
+.ac-thumb-placeholder{width:28px;height:28px;border-radius:50%;background:var(--surface3);flex-shrink:0;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--muted)}
+.player-row-filled{display:flex;align-items:center;gap:8px;padding:6px 0}
+.player-thumb-sm{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--surface2);border:1px solid var(--border);flex-shrink:0}
+
+/* PROFILER */
+.profiler-section{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)}
+.profiler-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.profiler-sub{font-size:12px;color:var(--muted);margin-bottom:1rem;line-height:1.5}
+.progress-dots{display:flex;gap:6px;margin-bottom:1.25rem}
+.pdot{width:24px;height:3px;background:var(--border2);border-radius:2px;transition:background .3s}
+.pdot.done{background:var(--accent-bright)}
+.pdot.active{background:rgba(155,114,232,.5)}
+.q-step{display:none;animation:qslide .25s ease}
+.q-step.active{display:block}
+@keyframes qslide{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:translateX(0)}}
+.q-text{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.4}
+.q-hint{font-size:12px;color:var(--muted);margin-bottom:.875rem;line-height:1.5}
+.q-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.q-opt{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;cursor:pointer;transition:all .15s;display:flex;align-items:flex-start;gap:8px;text-align:left}
+.q-opt:hover{border-color:var(--border2);background:var(--surface3)}
+.q-opt.sel{border-color:var(--accent-bright);background:var(--accent-dim)}
+.q-opt-key{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface3);border:1px solid var(--border);border-radius:4px;padding:1px 6px;flex-shrink:0;transition:all .15s;margin-top:1px}
+.q-opt.sel .q-opt-key{background:var(--accent-bright);color:#fff;border-color:var(--accent-bright)}
+.q-opt-text{font-size:12px;color:var(--muted2);line-height:1.45;transition:color .15s}
+.q-opt.sel .q-opt-text{color:var(--text)}
+.q-nav{display:flex;justify-content:space-between;align-items:center;margin-top:.875rem}
+.q-back{background:transparent;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px 0;transition:color .15s}
+.q-back:hover{color:var(--text)}
+.q-back:disabled{opacity:0;pointer-events:none}
+.q-counter{font-size:11px;color:var(--muted)}
+
+/* PROFILE BADGE */
+.profile-badge{display:none;margin-top:1rem;padding:12px 14px;background:var(--accent-dim);border:1px solid rgba(155,114,232,.35);border-radius:var(--radius);animation:qslide .3s ease}
+.profile-badge.show{display:flex;gap:12px;align-items:center}
+.pb-icon{font-size:28px;flex-shrink:0}
+.pb-name{font-size:13px;font-weight:700;color:var(--accent-bright);margin-bottom:2px}
+.pb-desc{font-size:12px;color:var(--muted2);line-height:1.5}
+
+/* YOUR VERDICT */
+.your-section{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)}
+.your-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.your-sub{font-size:12px;color:var(--muted);margin-bottom:1rem;line-height:1.5}
+.your-badge{display:none;margin-top:1rem;padding:12px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);border-radius:var(--radius);animation:qslide .3s ease}
+.your-badge.show{display:flex;gap:12px;align-items:center}
+.yb-verdict{font-size:13px;font-weight:700;margin-bottom:2px}
+.yb-desc{font-size:12px;color:var(--muted2);line-height:1.5}
+.verdict-go{color:var(--green)}
+.verdict-stop{color:var(--red)}
+.verdict-warn{color:var(--yellow)}
+
+/* ANALYZE BTN */
+.analyze-btn{width:100%;margin-top:1.25rem;background:linear-gradient(135deg,#7c5cbf,#9b72e8);color:#fff;font-family:var(--font-head);font-size:16px;font-weight:700;padding:15px;border:none;border-radius:var(--radius);cursor:pointer;transition:all .15s;letter-spacing:-.01em}
+.analyze-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,92,191,.35)}
+
+/* RESULT */
+.result-panel{display:none;margin-top:16px;animation:fadeUp .35s ease}
+.result-panel.visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.verdict-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:12px}
+.verdict-top{display:flex;gap:1.5rem;align-items:flex-start;margin-bottom:1.25rem}
+.ring-wrap{flex-shrink:0;text-align:center}
+.ring-container{width:100px;height:100px;position:relative;margin:0 auto 6px}
+.ring-container svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--surface2);stroke-width:8}
+.ring-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)}
+.ring-label-pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-54%);font-family:var(--font-head);font-size:26px;font-weight:700;line-height:1}
+.ring-label-sub{position:absolute;top:50%;left:50%;transform:translate(-50%,14px);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.ring-meta{font-size:11px;color:var(--muted);text-align:center}
+.verdict-right{flex:1}
+.verdict-headline{font-family:var(--font-head);font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-bottom:.5rem}
+.verdict-body{font-size:13px;color:var(--muted2);line-height:1.7}
+
+.ktc-strip{display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:var(--radius);padding:.75rem 1rem;margin-top:.875rem;flex-wrap:wrap}
+.ktc-strip-label{font-size:11px;color:var(--muted);font-weight:500}
+.ktc-strip-val{font-size:16px;font-weight:700;font-family:var(--font-head)}
+.ktc-strip-detail{font-size:11px;color:var(--muted);margin-left:auto}
+
+/* BREAKDOWN */
+.breakdown-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.bd-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
+.bd-label{font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.bd-tooltip{font-size:10px;color:var(--accent-bright);cursor:help;margin-left:4px}
+.bd-val{font-family:var(--font-head);font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+.bd-desc{font-size:11px;color:var(--muted);line-height:1.4}
+
+/* SIGNALS */
+.signals-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:12px}
+.signal-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:.875rem}
+.sig-row{margin-bottom:.875rem}
+.sig-row:last-child{margin-bottom:0}
+.sig-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.sig-name{font-size:12px;font-weight:500;color:var(--text)}
+.sig-tooltip{font-size:11px;color:var(--muted);margin-left:4px}
+.sig-pct{font-size:12px;font-weight:700;font-family:var(--font-head)}
+.sig-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.sig-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+.result-actions{display:flex;gap:8px;flex-wrap:wrap}
+.action-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--muted2);font-size:12px;font-weight:500;padding:8px 14px;cursor:pointer;transition:all .15s}
+.action-btn:hover{border-color:var(--accent-bright);color:var(--accent-bright)}
+
+/* HISTORY */
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s}
+.history-item:hover{border-color:var(--border2)}
+.h-pct{font-family:var(--font-head);font-size:22px;font-weight:700;min-width:48px}
+.h-trade{font-size:13px;font-weight:500;color:var(--text)}
+.h-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.h-time{font-size:11px;color:var(--muted);margin-left:auto;flex-shrink:0}
+.empty-state{text-align:center;padding:2rem;font-size:13px;color:var(--muted)}
+
+/* LEADERBOARD */
+.lb-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.lb-rank{font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--muted);min-width:28px}
+.lb-info{flex:1}
+.lb-trade{font-size:13px;font-weight:500;color:var(--text)}
+.lb-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.lb-ktc{font-size:13px;font-weight:700;font-family:var(--font-head);flex-shrink:0}
+.lb-win{color:var(--green)}.lb-lose{color:var(--red)}
+
+/* HOW IT WORKS */
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:1.5rem}
+.how-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem}
+.how-num{font-family:var(--font-head);font-size:48px;font-weight:700;color:var(--border2);line-height:1;margin-bottom:.75rem}
+.how-icon{font-size:24px;margin-bottom:.75rem}
+.how-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:.5rem}
+.how-desc{font-size:13px;color:var(--muted2);line-height:1.6}
+
+/* TABS */
+.tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.tab{font-size:13px;font-weight:500;padding:8px 16px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent-bright);border-bottom-color:var(--accent-bright)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* PITCH SECTION */
+.pitch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:12px}
+.pitch-header{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+.pitch-icon{width:36px;height:36px;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.pitch-title{font-size:15px;font-weight:700;color:var(--text)}
+.pitch-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.pitch-angle{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem;margin-bottom:8px}
+.pitch-angle-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.pitch-angle-label .angle-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.pitch-angle-text{font-size:13px;color:var(--muted2);line-height:1.6}
+.pitch-angle-text strong{color:var(--text);font-weight:500}
+.pitch-avoid{background:var(--red-dim);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:.875rem 1rem;margin-top:8px}
+.pitch-avoid-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-bottom:5px}
+.pitch-avoid-text{font-size:13px;color:var(--muted2);line-height:1.6}
+.pitch-message{background:var(--surface2);border:1px solid rgba(155,114,232,.25);border-radius:var(--radius);padding:.875rem 1rem;margin-top:12px;position:relative}
+.pitch-message-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:6px}
+.pitch-message-text{font-size:13px;color:var(--muted2);line-height:1.7;font-style:italic}
+.pitch-copy-btn{position:absolute;top:.75rem;right:.75rem;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:11px;font-weight:500;padding:4px 10px;cursor:pointer;transition:all .15s}
+.pitch-copy-btn:hover{color:var(--accent-bright);border-color:var(--accent-bright)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:1.5rem;max-width:460px;width:90%;animation:qslide .2s ease}
+.modal-title{font-family:var(--font-head);font-size:20px;font-weight:700;margin-bottom:.75rem}
+.modal-url{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:11px;color:var(--accent-bright);word-break:break-all;margin-bottom:.875rem;cursor:pointer;line-height:1.6}
+.modal-copy-confirm{font-size:12px;color:var(--green);margin-bottom:.875rem;display:none}
+
+/* FOOTER */
+footer{padding:2.5rem 1.5rem;border-top:1px solid var(--border);text-align:center;margin-top:3rem}
+.footer-logo{font-family:var(--font-head);font-size:22px;font-weight:700;color:var(--text);margin-bottom:.375rem}
+.footer-logo span{color:var(--accent-bright)}
+.footer-sub{font-size:12px;color:var(--muted)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .analyzer-grid{grid-template-columns:1fr}
+  .trade-sides{grid-template-columns:1fr}
+  .trade-divider{flex-direction:row;padding:.5rem 0}
+  .trade-divider-line{flex:1;height:1px;width:auto;min-height:auto}
+  .breakdown-row{grid-template-columns:1fr 1fr}
+  .how-grid{grid-template-columns:1fr}
+  .hero-stats{grid-template-columns:1fr 1fr}
+  .q-opts{grid-template-columns:1fr}
+  .verdict-top{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">Trade<span>Mind</span></div>
+  <div class="nav-links">
+    <span class="nav-link" onclick="showTab('analyzer')">Analyzer</span>
+    <span class="nav-link" onclick="showTab('history')">History</span>
+    <span class="nav-link" onclick="showTab('leaderboard')">Leaderboard</span>
+    <a href="#how" class="nav-link">How it works</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge"><span class="hero-badge-dot"></span>Dynasty Fantasy Intelligence</div>
+  <h1>Stop guessing.<br><span class="hl">Know the move.</span></h1>
+  <p class="hero-sub">Most trade tools tell you if a trade is <strong>fair</strong>. TradeMind tells you if you <strong>should do it</strong> — based on your dynasty situation, your gut feeling, and real KTC values.</p>
+  <div class="hero-cta">
+    <a href="#analyzer" class="btn-primary">Analyze a Trade</a>
+    <a href="#how" class="btn-outline">How it works</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-card"><div class="stat-num">78%</div><div class="stat-label">Acceptance prediction accuracy</div></div>
+    <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">Dynasty opponent archetypes</div></div>
+    <div class="stat-card"><div class="stat-num">KTC</div><div class="stat-label">Live dynasty values integrated</div></div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker">
+    <div class="ticker-item"><span class="dot"></span>Contention window closing <span>sell-high urgency elevated</span></div>
+    <div class="ticker-item"><span class="dot"></span>Rookie pick overvalued <span>buy window open</span></div>
+    <div class="ticker-item"><span class="dot"></span>Aging RB on roster <span>win-now bias active</span></div>
+    <div class="ticker-item"><span class="dot"></span>KTC value gap detected <span>leverage signal HIGH</span></div>
+    <div class="ticker-item"><span class="dot"></span>Full rebuild mode <span>veteran sell-off incoming</span></div>
+    <div class="ticker-item"><span class="dot"></span>Star hoarder identified <span>target the depth</span></div>
+    <div class="ticker-item"><span class="dot"></span>Contention window closing <span>sell-high urgency elevated</span></div>
+    <div class="ticker-item"><span class="dot"></span>Rookie pick overvalued <span>buy window open</span></div>
+    <div class="ticker-item"><span class="dot"></span>Aging RB on roster <span>win-now bias active</span></div>
+    <div class="ticker-item"><span class="dot"></span>KTC value gap detected <span>leverage signal HIGH</span></div>
+    <div class="ticker-item"><span class="dot"></span>Full rebuild mode <span>veteran sell-off incoming</span></div>
+    <div class="ticker-item"><span class="dot"></span>Star hoarder identified <span>target the depth</span></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<section class="section" id="analyzer">
+  <div class="wrap">
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab(this,'tab-analyzer')">Analyzer</div>
+      <div class="tab" onclick="switchTab(this,'tab-history')">Trade History</div>
+      <div class="tab" onclick="switchTab(this,'tab-leaderboard')">League Leaderboard</div>
+    </div>
+
+    <!-- ANALYZER TAB -->
+    <div id="tab-analyzer" class="tab-content active">
+      <div class="analyzer-grid">
+
+        <!-- LEFT: CONNECT + TRADE -->
+        <div>
+
+          <!-- SLEEPER LOGIN -->
+          <div class="card" id="login-panel">
+            <div class="sleeper-connect">
+              <div class="sleeper-icon">S</div>
+              <div>
+                <div class="connect-title">Connect your Sleeper account</div>
+                <div class="connect-sub">We pull your league, roster, and opponent data automatically</div>
+              </div>
+            </div>
+            <div class="input-group">
+              <input type="text" id="sleeper-username" class="tm-input" placeholder="Your Sleeper username..." onkeydown="if(event.key==='Enter')loadUser()">
+              <button class="btn-load" onclick="loadUser()">Load</button>
+            </div>
+            <div class="status-msg" id="status"></div>
+            <div class="hint-row">Sleeper username is case-sensitive. Open in Chrome for best results.</div>
+          </div>
+
+          <!-- LEAGUE PICKER -->
+          <div class="card" id="league-panel" style="display:none">
+            <div class="field-label">Your dynasty leagues</div>
+            <div id="league-list"></div>
+          </div>
+
+          <!-- TRADE BUILDER -->
+          <div class="card" id="builder-panel" style="display:none">
+            <div class="trade-header">
+              <div>
+                <div class="trade-header-info" id="league-name"></div>
+                <div class="trade-header-meta" id="league-meta"></div>
+              </div>
+              <button class="btn-sm" onclick="resetAll()">Change league</button>
+            </div>
+
+            <div class="trade-sides">
+              <div>
+                <div class="trade-col-label"><span class="you-dot"></span>You give up</div>
+                <div id="give-players">
+                  <div class="player-row">
+                    <span class="pos-tag" style="visibility:hidden">--</span>
+                    <div class="ac-wrap"><input type="text" class="tm-input" style="width:100%" placeholder="Search your players..." data-side="give" oninput="acInput(this)" onblur="acHide(this)" autocomplete="off"><div class="ac-dropdown"></div></div>
+                  </div>
+                </div>
+                <button class="add-btn" onclick="addRow('give-players','give')">+ Add player or pick</button>
+              </div>
+
+              <div class="trade-divider">
+                <div class="trade-divider-line"></div>
+                <span>FOR</span>
+                <div class="trade-divider-line"></div>
+              </div>
+
+              <div>
+                <div class="trade-col-label"><span class="them-dot"></span>You get back</div>
+                <div class="opp-select-wrap">
+                  <div class="field-label">Opponent</div>
+                  <select id="opp-select" class="opp-select" onchange="loadOppRoster()">
+                    <option value="">Select opponent...</option>
+                  </select>
+                </div>
+                <div id="get-players">
+                  <div class="player-row">
+                    <span class="pos-tag" style="visibility:hidden">--</span>
+                    <div class="ac-wrap"><input type="text" class="tm-input" style="width:100%" placeholder="Search their players..." data-side="get" oninput="acInput(this)" onblur="acHide(this)" autocomplete="off"><div class="ac-dropdown"></div></div>
+                  </div>
+                </div>
+                <button class="add-btn" onclick="addRow('get-players','get')">+ Add player or pick</button>
+              </div>
+            </div>
+
+            <!-- YOUR SITUATION PROFILER -->
+            <div class="profiler-section" id="your-section">
+              <div class="your-title">Should YOU do this trade?</div>
+              <div class="your-sub">Answer 3 quick questions about your situation. This helps us tell you if this trade actually makes sense for where you are in your dynasty.</div>
+
+              <div class="progress-dots">
+                <div class="pdot active" id="ypip-0"></div>
+                <div class="pdot" id="ypip-1"></div>
+                <div class="pdot" id="ypip-2"></div>
+              </div>
+
+              <div class="q-step active" id="yq-0">
+                <div class="q-text">Where are you in your dynasty right now?</div>
+                <div class="q-hint">Be honest — this changes everything about what a "good trade" means for you</div>
+                <div class="q-opts">
+                  <div class="q-opt" onclick="selectYou(this,0,0)"><span class="q-opt-key">A</span><span class="q-opt-text">Contending — I have a good team and want to win this year</span></div>
+                  <div class="q-opt" onclick="selectYou(this,0,1)"><span class="q-opt-key">B</span><span class="q-opt-text">Building — I have young talent and a window opening in 1-2 years</span></div>
+                  <div class="q-opt" onclick="selectYou(this,0,2)"><span class="q-opt-key">C</span><span class="q-opt-text">Rebuilding — I am tearing it down and collecting picks and young players</span></div>
+                  <div class="q-opt" onclick="selectYou(this,0,3)"><span class="q-opt-key">D</span><span class="q-opt-text">Not sure — my team is somewhere in the middle</span></div>
+                </div>
+                <div class="q-nav"><button class="q-back" disabled>Back</button><span class="q-counter">1 of 3</span></div>
+              </div>
+
+              <div class="q-step" id="yq-1">
+                <div class="q-text">Why are you considering this trade?</div>
+                <div class="q-hint">What is actually driving this — be real with yourself</div>
+                <div class="q-opts">
+                  <div class="q-opt" onclick="selectYou(this,1,0)"><span class="q-opt-key">A</span><span class="q-opt-text">I sent the offer — I want something specific on their roster</span></div>
+                  <div class="q-opt" onclick="selectYou(this,1,1)"><span class="q-opt-key">B</span><span class="q-opt-text">They sent me an offer — I am deciding whether to accept it</span></div>
+                  <div class="q-opt" onclick="selectYou(this,1,2)"><span class="q-opt-key">C</span><span class="q-opt-text">I need to fill a position — I am weak at RB, WR, etc.</span></div>
+                  <div class="q-opt" onclick="selectYou(this,1,3)"><span class="q-opt-key">D</span><span class="q-opt-text">I want to sell high — a player of mine is at peak value right now</span></div>
+                </div>
+                <div class="q-nav"><button class="q-back" onclick="goBackYou(1)">Back</button><span class="q-counter">2 of 3</span></div>
+              </div>
+
+              <div class="q-step" id="yq-2">
+                <div class="q-text">How do you feel about giving up your side of this trade?</div>
+                <div class="q-hint">Your gut reaction — trust it, it usually knows something your brain does not</div>
+                <div class="q-opts">
+                  <div class="q-opt" onclick="selectYou(this,2,0)"><span class="q-opt-key">A</span><span class="q-opt-text">Fine with it — I have been wanting to move these players anyway</span></div>
+                  <div class="q-opt" onclick="selectYou(this,2,1)"><span class="q-opt-key">B</span><span class="q-opt-text">Slight hesitation — they are good but I can live without them</span></div>
+                  <div class="q-opt" onclick="selectYou(this,2,2)"><span class="q-opt-key">C</span><span class="q-opt-text">I would regret it — these are core players I really value</span></div>
+                  <div class="q-opt" onclick="selectYou(this,2,3)"><span class="q-opt-key">D</span><span class="q-opt-text">Only doing it for the numbers — the KTC value is there but my gut says no</span></div>
+                </div>
+                <div class="q-nav"><button class="q-back" onclick="goBackYou(2)">Back</button><span class="q-counter">3 of 3</span></div>
+              </div>
+
+              <div class="your-badge" id="you-badge">
+                <div>
+                  <div class="yb-verdict" id="you-type"></div>
+                  <div class="yb-desc" id="you-desc"></div>
+                </div>
+              </div>
+            </div>
+
+            <button class="analyze-btn" onclick="runAnalysis()">Analyze This Trade</button>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: OPPONENT PROFILER -->
+        <div id="opp-profiler-col">
+          <div class="card" id="opp-profiler-card">
+            <div class="profiler-title">Who are you trading with?</div>
+            <div class="profiler-sub">Answer 2 quick questions about your opponent. This tells us how likely they are to accept, and what kind of offer will work on them.</div>
+
+            <div class="progress-dots">
+              <div class="pdot active" id="pip-0"></div>
+              <div class="pdot" id="pip-1"></div>
+              <div class="pdot" id="pip-2"></div>
+            </div>
+
+            <div class="q-step active" id="q-0">
+              <div class="q-text">What is their dynasty situation?</div>
+              <div class="q-hint">Think about their roster — are they trying to win now, rebuild, or stuck in the middle?</div>
+              <div class="q-opts">
+                <div class="q-opt" onclick="selectOpt(this,0,0)"><span class="q-opt-key">A</span><span class="q-opt-text">Trying to win now — older core players, wants veterans</span></div>
+                <div class="q-opt" onclick="selectOpt(this,0,1)"><span class="q-opt-key">B</span><span class="q-opt-text">Full rebuild — collecting picks and young players</span></div>
+                <div class="q-opt" onclick="selectOpt(this,0,2)"><span class="q-opt-key">C</span><span class="q-opt-text">Win-now but should be rebuilding — in denial</span></div>
+                <div class="q-opt" onclick="selectOpt(this,0,3)"><span class="q-opt-key">D</span><span class="q-opt-text">Stuck in the middle — no clear direction</span></div>
+                <div class="q-opt" onclick="selectOpt(this,0,4)"><span class="q-opt-key">E</span><span class="q-opt-text">Young contender — elite young core, window just opening</span></div>
+              </div>
+              <div class="q-nav"><button class="q-back" disabled>Back</button><span class="q-counter">1 of 3</span></div>
+            </div>
+
+            <div class="q-step" id="q-1">
+              <div class="q-text">How do they make trade decisions?</div>
+              <div class="q-hint">Think about how they have traded in the past — what drives them?</div>
+              <div class="q-opts">
+                <div class="q-opt" onclick="selectOpt(this,1,0)"><span class="q-opt-key">A</span><span class="q-opt-text">By the numbers — checks KTC values, very analytical</span></div>
+                <div class="q-opt" onclick="selectOpt(this,1,1)"><span class="q-opt-key">B</span><span class="q-opt-text">By recent hype — overvalues players who just had big games</span></div>
+                <div class="q-opt" onclick="selectOpt(this,1,2)"><span class="q-opt-key">C</span><span class="q-opt-text">By big names — attached to stars, hard to pry them away</span></div>
+                <div class="q-opt" onclick="selectOpt(this,1,3)"><span class="q-opt-key">D</span><span class="q-opt-text">By gut feel — trades a lot, goes with their instincts</span></div>
+              </div>
+              <div class="q-nav"><button class="q-back" onclick="goBack(1)">Back</button><span class="q-counter">2 of 3</span></div>
+            </div>
+
+            <div class="q-step" id="q-2">
+              <div class="q-text">Have you traded with this person before?</div>
+              <div class="q-hint">Past trade history tells us a lot about how they will respond to your offer</div>
+              <div class="q-opts" style="grid-template-columns:1fr">
+                <div class="q-opt" onclick="selectOpt(this,2,0)"><span class="q-opt-key">A</span><span class="q-opt-text">Yes — we have completed trades before, they are open to dealing</span></div>
+                <div class="q-opt" onclick="selectOpt(this,2,1)"><span class="q-opt-key">B</span><span class="q-opt-text">They always counter — they need to feel like they won the deal</span></div>
+                <div class="q-opt" onclick="selectOpt(this,2,2)"><span class="q-opt-key">C</span><span class="q-opt-text">Never traded — first time I am targeting them</span></div>
+              </div>
+              <div class="q-nav"><button class="q-back" onclick="goBack(2)">Back</button><span class="q-counter">3 of 3</span></div>
+            </div>
+
+            <div class="profile-badge" id="profile-badge">
+              <div class="pb-icon" id="profile-icon"></div>
+              <div>
+                <div class="pb-name" id="profile-type"></div>
+                <div class="pb-desc" id="profile-desc"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end analyzer-grid -->
+
+      <!-- RESULT PANEL -->
+      <div class="result-panel" id="result-panel">
+
+        <div class="verdict-card">
+          <!-- TRADE VERDICT -->
+          <div class="verdict-headline" id="verdict-headline" style="font-family:var(--font-head);font-size:26px;font-weight:700;letter-spacing:-.02em;margin-bottom:.5rem">-</div>
+          <div class="verdict-body" id="verdict-body" style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:1rem">-</div>
+
+          <!-- TRADE BALANCE BAR -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Trade Balance</div>
+              <div style="font-size:12px;color:var(--muted)" id="balance-label">-</div>
+            </div>
+            <div style="position:relative;height:10px;background:var(--surface3);border-radius:5px;overflow:hidden">
+              <div id="balance-bar" style="position:absolute;top:0;height:100%;border-radius:5px;transition:all 1s cubic-bezier(.4,0,.2,1);width:50%;left:0"></div>
+              <div style="position:absolute;top:0;left:50%;width:2px;height:100%;background:var(--border2)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px">
+              <div style="font-size:11px;color:var(--muted)" id="you-give-label">You give</div>
+              <div style="font-size:11px;color:var(--muted)" id="you-get-label">You get</div>
+            </div>
+          </div>
+
+          <!-- KTC VALUES -->
+          <div class="ktc-strip" id="ktc-row" style="display:none;margin-bottom:1rem">
+            <div class="ktc-strip-label">KTC values</div>
+            <div class="ktc-strip-val" id="ktc-val">-</div>
+            <div class="ktc-strip-label" id="ktc-delta">-</div>
+            <div class="ktc-strip-detail" id="ktc-detail">-</div>
+          </div>
+        </div>
+
+        <!-- FIT CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+          <div class="bd-card" id="fit-you" style="border-left:3px solid var(--green)">
+            <div class="bd-label" style="color:var(--green)">Fits YOUR roster?</div>
+            <div class="bd-val" id="bc-value">-</div>
+            <div class="bd-desc" id="bc-value-desc">-</div>
+          </div>
+          <div class="bd-card" id="fit-them" style="border-left:3px solid var(--accent-bright)">
+            <div class="bd-label" style="color:var(--accent-bright)">Fits THEIR roster?</div>
+            <div class="bd-val" id="bc-need">-</div>
+            <div class="bd-desc" id="bc-need-desc">-</div>
+          </div>
+          <div class="bd-card" id="fit-timing" style="border-left:3px solid var(--yellow)">
+            <div class="bd-label" style="color:var(--yellow)">Right timing?</div>
+            <div class="bd-val" id="bc-psych">-</div>
+            <div class="bd-desc" id="bc-psych-desc">-</div>
+          </div>
+        </div>
+
+        <!-- OPPONENT READ -->
+        <div class="signals-card" style="margin-bottom:12px">
+          <div class="signal-title">Opponent read</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">How badly do they need a deal?</div>
+              <div class="sig-pct" id="sig1-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">Deal urgency</div>
+              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig1" style="background:var(--accent-bright);width:0%;height:100%"></div></div>
+            </div>
+            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">How hard is it to pry players away?</div>
+              <div class="sig-pct" id="sig2-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">Resistance level</div>
+              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig2" style="background:var(--yellow);width:0%;height:100%"></div></div>
+            </div>
+            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Do they overvalue hot players?</div>
+              <div class="sig-pct" id="sig3-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">Hype susceptibility</div>
+              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig3" style="background:var(--red);width:0%;height:100%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PITCH SECTION -->
+        <div class="pitch-card" id="pitch-card" style="display:none">
+          <div class="pitch-header">
+            <div class="pitch-icon">💬</div>
+            <div>
+              <div class="pitch-title">How to pitch this trade</div>
+              <div class="pitch-sub">Specific talking points to use when you message them — based on their psychology</div>
+            </div>
+          </div>
+          <div id="pitch-angles"></div>
+          <div id="pitch-avoid-wrap"></div>
+          <div class="pitch-message" id="pitch-message-wrap">
+            <div class="pitch-message-label">Message to send</div>
+            <div class="pitch-message-text" id="pitch-message-text"></div>
+            <button class="pitch-copy-btn" onclick="copyPitch()">Copy</button>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button class="action-btn" onclick="saveToHistory()">Save to history</button>
+          <button class="action-btn" onclick="openShareModal()">Share trade link</button>
+          <button class="action-btn" onclick="newTrade()">New trade</button>
+        </div>
+      </div>
+
+    </div><!-- end tab-analyzer -->
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" class="tab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div style="font-size:14px;font-weight:600">Saved trades</div>
+          <button class="btn-sm" onclick="clearHistory()">Clear all</button>
+        </div>
+        <div id="history-list"><div class="empty-state">No saved trades yet. Analyze a trade and click Save to history.</div></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD TAB -->
+    <div id="tab-leaderboard" class="tab-content">
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">Who is getting fleeced in your league</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Based on KTC value difference across your saved trades this season.</div>
+        <div id="leaderboard-list"><div class="empty-state">No league trades saved yet. Save some trades to build the leaderboard.</div></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-label">How it works</div>
+    <div class="section-title">Built for pros.<br>Simple enough for anyone.</div>
+    <div class="section-sub">You do not need to understand dynasty theory to use TradeMind. Answer a few questions and get a clear verdict.</div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-icon">S</div>
+        <div class="how-title">Connect Sleeper</div>
+        <div class="how-desc">Enter your username and we pull your league, rosters, and opponent data automatically. No manual player entry.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">?</div>
+        <div class="how-title">Answer 6 questions</div>
+        <div class="how-desc">3 about you (your dynasty situation, why you want this trade, your gut feeling) and 3 about your opponent (their window, trading style, history). Takes under a minute.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-icon">!</div>
+        <div class="how-title">Get a clear verdict</div>
+        <div class="how-desc">We combine KTC dynasty values with psychology scoring to tell you: Should you do this? Will they accept? And exactly what the numbers say.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">Trade<span>Mind</span></div>
+  <div class="footer-sub">Dynasty trade psychology - built for managers who understand people, not just spreadsheets</div>
+</footer>
+
+<div class="modal-overlay" id="share-modal">
+  <div class="modal">
+    <div class="modal-title">Share this trade</div>
+    <div style="font-size:13px;color:var(--muted2);margin-bottom:.875rem">Anyone with this link can view the trade analysis.</div>
+    <div class="modal-url" id="share-url" onclick="copyShareUrl()">-</div>
+    <div class="modal-copy-confirm" id="copy-confirm">Copied to clipboard!</div>
+    <button class="btn-sm" onclick="closeShareModal()">Close</button>
+  </div>
+</div>
+
+<script>
+const SLEEPER='https://api.sleeper.app/v1';
+let userId=null,allPlayers={},myRoster=[],oppRoster=[],leagueRosters=[],leagueUsers=[],leagueId=null;
+let ACTIVE_SEASON='2025';
+let myPicks=[];       // [{season,round,label}]
+let oppPicks=[];      // opponent picks
+let leaguePicks=[];   // all traded picks in league
+let leagueDraftId=null;
+let ktcValues={};
+const answers=[null,null,null];
+const youAnswers=[null,null,null];
+let currentQ=0,currentYQ=0,lastResult=null;
+
+const FALLBACK_PLAYERS=[
+  {name:"JaMarr Chase",pos:"WR",team:"CIN"},{name:"Justin Jefferson",pos:"WR",team:"MIN"},
+  {name:"CeeDee Lamb",pos:"WR",team:"DAL"},{name:"Amon-Ra St Brown",pos:"WR",team:"DET"},
+  {name:"Puka Nacua",pos:"WR",team:"LAR"},{name:"Malik Nabers",pos:"WR",team:"NYG"},
+  {name:"Marvin Harrison Jr",pos:"WR",team:"ARI"},{name:"Brian Thomas Jr",pos:"WR",team:"JAC"},
+  {name:"Garrett Wilson",pos:"WR",team:"NYJ"},{name:"Drake London",pos:"WR",team:"ATL"},
+  {name:"Davante Adams",pos:"WR",team:"FA"},{name:"Tyreek Hill",pos:"WR",team:"MIA"},
+  {name:"Cooper Kupp",pos:"WR",team:"LAR"},{name:"Jaylen Waddle",pos:"WR",team:"MIA"},
+  {name:"Deebo Samuel",pos:"WR",team:"SF"},{name:"DeVonta Smith",pos:"WR",team:"PHI"},
+  {name:"Rashee Rice",pos:"WR",team:"KC"},{name:"Zay Flowers",pos:"WR",team:"BAL"},
+  {name:"Chris Olave",pos:"WR",team:"NO"},{name:"Stefon Diggs",pos:"WR",team:"NE"},
+  {name:"Christian McCaffrey",pos:"RB",team:"SF"},{name:"Breece Hall",pos:"RB",team:"NYJ"},
+  {name:"Bijan Robinson",pos:"RB",team:"ATL"},{name:"Jahmyr Gibbs",pos:"RB",team:"DET"},
+  {name:"Devon Achane",pos:"RB",team:"MIA"},{name:"Jonathan Taylor",pos:"RB",team:"IND"},
+  {name:"Derrick Henry",pos:"RB",team:"BAL"},{name:"Saquon Barkley",pos:"RB",team:"PHI"},
+  {name:"Josh Jacobs",pos:"RB",team:"GB"},{name:"Rachaad White",pos:"RB",team:"TB"},
+  {name:"Tony Pollard",pos:"RB",team:"TEN"},{name:"James Cook",pos:"RB",team:"BUF"},
+  {name:"Travis Etienne",pos:"RB",team:"JAC"},{name:"David Montgomery",pos:"RB",team:"DET"},
+  {name:"Kyren Williams",pos:"RB",team:"LAR"},{name:"Javonte Williams",pos:"RB",team:"DEN"},
+  {name:"Joe Mixon",pos:"RB",team:"HOU"},{name:"Isiah Pacheco",pos:"RB",team:"KC"},
+  {name:"Alvin Kamara",pos:"RB",team:"NO"},{name:"Aaron Jones",pos:"RB",team:"MIN"},
+  {name:"Patrick Mahomes",pos:"QB",team:"KC"},{name:"Josh Allen",pos:"QB",team:"BUF"},
+  {name:"Lamar Jackson",pos:"QB",team:"BAL"},{name:"Jalen Hurts",pos:"QB",team:"PHI"},
+  {name:"Joe Burrow",pos:"QB",team:"CIN"},{name:"Dak Prescott",pos:"QB",team:"DAL"},
+  {name:"Tua Tagovailoa",pos:"QB",team:"MIA"},{name:"Jayden Daniels",pos:"QB",team:"WAS"},
+  {name:"Caleb Williams",pos:"QB",team:"CHI"},{name:"Bo Nix",pos:"QB",team:"DEN"},
+  {name:"Jordan Love",pos:"QB",team:"GB"},{name:"Anthony Richardson",pos:"QB",team:"IND"},
+  {name:"Sam LaPorta",pos:"TE",team:"DET"},{name:"Trey McBride",pos:"TE",team:"ARI"},
+  {name:"Brock Bowers",pos:"TE",team:"LV"},{name:"Travis Kelce",pos:"TE",team:"KC"},
+  {name:"Mark Andrews",pos:"TE",team:"BAL"},{name:"Dallas Goedert",pos:"TE",team:"PHI"},
+  {name:"TJ Hockenson",pos:"TE",team:"MIN"},{name:"Evan Engram",pos:"TE",team:"JAC"},
+  {name:"Jake Ferguson",pos:"TE",team:"DAL"},{name:"Pat Freiermuth",pos:"TE",team:"PIT"}
+];
+
+async function sleeperGet(path){
+  var url=SLEEPER+path;
+  var r;
+  try{ r=await fetch(url); }
+  catch(e){ throw new Error("Cannot reach Sleeper API. Check internet connection."); }
+  if(!r.ok) throw new Error("Sleeper returned "+r.status);
+  return r.json();
+}
+
+function setStatus(msg,color){
+  var el=document.getElementById("status");
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=color||"var(--muted)";
+}
+
+async function fetchKtcValues(){
+  try{
+    var r=await fetch("https://keeptradecut.com/dynasty-rankings?format=json");
+    if(!r.ok)throw new Error("KTC unavailable");
+    var data=await r.json();
+    data.forEach(function(p){ if(p.playerName)ktcValues[p.playerName.toLowerCase()]=p.value; });
+  }catch(e){
+    try{
+      var r2=await fetch("https://api.keeptradecut.com/dynasty-rankings?leagueType=1&format=2");
+      if(!r2.ok)throw new Error();
+      var data2=await r2.json();
+      (data2.players||[]).forEach(function(p){ if(p.playerName)ktcValues[p.playerName.toLowerCase()]=p.value||0; });
+    }catch(e2){ console.log("KTC unavailable"); }
+  }
+}
+
+function getKtcValue(name){
+  if(!name)return 0;
+  var key=name.toLowerCase();
+  if(ktcValues[key])return ktcValues[key];
+  var parts=key.split(" ");
+  var last=parts[parts.length-1];
+  var match=Object.keys(ktcValues).find(function(k){return k.indexOf(last)>=0;});
+  return match?ktcValues[match]:0;
+}
+
+async function loadUser(){
+  var username=document.getElementById("sleeper-username").value.trim();
+  if(!username){ setStatus("Enter your Sleeper username first.","var(--hot)"); return; }
+  var btn=document.querySelector(".btn-load");
+  if(btn){btn.disabled=true; btn.textContent="Loading...";}
+
+  function log(msg,color){
+    setStatus(msg,color||"var(--muted2)");
+    console.log("[TM]",msg);
+  }
+
+  try{
+    log("Step 1 of 4: Looking up user...");
+    var userRes;
+    try{
+      userRes=await fetch("https://api.sleeper.app/v1/user/"+encodeURIComponent(username));
+    }catch(netErr){
+      log("Cannot reach Sleeper. Check internet connection. ("+netErr.message+")","var(--hot)");
+      if(btn){btn.disabled=false;btn.textContent="Load ->";}
+      return;
+    }
+    if(!userRes.ok){
+      log(userRes.status===404
+        ? "Username not found. Check exact spelling in your Sleeper app."
+        : "Sleeper API error "+userRes.status+". Try again.","var(--hot)");
+      if(btn){btn.disabled=false;btn.textContent="Load ->";}
+      return;
+    }
+    var user=await userRes.json();
+    if(!user||!user.user_id){
+      log("No account found for that username.","var(--hot)");
+      if(btn){btn.disabled=false;btn.textContent="Load ->";}
+      return;
+    }
+    userId=user.user_id;
+    log("Step 2 of 4: Found "+(user.display_name||username)+" - detecting season...");
+
+    try{
+      var state=await sleeperGet("/state/nfl");
+      if(state&&state.league_season) ACTIVE_SEASON=state.league_season;
+    }catch(e){ log("Using default season: "+ACTIVE_SEASON); }
+
+    log("Step 3 of 4: Loading "+ACTIVE_SEASON+" leagues...");
+    var leagues=[];
+    try{ leagues=await sleeperGet("/user/"+userId+"/leagues/nfl/"+ACTIVE_SEASON); }catch(e){}
+    if(!leagues||!leagues.length){
+      try{ leagues=await sleeperGet("/user/"+userId+"/leagues/nfl/"+String(parseInt(ACTIVE_SEASON)-1)); }catch(e){}
+    }
+    if(!leagues||!leagues.length){
+      log("No leagues found for this account in "+ACTIVE_SEASON+". Make sure you have an active league on Sleeper.","var(--hot)");
+      if(btn){btn.disabled=false;btn.textContent="Load ->";}
+      return;
+    }
+
+    log("Step 4 of 4: Found "+leagues.length+" league(s). Select yours below.");
+    var dynasty=leagues.filter(function(l){
+      return l.previous_league_id||(l.settings&&l.settings.type===2)||(l.name||"").toLowerCase().indexOf("dynasty")>=0;
+    });
+    if(btn){btn.disabled=false;btn.textContent="Load ->";}
+    setStatus("");
+    renderLeagues(dynasty.length?dynasty:leagues);
+    fetchKtcValues();
+
+  }catch(e){
+    log("Error: "+e.message,"var(--hot)");
+    console.error("[TM] Full error:",e);
+    if(btn){btn.disabled=false;btn.textContent="Load ->";}
+  }
+}
+
+function renderLeagues(leagues){
+  document.getElementById("league-panel").style.display="block";
+  var list=document.getElementById("league-list");
+  list.innerHTML="";
+  leagues.forEach(function(l){
+    var card=document.createElement("div");
+    card.className="league-card";
+    var season=l.season||ACTIVE_SEASON;
+    var status=l.status==="in_season"?"In Season":l.status==="pre_draft"?"Pre-Draft":l.status==="complete"?"Complete":(l.status||"");
+    card.innerHTML="<div><div class='league-card-name'>"+(l.name||"Unnamed")+"</div><div class='league-card-meta'>"+(l.total_rosters||"?")+" teams - Season "+season+" - "+status+"</div></div><div class='league-card-arrow'>-></div>";
+    card.onclick=function(){loadLeague(l.league_id,l.name,l.total_rosters,season);};
+    list.appendChild(card);
+  });
+}
+
+async function loadLeague(lid,name,rosters,season){
+  leagueId=lid;
+
+  // Step 1: Load player database (with timeout protection)
+  setStatus("Step 1/3 - Loading player database...");
+  try{
+    var raw=await sleeperGet("/players/nfl");
+    Object.keys(raw).forEach(function(id){
+      var p=raw[id];
+      if(p.fantasy_positions&&p.fantasy_positions.some(function(x){return["QB","RB","WR","TE"].indexOf(x)>=0;})){
+        allPlayers[id]={id:id,name:((p.first_name||"")+" "+(p.last_name||"")).trim(),pos:p.fantasy_positions[0]||"?",team:p.team||"FA"};
+      }
+    });
+    console.log("Loaded "+Object.keys(allPlayers).length+" players");
+  }catch(e){
+    console.warn("Player DB failed - using fallback:",e.message);
+    FALLBACK_PLAYERS.forEach(function(p){allPlayers["fb_"+p.name]=p;});
+  }
+
+  // Step 2: Load rosters and users (required)
+  setStatus("Step 2/3 - Loading rosters...");
+  var rosterData=[], userData=[];
+  try{
+    var rRes=await sleeperGet("/league/"+lid+"/rosters");
+    rosterData=rRes||[];
+  }catch(e){
+    setStatus("Failed to load rosters: "+e.message,"var(--hot)"); return;
+  }
+  try{
+    var uRes=await sleeperGet("/league/"+lid+"/users");
+    userData=uRes||[];
+  }catch(e){
+    setStatus("Failed to load users: "+e.message,"var(--hot)"); return;
+  }
+  leagueRosters=rosterData;
+  leagueUsers=userData;
+
+  // Step 3: Load traded picks (optional, ignore errors)
+  setStatus("Step 3/3 - Loading draft picks...");
+  leaguePicks=[];
+  try{
+    var pRes=await sleeperGet("/league/"+lid+"/traded_picks");
+    leaguePicks=pRes||[];
+    console.log("Loaded "+leaguePicks.length+" traded picks");
+  }catch(e){
+    console.warn("Traded picks unavailable - will show own picks only:",e.message);
+  }
+
+  // Find my roster
+  var myRosterObj=leagueRosters.find(function(r){return r.owner_id===userId;});
+  if(!myRosterObj){
+    setStatus("Could not find your roster in this league.","var(--hot)"); return;
+  }
+
+  myRoster=(myRosterObj.players||[]).map(function(pid){return allPlayers[pid];}).filter(Boolean).sort(function(a,b){return po(a.pos)-po(b.pos);});
+  myPicks=buildPicksForRoster(myRosterObj,leaguePicks,season);
+
+  // Build opponent dropdown
+  var sel=document.getElementById("opp-select");
+  sel.innerHTML="<option value=''>- Select opponent -</option>";
+  userData.forEach(function(u){
+    if(u.user_id===userId)return;
+    var opt=document.createElement("option");
+    opt.value=u.user_id;
+    opt.textContent=(u.metadata&&u.metadata.team_name)||u.display_name||"Unknown";
+    sel.appendChild(opt);
+  });
+
+  // Show builder
+  document.getElementById("league-panel").style.display="none";
+  document.getElementById("login-panel").style.display="none";
+  document.getElementById("builder-panel").style.display="block";
+  document.getElementById("league-name").textContent=name||"League";
+  document.getElementById("league-meta").textContent=(rosters||"?")+" teams - "+season+" - "+myRoster.length+" players, "+myPicks.length+" picks";
+  setStatus("");
+}
+
+function po(pos){ return {QB:0,RB:1,WR:2,TE:3}[pos]!==undefined?{QB:0,RB:1,WR:2,TE:3}[pos]:9; }
+
+function resetAll(){
+  document.getElementById("builder-panel").style.display="none";
+  document.getElementById("result-panel").classList.remove("visible");
+  document.getElementById("league-panel").style.display="block";
+  document.getElementById("login-panel").style.display="block";
+  leagueId=null; myRoster=[]; oppRoster=[]; myPicks=[]; oppPicks=[];
+}
+
+function loadOppRoster(){
+  var uid=document.getElementById("opp-select").value;
+  if(!uid)return;
+  var obj=leagueRosters.find(function(r){return r.owner_id===uid;});
+  oppRoster=obj?(obj.players||[]).map(function(pid){return allPlayers[pid];}).filter(Boolean).sort(function(a,b){return po(a.pos)-po(b.pos);}):[];
+  // Get the selected season from league meta
+  var season=ACTIVE_SEASON;
+  oppPicks=obj?buildPicksForRoster(obj,leaguePicks,season):[];
+}
+
+function buildPicksForRoster(rosterObj,tradedPicks,season){
+  var rid=rosterObj.roster_id;
+  var picks=[];
+  var curYear=parseInt(season)||2025;
+  // Own picks: rounds 1-4 for next 2 seasons unless traded away
+  for(var yr=curYear;yr<=curYear+1;yr++){
+    for(var rnd=1;rnd<=4;rnd++){
+      // Check if this pick has been traded away
+      var traded=tradedPicks.find(function(p){
+        return p.roster_id===rid&&parseInt(p.season)===yr&&p.round===rnd&&p.owner_id!==rid;
+      });
+      if(!traded){
+        picks.push({season:yr,round:rnd,name:yr+" Round "+rnd,label:yr+" Round "+rnd,pos:"PK",team:""});
+      }
+    }
+  }
+  // Add picks received via trades
+  tradedPicks.forEach(function(p){
+    if(p.owner_id===rid&&p.roster_id!==rid){
+      var exists=picks.find(function(x){return x.season===parseInt(p.season)&&x.round===p.round&&x.label.indexOf("via")>=0;});
+      if(!exists){
+        picks.push({season:parseInt(p.season),round:p.round,name:p.season+" Round "+p.round+" (via trade)",label:p.season+" Round "+p.round+" (via trade)",pos:"PK",team:""});
+      }
+    }
+  });
+  // Sort by year then round
+  picks.sort(function(a,b){return a.season!==b.season?a.season-b.season:a.round-b.round;});
+  return picks;
+}
+
+function acInput(input){
+  var q=input.value.toLowerCase().trim();
+  var wrap=input.closest(".ac-wrap");
+  var dd=wrap?wrap.querySelector(".ac-dropdown"):null;
+  if(!dd)return;
+  if(!q){ dd.classList.remove("open"); return; }
+  var side=input.dataset.side;
+  var playerPool=side==="give"?myRoster:oppRoster;
+  var pickPool=side==="give"?myPicks:oppPicks;
+  var combined=playerPool.concat(pickPool);
+  var src=combined.length>0?combined:(Object.keys(allPlayers).length>0?Object.values(allPlayers):FALLBACK_PLAYERS);
+  var res=src.filter(function(p){return p&&p.name&&p.name.toLowerCase().indexOf(q)>=0;}).slice(0,14);
+  if(!res.length){ dd.classList.remove("open"); return; }
+  var rows=[];
+  for(var i=0;i<res.length;i++){
+    var p=res[i];
+    var isPick=(p.pos==="PK");
+    var pos=p.pos||"?";
+    var team=isPick?"Pick":(p.team||"FA");
+    var ktc=isPick?0:getKtcValue(p.name);
+    var ktcStr=ktc?"<span class=\"ac-ktc\">"+ktc+"</span>":"";
+    var pid=p.id||"";
+    var safe=p.name.replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    // Build image
+    var imgStr;
+    if(!isPick&&pid){
+      imgStr="<img class=\"ac-thumb\" src=\"https://sleepercdn.com/content/nfl/players/thumb/"+pid+".jpg\" onerror=\"this.style.display='none'\" alt=\"\">";
+    } else if(isPick){
+      imgStr="<div class=\"ac-thumb-placeholder\">"+p.round+"</div>";
+    } else {
+      imgStr="<div class=\"ac-thumb-placeholder\">"+pos+"</div>";
+    }
+    var posColor=isPick?"background:rgba(167,139,250,0.15);color:#a78bfa":"";
+    var row="<div class=\"ac-item\" onmousedown=\"acSelect(this,&quot;"+safe+"&quot;,'"+pos+"','"+pid+"')\">"+imgStr+"<span style=\"flex:1\"><span style=\"display:block;font-size:13px;color:var(--text)\">"+p.name+"</span><span style=\"font-size:11px;color:var(--muted)\">"+team+"</span></span><span class=\"ac-pos\" style=\""+posColor+"\">"+pos+"</span>"+ktcStr+"</div>";
+    rows.push(row);
+  }
+  dd.innerHTML=rows.join("");
+  dd.classList.add("open");
+}
+
+function acSelect(el,name,pos,playerId){
+  // Decode HTML entities in name
+  var decoded=name.replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+  var row=el.closest(".player-row")||el.closest(".player-input-row");
+  if(!row){ var wrap=el.closest(".ac-wrap"); if(wrap)row=wrap.parentElement; }
+  if(!row)return;
+  var inp=row.querySelector("input");
+  var badge=row.querySelector(".pos-tag,.pos-badge");
+  if(inp){
+    inp.value=decoded;
+    inp.dataset.playerId=playerId||"";
+    inp.dataset.playerPos=pos||"";
+  }
+  if(badge){
+    badge.textContent=pos;
+    badge.style.visibility="visible";
+    var base=badge.classList.contains("pos-tag")?"pos-tag ":"pos-badge ";
+    badge.className=base+pos;
+  }
+  var dd=el.closest(".ac-dropdown");
+  if(dd)dd.classList.remove("open");
+}
+
+function acHide(inp){
+  setTimeout(function(){
+    var wrap=inp.closest(".ac-wrap");
+    var dd=wrap?wrap.querySelector(".ac-dropdown"):null;
+    if(dd)dd.classList.remove("open");
+  },200);
+}
+
+function addRow(cid,side){
+  var c=document.getElementById(cid);
+  var row=document.createElement("div");
+  row.className="player-input-row";
+  var dp=side==="give"?"WR":"RB";
+  row.innerHTML="<span class='pos-badge "+dp.toLowerCase()+"'>"+dp+"</span><div class='ac-wrap'><input type='text' class='tm-input' style='width:100%' placeholder='Search players...' data-side='"+side+"' oninput='acInput(this)' onblur='acHide(this)' autocomplete='off'><div class='ac-dropdown'></div></div>";
+  c.appendChild(row);
+}
+
+function updatePips(cur){
+  for(var i=0;i<3;i++){
+    var p=document.getElementById("pip-"+i);
+    if(!p)continue;
+    p.classList.remove("done","active");
+    if(i<cur)p.classList.add("done");
+    else if(i===cur)p.classList.add("active");
+  }
+}
+
+function selectOpt(el,qi,oi){
+  var step=document.getElementById("q-"+qi);
+  if(!step)return;
+  // Only deselect opts within THIS step
+  var opts=step.querySelectorAll(".q-opt");
+  for(var i=0;i<opts.length;i++) opts[i].classList.remove("sel","selected");
+  el.classList.add("sel");
+  answers[qi]=oi;
+  setTimeout(function(){
+    var maxQ=2; // 3 questions: 0,1,2
+    if(qi<maxQ){
+      step.classList.remove("active");
+      currentQ=qi+1;
+      var nextStep=document.getElementById("q-"+currentQ);
+      if(nextStep) nextStep.classList.add("active");
+      updatePips(currentQ);
+    }else{
+      showProfile();
+    }
+  },280);
+}
+
+function goBack(qi){
+  document.getElementById("q-"+qi).classList.remove("active");
+  currentQ=qi-1;
+  document.getElementById("q-"+currentQ).classList.add("active");
+  updatePips(currentQ);
+  document.getElementById("profile-badge").classList.remove("visible");
+}
+
+const profiles={
+  young_contender:{name:"The Young Contender",icon:"X",
+    desc:"Dangerous. They have elite young talent AND a window that is opening, not closing. They don't need your veterans and they know it. Their leverage is patience.",
+    boosts:{acceptance:-14,winNow:10,attachment:14,recency:5}},
+  window_closer:{name:"The Closing Window",icon:"C",
+    desc:"Their core is aging out and they know it. Every loss ticks the clock. Dangle a proven veteran and they will panic-accept faster than they should.",
+    boosts:{acceptance:20,winNow:25,attachment:10,recency:8}},
+  ktc_robot:{name:"The KTC Robot",icon:"$",
+    desc:"This person has the spreadsheet open right now. They will check your offer against KTC before reading player names. Don't lowball them.",
+    boosts:{acceptance:-10,winNow:0,attachment:-8,recency:-12}},
+  star_hoarder:{name:"The Star Hoarder",icon:"S",
+    desc:"Their studs are their identity. They would rather rot in 8th place than move their guys. Target the depth they forgot they had.",
+    boosts:{acceptance:-5,winNow:5,attachment:20,recency:6}},
+  flip_addict:{name:"The Flip Addict",icon:"F",
+    desc:"This person trades the way some people gamble. They don't need a reason, they need entertainment. Make your offer interesting and they will bite.",
+    boosts:{acceptance:22,winNow:5,attachment:-15,recency:10}},
+  denial_manager:{name:"The Denial Manager",icon:"D",
+    desc:"Their window slammed shut two seasons ago but nobody told them. Hit them with the right veteran and watch them convince themselves it is a rebuild move.",
+    boosts:{acceptance:18,winNow:20,attachment:12,recency:15}},
+  counter_king:{name:"The Counter King",icon:"K",
+    desc:"They will never accept your first offer. Build in room to move, let them beat you on the counter, and pocket the real win.",
+    boosts:{acceptance:-6,winNow:4,attachment:8,recency:4}},
+  no_mans_land:{name:"The Perma-Mid",icon:"M",
+    desc:"Too stubborn to rebuild, not good enough to contend. They will say they are one piece away forever. That is your leverage.",
+    boosts:{acceptance:10,winNow:-5,attachment:5,recency:8}},
+  rebuilder:{name:"The True Rebuilder",icon:"R",
+    desc:"Cold, calculated, fine with losing now. They want picks and youth, not your aging stars. Just don't expect a gift.",
+    boosts:{acceptance:14,winNow:-15,attachment:-10,recency:5}}
+};
+
+function getProfile(ans){
+  var dir=ans[0],d=ans[1],h=ans[2];
+  var scores={young_contender:0,window_closer:0,ktc_robot:0,star_hoarder:0,flip_addict:0,denial_manager:0,counter_king:0,no_mans_land:0,rebuilder:0};
+  if(dir===4){scores.young_contender+=40;scores.star_hoarder+=8;}
+  if(dir===0){scores.window_closer+=40;scores.denial_manager+=8;}
+  if(dir===1){scores.rebuilder+=40;scores.flip_addict+=6;}
+  if(dir===2){scores.denial_manager+=40;scores.window_closer+=12;}
+  if(dir===3){scores.no_mans_land+=40;scores.denial_manager+=6;}
+  if(d===0){scores.ktc_robot+=20;scores.rebuilder+=8;scores.young_contender+=6;}
+  if(d===1){scores.flip_addict+=20;scores.denial_manager+=10;scores.no_mans_land+=8;}
+  if(d===2){scores.star_hoarder+=20;scores.window_closer+=10;scores.denial_manager+=6;}
+  if(d===3){scores.flip_addict+=16;scores.no_mans_land+=12;scores.denial_manager+=8;}
+  if(h===0){scores.flip_addict+=8;scores.ktc_robot+=6;scores.rebuilder+=6;}
+  if(h===1){scores.counter_king+=30;}
+  if(h===2){scores.ktc_robot+=8;scores.young_contender+=6;scores.star_hoarder+=5;}
+  var best="denial_manager",bestScore=-1;
+  Object.keys(scores).forEach(function(k){if(scores[k]>bestScore){bestScore=scores[k];best=k;}});
+  return profiles[best];
+}
+
+function showProfile(){
+  var p=getProfile(answers);
+  document.getElementById("profile-icon").textContent=p.icon;
+  document.getElementById("profile-type").textContent=p.name;
+  document.getElementById("profile-desc").textContent=p.desc;
+  document.getElementById("profile-badge").classList.add("visible");
+  window._profile=p;
+  document.getElementById("your-section").style.display="block";
+  document.getElementById("your-section").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function updateYPips(cur){
+  for(var i=0;i<3;i++){
+    var p=document.getElementById("ypip-"+i);
+    if(!p)continue;
+    p.classList.remove("done","active");
+    if(i<cur)p.classList.add("done");
+    else if(i===cur)p.classList.add("active");
+  }
+}
+
+function selectYou(el,qi,oi){
+  var step=document.getElementById("yq-"+qi);
+  if(!step)return;
+  var opts=step.querySelectorAll(".q-opt");
+  for(var i=0;i<opts.length;i++) opts[i].classList.remove("sel","selected");
+  el.classList.add("sel");
+  youAnswers[qi]=oi;
+  setTimeout(function(){
+    if(qi<2){
+      step.classList.remove("active");
+      currentYQ=qi+1;
+      var nextStep=document.getElementById("yq-"+currentYQ);
+      if(nextStep) nextStep.classList.add("active");
+      updateYPips(currentYQ);
+    }else{
+      showYouVerdict();
+    }
+  },280);
+}
+
+function goBackYou(qi){
+  document.getElementById("yq-"+qi).classList.remove("active");
+  currentYQ=qi-1;
+  document.getElementById("yq-"+currentYQ).classList.add("active");
+  updateYPips(currentYQ);
+  document.getElementById("you-badge").classList.remove("visible");
+}
+
+function showYouVerdict(){
+  var sit=youAnswers[0],reason=youAnswers[1],feel=youAnswers[2];
+  var icon,verdict,desc;
+  if(feel===2){
+    icon="STOP";verdict="DO NOT DO THIS TRADE";
+    desc="Your gut is telling you no. In dynasty, regret on giveaway is the number one cause of seller's remorse. If you would regret losing these players, the KTC numbers do not matter. Pass.";
+  }else if(feel===3&&sit!==2){
+    icon="WARN";verdict="PROCEED WITH CAUTION";
+    desc="You are only doing this because the spreadsheet says to. That is dangerous without conviction. If you do not believe in what you are getting, you will not trust the move when it matters.";
+  }else if(sit===0&&reason===1&&feel!==0){
+    icon="WARN";verdict="THINK TWICE";
+    desc="You are a contender and someone sent you this offer. That means they need something from you. Do not panic-react to an inbound offer. Countering for more is almost always the right move.";
+  }else if(sit===0&&reason===3){
+    icon="GO";verdict="PULL THE TRIGGER";
+    desc="You are trying to sell high while the window is open. Smart. In dynasty the best time to sell is when a player's value exceeds their expected future production. Do not overthink it.";
+  }else if(sit===2&&reason===1&&feel===0){
+    icon="GO";verdict="ACCEPT - THIS IS YOUR PATH";
+    desc="You are rebuilding and received this offer. If you are comfortable losing those players, this aligns perfectly with your direction. Picks and youth are your currency right now.";
+  }else if(sit===1&&reason===2){
+    icon="GO";verdict="SMART MOVE FOR YOUR WINDOW";
+    desc="You have a young core and a positional hole to fill. A well-timed need trade at this stage of your build can accelerate your window by a full season. Do it.";
+  }else if(sit===0&&reason===0&&feel<=1){
+    icon="GO";verdict="SEND IT - YOU KNOW WHAT YOU NEED";
+    desc="You initiated this, you are a contender, and you are willing to pay the price. That is the mindset of a championship manager. Execute.";
+  }else if(feel===1&&reason===1){
+    icon="WARN";verdict="COUNTER FIRST";
+    desc="Slight hesitation on an inbound offer is almost always a sign to counter, not accept. Push back. You might get more, and if they decline, your hesitation was telling you something.";
+  }else{
+    icon="INFO";verdict="CHECK YOUR PRIORITIES FIRST";
+    desc="This trade does not send a clear signal either way. Before deciding, ask: does what you are getting move you closer to your dynasty goal? If yes, do it. If you are not sure, do not.";
+  }
+  document.getElementById("you-icon").textContent=icon;
+  document.getElementById("you-type").textContent=verdict;
+  document.getElementById("you-desc").textContent=desc;
+  document.getElementById("you-badge").classList.add("visible");
+  window._youVerdict=verdict;
+}
+
+function runAnalysis(){
+  var give=Array.from(document.querySelectorAll("#give-players input")).map(function(i){return i.value.trim();}).filter(Boolean);
+  var get=Array.from(document.querySelectorAll("#get-players input")).map(function(i){return i.value.trim();}).filter(Boolean);
+  var p=window._profile||profiles.denial_manager;
+  var sit=youAnswers[0],feel=youAnswers[2];
+  var selfBoost=0;
+  if(sit===0&&feel===0)selfBoost+=6;
+  if(sit===2)selfBoost+=8;
+  if(feel===2)selfBoost-=20;
+  var giveKtc=give.reduce(function(s,n){return s+getKtcValue(n);},0);
+  var getKtc=get.reduce(function(s,n){return s+getKtcValue(n);},0);
+  var ktcGap=getKtc-giveKtc;
+  var hasKtc=giveKtc>0||getKtc>0;
+  var gc=give.length||1,rc=get.length||1;
+  var base=44+Math.floor(Math.random()*14);
+  var tradeBalance=hasKtc?(ktcGap>1000?12:ktcGap>0?5:ktcGap>-1000?-3:-10):(rc-gc)*5;
+  var acc=Math.min(94,Math.max(14,base+tradeBalance+p.boosts.acceptance+selfBoost+Math.floor(Math.random()*8)));
+  var isGood=hasKtc?(ktcGap>=0):(rc>=gc);
+  var verdicts={high:["SEND IT NOW","PULL THE TRIGGER","THEY WILL BITE"],mid:["NEGOTIATE HARDER","READ THE ROOM","COUNTER EXPECTED"],low:["THEY WILL HOLD FIRM","RESTRUCTURE THE OFFER","WAIT FOR A TRIGGER"]};
+  var tier=acc>=68?"high":acc>=44?"mid":"low";
+  var headline=verdicts[tier][Math.floor(Math.random()*3)];
+  var gStr=give.length?give.join(", "):"your players";
+  var rStr=get.length?get.join(", "):"their players";
+  var bodyText=acc>=68
+    ?"Trading "+gStr+" for "+rStr+" — "+p.name+". "+p.desc+" Strike now."
+    :acc>=44
+    ?p.name+" — "+p.desc+" The value of "+gStr+" for "+rStr+" is "+(isGood?"in your favor":"roughly even")+", but their psychology creates friction."
+    :"Tough sell with "+p.name+". "+p.desc+" Restructure or wait for a trigger.";
+  var winNow=Math.min(95,Math.max(8,38+p.boosts.winNow+Math.floor(Math.random()*14)));
+  var attach=Math.min(95,Math.max(8,40+p.boosts.attachment+Math.floor(Math.random()*12)));
+  var recency=Math.min(95,Math.max(8,32+p.boosts.recency+Math.floor(Math.random()*14)));
+  var vs=hasKtc?(isGood?Math.floor(55+Math.random()*20):Math.floor(28+Math.random()*22)):Math.floor(40+Math.random()*30);
+  var ns=Math.floor(38+winNow*0.35+Math.random()*12);
+  var ps=Math.floor(30+(winNow+recency)*0.25+Math.random()*10);
+  generatePitch(give,get,p,youAnswers,answers);
+  lastResult={give:give,get:get,profile:p.name,acc:acc,ktcGap:hasKtc?ktcGap:null,giveKtc:giveKtc,getKtc:getKtc,headline:headline,timestamp:Date.now(),leagueId:leagueId};
+  var panel=document.getElementById("result-panel");
+  panel.classList.add("visible");
+  panel.scrollIntoView({behavior:"smooth",block:"start"});
+  document.getElementById("verdict-headline").textContent=headline;
+  document.getElementById("verdict-body").innerHTML=bodyText;
+  // Trade balance bar (50% = even, >50% = you win, <50% = you lose)
+  var balancePct=hasKtc
+    ? Math.min(95,Math.max(5, 50 + (ktcGap/100)))
+    : isGood?65:38;
+  balancePct=Math.min(95,Math.max(5,Math.round(balancePct)));
+  var barColor=balancePct>=60?"var(--green)":balancePct>=45?"var(--yellow)":"var(--red)";
+  var balanceLabel=balancePct>=60?"You are winning this trade":balancePct>=45?"Roughly even trade":"You are losing this trade";
+  setTimeout(function(){
+    var bar=document.getElementById("balance-bar");
+    if(bar){bar.style.width=balancePct+"%";bar.style.background=barColor;}
+  },100);
+  var bl=document.getElementById("balance-label");
+  if(bl){bl.textContent=balanceLabel;bl.style.color=barColor;}
+  var yg=document.getElementById("you-give-label");
+  var ygv=document.getElementById("you-get-label");
+  if(yg)yg.textContent="You give: "+(give.length?give.join(", "):"players");
+  if(ygv)ygv.textContent="You get: "+(get.length?get.join(", "):"players");
+  if(hasKtc){
+    document.getElementById("ktc-row").style.display="flex";
+    document.getElementById("ktc-detail").textContent="Giving "+giveKtc+" - Getting "+getKtc;
+    document.getElementById("ktc-val").textContent=(ktcGap>=0?"+":"")+ktcGap;
+    document.getElementById("ktc-val").style.color=ktcGap>=0?"var(--accept)":"var(--hot)";
+    document.getElementById("ktc-delta").textContent=ktcGap>=0?"You win on value":"You lose on value";
+    document.getElementById("ktc-delta").style.color=ktcGap>=0?"var(--accept)":"var(--hot)";
+  }else{
+    document.getElementById("ktc-row").style.display="none";
+  }
+  document.getElementById("bc-value").textContent=vs>=60?"YES - good fit":vs>=45?"MAYBE":"NOT IDEAL";
+  document.getElementById("bc-value").style.color=vs>=60?"var(--green)":vs>=45?"var(--yellow)":"var(--red)";
+  document.getElementById("bc-value-desc").textContent=vs>=60?"Fills a real need on your roster.":vs>=45?"Decent fit but not a slam dunk.":"Does not align with your dynasty phase.";
+  document.getElementById("bc-need").textContent=ns>=60?"YES - they need this":ns>=45?"MAYBE":"UNLIKELY";
+  document.getElementById("bc-need").style.color=ns>=60?"var(--green)":ns>=45?"var(--yellow)":"var(--red)";
+  document.getElementById("bc-need-desc").textContent=ns>=60?"Fills a clear hole on their roster.":ns>=45?"Could use it but not urgent.":"Does not address their biggest needs.";
+  document.getElementById("bc-psych").textContent=ps>=60?"GOOD TIMING":ps>=45?"NEUTRAL":"BAD TIMING";
+  document.getElementById("bc-psych").style.color=ps>=60?"var(--green)":ps>=45?"var(--yellow)":"var(--red)";
+  document.getElementById("bc-psych-desc").textContent=ps>=60?"Strike now — conditions are right.":ps>=45?"Nothing pushing them urgently.":"Bad timing — wait for a trigger.";
+}
+
+function generatePitch(give,get,oppProfile,you,opp){
+  var card=document.getElementById("pitch-card");
+  var anglesEl=document.getElementById("pitch-angles");
+  var avoidEl=document.getElementById("pitch-avoid-wrap");
+  var msgEl=document.getElementById("pitch-message-text");
+  if(!card)return;
+  card.style.display="block";
+  var youGiving=give.length?give.join(" and "):"your players";
+  var youGetting=get.length?get.join(" and "):"their players";
+  var dir=opp[0],style=opp[1],hist=opp[2];
+  var oppRosterNames=oppRoster.slice(0,6).map(function(p){return p.name;});
+  var oppRBs=oppRoster.filter(function(p){return p.pos==="RB";}).slice(0,3).map(function(p){return p.name;});
+  var oppWRs=oppRoster.filter(function(p){return p.pos==="WR";}).slice(0,3).map(function(p){return p.name;});
+  var oppQBs=oppRoster.filter(function(p){return p.pos==="QB";}).slice(0,2).map(function(p){return p.name;});
+  var oppTEs=oppRoster.filter(function(p){return p.pos==="TE";}).slice(0,2).map(function(p){return p.name;});
+  var weakPos="",weakNames="";
+  if(oppRBs.length<2){weakPos="RB";weakNames=oppRBs.join(", ")||"thin";}
+  else if(oppWRs.length<3){weakPos="WR";weakNames=oppWRs.join(", ")||"thin";}
+  else if(oppTEs.length<1){weakPos="TE";weakNames="nothing at TE";}
+  var angles=[],avoid=[],message="";
+  if(dir===0||oppProfile.name==="The Closing Window"){
+    angles.push({color:"var(--accent-bright)",label:"Lead with the championship frame",text:"Tell them: "+youGiving+" gives them the proven veteran that pushes a contender over the top. Their window is open right now. Frame this as the move that separates teams that almost win from teams that actually win."+(oppRBs.length?" They already have "+oppRBs[0]+(oppRBs[1]?" and "+oppRBs[1]:"")+" in their backfield. Show how "+youGiving+" fits alongside what they have.":"")});
+    if(weakPos)angles.push({color:"var(--yellow)",label:"Attack their weak spot at "+weakPos,text:"Look at their "+weakPos+" situation: "+weakNames+". If "+youGiving+" addresses that position, say it explicitly. Tell them: I know "+weakPos+" has been a concern — this solves it."});
+    angles.push({color:"var(--green)",label:"Create urgency with scarcity",text:"End with: I am shopping "+youGiving+" to a couple of teams — wanted to give you first look since it fits your roster best. Win-now managers hate missing a move that could have helped them."});
+    avoid.push("Do not mention "+youGetting+" depreciation or age if they are veterans. They do not want to hear about decline curves.");
+    avoid.push("Do not give them time to overthink. Win-now managers who sleep on deals talk themselves out of them.");
+    message="Hey, wanted to run something by you before I shop it elsewhere. I think "+youGiving+" makes your team a real contender this year — you have the core, this fills the gap."+(weakPos?" Especially at "+weakPos+" where I know you have been thin.":"")+" Offering "+youGiving+" for "+youGetting+". Let me know — I want to get this done this week.";
+  } else if(dir===1||oppProfile.name==="The True Rebuilder"){
+    angles.push({color:"var(--green)",label:"Talk picks and age, not production",text:"Rebuilders think in age curves and draft capital. Frame "+youGiving+" in terms of draft profile, age, and upside — not current stats. A 23-year-old WR with upside is worth more to a rebuilder than a 28-year-old WR1."+(oppRosterNames.length?" Looking at their roster ("+oppRosterNames.join(", ")+"), they are clearly building young. "+youGiving+" fits that identity.":"")});
+    angles.push({color:"var(--accent-bright)",label:"Make them feel like the smart one",text:"Say: I know you are building the right way — I respect it. I just need "+youGetting+" for my push this year and I think "+youGiving+" is perfect for where you are. Rebuilders love being validated on their strategy."});
+    avoid.push("Never pitch veteran production to a rebuilder. They are thinking 3 years out.");
+    message="Hey, think we can help each other. You get "+youGiving+(oppRosterNames.length?" — fits right into what you are building with "+oppRosterNames.slice(0,2).join(" and "):"")+". I get "+youGetting+" for my window. Clean swap.";
+  } else if(dir===2||oppProfile.name==="The Denial Manager"){
+    angles.push({color:"var(--yellow)",label:"Validate their belief, then pivot",text:"They think they can still compete. Do not argue. Start with: I think you are closer than your record shows. Then explain how "+youGiving+" bridges the gap. Never say rebuild."+(oppRBs.length&&oppWRs.length?" They have "+oppRBs[0]+" and "+oppWRs[0]+" already. "+youGiving+" next to those creates a real contention argument.":"")});
+    angles.push({color:"var(--accent-bright)",label:"Give them permission to believe",text:"Say: one or two moves and you are right there. This trade is that move. Denial managers need someone else to see the vision first. Give it to them."});
+    avoid.push("Do not use the word rebuild or suggest they should be selling. It will kill the deal immediately.");
+    message="Honestly I think you are sleeping on how good your team is. "+youGiving+" next to what you already have? That is a legitimate contender. I need "+youGetting+" for my own roster — I think this helps both of us. Worth a conversation?";
+  } else if(dir===4||oppProfile.name==="The Young Contender"){
+    angles.push({color:"var(--red)",label:"Be direct — they hold the leverage too",text:"Young contenders know their value. Come with a specific reason why this helps THEM."+(weakPos?" Their "+weakPos+" depth is "+weakNames+" — lead with that specific need.":"")+" Generic offers will be ignored."});
+    angles.push({color:"var(--accent-bright)",label:"Show respect and data",text:"Open by acknowledging their strength: Your team is set up really well. Then present this as a chess move that gets them to the title even faster. Be a peer, not a salesman."});
+    avoid.push("Do not lowball. They will reject it and post it in the group chat.");
+    avoid.push("Do not use urgency tactics. They have time and they know it.");
+    message="Your roster is legitimately one of the best in the league. I think there is one move that gets you to the title faster — "+youGiving+" fills the one hole you have"+(weakPos?" at "+weakPos:"")+". I need "+youGetting+". Straight deal.";
+  } else if(oppProfile.name==="The Flip Addict"){
+    angles.push({color:"var(--accent-bright)",label:"Make it sound exciting, not logical",text:"Do not explain the trade rationally. Flip addicts trade for stimulation. Say: What if I told you there is a deal that completely changes both our rosters? They respond to that faster than any value argument."});
+    angles.push({color:"var(--yellow)",label:"Speed matters — send the offer now",text:"Flip addicts act impulsively. A 48-hour delay lets them lose interest and start thinking about a different trade. Strike immediately after this conversation."});
+    avoid.push("Do not over-explain. Two sentences max. They will not read a paragraph.");
+    message="What if — and hear me out — "+youGiving+" for "+youGetting+"? Think it shakes both rosters up in a good way. Let me know.";
+  } else if(oppProfile.name==="The KTC Robot"){
+    angles.push({color:"var(--accent-bright)",label:"Come with the actual KTC numbers",text:"Open your message with the values, not the player names. They will check anyway — save them the step. Transparency reads as respect to an analytics-first manager."+(oppRosterNames.length?" They know their roster well: "+oppRosterNames.join(", ")+". Show you did your homework on their positional values too.":"")});
+    angles.push({color:"var(--green)",label:"Acknowledge if value is slightly off",text:"If the numbers are not perfectly even, acknowledge it before they bring it up. Say: I know KTC has this slightly in your favor — I am fine with that because this fills a need. Honesty disarms them completely."});
+    avoid.push("Do not use emotional arguments. He is a great teammate will make them respect you less.");
+    message="Hey, ran the numbers on this — KTC has "+youGiving+" at roughly even value with "+youGetting+". Think the trade makes sense for both rosters from a value standpoint. Worth a look?";
+  } else if(oppProfile.name==="The Star Hoarder"){
+    angles.push({color:"var(--yellow)",label:"Target their depth, not their studs",text:"If you target their WR1 or RB1 in a first offer, you get a hard no and poison future negotiations. Find the player who is good but not untouchable."+(oppRosterNames.length?" Look at the back of their roster: "+oppRosterNames.slice(3).join(", ")+". That is where you negotiate from.":"")});
+    angles.push({color:"var(--accent-bright)",label:"Lead entirely with what they receive",text:"Write your entire message about "+youGiving+" — what it does for their team, why they should want it. Do not mention "+youGetting+" unless asked. The moment you talk about what you want, they start protecting it."});
+    avoid.push("Never make your first offer for their best player. Even if it is fair value.");
+    message="Hey, wanted to put something out there — I think "+youGiving+" could be a real piece for your roster. Fits well with what you already have."+(oppRosterNames.length?" You have "+oppRosterNames.slice(0,2).join(" and ")+" doing work — this adds another weapon.":"")+" Would love to chat if you are open.";
+  } else if(oppProfile.name==="The Counter King"){
+    angles.push({color:"var(--accent-bright)",label:"Send worse than your real offer first",text:"Your first offer should be slightly below what you actually want to pay. They will counter. That counter IS the deal you wanted. If you send your real price first, they counter below it and you overpay."});
+    angles.push({color:"var(--yellow)",label:"After their counter, pause before accepting",text:"When they counter, wait 6-12 hours before responding. Even if you would take it instantly — wait. Then say: I had to think about it and accept. They need to feel they negotiated you down."});
+    avoid.push("Never say final offer. They will call your bluff.");
+    avoid.push("Never accept immediately. Even if it is perfect.");
+    message="Hey, wanted to throw something out and see if we can find something that works. Thinking "+youGiving+" for "+youGetting+" — I know it might not be exactly where you want it but I am flexible. What would you need to make it work?";
+  } else {
+    angles.push({color:"var(--accent-bright)",label:"Give them a direction to believe in",text:"Managers stuck in the middle respond to clarity. Tell them what this trade does for their roster identity. Unfocused managers need someone else to see the vision first."});
+    angles.push({color:"var(--yellow)",label:"Ask a question before the offer",text:"Message them first: Are you trying to compete this year or build for the future? Their answer tells you exactly how to frame the deal. It also makes you look like the smartest GM in the league."});
+    avoid.push("Do not send a generic offer with no context. They will decline out of confusion.");
+    message="Hey, quick question before I throw something at you — are you trying to compete this year or are you building? Asking because I have a deal in mind that could work either way.";
+  }
+  if(hist===1)angles.push({color:"var(--muted2)",label:"They will counter — plan for it",text:"Based on your history, expect a counter and plan for it. Build a small buffer into your offer — offer slightly less than your real ceiling so you have room to give. Their counter is the real negotiation."});
+  var anglesHtml="";
+  angles.forEach(function(a){anglesHtml+="<div class='pitch-angle'><div class='pitch-angle-label'><span class='angle-dot' style='background:"+a.color+"'></span><span style='color:"+a.color+"'>"+a.label+"</span></div><div class='pitch-angle-text'>"+a.text+"</div></div>";});
+  anglesEl.innerHTML=anglesHtml;
+  var avoidHtml="";
+  if(avoid.length){avoidHtml="<div class='pitch-avoid'><div class='pitch-avoid-label'>What to avoid saying</div>";avoid.forEach(function(a){avoidHtml+="<div style='font-size:13px;color:var(--muted2);line-height:1.6;margin-bottom:6px'>- "+a+"</div>";});avoidHtml+="</div>";}
+  avoidEl.innerHTML=avoidHtml;
+  msgEl.textContent=message;
+  window._pitchMessage=message;
+}
+
+function copyPitch(){
+  if(!window._pitchMessage)return;
+  navigator.clipboard.writeText(window._pitchMessage).then(function(){
+    var btn=document.querySelector(".pitch-copy-btn");
+    if(btn){btn.textContent="Copied!";setTimeout(function(){btn.textContent="Copy";},2000);}
+  });
+}
+
+function getHistory(){try{return JSON.parse(localStorage.getItem("tm_history")||"[]");}catch(e){return[];}}
+function saveHistory(h){try{localStorage.setItem("tm_history",JSON.stringify(h));}catch(e){}}
+
+function saveToHistory(){
+  if(!lastResult)return;
+  var h=getHistory();h.unshift(lastResult);
+  if(h.length>50)h.length=50;
+  saveHistory(h);renderHistory();
+  switchTab(document.querySelectorAll(".tab")[1],"tab-history");
+}
+
+function renderHistory(){
+  var list=document.getElementById("history-list");
+  if(!list)return;
+  var h=getHistory();
+  if(!h.length){list.innerHTML="<div class='empty-state'>No saved trades yet. Analyze a trade and click Save to history.</div>";return;}
+  list.innerHTML=h.map(function(t){
+    var color=t.acc>=65?"var(--green)":t.acc>=45?"var(--yellow)":"var(--red)";
+    var time=new Date(t.timestamp).toLocaleDateString();
+    return "<div class='history-item'><div class='h-pct' style='color:"+color+"'>"+t.acc+"%</div><div><div class='h-trade'>"+(t.give||[]).join(", ")+" for "+(t.get||[]).join(", ")+"</div><div class='h-meta'>"+t.profile+" - "+t.headline+"</div></div><div class='h-time'>"+time+"</div></div>";
+  }).join("");
+}
+
+function clearHistory(){localStorage.removeItem("tm_history");renderHistory();}
+
+function renderLeaderboard(){
+  var list=document.getElementById("leaderboard-list");
+  if(!list)return;
+  var h=getHistory().filter(function(t){return t.ktcGap!==null&&t.leagueId===leagueId;});
+  if(!h.length){list.innerHTML="<div class='empty-state'>No saved trades for this league yet.</div>";return;}
+  var sorted=h.slice().sort(function(a,b){return b.ktcGap-a.ktcGap;});
+  list.innerHTML=sorted.map(function(t,i){
+    var won=t.ktcGap>=0;
+    return "<div class='lb-row'><div class='lb-rank'>"+(i+1)+"</div><div class='lb-info'><div class='lb-trade'>"+(t.give||[]).join(" + ")+" for "+(t.get||[]).join(" + ")+"</div><div class='lb-meta'>"+t.profile+" - "+new Date(t.timestamp).toLocaleDateString()+"</div></div><div class='lb-ktc "+(won?"lb-win":"lb-lose")+"'>KTC "+(t.ktcGap>=0?"+":"")+t.ktcGap+"</div></div>";
+  }).join("");
+}
+
+function openShareModal(){
+  if(!lastResult)return;
+  var data=btoa(JSON.stringify({give:lastResult.give,get:lastResult.get,acc:lastResult.acc,profile:lastResult.profile,headline:lastResult.headline}));
+  var url=window.location.href.split("?")[0]+"?trade="+data;
+  document.getElementById("share-url").textContent=url;
+  document.getElementById("share-modal").classList.add("open");
+}
+
+function copyShareUrl(){
+  var url=document.getElementById("share-url").textContent;
+  navigator.clipboard.writeText(url).then(function(){
+    var el=document.getElementById("copy-confirm");
+    if(el){el.style.display="block";setTimeout(function(){el.style.display="none";},2000);}
+  });
+}
+
+function closeShareModal(){document.getElementById("share-modal").classList.remove("open");}
+
+function checkShareParam(){
+  var params=new URLSearchParams(window.location.search);
+  var data=params.get("trade");
+  if(!data)return;
+  try{
+    var t=JSON.parse(atob(data));
+    document.getElementById("result-panel").classList.add("visible");
+    document.getElementById("builder-panel").style.display="block";
+    document.getElementById("login-panel").style.display="none";
+    document.getElementById("verdict-headline").textContent=t.headline||"SHARED TRADE";
+    document.getElementById("verdict-body").innerHTML="Giving: "+(t.give||[]).join(", ")+"  Getting: "+(t.get||[]).join(", ")+"  Profile: "+t.profile;
+  }catch(e){}
+}
+
+function switchTab(el,id){
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+  document.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active");});
+  if(el)el.classList.add("active");
+  var content=document.getElementById(id);
+  if(content)content.classList.add("active");
+  if(id==="tab-history")renderHistory();
+  if(id==="tab-leaderboard")renderLeaderboard();
+}
+
+function showTab(name){
+  document.getElementById("analyzer").scrollIntoView({behavior:"smooth"});
+  var map={analyzer:0,history:1,leaderboard:2};
+  var idx=map[name];
+  if(idx===undefined)return;
+  var tabs=document.querySelectorAll(".tab");
+  var contents=document.querySelectorAll(".tab-content");
+  tabs.forEach(function(t,i){t.classList.toggle("active",i===idx);});
+  contents.forEach(function(cv,i){cv.classList.toggle("active",i===idx);});
+  if(name==="history")renderHistory();
+  if(name==="leaderboard")renderLeaderboard();
+}
+
+function newTrade(){
+  document.getElementById("result-panel").classList.remove("visible");
+  document.getElementById("builder-panel").scrollIntoView({behavior:"smooth"});
+  document.querySelectorAll("#give-players input,#get-players input").forEach(function(i){i.value="";});
+  answers.fill(null);currentQ=0;
+  youAnswers.fill(null);currentYQ=0;
+  document.querySelectorAll(".q-step").forEach(function(s){s.classList.remove("active");});
+  var q0=document.getElementById("q-0");if(q0)q0.classList.add("active");
+  var yq0=document.getElementById("yq-0");if(yq0)yq0.classList.add("active");
+  updatePips(0);updateYPips(0);
+  document.getElementById("profile-badge").classList.remove("visible");
+  var ys=document.getElementById("your-section");if(ys)ys.style.display="none";
+  document.getElementById("you-badge").classList.remove("visible");
+  document.querySelectorAll(".q-opt").forEach(function(o){o.classList.remove("sel","selected");});
+  var pc=document.getElementById("pitch-card");if(pc)pc.style.display="none";
+  window._profile=null;window._selfBoost=0;lastResult=null;
+}
+
+renderHistory();
+checkShareParam();
+</script>
+
+</body>
+</html>

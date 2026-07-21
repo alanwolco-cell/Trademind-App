@@ -1,0 +1,115 @@
+/* ── TradeMind v2 homepage concept ─────────────────────────────────────────
+   Preview-only skin, loads when the URL has ?v2.
+   Direction: modern CPG brand energy (Graza / Magic Spoon / OffLimits) -
+   warm cream canvas, ink lines, chunky offset shadows, one loud accent,
+   huge confident type, sticker details. Clean, premium, a little playful. */
+
+html.v2{
+  --bg:#f5efe3;
+  --surface:#fffdf7;
+  --surface2:#f3ecdc;
+  --surface3:#eadfc9;
+  --text:#131210;
+  --muted:#6f6857;
+  --muted2:#3f3a2f;
+  --border:rgba(19,18,16,.16);
+  --border2:rgba(19,18,16,.32);
+  --accent-bright:#6b48c4;
+  --accent-dim:rgba(107,72,196,.10);
+  --green:#0c8a43;
+  --red:#d8321f;
+  --yellow:#c78a06;
+  --ink:#131210;
+  --pop:#ffd648;
+}
+html.v2 body{background:var(--bg);color:var(--text)}
+html.v2 body::before{display:none} /* no aurora - flat, confident canvas */
+
+/* Nav: cream bar with a hard ink rule */
+html.v2 .nav{background:var(--bg);border-bottom:2px solid var(--ink);backdrop-filter:none}
+html.v2 .nav-item-btn{color:var(--ink);font-weight:700}
+html.v2 .nav-item-btn.active,html.v2 .nav-item-btn:hover{background:var(--ink);color:var(--bg)}
+html.v2 .nav-dropdown{background:var(--surface);border:2px solid var(--ink);border-radius:12px;box-shadow:5px 5px 0 var(--ink)}
+html.v2 .nav-dd-item{color:var(--muted2)}
+html.v2 .nav-dd-item:hover{background:var(--pop);color:var(--ink)}
+html.v2 .theme-toggle{border:2px solid var(--ink);color:var(--ink)}
+
+/* Ticker: inverted ink strip, like a store-front marquee */
+html.v2 #ticker-bar{background:var(--ink);border-bottom:none}
+html.v2 .ticker-item{color:#f5efe3!important}
+html.v2 .ticker-item span{color:#f5efe3!important}
+html.v2 .ticker-item .dot{outline:2px solid rgba(245,239,227,.25)}
+
+/* Hero: giant type, marker highlight, sticker Sage */
+html.v2 .hero{background:none;padding-top:56px}
+html.v2 .hero h1,html.v2 .hero .hero-title{color:var(--ink);letter-spacing:-.045em;line-height:.98}
+html.v2 .hero h1 .hl{
+  color:var(--ink);
+  background:linear-gradient(transparent 58%,var(--pop) 58%,var(--pop) 92%,transparent 92%);
+  -webkit-background-clip:initial;background-clip:initial;-webkit-text-fill-color:currentColor;
+}
+html.v2 .hero p{color:var(--muted2);font-weight:500}
+html.v2 .sage-wrap svg,html.v2 .hero svg{filter:none}
+html.v2 .hero-ring,html.v2 .hero-particles{display:none}
+html.v2 .hero-badge{
+  background:var(--surface);border:2px solid var(--ink);color:var(--ink);
+  border-radius:100px;font-weight:800;box-shadow:3px 3px 0 var(--ink);
+}
+html.v2 .hero-badge-dot{background:var(--green)}
+html.v2 .hero-tagline{color:var(--muted2);font-weight:500}
+html.v2 .hero-sage-stage{position:relative}
+html.v2 .hero-sage-stage::after{content:'';position:absolute;inset:auto;left:50%;top:50%;width:168px;height:168px;transform:translate(-50%,-50%);border-radius:50%;background:var(--surface);border:2.5px solid var(--ink);box-shadow:6px 6px 0 rgba(19,18,16,.85);z-index:-1}
+
+/* Primary CTA: chunky pill with the hard offset shadow */
+html.v2 .btn-primary,html.v2 .btn-load,html.v2 .hero .cta,html.v2 a.cta{
+  background:var(--accent-bright);color:#fff;border:2px solid var(--ink);
+  border-radius:100px;font-weight:800;letter-spacing:.01em;
+  box-shadow:5px 5px 0 var(--ink);transition:transform .12s,box-shadow .12s;
+}
+html.v2 .btn-primary:hover,html.v2 .btn-load:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+html.v2 .btn-primary:active,html.v2 .btn-load:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+html.v2 .btn-sm,html.v2 .ideas-refresh{border:2px solid var(--ink);color:var(--ink);background:var(--surface);border-radius:100px;font-weight:700}
+html.v2 .btn-sm:hover{background:var(--pop);color:var(--ink);border-color:var(--ink)}
+
+/* Cards: white paper, ink outline, offset shadow */
+html.v2 .card,html.v2 .ideas-card,html.v2 .mkt-panel,html.v2 .comm-card,html.v2 .news-card,html.v2 .pitch-card,html.v2 .how-card,html.v2 .tm-tweet-card{
+  background:var(--surface);border:2px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 rgba(19,18,16,.9);
+}
+html.v2 .card .card,html.v2 .bd-card{box-shadow:none;border:1.5px solid var(--border2);border-radius:12px}
+html.v2 .result-panel .verdict-card{border:2px solid var(--ink);border-radius:16px;background:var(--surface)}
+html.v2 .tm-input,html.v2 .opp-select{background:#fff;border:2px solid var(--ink);border-radius:12px;color:var(--ink)}
+html.v2 .tm-input:focus{border-color:var(--accent-bright);box-shadow:3px 3px 0 rgba(107,72,196,.35)}
+html.v2 .inner-tab-bar{border-bottom:2px solid var(--ink)}
+html.v2 .inner-tab{color:var(--muted2);font-weight:700}
+html.v2 .inner-tab.active{color:var(--ink);border-bottom:3px solid var(--accent-bright)}
+
+/* Section headers get editorial weight */
+html.v2 .trade-col-label,html.v2 .field-label{color:var(--ink);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+html.v2 .side-clear-btn{border:1.5px solid var(--ink);color:var(--ink)}
+html.v2 .idea-use-btn{background:var(--ink);border:2px solid var(--ink);box-shadow:4px 4px 0 rgba(19,18,16,.25)}
+
+/* Hero proof strip ("Live market values · Real matchup data ...") as sticker pills */
+html.v2 .hero-proof span:not(.hero-proof-sep){
+  background:var(--surface);border:1.5px solid var(--ink);border-radius:100px;
+  padding:4px 12px;color:var(--ink);font-weight:700;font-size:11px;
+}
+html.v2 .hero-proof .hero-proof-sep{display:none}
+html.v2 .hero-proof{gap:8px;display:flex;flex-wrap:wrap;justify-content:center}
+
+/* Footer: ink block */
+html.v2 footer{background:var(--ink);color:#f5efe3;border-top:none}
+html.v2 footer a,html.v2 footer div{color:#cfc8b8!important}
+html.v2 footer svg{opacity:.9}
+
+/* Home news rail cards inherit the paper look; keep imagery punchy */
+html.v2 .news-card img{border-bottom:2px solid var(--ink)}
+html.v2 .nc-h{color:var(--ink);font-weight:800}
+
+/* Subtle paper grain for the CPG feel */
+html.v2 body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+}
+
+/* Wordmark: solid ink, no gradient wash */
+html.v2 .tm-wordmark{background:none!important;-webkit-background-clip:initial!important;-webkit-text-fill-color:var(--ink)!important;color:var(--ink)!important}

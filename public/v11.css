@@ -1,0 +1,374 @@
+/* ── TradeMind v11 concept: APPLE ─────────────────────────────────────────
+   Preview-only (?v11). The real app, restyled the way Apple would ship it.
+   TradeMind's purple stays; everything around it gets Apple's discipline:
+   SF Pro, tighter tracking, semibold instead of extrabold, flatter surfaces,
+   real hairlines, more air, and calmer motion.
+
+   Scoped to BOTH v11 and v12 so v12.css can @import this and override only
+   the headline font. Do not narrow these selectors to html.v11 alone. */
+
+/* ── tokens ─────────────────────────────────────────────────────────────── */
+html.v11, html.v12{
+  /* near-black with a purple cast, instead of the blue-grey #111827 */
+  --bg:#08060f;
+  --surface:#141420;
+  --surface2:#1c1c2a;
+  --surface3:#252536;
+  /* hairlines: Apple's borders are thinner and quieter */
+  --border:rgba(255,255,255,.08);
+  --border2:rgba(255,255,255,.14);
+  /* Apple's real dark-mode text greys, paired with TradeMind purple */
+  --text:#f5f5f7;
+  --muted:#86868b;
+  --muted2:#a1a1a6;
+  /* the brand, kept */
+  --accent:#7c5cbf;
+  --accent-bright:#9b72e8;
+  --accent-dim:rgba(139,107,255,.14);
+  --green:#30d158;
+  --red:#ff453a;
+  --yellow:#ff9f0a;
+  /* Apple's continuous-ish radii */
+  --radius:12px;
+  --radius-lg:18px;
+  --font-head:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --ap-spring:cubic-bezier(.16,1,.3,1);
+  --ap-ease:cubic-bezier(.4,0,.2,1);
+}
+
+html.v11 body, html.v12 body{
+  -webkit-font-smoothing:antialiased;
+  letter-spacing:-.012em;
+}
+
+/* Apple sets headings semibold and tight, never extrabold and airy */
+html.v11 h1, html.v12 h1,
+html.v11 h2, html.v12 h2,
+html.v11 h3, html.v12 h3{
+  font-weight:600;
+  letter-spacing:-.026em;
+  text-wrap:balance;
+}
+
+/* ── nav: thin, translucent, quiet ──────────────────────────────────────── */
+html.v11 .nav, html.v12 .nav{
+  background:rgba(8,6,15,.72);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid transparent;
+  box-shadow:none;
+}
+html.v11 .nav-item, html.v12 .nav-item,
+html.v11 .nav-item-btn, html.v12 .nav-item-btn{
+  font-size:12.5px;
+  font-weight:400;
+  letter-spacing:-.005em;
+  opacity:.82;
+  transition:opacity .2s var(--ap-ease);
+}
+html.v11 .nav-item:hover, html.v12 .nav-item:hover,
+html.v11 .nav-item-btn:hover, html.v12 .nav-item-btn:hover{opacity:1}
+html.v11 .nav-item.active, html.v12 .nav-item.active{opacity:1;font-weight:500}
+
+/* The wordmark stops shimmering: Apple's logo never animates at you.
+   NOTE: use background-image, never the `background` shorthand. styles.css
+   clips this gradient to the glyphs with background-clip:text, and the
+   shorthand resets background-clip to border-box, which paints a solid bar
+   over transparent text and the wordmark vanishes. Re-declared here so the
+   clip survives regardless of source order. */
+html.v11 .tm-wordmark, html.v12 .tm-wordmark{
+  animation:none;
+  background-image:linear-gradient(94deg,#9b72e8,#4fd8f5);
+  background-size:100% auto;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  letter-spacing:-.02em;
+  font-weight:600;
+}
+
+/* ── nav overflow ───────────────────────────────────────────────────────
+   PRE-EXISTING BUG (also present without any skin, see styles.css .nav):
+   the nav row is flex-wrap:nowrap with a 32px gap and needs ~1416px, but it
+   does not collapse until the 1024px breakpoint. Between 1025px and 1416px
+   the Analyze CTA and theme toggle are pushed past the viewport and become
+   unreachable — that window covers 1366x768 and 1280x800, the two most
+   common laptop sizes.
+   styles.css already solves this correctly at max-width:1024 (it hides
+   #nav-cta and lets .nav-links scroll). The bug is only that 1024 is far
+   too late a trigger. These are the same rules, raised to the width the
+   row actually needs. For production, changing that one breakpoint value
+   from 1024px to 1400px fixes it for every user. */
+/* Keep in sync with the same breakpoint in styles.css (the bar was slimmed:
+   CTA removed, Learn folded into Research, utilities are icons now). */
+@media (max-width:1200px){
+  html.v11 .nav, html.v12 .nav{padding:0 12px;gap:10px}
+  html.v11 .nav-links, html.v12 .nav-links{
+    overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0;
+  }
+  html.v11 .nav-links::-webkit-scrollbar, html.v12 .nav-links::-webkit-scrollbar{display:none}
+  html.v11 .nav-item-btn, html.v12 .nav-item-btn{padding:6px 9px}
+}
+
+/* ── buttons: flat pills, no glow, no lift ──────────────────────────────── */
+html.v11 .btn-primary, html.v12 .btn-primary{
+  background:var(--accent-bright);
+  font-family:var(--font-body);
+  font-size:15px;
+  font-weight:400;
+  letter-spacing:-.01em;
+  padding:11px 24px;
+  border-radius:980px;
+  box-shadow:none;
+  transition:background .2s var(--ap-ease),transform .12s var(--ap-ease);
+}
+html.v11 .btn-primary:hover, html.v12 .btn-primary:hover{
+  background:#ac89f5;
+  transform:none;
+  box-shadow:none;
+}
+html.v11 .btn-primary:active, html.v12 .btn-primary:active{transform:scale(.98);box-shadow:none}
+html.v11 .btn-sm, html.v12 .btn-sm{
+  border-radius:980px;
+  font-weight:500;
+  letter-spacing:-.01em;
+  transition:background .2s var(--ap-ease),border-color .2s var(--ap-ease);
+}
+
+/* ── surfaces: flatter, hairline borders, bigger radius ─────────────────── */
+html.v11 .card, html.v12 .card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:none;
+  padding:1.75rem;
+}
+html.v11 .tm-input, html.v12 .tm-input{
+  border-radius:var(--radius);
+  font-family:var(--font-body);
+  letter-spacing:-.01em;
+  transition:border-color .2s var(--ap-ease);
+}
+html.v11 .tm-input:focus, html.v12 .tm-input:focus{
+  border-color:var(--accent-bright);
+  box-shadow:none;
+  outline:none;
+}
+
+/* ── hero: one idea, big and tight, no theatre ──────────────────────────── */
+html.v11 .hero, html.v12 .hero{
+  background:radial-gradient(ellipse at 50% -10%,rgba(139,107,255,.18) 0%,transparent 60%);
+  min-height:auto;
+}
+/* Apple does not float particles behind a headline */
+html.v11 .hero-particles, html.v12 .hero-particles{display:none}
+html.v11 .hero-badge, html.v12 .hero-badge{
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:980px;
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:-.005em;
+  color:var(--muted2);
+  box-shadow:none;
+}
+html.v11 .hero h1, html.v12 .hero h1{
+  font-weight:600;
+  letter-spacing:-.03em;
+  line-height:1.05;
+}
+
+/* ── tabs: iOS segmented feel ───────────────────────────────────────────── */
+html.v11 .inner-tab-bar, html.v12 .inner-tab-bar{
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:11px;
+  padding:2px;
+  gap:2px;
+}
+html.v11 .inner-tab, html.v12 .inner-tab{
+  border-radius:9px;
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:-.01em;
+  border:none;
+  background:transparent;
+  transition:background .22s var(--ap-ease),color .22s var(--ap-ease);
+}
+html.v11 .inner-tab.active, html.v12 .inner-tab.active{
+  background:var(--surface3);
+  color:var(--text);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+html.v11 .screen-nav, html.v12 .screen-nav{border-bottom:1px solid var(--border)}
+
+/* ══ SCREEN 1: ANALYZE ══════════════════════════════════════════════════ */
+
+/* the three situation questions: quiet cards that highlight on selection */
+html.v11 .q-opt, html.v12 .q-opt{
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  transition:border-color .2s var(--ap-ease),background .2s var(--ap-ease),transform .12s var(--ap-ease);
+  box-shadow:none;
+}
+html.v11 .q-opt:hover, html.v12 .q-opt:hover{
+  border-color:var(--accent-bright);
+  transform:none;
+}
+html.v11 .q-opt.active, html.v12 .q-opt.active{
+  background:var(--accent-dim);
+  border-color:var(--accent-bright);
+}
+html.v11 .q-opt-key, html.v12 .q-opt-key{
+  font-weight:500;
+  letter-spacing:-.012em;
+}
+html.v11 .q-opt-text, html.v12 .q-opt-text{color:var(--muted);letter-spacing:-.008em}
+
+/* opponent picker + autocomplete */
+html.v11 .opp-select, html.v12 .opp-select{
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  transition:border-color .2s var(--ap-ease);
+}
+html.v11 .opp-select.active, html.v12 .opp-select.active{border-color:var(--accent-bright)}
+html.v11 .ac-dropdown, html.v12 .ac-dropdown{
+  border-radius:var(--radius);
+  border:1px solid var(--border2);
+  background:var(--surface2);
+  box-shadow:0 12px 40px rgba(0,0,0,.5);
+  -webkit-backdrop-filter:blur(20px);
+  backdrop-filter:blur(20px);
+}
+
+/* the verdict: the moment the whole app exists for. flat, confident, calm */
+html.v11 .result-panel, html.v12 .result-panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:none;
+}
+html.v11 .verdict-card, html.v12 .verdict-card{
+  border-radius:var(--radius-lg);
+  box-shadow:none;
+  border:1px solid var(--border);
+}
+html.v11 .verdict-headline, html.v12 .verdict-headline{
+  font-family:var(--font-head);
+  font-weight:600;
+  letter-spacing:-.028em;
+  text-transform:none;   /* Apple states it, it does not shout it */
+}
+html.v11 .verdict-body, html.v12 .verdict-body{
+  letter-spacing:-.012em;
+  line-height:1.5;
+  color:var(--muted2);
+}
+html.v11 .verdict-go, html.v12 .verdict-go{color:var(--green)}
+html.v11 .verdict-stop, html.v12 .verdict-stop{color:var(--red)}
+html.v11 .breakdown-toggle, html.v12 .breakdown-toggle{
+  border-radius:980px;
+  font-size:12.5px;
+  font-weight:500;
+  letter-spacing:-.01em;
+  border:1px solid var(--border);
+  background:transparent;
+}
+html.v11 .breakdown-row, html.v12 .breakdown-row{border-bottom:1px solid var(--border)}
+
+/* ══ SCREEN 2: SAGE ═════════════════════════════════════════════════════ */
+
+html.v11 .sage-composer, html.v12 .sage-composer{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:22px;
+  box-shadow:none;
+  transition:border-color .25s var(--ap-ease);
+}
+html.v11 .sage-composer:focus-within, html.v12 .sage-composer:focus-within{
+  border-color:var(--accent-bright);
+  box-shadow:none;
+}
+html.v11 .sage-composer textarea, html.v12 .sage-composer textarea{
+  font-family:var(--font-body);
+  font-size:16px;
+  letter-spacing:-.012em;
+  line-height:1.45;
+}
+html.v11 .sage-chat-log, html.v12 .sage-chat-log{letter-spacing:-.012em;line-height:1.55}
+/* Sage's face: keep it, drop the glow to a whisper */
+html.v11 .sage-hero-svg, html.v12 .sage-hero-svg{filter:none}
+html.v11 .sage-hero-eye, html.v12 .sage-hero-eye{filter:drop-shadow(0 0 6px rgba(155,114,232,.5))}
+
+/* ══ SCREEN 3: MARKET ═══════════════════════════════════════════════════ */
+
+html.v11 .mkt-panel, html.v12 .mkt-panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:none;
+}
+html.v11 .mkt-panel-title, html.v12 .mkt-panel-title{
+  font-family:var(--font-head);
+  font-weight:600;
+  letter-spacing:-.018em;
+  text-transform:none;
+}
+html.v11 .mkt-mover, html.v12 .mkt-mover{
+  border-radius:var(--radius);
+  border:1px solid transparent;
+  transition:border-color .25s var(--ap-ease),background .25s var(--ap-ease);
+}
+html.v11 .mkt-mover:hover, html.v12 .mkt-mover:hover{
+  border-color:var(--border2);
+  transform:none;
+}
+html.v11 .mkt-mover-img, html.v12 .mkt-mover-img{border-radius:50%}
+html.v11 .mkt-mover-name, html.v12 .mkt-mover-name{font-weight:500;letter-spacing:-.012em}
+html.v11 .mkt-chart-name, html.v12 .mkt-chart-name{font-weight:600;letter-spacing:-.018em}
+html.v11 .mkt-chart-val, html.v12 .mkt-chart-val{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+html.v11 .mkt-up, html.v12 .mkt-up{color:var(--green)}
+html.v11 .mkt-down, html.v12 .mkt-down{color:var(--red)}
+
+/* every figure that can be compared gets lining figures */
+html.v11 .verdict-right, html.v12 .verdict-right,
+html.v11 .mkt-chart-chg, html.v12 .mkt-chart-chg{font-variant-numeric:tabular-nums}
+
+/* ── motion: one spring, applied sparingly ──────────────────────────────── */
+html.v11 .card, html.v12 .card,
+html.v11 .q-opt, html.v12 .q-opt,
+html.v11 .mkt-panel, html.v12 .mkt-panel{
+  transition-timing-function:var(--ap-spring);
+}
+@media (prefers-reduced-motion:reduce){
+  html.v11 *, html.v12 *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+
+
+/* ── Light mode for the Apple skins ─────────────────────────────────────────
+   The tokens above pin the dark palette; without these overrides the theme
+   toggle changed data-theme but the skin stayed dark. */
+html.v11[data-theme="light"], html.v12[data-theme="light"]{
+  --bg:#f6f4fc;
+  --surface:#ffffff;
+  --surface2:#f1eefa;
+  --surface3:#e7e2f6;
+  --border:rgba(20,16,43,.12);
+  --border2:rgba(20,16,43,.2);
+  --text:#17122e;
+  --muted:#6b6490;
+  --muted2:#4d4670;
+  --accent:#6a3fff;
+  --accent-bright:#6a3fff;
+  --accent-dim:rgba(106,63,255,.1);
+  --green:#0a8f52;
+  --red:#d92d3f;
+  --yellow:#b7791f;
+}
+html.v11[data-theme="light"] body, html.v12[data-theme="light"] body{background:var(--bg);color:var(--text)}
+html.v11[data-theme="light"] .nav, html.v12[data-theme="light"] .nav{background:rgba(246,244,252,.85);border-bottom-color:rgba(20,16,43,.08);box-shadow:none}
+html.v11[data-theme="light"] .card, html.v12[data-theme="light"] .card{background:var(--surface);border-color:var(--border)}
+html.v11[data-theme="light"] .hero, html.v12[data-theme="light"] .hero{background:radial-gradient(ellipse at 50% -10%,rgba(106,63,255,.1) 0%,transparent 60%)}
+html.v11[data-theme="light"] .tm-wordmark, html.v12[data-theme="light"] .tm-wordmark{background-image:linear-gradient(94deg,#6a3fff,#0396b8)}

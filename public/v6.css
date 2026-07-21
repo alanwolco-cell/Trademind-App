@@ -1,0 +1,93 @@
+/* ── TradeMind v6 concept: GRADIENT FINTECH ────────────────────────────────
+   Preview-only (?v6). The Stripe / Ramp / Mercury school - crisp white base,
+   one spectacular gradient moment, glassy depth, confident sans type.
+   Reads "serious money product" - fitting for a market-value tool. */
+
+html.v6{
+  --bg:#ffffff;
+  --surface:#ffffff;
+  --surface2:#f6f8fb;
+  --surface3:#eef1f6;
+  --text:#0f172a;
+  --muted:#8b94a7;
+  --muted2:#475569;
+  --border:rgba(15,23,42,.08);
+  --border2:rgba(15,23,42,.15);
+  --accent-bright:#635bff;
+  --accent-dim:rgba(99,91,255,.07);
+  --green:#059669;
+  --red:#dc2626;
+  --yellow:#b45309;
+}
+html.v6 body{background:var(--bg);color:var(--text)}
+/* The one big gradient moment: an aurora sweep behind the hero */
+html.v6 body::before{
+  content:'';position:fixed;inset:-10% -10% auto -10%;height:72vh;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(45% 60% at 18% 20%,rgba(99,91,255,.16) 0%,transparent 70%),
+    radial-gradient(40% 55% at 82% 12%,rgba(0,212,255,.13) 0%,transparent 70%),
+    radial-gradient(50% 60% at 55% 40%,rgba(255,94,196,.09) 0%,transparent 70%);
+  animation:none;transform:skewY(-4deg);transform-origin:top left;
+}
+
+/* Nav: white glass */
+html.v6 .nav{background:rgba(255,255,255,.8);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+html.v6 .nav-item-btn{color:var(--muted2);font-weight:600}
+html.v6 .nav-item-btn.active{color:var(--accent-bright);background:var(--accent-dim)}
+html.v6 .nav-item-btn:hover{color:var(--text);background:var(--surface2)}
+html.v6 .tm-wordmark{background:linear-gradient(90deg,#635bff,#00b3e6)!important;-webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important;font-weight:800}
+html.v6 .nav-dropdown{background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(15,23,42,.10)}
+html.v6 .nav-dd-item:hover{background:var(--accent-dim);color:var(--accent-bright)}
+
+/* Ticker: glass strip */
+html.v6 #ticker-bar{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+html.v6 .ticker-item{color:var(--muted2)!important}
+
+/* Hero: gradient headline accent */
+html.v6 .hero{background:none;padding-top:60px}
+html.v6 .hero h1{color:var(--text);letter-spacing:-.04em;line-height:1.02;font-weight:800}
+html.v6 .hero h1 .hl{
+  background:linear-gradient(92deg,#635bff 0%,#00b3e6 55%,#ff5ec4 110%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#635bff;
+}
+html.v6 .hero-tagline{color:var(--muted2);font-weight:450;font-size:17px}
+html.v6 .hero-ring,html.v6 .hero-particles{display:none}
+html.v6 .hero-badge{background:rgba(255,255,255,.75);backdrop-filter:blur(8px);border:1px solid var(--border2);color:var(--muted2);border-radius:100px;font-weight:600;box-shadow:0 2px 10px rgba(15,23,42,.05)}
+html.v6 .hero-badge-dot{background:var(--green)}
+html.v6 .hero-sage-stage{position:relative}
+html.v6 .hero-sage-stage::after{
+  content:'';position:absolute;left:50%;top:50%;width:190px;height:190px;transform:translate(-50%,-50%);
+  border-radius:50%;background:conic-gradient(from 200deg,#635bff,#00b3e6,#ff5ec4,#635bff);
+  filter:blur(26px);opacity:.35;z-index:-1;
+}
+
+/* CTA: gradient pill with depth */
+html.v6 .btn-primary,html.v6 .btn-load{
+  background:linear-gradient(135deg,#635bff 0%,#4f46e5 100%);color:#fff;border:none;border-radius:12px;
+  font-weight:700;box-shadow:0 8px 24px rgba(99,91,255,.35),inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .15s,box-shadow .2s;
+}
+html.v6 .btn-primary:hover,html.v6 .btn-load:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(99,91,255,.45),inset 0 1px 0 rgba(255,255,255,.3)}
+html.v6 .btn-sm,html.v6 .ideas-refresh{background:#fff;border:1px solid var(--border2);color:var(--muted2);border-radius:10px;font-weight:600}
+html.v6 .btn-sm:hover{border-color:var(--accent-bright);color:var(--accent-bright)}
+
+/* Proof strip: soft chips */
+html.v6 .hero-proof span:not(.hero-proof-sep){background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:4px 12px;color:var(--muted2);font-weight:600;font-size:11px}
+html.v6 .hero-proof .hero-proof-sep{display:none}
+html.v6 .hero-proof{gap:8px;display:flex;flex-wrap:wrap;justify-content:center}
+
+/* Cards: floating white glass */
+html.v6 .card,html.v6 .ideas-card,html.v6 .mkt-panel,html.v6 .comm-card,html.v6 .news-card,html.v6 .pitch-card,html.v6 .how-card,html.v6 .tm-tweet-card{
+  background:#fff;border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 16px 48px rgba(15,23,42,.06);
+}
+html.v6 .tm-input,html.v6 .opp-select{background:#fff;border:1px solid var(--border2);border-radius:10px;color:var(--text)}
+html.v6 .tm-input:focus{border-color:var(--accent-bright);box-shadow:0 0 0 3px rgba(99,91,255,.15)}
+html.v6 .inner-tab{color:var(--muted2);font-weight:600}
+html.v6 .inner-tab.active{color:var(--accent-bright);border-bottom:2px solid var(--accent-bright)}
+html.v6 .idea-use-btn{background:linear-gradient(135deg,#635bff,#4f46e5);border:none;border-radius:10px;box-shadow:0 4px 14px rgba(99,91,255,.3)}
+html.v6 .nc-h{color:var(--text);font-weight:700}
+
+/* Footer: deep navy anchor */
+html.v6 footer{background:#0f172a;color:#94a3b8;border-top:none}
+html.v6 footer a,html.v6 footer div{color:#94a3b8!important}

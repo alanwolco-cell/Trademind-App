@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server/index.js"
+    },
+    {
+      "src": "/((?!_vercel/).*)",
+      "dest": "server/index.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/ktc/snapshot",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/stats/build",
+      "schedule": "0 9 * * 2"
+    }
+  ]
+}

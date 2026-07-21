@@ -1,0 +1,77 @@
+/* ── TradeMind v5 concept: EDITORIAL SERIF ─────────────────────────────────
+   Preview-only (?v5). The refined sports-journal school (Aesop / The Athletic
+   longform / Kinfolk) - warm paper, serif display type, terracotta accent,
+   thin rules. Feels like a publication you pay for. */
+
+html.v5{
+  --bg:#f7f3ec;
+  --surface:#fffdf9;
+  --surface2:#f1ece2;
+  --surface3:#e8e1d3;
+  --text:#211d17;
+  --muted:#8d8578;
+  --muted2:#4f4a40;
+  --border:rgba(33,29,23,.12);
+  --border2:rgba(33,29,23,.22);
+  --accent-bright:#b4552d;
+  --accent-dim:rgba(180,85,45,.08);
+  --green:#4a7c47;
+  --red:#b3372a;
+  --yellow:#a97913;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+}
+html.v5 body{background:var(--bg);color:var(--text)}
+html.v5 body::before{display:none}
+
+/* Nav: masthead - centered feel, thin double rule */
+html.v5 .nav{background:var(--bg);border-bottom:1px solid var(--text);box-shadow:0 3px 0 -2px var(--text)}
+html.v5 .nav-item-btn{color:var(--muted2);font-family:var(--serif);font-weight:400;font-style:italic;font-size:14px}
+html.v5 .nav-item-btn.active{color:var(--accent-bright);background:none;font-style:normal;font-weight:700}
+html.v5 .nav-item-btn:hover{color:var(--text);background:var(--surface2)}
+html.v5 .tm-wordmark{background:none!important;-webkit-background-clip:initial!important;-webkit-text-fill-color:var(--text)!important;color:var(--text)!important;font-family:var(--serif);font-weight:700;letter-spacing:.04em}
+
+/* Ticker: stock-ticker in a newspaper */
+html.v5 #ticker-bar{background:var(--text);border:none}
+html.v5 .ticker-item{color:#f7f3ec!important;font-family:var(--serif)}
+html.v5 .ticker-item span{color:#f7f3ec!important}
+
+/* Hero: serif headline with an italic accent word */
+html.v5 .hero{background:none;padding-top:56px}
+html.v5 .hero h1{color:var(--text);font-family:var(--serif);font-weight:700;letter-spacing:-.02em;line-height:1.04}
+html.v5 .hero h1 .hl{color:var(--accent-bright);background:none;-webkit-background-clip:initial;-webkit-text-fill-color:currentColor;font-style:italic}
+html.v5 .hero-tagline{color:var(--muted2);font-family:var(--serif);font-style:italic;font-size:17px}
+html.v5 .hero-ring,html.v5 .hero-particles{display:none}
+html.v5 .hero-badge{background:none;border:none;border-top:1px solid var(--text);border-bottom:1px solid var(--text);border-radius:0;color:var(--text);font-family:var(--serif);letter-spacing:.14em;text-transform:uppercase;font-size:10px;font-weight:400;box-shadow:none;padding:7px 4px}
+html.v5 .hero-badge-dot{display:none}
+html.v5 .hero-sage-stage{position:relative}
+html.v5 .hero-sage-stage::after{content:'';position:absolute;left:50%;top:50%;width:176px;height:176px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid var(--border2);z-index:-1}
+html.v5 .sage-hero-svg{filter:sepia(.25) saturate(.8)}
+
+/* CTA: understated ink button, serif label */
+html.v5 .btn-primary,html.v5 .btn-load{
+  background:var(--text);color:#f7f3ec;border:none;border-radius:2px;font-family:var(--serif);
+  font-weight:400;letter-spacing:.08em;text-transform:uppercase;font-size:12px;box-shadow:none;
+  transition:background .15s;
+}
+html.v5 .btn-primary:hover,html.v5 .btn-load:hover{background:var(--accent-bright)}
+html.v5 .btn-sm,html.v5 .ideas-refresh{background:none;border:1px solid var(--border2);color:var(--muted2);border-radius:2px;font-family:var(--serif)}
+html.v5 .btn-sm:hover{border-color:var(--accent-bright);color:var(--accent-bright)}
+
+/* Proof strip: caption line under a photograph */
+html.v5 .hero-proof span:not(.hero-proof-sep){color:var(--muted);font-family:var(--serif);font-style:italic;font-size:13px}
+html.v5 .hero-proof .hero-proof-sep{color:var(--accent-bright)}
+
+/* Cards: paper sheets, thin rules, drop-cap energy */
+html.v5 .card,html.v5 .ideas-card,html.v5 .mkt-panel,html.v5 .comm-card,html.v5 .news-card,html.v5 .pitch-card,html.v5 .how-card,html.v5 .tm-tweet-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:3px;box-shadow:0 1px 0 rgba(33,29,23,.06);
+}
+html.v5 .tm-input,html.v5 .opp-select{background:var(--surface);border:1px solid var(--border2);border-radius:2px;color:var(--text)}
+html.v5 .tm-input:focus{border-color:var(--accent-bright)}
+html.v5 .inner-tab{color:var(--muted2);font-family:var(--serif);font-style:italic}
+html.v5 .inner-tab.active{color:var(--text);font-style:normal;border-bottom:2px solid var(--accent-bright)}
+html.v5 .idea-use-btn{background:var(--text);border:none;border-radius:2px;box-shadow:none;font-family:var(--serif);text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+html.v5 .nc-h{font-family:var(--serif);font-weight:700;color:var(--text)}
+
+/* Footer: colophon */
+html.v5 footer{background:var(--bg);border-top:1px solid var(--text);color:var(--muted)}
+html.v5 footer a,html.v5 footer div{color:var(--muted2)!important;font-family:var(--serif)}

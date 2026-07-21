@@ -1,0 +1,124 @@
+/* ── TradeMind v10 concept: FRIDAY NIGHT LIGHTS ────────────────────────────
+   Preview-only (?v10). The CURRENT dark design, football-ified: the purple
+   stays in charge, but a stadium field glows in under the hero (yard lines
+   and all), the accent word goes pigskin orange/maroon, and the CTA is a
+   literal football - laces included. Night game under the lights. */
+
+html.v10{
+  --pigskin:#c2691e;      /* football leather orange */
+  --pigskin-hi:#e08331;
+  --maroon:#8a2f26;       /* deep football maroon */
+  --field:#1f7a3d;        /* turf green */
+  --field-glow:rgba(34,160,80,.25);
+}
+
+/* Aurora: keep the purple night sky, add floodlight green from below
+   and a warm maroon ember on the right */
+html.v10 body::before{
+  content:'';position:fixed;inset:-20%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(40% 35% at 20% 22%,rgba(124,92,191,.16) 0%,transparent 70%),
+    radial-gradient(35% 30% at 80% 15%,rgba(138,47,38,.14) 0%,transparent 70%),
+    radial-gradient(55% 40% at 50% 100%,var(--field-glow) 0%,transparent 65%);
+  animation:aurora 24s ease-in-out infinite alternate;
+}
+
+/* Wordmark: leather gradient */
+html.v10 .tm-wordmark{
+  background:linear-gradient(90deg,var(--pigskin-hi),var(--pigskin) 55%,var(--maroon))!important;
+  -webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important;font-weight:800;
+}
+
+/* ── THE FIELD: hero floor with yard lines fading into the dark ── */
+html.v10 .hero{position:relative;overflow:hidden}
+html.v10 .hero::after{
+  content:'';position:absolute;left:-10%;right:-10%;bottom:0;height:34%;
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.16) 0 2px,transparent 2px 34px),
+    linear-gradient(180deg,transparent 0%,rgba(31,122,61,.28) 45%,rgba(31,122,61,.5) 100%);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 55%);
+  mask-image:linear-gradient(180deg,transparent 0%,#000 55%);
+  transform:perspective(320px) rotateX(38deg);transform-origin:bottom center;
+  pointer-events:none;z-index:0;
+}
+html.v10 .hero>*{position:relative;z-index:1}
+
+/* Hash marks: a faint second layer for depth */
+html.v10 .hero::before{
+  content:'';position:absolute;left:20%;right:20%;bottom:0;height:26%;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.10) 0 2px,transparent 2px 17px);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 70%);
+  mask-image:linear-gradient(180deg,transparent 0%,#000 70%);
+  transform:perspective(320px) rotateX(38deg);transform-origin:bottom center;
+  pointer-events:none;z-index:0;
+}
+
+/* Headline: white stays, the money line goes pigskin */
+html.v10 .hero h1 .hl{
+  background:linear-gradient(92deg,var(--pigskin-hi) 0%,var(--pigskin) 45%,var(--maroon) 105%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--pigskin);
+}
+
+/* Sage under the floodlights */
+html.v10 .hero-ring{border-color:rgba(34,160,80,.25)}
+html.v10 .hero-sage-stage{position:relative}
+html.v10 .hero-sage-stage::after{
+  content:'';position:absolute;left:50%;top:50%;width:210px;height:210px;transform:translate(-50%,-50%);
+  border-radius:50%;background:radial-gradient(circle,rgba(224,131,49,.18) 0%,rgba(34,160,80,.12) 55%,transparent 75%);
+  filter:blur(6px);z-index:-1;
+}
+
+/* Badge: sideline pass */
+html.v10 .hero-badge{border-color:rgba(194,105,30,.5)}
+html.v10 .hero-badge-dot{background:var(--pigskin)}
+
+/* ── THE FOOTBALL CTA: leather ball with laces ── */
+html.v10 .btn-primary,html.v10 .btn-load{
+  position:relative;
+  background:linear-gradient(180deg,var(--pigskin-hi) 0%,var(--pigskin) 45%,#9a4f16 100%);
+  border:2px solid #7d3f12;border-radius:100px;color:#fff;font-weight:800;
+  box-shadow:0 6px 20px rgba(194,105,30,.35),inset 0 2px 0 rgba(255,255,255,.25),inset 0 -3px 6px rgba(80,40,10,.4);
+  text-shadow:0 1px 2px rgba(80,40,10,.5);
+  transition:transform .15s,box-shadow .2s;overflow:hidden;
+}
+/* The laces: white stitching across the top */
+html.v10 .btn-primary::after,html.v10 .btn-load::after{
+  content:'';position:absolute;top:5px;left:50%;transform:translateX(-50%);
+  width:56%;height:0;border-top:3px dashed rgba(255,255,255,.85);
+  border-radius:2px;pointer-events:none;
+}
+html.v10 .btn-primary:hover,html.v10 .btn-load:hover{
+  transform:translateY(-2px) rotate(-.5deg);
+  box-shadow:0 10px 28px rgba(194,105,30,.5),inset 0 2px 0 rgba(255,255,255,.3),inset 0 -3px 6px rgba(80,40,10,.4);
+}
+
+/* Proof chips: field-pass tags with a green tick */
+html.v10 .hero-proof span:not(.hero-proof-sep){
+  background:rgba(31,122,61,.12);border:1px solid rgba(34,160,80,.35);border-radius:100px;
+  padding:4px 12px;color:var(--muted2);font-weight:600;font-size:11px;
+}
+html.v10 .hero-proof .hero-proof-sep{display:none}
+html.v10 .hero-proof{gap:8px;display:flex;flex-wrap:wrap;justify-content:center}
+
+/* Ticker: scoreboard - deep green glass with amber text */
+html.v10 #ticker-bar{background:rgba(16,54,30,.85);border-bottom:1px solid rgba(34,160,80,.3)}
+html.v10 .ticker-item{color:#ffd28a!important}
+html.v10 .ticker-item span{color:#ffd28a!important}
+
+/* Cards: current surfaces with a whisper of turf in the border */
+html.v10 .card,html.v10 .ideas-card,html.v10 .mkt-panel,html.v10 .comm-card,html.v10 .news-card,html.v10 .pitch-card,html.v10 .how-card,html.v10 .tm-tweet-card{
+  border:1px solid rgba(34,160,80,.14);
+  box-shadow:0 1px 2px rgba(0,0,0,.25),0 16px 44px rgba(10,40,20,.25);
+}
+
+/* Accents that were purple lean pigskin now, but only on interactive moments */
+html.v10 .inner-tab.active{color:var(--pigskin-hi);border-bottom:2px solid var(--pigskin)}
+html.v10 .tm-input:focus,html.v10 .opp-select:focus{border-color:var(--pigskin);box-shadow:0 0 0 3px rgba(194,105,30,.16)}
+html.v10 .idea-use-btn{
+  background:linear-gradient(180deg,var(--pigskin-hi),#9a4f16);border:2px solid #7d3f12;border-radius:100px;
+  box-shadow:0 3px 0 rgba(80,40,10,.5);
+}
+html.v10 .btn-sm:hover,html.v10 .ideas-refresh:hover{border-color:var(--pigskin);color:var(--pigskin-hi)}
+
+/* Footer: end zone */
+html.v10 footer{border-top:2px solid rgba(34,160,80,.35)}

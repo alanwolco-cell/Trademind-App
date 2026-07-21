@@ -1,0 +1,10 @@
+node_modules/
+.env
+server/cache/
+*.log
+.vercel
+.env*
+
+# local tooling / OS noise
+.claude-flow/
+.DS_Store

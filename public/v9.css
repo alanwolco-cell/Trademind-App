@@ -1,0 +1,95 @@
+/* ── TradeMind v9 concept: ORIGINAL × GRADIENT FINTECH ─────────────────────
+   Preview-only (?v9). Design 6 (Stripe-style gradient) fused into the
+   original dark TradeMind identity. Same dark canvas, same purple brand,
+   same layout - upgraded with v6's moves: a vivid aurora sweep in the hero,
+   gradient headline accent, a gradient CTA with real depth, glassier cards,
+   and a conic glow ring behind Sage. The original site, plus polish. */
+
+/* Keep the original variables - only sharpen the accent range */
+html.v9{
+  --grad-a:#8b5cf6; /* brand purple */
+  --grad-b:#22d3ee; /* cyan */
+  --grad-c:#f472b6; /* pink */
+}
+
+/* Aurora: keep the original's ambient glow but give the top of the page the
+   v6 skewed gradient sweep, tinted to the brand palette */
+html.v9 body::before{
+  content:'';position:fixed;inset:-10% -10% auto -10%;height:78vh;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(42% 55% at 16% 18%,rgba(139,92,246,.22) 0%,transparent 70%),
+    radial-gradient(38% 50% at 84% 10%,rgba(34,211,238,.14) 0%,transparent 70%),
+    radial-gradient(48% 58% at 55% 38%,rgba(244,114,182,.10) 0%,transparent 70%),
+    radial-gradient(45% 40% at 60% 85%,rgba(155,114,232,.10) 0%,transparent 70%);
+  transform:skewY(-4deg);transform-origin:top left;
+  animation:aurora 24s ease-in-out infinite alternate;
+}
+
+/* Nav: original dark glass, slightly deeper blur */
+html.v9 .nav{backdrop-filter:blur(16px)}
+html.v9 .tm-wordmark{
+  background:linear-gradient(90deg,var(--grad-a),var(--grad-b))!important;
+  -webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important;font-weight:800;
+}
+
+/* Hero: same structure, gradient accent line */
+html.v9 .hero h1{letter-spacing:-.04em}
+html.v9 .hero h1 .hl{
+  background:linear-gradient(92deg,var(--grad-a) 0%,var(--grad-b) 55%,var(--grad-c) 110%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--grad-a);
+}
+/* Conic glow ring behind Sage (replaces the plain pulse rings) */
+html.v9 .hero-ring{display:none}
+html.v9 .hero-sage-stage{position:relative}
+html.v9 .hero-sage-stage::after{
+  content:'';position:absolute;left:50%;top:50%;width:200px;height:200px;transform:translate(-50%,-50%);
+  border-radius:50%;background:conic-gradient(from 200deg,var(--grad-a),var(--grad-b),var(--grad-c),var(--grad-a));
+  filter:blur(28px);opacity:.4;z-index:-1;
+}
+
+/* Badge: subtle glass */
+html.v9 .hero-badge{background:rgba(255,255,255,.05);backdrop-filter:blur(8px);border:1px solid rgba(155,114,232,.35)}
+
+/* CTA: v6's gradient pill with depth, in brand colors */
+html.v9 .btn-primary,html.v9 .btn-load{
+  background:linear-gradient(135deg,#8b5cf6 0%,#6b48c4 55%,#4f46e5 100%);
+  border:none;border-radius:14px;font-weight:700;color:#fff;
+  box-shadow:0 8px 26px rgba(124,92,191,.45),inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .15s,box-shadow .2s;
+}
+html.v9 .btn-primary:hover,html.v9 .btn-load:hover{
+  transform:translateY(-2px);
+  box-shadow:0 14px 36px rgba(124,92,191,.55),inset 0 1px 0 rgba(255,255,255,.3);
+}
+html.v9 .btn-primary:active,html.v9 .btn-load:active{transform:translateY(0)}
+
+/* Proof chips: soft glass chips like v6, dark */
+html.v9 .hero-proof span:not(.hero-proof-sep){
+  background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:100px;
+  padding:4px 12px;color:var(--muted2);font-weight:600;font-size:11px;
+}
+html.v9 .hero-proof .hero-proof-sep{display:none}
+html.v9 .hero-proof{gap:8px;display:flex;flex-wrap:wrap;justify-content:center}
+
+/* Cards: original surfaces, v6's floating depth */
+html.v9 .card,html.v9 .ideas-card,html.v9 .mkt-panel,html.v9 .comm-card,html.v9 .news-card,html.v9 .pitch-card,html.v9 .how-card,html.v9 .tm-tweet-card{
+  border:1px solid rgba(155,114,232,.14);
+  box-shadow:0 1px 2px rgba(0,0,0,.25),0 18px 50px rgba(0,0,0,.30);
+}
+html.v9 .tm-input:focus,html.v9 .opp-select:focus{
+  border-color:var(--grad-a);box-shadow:0 0 0 3px rgba(139,92,246,.18);
+}
+
+/* Gradient thread on active states */
+html.v9 .inner-tab.active{
+  color:var(--text);
+  border-image:linear-gradient(90deg,var(--grad-a),var(--grad-b)) 1;
+  border-bottom:2px solid;
+}
+html.v9 .idea-use-btn{
+  background:linear-gradient(135deg,#8b5cf6,#4f46e5);border:none;border-radius:100px;
+  box-shadow:0 4px 16px rgba(124,92,191,.4),inset 0 1px 0 rgba(255,255,255,.2);
+}
+
+/* Section titles pick up a whisper of the gradient */
+html.v9 .verdict-headline{letter-spacing:-.03em}

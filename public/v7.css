@@ -1,0 +1,136 @@
+/* ── TradeMind v7 concept: BACKYARD FOOTBALL ───────────────────────────────
+   Preview-only (?v7). Late-2000s kids sports video game box art - big red
+   splatter banner, chunky white italic type with navy outlines, starburst
+   stickers, and the whole page playing on a grass field with yard lines. */
+
+html.v7{
+  --bg:#2e7d32;
+  --surface:#ffffff;
+  --surface2:#f2f6ff;
+  --surface3:#e3ebf8;
+  --text:#12275e;
+  --muted:#5d6d95;
+  --muted2:#2c3f77;
+  --border:rgba(18,39,94,.22);
+  --border2:rgba(18,39,94,.45);
+  --accent-bright:#d8291f;
+  --accent-dim:rgba(216,41,31,.09);
+  --green:#1e8a3c;
+  --red:#d8291f;
+  --yellow:#f4b400;
+  --navy:#12275e;
+  --bfred:#d8291f;
+}
+/* The field: mowed-grass stripes + white yard lines and hash marks */
+html.v7 body{
+  color:var(--text);
+  background:
+    repeating-linear-gradient(0deg,transparent 0 118px,rgba(255,255,255,.75) 118px 122px),
+    repeating-linear-gradient(0deg,transparent 0 58px,rgba(255,255,255,.28) 58px 60px,transparent 60px 118px),
+    repeating-linear-gradient(90deg,#2e7d32 0 140px,#37903c 140px 280px);
+  background-attachment:fixed;
+}
+html.v7 body::before{display:none}
+
+/* Nav: the red box-art banner with a painted edge */
+html.v7 .nav{
+  background:linear-gradient(180deg,#e5352a 0%,#c21f16 100%);
+  border-bottom:4px solid #fff;box-shadow:0 4px 0 var(--navy),0 8px 18px rgba(0,0,0,.3);
+}
+html.v7 .nav-item-btn{color:#fff;font-weight:900;font-style:italic;text-transform:uppercase;font-size:11.5px;letter-spacing:.02em;text-shadow:1px 2px 0 rgba(18,39,94,.55)}
+html.v7 .nav-item-btn.active{background:#fff;color:var(--bfred);border-radius:100px;text-shadow:none}
+html.v7 .nav-item-btn:hover{background:rgba(255,255,255,.18)}
+html.v7 .tm-wordmark{background:none!important;-webkit-background-clip:initial!important;-webkit-text-fill-color:#fff!important;color:#fff!important;font-weight:900;font-style:italic;letter-spacing:-.01em;text-shadow:2px 3px 0 var(--navy)}
+html.v7 .nav-dropdown{background:#fff;border:3px solid var(--navy);border-radius:14px;box-shadow:4px 6px 0 rgba(18,39,94,.5)}
+html.v7 .nav-dd-item{color:var(--navy);font-weight:700}
+html.v7 .nav-dd-item:hover{background:var(--bfred);color:#fff}
+html.v7 .theme-toggle{border:2px solid #fff;color:#fff}
+
+/* Ticker: navy crowd strip */
+html.v7 #ticker-bar{background:var(--navy);border-bottom:3px solid #fff}
+html.v7 .ticker-item{color:#fff!important;font-weight:700;font-style:italic}
+html.v7 .ticker-item span{color:#fff!important}
+
+/* Hero: navy crowd splash over the field, box-art type */
+html.v7 .hero{
+  background:radial-gradient(120% 85% at 50% -12%,#1d3a7e 0%,#12275e 55%,transparent 100%);
+  padding-top:52px;border-radius:0 0 46% 46%/0 0 90px 90px;
+}
+html.v7 .hero h1{
+  color:#fff;font-weight:900;font-style:italic;letter-spacing:-.02em;line-height:.98;text-transform:uppercase;
+  -webkit-text-stroke:2px var(--navy);
+  text-shadow:3px 4px 0 var(--navy),6px 8px 0 rgba(216,41,31,.55);
+}
+html.v7 .hero h1 .hl{
+  color:#ffd94a;background:none;-webkit-background-clip:initial;-webkit-text-fill-color:currentColor;
+  -webkit-text-stroke:2px var(--navy);
+}
+html.v7 .hero-tagline{color:#e8efff;font-weight:800;font-style:italic;font-size:15px;text-shadow:1px 2px 0 rgba(18,39,94,.7)}
+html.v7 .hero-ring,html.v7 .hero-particles{display:none}
+
+/* Title badge: tilted painted ribbon */
+html.v7 .hero-badge{
+  background:var(--bfred);border:3px solid #fff;color:#fff;border-radius:100px;
+  font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:.03em;
+  box-shadow:3px 5px 0 rgba(18,39,94,.6);transform:rotate(-2.5deg);
+}
+html.v7 .hero-badge-dot{background:#ffd94a}
+
+/* Sage in a helmet-sticker circle with a starburst behind him */
+html.v7 .hero-sage-stage{position:relative}
+html.v7 .hero-sage-stage::before{
+  content:'';position:absolute;inset:0;margin:auto;width:225px;height:225px;transform:rotate(12deg);
+  background:var(--bfred);z-index:-2;
+  clip-path:polygon(50% 0%,61% 20%,79% 8%,80% 30%,100% 29%,89% 47%,108% 60%,84% 63%,88% 85%,66% 76%,60% 100%,50% 82%,40% 100%,34% 76%,12% 85%,16% 63%,-8% 60%,11% 47%,0% 29%,20% 30%,21% 8%,39% 20%);
+  filter:drop-shadow(3px 5px 0 rgba(18,39,94,.55));
+}
+html.v7 .hero-sage-stage::after{
+  content:'';position:absolute;left:50%;top:50%;width:164px;height:164px;transform:translate(-50%,-50%);
+  border-radius:50%;background:#fff;border:4px solid var(--navy);z-index:-1;
+}
+
+/* CTA: big arcade start button */
+html.v7 .btn-primary,html.v7 .btn-load{
+  background:linear-gradient(180deg,#ff5a3c 0%,#d8291f 60%,#b71c12 100%);
+  color:#fff;border:3px solid #fff;border-radius:100px;font-weight:900;font-style:italic;
+  text-transform:uppercase;letter-spacing:.03em;
+  box-shadow:0 5px 0 var(--navy),0 10px 20px rgba(0,0,0,.35);
+  transition:transform .1s,box-shadow .1s;text-shadow:1px 2px 0 rgba(18,39,94,.5);
+}
+html.v7 .btn-primary:hover,html.v7 .btn-load:hover{transform:translateY(-2px);box-shadow:0 7px 0 var(--navy),0 14px 24px rgba(0,0,0,.4)}
+html.v7 .btn-primary:active,html.v7 .btn-load:active{transform:translateY(3px);box-shadow:0 2px 0 var(--navy)}
+html.v7 .btn-sm,html.v7 .ideas-refresh{background:#fff;border:2.5px solid var(--navy);color:var(--navy);border-radius:100px;font-weight:800;font-style:italic;box-shadow:2px 3px 0 rgba(18,39,94,.35)}
+html.v7 .btn-sm:hover{background:#ffd94a;color:var(--navy)}
+
+/* Proof strip: team sticker decals */
+html.v7 .hero-proof span:not(.hero-proof-sep){
+  background:#fff;border:2.5px solid var(--navy);border-radius:100px;padding:5px 13px;
+  color:var(--navy);font-weight:900;font-style:italic;font-size:11px;text-transform:uppercase;
+  box-shadow:2px 3px 0 rgba(18,39,94,.4);
+}
+html.v7 .hero-proof .hero-proof-sep{display:none}
+html.v7 .hero-proof{gap:9px;display:flex;flex-wrap:wrap;justify-content:center}
+
+/* Cards: white trading-card stickers on the grass */
+html.v7 .card,html.v7 .ideas-card,html.v7 .mkt-panel,html.v7 .comm-card,html.v7 .news-card,html.v7 .pitch-card,html.v7 .how-card,html.v7 .tm-tweet-card{
+  background:#fff;border:3px solid var(--navy);border-radius:18px;
+  box-shadow:4px 6px 0 rgba(18,39,94,.45),0 14px 30px rgba(0,0,0,.18);
+}
+html.v7 .bd-card{box-shadow:none;border:2px solid var(--border2);border-radius:12px}
+html.v7 .tm-input,html.v7 .opp-select{background:#fff;border:2.5px solid var(--navy);border-radius:12px;color:var(--navy);font-weight:600}
+html.v7 .tm-input:focus{border-color:var(--bfred);box-shadow:0 0 0 3px rgba(216,41,31,.2)}
+html.v7 .inner-tab-bar{border-bottom:3px solid var(--navy)}
+html.v7 .inner-tab{color:var(--muted2);font-weight:900;font-style:italic;text-transform:uppercase;font-size:11px}
+html.v7 .inner-tab.active{color:var(--bfred);border-bottom:4px solid var(--bfred)}
+html.v7 .trade-col-label,html.v7 .field-label{color:var(--navy);font-weight:900;font-style:italic;text-transform:uppercase}
+html.v7 .idea-use-btn{background:linear-gradient(180deg,#ff5a3c,#c21f16);border:2.5px solid #fff;border-radius:100px;box-shadow:0 3px 0 var(--navy);font-weight:900;font-style:italic;text-transform:uppercase}
+html.v7 .side-clear-btn{border:2px solid var(--navy);color:var(--navy);font-weight:800}
+html.v7 .nc-h{color:var(--navy);font-weight:800}
+html.v7 .empty-state{color:var(--muted2)}
+
+/* Footer: navy end zone */
+html.v7 footer{background:var(--navy);border-top:4px solid #fff;color:#c6d2f0}
+html.v7 footer a,html.v7 footer div{color:#c6d2f0!important}
+
+/* Keep text readable inside white cards on every screen */
+html.v7 .card .verdict-headline{color:var(--navy)}

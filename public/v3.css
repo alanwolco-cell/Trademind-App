@@ -1,0 +1,84 @@
+/* ── TradeMind v3 homepage concept ─────────────────────────────────────────
+   Preview-only skin, loads when the URL has ?v3.
+   Direction: famous-clean-aesthetic school (Linear / Apple / Notion) -
+   near-white canvas, hairline borders, one restrained accent, generous air,
+   quiet confidence. No shadows shouting, no texture - just typography and space. */
+
+html.v3{
+  --bg:#fafafa;
+  --surface:#ffffff;
+  --surface2:#f4f4f5;
+  --surface3:#ececee;
+  --text:#18181b;
+  --muted:#8e8e95;
+  --muted2:#52525b;
+  --border:rgba(24,24,27,.08);
+  --border2:rgba(24,24,27,.14);
+  --accent-bright:#5b4fc7;
+  --accent-dim:rgba(91,79,199,.07);
+  --green:#16a34a;
+  --red:#dc2626;
+  --yellow:#b45309;
+}
+html.v3 body{background:var(--bg);color:var(--text);letter-spacing:-.006em}
+html.v3 body::before{display:none}
+
+/* Nav: frosted glass, hairline rule */
+html.v3 .nav{background:rgba(250,250,250,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+html.v3 .nav-item-btn{color:var(--muted2);font-weight:500}
+html.v3 .nav-item-btn.active{color:var(--text);background:var(--surface3)}
+html.v3 .nav-item-btn:hover{color:var(--text);background:var(--surface2)}
+html.v3 .tm-wordmark{background:none!important;-webkit-background-clip:initial!important;-webkit-text-fill-color:var(--text)!important;color:var(--text)!important;font-weight:700;letter-spacing:-.02em}
+html.v3 .nav-dropdown{background:var(--surface);border:1px solid var(--border2);border-radius:10px;box-shadow:0 10px 30px rgba(24,24,27,.08)}
+html.v3 .nav-dd-item:hover{background:var(--surface2);color:var(--text)}
+html.v3 .theme-toggle{border-color:var(--border2);color:var(--muted2)}
+
+/* Ticker: whisper-quiet strip */
+html.v3 #ticker-bar{background:var(--surface);border-bottom:1px solid var(--border)}
+html.v3 .ticker-item{color:var(--muted2)!important}
+
+/* Hero: type does all the work */
+html.v3 .hero{background:none;padding-top:64px}
+html.v3 .hero h1{color:var(--text);letter-spacing:-.045em;line-height:1.02;font-weight:800}
+html.v3 .hero h1 .hl{color:var(--accent-bright);background:none;-webkit-background-clip:initial;-webkit-text-fill-color:currentColor}
+html.v3 .hero-tagline{color:var(--muted2);font-weight:400;font-size:17px}
+html.v3 .hero-ring,html.v3 .hero-particles{display:none}
+html.v3 .hero-badge{background:var(--surface);border:1px solid var(--border2);color:var(--muted2);border-radius:100px;font-weight:600;box-shadow:none}
+html.v3 .hero-badge-dot{background:var(--green)}
+html.v3 .hero-sage-stage{position:relative}
+html.v3 .hero-sage-stage::after{content:'';position:absolute;left:50%;top:50%;width:172px;height:172px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(91,79,199,.10) 0%,transparent 70%);z-index:-1}
+html.v3 .sage-hero-svg{filter:saturate(.9)}
+
+/* CTA: one solid accent button, everything else ghost */
+html.v3 .btn-primary,html.v3 .btn-load{
+  background:var(--text);color:#fff;border:none;border-radius:10px;font-weight:600;
+  box-shadow:0 1px 2px rgba(24,24,27,.2);transition:transform .12s,box-shadow .2s;
+}
+html.v3 .btn-primary:hover,html.v3 .btn-load:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(24,24,27,.18);background:#000}
+html.v3 .btn-sm,html.v3 .ideas-refresh{background:var(--surface);border:1px solid var(--border2);color:var(--muted2);border-radius:8px;font-weight:500}
+html.v3 .btn-sm:hover{color:var(--text);border-color:rgba(24,24,27,.3)}
+
+/* Proof strip: quiet dot-separated caption, no pills */
+html.v3 .hero-proof span:not(.hero-proof-sep){color:var(--muted);font-weight:500;font-size:12px}
+html.v3 .hero-proof .hero-proof-sep{color:var(--border2)}
+
+/* Cards: white, hairline, soft ambient shadow */
+html.v3 .card,html.v3 .ideas-card,html.v3 .mkt-panel,html.v3 .comm-card,html.v3 .news-card,html.v3 .pitch-card,html.v3 .how-card,html.v3 .tm-tweet-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 2px rgba(24,24,27,.04),0 12px 32px rgba(24,24,27,.04);
+}
+html.v3 .bd-card{box-shadow:none;border:1px solid var(--border)}
+html.v3 .tm-input,html.v3 .opp-select{background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text)}
+html.v3 .tm-input:focus{border-color:var(--accent-bright);box-shadow:0 0 0 3px rgba(91,79,199,.12)}
+html.v3 .inner-tab{color:var(--muted);font-weight:500}
+html.v3 .inner-tab.active{color:var(--text);border-bottom:2px solid var(--text)}
+html.v3 .trade-col-label,html.v3 .field-label{color:var(--muted);font-weight:600;letter-spacing:.04em}
+html.v3 .idea-use-btn{background:var(--text);border:none;box-shadow:none;border-radius:8px}
+html.v3 .side-clear-btn{border-color:var(--border2);color:var(--muted)}
+
+/* News cards: editorial */
+html.v3 .news-card img{border-bottom:1px solid var(--border)}
+html.v3 .nc-h{color:var(--text);font-weight:600;letter-spacing:-.01em}
+
+/* Footer: pale, hairline */
+html.v3 footer{background:var(--surface);border-top:1px solid var(--border);color:var(--muted)}
+html.v3 footer a,html.v3 footer div{color:var(--muted)!important}

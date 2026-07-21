@@ -1,0 +1,55 @@
+/* ── TradeMind v12 concept: APPLE, KEEPING UNBOUNDED ──────────────────────
+   Preview-only (?v12). Identical to v11 in every way except one: the
+   headline face stays Unbounded, so TradeMind keeps its own voice while
+   the body copy, spacing, surfaces and motion go Apple.
+
+   v11.css is scoped to `html.v11, html.v12`, so importing it here applies
+   the whole Apple base, and the rules below override only the type.
+   @import must stay first in the file. */
+@import url('/v11.css?v=2026072233');
+
+html.v12{
+  /* the brand face, kept, everywhere a headline lives */
+  --font-head:'Unbounded','Outfit',system-ui,sans-serif;
+  /* body/UI stays SF Pro, inherited from v11 via --font-body */
+}
+
+/* Unbounded is a wide display face: it needs less negative tracking than
+   SF Pro or it collides with itself at large sizes */
+html.v12 h1,
+html.v12 h2,
+html.v12 h3,
+html.v12 .hero h1,
+html.v12 .verdict-headline,
+html.v12 .mkt-panel-title,
+html.v12 .mkt-chart-name{
+  font-family:var(--font-head);
+  letter-spacing:-.01em;
+  font-weight:600;
+}
+
+/* the wordmark is Unbounded here, so give it the brand's own weight back */
+html.v12 .tm-wordmark{
+  font-family:var(--font-head);
+  font-weight:700;
+  letter-spacing:.01em;
+}
+
+/* Unbounded is wider than SF Pro: at 62px "Win every trade." needs ~616px of
+   content box, and the stock 620px hero-inner leaves only ~572px after padding,
+   so each phrase wrapped again below its <br>. Give the column the room the
+   face actually needs, with a little margin. */
+html.v12 .hero-inner{max-width:720px}
+
+/* "Life is good / when you know / the move." runs three lines in Unbounded -
+   step the size down so the block stays balanced and never wraps a 4th line */
+html.v12 .hero-inner h1{font-size:clamp(30px,4.4vw,50px)}
+
+/* The opening screen is one balanced composition: hero fills the viewport and
+   its content sits on the vertical center (nudged up slightly - optical center),
+   so a fresh load shows Sage + title + CTA and nothing half-cut below.
+   min-height must be re-asserted here: the v11 base sets it to auto. */
+html.v12 .hero{align-items:center;min-height:calc(100svh - 60px)}
+html.v12 body.ticker-on .hero,
+html.v12 .ticker-visible .hero{min-height:calc(100svh - 94px)}
+html.v12 .hero-inner{padding-top:0;padding-bottom:6vh}

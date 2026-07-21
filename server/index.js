@@ -1,0 +1,90 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+
+const sleeperRoutes = require('./routes/sleeper');
+const ktcRoutes = require('./routes/ktc');
+const newsRoutes = require('./routes/news');
+const communityRoutes = require('./routes/community');
+const espnRoutes = require('./routes/espn');
+const statsRoutes = require('./routes/stats');
+const yahooRoutes = require('./routes/yahoo');
+const sageRoutes = require('./routes/sage');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+// Capture the raw body so the Stripe webhook can verify its signature (the
+// parsed JSON loses the exact bytes Stripe signed).
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+
+// API routes
+app.use('/api/sleeper', sleeperRoutes);
+app.use('/api/ktc', ktcRoutes);
+app.use('/api/news', newsRoutes);
+app.use('/api/community', communityRoutes);
+app.use('/api/espn', espnRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/yahoo', yahooRoutes);
+app.use('/api/sage', sageRoutes);
+app.use('/api/odds', require('./routes/odds'));
+app.use('/api/scout', require('./routes/scout'));
+app.use('/api/room', require('./routes/draftroom'));
+app.use('/api/billing', require('./routes/billing'));
+
+// Serve frontend
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Public player pages: /player/jahmyr-gibbs — same SPA, SEO-friendly meta tags
+const fs = require('fs');
+let _indexHtml = null;
+app.get('/player/:slug', (req, res) => {
+  try {
+    if (!_indexHtml) _indexHtml = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+    const nice = String(req.params.slug).replace(/[^a-z0-9-]/gi, '').split('-')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 60);
+    const title = nice ? `${nice} - Dynasty Value, Trades & Sage's Take | TradeMind` : 'TradeMind';
+    const desc = nice ? `${nice}'s live fantasy football market value, trade history and comps, and what Sage would pay. Updated daily on TradeMind.` : '';
+    let html = _indexHtml.replace(/<title>[\s\S]*?<\/title>/, '<title>' + title + '</title>');
+    if (desc) html = html.replace(/(<meta name="description" content=")[^"]*(">)/, '$1' + desc + '$2');
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=3600');
+    res.send(html);
+  } catch (e) {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  }
+});
+
+// Legal pages: real, standalone (not the SPA catch-all)
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, '../public/privacy.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, '../public/terms.html')));
+
+// Lightweight client error beacon -> Vercel logs. Zero-cost visibility into
+// runtime breakage in the field. Point BEACON at Sentry later if wanted: the
+// client just POSTs {msg, url, ua}; this logs it where `vercel logs` can see.
+app.post('/api/log/error', (req, res) => {
+  try {
+    const b = req.body || {};
+    console.error('[client-error]', JSON.stringify({
+      msg: String(b.msg || '').slice(0, 300),
+      src: String(b.src || '').slice(0, 200),
+      line: b.line, ua: String(b.ua || '').slice(0, 160),
+      t: new Date().toISOString(),
+    }));
+  } catch (_) {}
+  res.status(204).end();
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// Local dev: start server. Vercel: export app for serverless handler.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`TradeMind running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

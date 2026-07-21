@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trademind",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/index.js"],
+      "port": 3000
+    },
+    {
+      "name": "trademind-alt",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "PORT=3457 node server/index.js"],
+      "port": 3457
+    }
+  ]
+}
