@@ -115,7 +115,7 @@ html.v11 .tm-wordmark, html.v12 .tm-wordmark{
 html.v11 .btn-primary, html.v12 .btn-primary{
   background:linear-gradient(90deg,#7c5cbf,#9b72e8,#4fd8f5,#9b72e8,#7c5cbf);
   background-size:300% 100%;
-  animation:tmDrift 7s linear infinite;
+  animation:tmDrift 18s ease-in-out infinite alternate;
   color:#fff;
   font-family:var(--font-body);
   font-size:15px;
