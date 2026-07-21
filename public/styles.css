@@ -155,9 +155,13 @@ h1 .hl{color:var(--accent-bright)}
 .hero-villain{display:none}
 /* CTA */
 .hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:0}
-.btn-primary{background:linear-gradient(135deg,#a87ef0 0%,#7c5cbf 100%);color:#fff;font-size:15px;font-weight:700;padding:15px 36px;border:none;border-radius:100px;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block;letter-spacing:.01em;box-shadow:0 4px 28px rgba(124,92,191,.5),0 1px 0 rgba(255,255,255,.12) inset}
-.btn-primary:hover{background:linear-gradient(135deg,#c4a0ff 0%,#9b72e8 100%);transform:translateY(-2px);box-shadow:0 10px 36px rgba(124,92,191,.65),0 1px 0 rgba(255,255,255,.15) inset}
+/* Aurora Drift: a living purple->cyan gradient drifts across the primary CTA */
+.btn-primary{background:linear-gradient(90deg,#7c5cbf,#9b72e8,#4fd8f5,#9b72e8,#7c5cbf);background-size:300% 100%;animation:tmDrift 7s linear infinite;color:#fff;font-size:15px;font-weight:700;padding:15px 36px;border:none;border-radius:100px;cursor:pointer;transition:transform .2s,box-shadow .3s;text-decoration:none;display:inline-block;letter-spacing:.01em;box-shadow:0 5px 30px rgba(124,92,191,.5),0 1px 0 rgba(255,255,255,.18) inset}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 46px rgba(103,232,249,.42),0 1px 0 rgba(255,255,255,.22) inset}
 .btn-primary:active{transform:translateY(0);box-shadow:0 2px 10px rgba(124,92,191,.3)}
+@keyframes tmDrift{to{background-position:300% 0}}
+@keyframes tmPcFade{from{opacity:.35}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.btn-primary{animation:none}.pcwrap{animation:none!important}}
 .btn-outline{background:rgba(255,255,255,.05);color:var(--text);font-size:15px;font-weight:500;padding:15px 32px;border:1px solid rgba(255,255,255,.16);border-radius:100px;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block}
 .btn-outline:hover{color:#fff;border-color:rgba(155,114,232,.6);background:rgba(155,114,232,.1);box-shadow:0 0 20px rgba(155,114,232,.18)}
 /* Social proof strip */

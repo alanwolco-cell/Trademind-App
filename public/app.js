@@ -7243,6 +7243,8 @@ function mdScoutQueue(p){
       w.innerHTML=_pcCols(pros,cons)
         +(doc.college?'<div style="font-size:11px;color:var(--muted2);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><strong style="color:#4fd8f5">College:</strong> '+doc.college+'</div>':'')
         +'<div style="font-size:9.5px;color:var(--muted);margin-top:4px">Includes this week\'s scouting from around the web.</div>';
+      // Fade the fresh scouting in so it never hard-jumps the columns
+      w.style.animation='none';void w.offsetWidth;w.style.animation='tmPcFade .35s ease';
     });
   });
 }
