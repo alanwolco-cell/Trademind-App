@@ -740,10 +740,21 @@ function buildScoutBlock(inputEls,borderColor){
 }
 
 function describePlayer(name, pid, pos, ktcVal){
+  var isR=leagueMode==='redraft';
+  // Draft picks are NOT players - never run tier/position logic on them (that
+  // produced junk like "a solid roster player ?"). Describe the pick itself.
+  var isPick = pos==='PK' || /\bround\s*\d/i.test(name||'') || /^\s*20\d{2}\s+\d\.\d/.test(name||'');
+  if(isPick){
+    var ym=(name||'').match(/20\d{2}/); var yr=ym?ym[0]:'';
+    var rm=(name||'').match(/round\s*(\d)/i)||(name||'').match(/\b(\d)\.\d{2}/); var rnd=rm?rm[1]:'';
+    var ords=['','first','second','third','fourth'];
+    var pdesc = (yr&&rnd) ? ('a '+yr+' '+(ords[+rnd]||(rnd+'th'))+'-round rookie pick') : 'a future rookie pick';
+    return '<strong>'+name+'</strong> ('+pdesc+')';
+  }
   var fc=pid?ktcFull[pid]:null;
   var posRank=fc&&fc.positionRank?fc.positionRank:null;
   var rankDesc='';
-  var isR=leagueMode==='redraft';
+  var knownPos=(pos&&pos!=='?');
   if(posRank){
     if(posRank<=3) rankDesc=isR?'a top-3 weekly scorer at '+pos:'a top-3 '+pos+' in dynasty';
     else if(posRank<=5) rankDesc='a top-5 '+pos;
@@ -752,7 +763,9 @@ function describePlayer(name, pid, pos, ktcVal){
     else if(posRank<=36) rankDesc='outside the top-24 '+pos;
     else rankDesc='fringe-roster '+pos;
   } else {
-    rankDesc=playerTierLabel(ktcVal).label+' '+pos;
+    // No positional rank: use the value tier, and only append the position if we
+    // actually know it (otherwise we'd print a stray "?").
+    rankDesc = knownPos ? (playerTierLabel(ktcVal).label+' '+pos) : playerTierLabel(ktcVal).label;
   }
   var formatNote='';
   if(leagueFormat.hasSuperFlex&&pos==='QB'){
