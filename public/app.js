@@ -1833,6 +1833,34 @@ async function sageInlineSignIn(){
     if(st)st.textContent='No Sleeper account found under that name. Check the spelling - it is case sensitive.';
   }
 }
+// Sage can send the user to any tool. It emits [[go:KEY]] in its reply; we strip
+// that from the text and render a clickable chip that navigates there.
+var SAGE_NAV={
+  home:{label:'Home',go:function(){switchScreen('home');}},
+  analyze:{label:'Open the Trade Analyzer',go:function(){switchScreen('analyze');try{showAnalyzeTab('analyzer');}catch(_){}}},
+  ideas:{label:'See Trade Ideas',go:function(){switchScreen('analyze');try{showAnalyzeTab('ideas');}catch(_){}}},
+  league:{label:'Open My League',go:function(){switchScreen('league');}},
+  research:{label:'Open Research',go:function(){switchScreen('research');}},
+  draft:{label:'Open the Draft room',go:function(){switchScreen('mock');try{mdRenderStrats();}catch(_){}}},
+  mock:{label:'Open the Draft room',go:function(){switchScreen('mock');}},
+  news:{label:'Open News',go:function(){switchScreen('news');try{loadNewsGrid();loadAnalystCorner();}catch(_){}}},
+  community:{label:'Open Community',go:function(){switchScreen('community');try{loadCommunityFeed();}catch(_){}}},
+  learn:{label:'Fantasy 101',go:function(){switchScreen('learn');}}
+};
+function _sageStripNav(txt){return String(txt).replace(/\[\[go:[a-z]*\]\]/gi,'').replace(/\[\[go:[a-z]*$/i,'').replace(/[ \t]+(\n|$)/g,'$1').replace(/\s+$/,'');}
+function _sageNavKeys(txt){var out=[],seen={},m,re=/\[\[go:([a-z]+)\]\]/gi;while((m=re.exec(String(txt)))){var k=m[1].toLowerCase();if(SAGE_NAV[k]&&!seen[k]){seen[k]=1;out.push(k);}}return out.slice(0,2);}
+function _sageRenderNav(container,txt){
+  var keys=_sageNavKeys(txt);if(!keys.length||!container)return;
+  var wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:11px';
+  keys.forEach(function(k){
+    var nav=SAGE_NAV[k];var b=document.createElement('button');
+    b.className='sage-nav-chip';b.innerHTML=nav.label+' <span style="opacity:.75">&rarr;</span>';
+    b.onclick=function(){try{nav.go();}catch(_){}};
+    wrap.appendChild(b);
+  });
+  container.appendChild(wrap);
+}
 async function sageChatSend(){
   var inp=document.getElementById('sage-chat-input');
   var btn=document.getElementById('sage-chat-send');
@@ -1869,7 +1897,7 @@ async function sageChatSend(){
       typing.appendChild(liveText);
     }
     full+=t;
-    liveText.textContent=full;
+    liveText.textContent=_sageStripNav(full);
     log.scrollTop=log.scrollHeight;
   }
   try{
@@ -1893,7 +1921,7 @@ async function sageChatSend(){
       // Non-streaming fallback (errors come back as JSON)
       var d=await res.json().catch(function(){return {};});
       typing.remove();
-      if(res.ok&&d.answer){full=d.answer;_sageChatAppend('sage',full);}
+      if(res.ok&&d.answer){full=d.answer;_sageChatAppend('sage',_sageStripNav(full));}
       else if(d&&d.error&&(res.status===401||res.status===429)){_sageChatAppend('sage',d.error);if(d.upgrade){_sageUpgradeButton();}_sageChat.pop();full='';}
       else{_sageChatAppend('sage','Hit a snag on my end. Give it another shot in a moment.');_sageChat.pop();full='';}
     }else{
@@ -1922,10 +1950,13 @@ async function sageChatSend(){
         typing.remove();
         _sageChatAppend('sage','Hit a snag on my end. Give it another shot in a moment.');
         _sageChat.pop();full='';
+      }else{
+        try{liveText.textContent=_sageStripNav(full);}catch(_){}
+        _sageRenderNav(typing,full);
       }
     }
     if(full.trim()){
-      _sageChat.push({role:'assistant',content:full});
+      _sageChat.push({role:'assistant',content:full.replace(/\[\[go:[a-z]+\]\]/gi,'').trim()});
       _sageSaveChat();
       var nb=document.getElementById('sage-new-chat');
       if(nb)nb.style.display='';
