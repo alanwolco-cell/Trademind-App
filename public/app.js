@@ -4623,20 +4623,30 @@ function posNeed(summary){
   }).sort(function(a,b){return b.deficit-a.deficit;});
 }
 
+function _ordinal(n){n=Number(n)||0;var s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
 function estimatePickSlot(ownerRosterId){
   if(!leagueRosters.length)return null;
-  var hasRecords=leagueRosters.some(function(r){return r.settings&&((r.settings.wins||0)+(r.settings.losses||0))>0;});
-  if(!hasRecords)return null;
   var total=leagueRosters.length;
-  var sorted=leagueRosters.slice().sort(function(a,b){
-    var wA=a.settings&&a.settings.wins||0,lA=a.settings&&a.settings.losses||0;
-    var wB=b.settings&&b.settings.wins||0,lB=b.settings&&b.settings.losses||0;
-    var gA=wA+lA,gB=wB+lB;
-    var pA=gA?wA/gA:0.5,pB=gB?wB/gB:0.5;
-    return pA!==pB?pA-pB:(lA-wA)-(lB-wB);
-  });
+  var hasRecords=leagueRosters.some(function(r){return r.settings&&((r.settings.wins||0)+(r.settings.losses||0))>0;});
+  var sorted;
+  if(hasRecords){
+    // In-season: draft order is reverse standings (worst record picks first)
+    sorted=leagueRosters.slice().sort(function(a,b){
+      var wA=a.settings&&a.settings.wins||0,lA=a.settings&&a.settings.losses||0;
+      var wB=b.settings&&b.settings.wins||0,lB=b.settings&&b.settings.losses||0;
+      var gA=wA+lA,gB=wB+lB;
+      var pA=gA?wA/gA:0.5,pB=gB?wB/gB:0.5;
+      return pA!==pB?pA-pB:(lA-wA)-(lB-wB);
+    });
+  }else{
+    // Offseason: no records yet, so PROJECT the order from roster strength -
+    // the weakest roster (lowest total market value) is projected to pick first,
+    // just like a real league. Uses live KTC values.
+    var strength=function(r){return (r.players||[]).reduce(function(s,pid){return s+(ktcById[pid]||0);},0);};
+    sorted=leagueRosters.slice().sort(function(a,b){return strength(a)-strength(b);});
+  }
   var slot=sorted.findIndex(function(r){return r.roster_id===ownerRosterId;})+1;
-  return slot>0?{slot:slot,total:total}:null;
+  return slot>0?{slot:slot,total:total,projected:!hasRecords}:null;
 }
 
 function pickSlotLabel(slot,total){
@@ -4769,22 +4779,27 @@ function generateTradeIdeas(){
 
   // --- Strategy 2: Sell aging vet for future picks (rebuilding/building) ---
   if(build.phase==='rebuilding'||build.phase==='building'){
+    // Cap "sell for picks" to a handful so the list isn't a wall of identical picks
+    var s2cap=topIdeas.length+3;
     leagueRosters.forEach(function(oppRosterObj){
-      if(oppRosterObj.owner_id===userId||topIdeas.length>=16)return;
+      if(oppRosterObj.owner_id===userId||topIdeas.length>=s2cap)return;
       var oppUser=leagueUsers.find(function(u){return u.user_id===oppRosterObj.owner_id;});
       var oppName=(oppUser&&(oppUser.metadata&&oppUser.metadata.team_name||oppUser.display_name))||"Opponent";
       [1,2].forEach(function(rnd){
-        if(topIdeas.length>=16)return;
+        if(topIdeas.length>=s2cap)return;
         var seasons=offSeason?[parseInt(leagueSeason)+1]:([parseInt(leagueSeason),parseInt(leagueSeason)+1]);
         seasons.forEach(function(yr){
-          if(topIdeas.length>=16)return;
+          if(topIdeas.length>=s2cap)return;
           var pickKtc=getPickKtcValue(yr,rnd);
           if(!pickKtc)return;
           var pickKey="pick_"+yr+"_"+rnd+"_"+oppRosterObj.roster_id;
           if(seenGet[pickKey])return;
+          // Realistic only: the vet must be worth ROUGHLY the pick. Nobody gives up
+          // a pick for a much cheaper player, so the vet has to be worth at least
+          // ~the pick (opponent says yes) and not wildly more (fair for you too).
           var giveVet=myAllPlayers.find(function(p){
             var k=p.id||p.name;
-            return !seenGive[k]&&p.ktc>0&&(p.age||0)>=27&&Math.abs(p.ktc-pickKtc)<1200;
+            return !seenGive[k]&&p.ktc>0&&(p.age||0)>=27&&p.ktc>=pickKtc-150&&p.ktc<=pickKtc+400;
           });
           if(!giveVet)return;
           var gKey=giveVet.id||giveVet.name;
@@ -4913,17 +4928,17 @@ function generateTradeIdeas(){
 
   function assetHtml(p){
     if(p.pos==="PK"){
+      var rnd=p.round||1;
       var roundNames=["1st","2nd","3rd","4th"];
-      var roundLabel=roundNames[(p.round||1)-1]||(p.round+"th");
-      var pickKtc=p.ktc||getPickKtcValue(p.season,p.round);
-      var slotNote="";
-      if(p.ownerRosterId&&!offSeason){var sl=estimatePickSlot(p.ownerRosterId);if(sl)slotNote="<div class='idea-player-sub' style='color:var(--muted)'>"+pickSlotLabel(sl.slot,sl.total)+"</div>";}
-      var tierLabel=pickKtc?playerTierLabel(pickKtc).short:"";
+      var roundLabel=roundNames[rnd-1]||(rnd+"th");
+      // Projected exact slot, e.g. 2.03 (round.pick). Falls back to "2nd" if unknown.
+      var sl=p.ownerRosterId?estimatePickSlot(p.ownerRosterId):null;
+      var pickNum=sl?(rnd+"."+String(sl.slot).padStart(2,"0")):roundLabel;
+      var pickSub=sl?(sl.projected?"Projected · "+_ordinal(sl.slot)+" of "+sl.total:_ordinal(sl.slot)+" of "+sl.total):"Draft pick";
       return "<div class='idea-side'>"
-        +"<div style='width:36px;height:36px;border-radius:50%;background:var(--surface3);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent-bright);flex-shrink:0'>"+roundLabel.charAt(0)+"</div>"
-        +"<div><div class='idea-player-name'>"+(p.season||"")+" "+roundLabel+"</div>"
-        +(tierLabel?"<div class='idea-player-sub' style='color:var(--accent-bright)'>Pick · "+tierLabel+"</div>":"<div class='idea-player-sub'>Draft Pick</div>")
-        +slotNote+"</div></div>";
+        +"<div class='idea-pk'>"+rnd+"</div>"
+        +"<div><div class='idea-player-name'>"+(p.season||"")+" "+pickNum+"</div>"
+        +"<div class='idea-player-sub'>"+pickSub+"</div></div></div>";
     }
     var posColors={QB:"#a78bfa",RB:"#4ade80",WR:"#fbbf24",TE:"#f87171"};
     var col=posColors[p.pos]||"var(--muted)";
@@ -4931,7 +4946,7 @@ function generateTradeIdeas(){
     return "<div class='idea-side' onclick='openPlayerCard(\""+p.id+"\",\""+p.name.replace(/"/g,"&quot;")+"\")' style='cursor:pointer'>"
       +"<img class='idea-avatar' src='https://sleepercdn.com/content/nfl/players/thumb/"+p.id+".jpg' onerror='this.style.display=\"none\"' alt=''>"
       +"<div><div class='idea-player-name'>"+p.name+"</div>"
-      +"<div class='idea-player-sub' style='color:"+col+"'>"+p.pos+(p.team?" · "+teamLogo(p.team,13)+p.team:"")+ageSub+(p.ktc?" · "+playerTierLabel(p.ktc).short:"")+"</div></div></div>";
+      +"<div class='idea-player-sub' style='color:"+col+"'>"+p.pos+(p.team?" · "+teamLogo(p.team,13)+p.team:"")+ageSub+"</div></div></div>";
   }
 
   var buildNote=build.phase==='rebuilding'?"Rebuilding":build.phase==='contending'?"Contending":"Building";
