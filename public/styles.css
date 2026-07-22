@@ -135,6 +135,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .hero-inner{text-align:center;position:relative;z-index:1;max-width:620px;padding:16px 24px 34px;display:flex;flex-direction:column;align-items:center;animation:heroEnter .7s ease both}
 @keyframes heroEnter{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @media (prefers-reduced-motion:reduce){.hero-inner{animation:none}}
+/* Mobile: the full-screen "peek" sections are a desktop effect. On phones, size
+   sections to their content so there's no giant empty gap between them. */
+@media(max-width:640px){
+  #home-problem{min-height:auto!important;padding-top:22px!important;padding-bottom:40px!important}
+  html.v12 .hero,html.v12 .ticker-visible .hero,html.v12 body.ticker-on .hero{min-height:auto!important}
+  html.v12 .hero-inner{padding-top:22px!important}
+}
 /* Sage stage - centered with rings */
 .hero-sage-stage{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-bottom:32px}
 .hero-sage-stage::before{content:'';position:absolute;inset:-50px;border-radius:50%;background:radial-gradient(circle,rgba(91,33,182,.4) 0%,transparent 68%);animation:sagePulseGlow 3.5s ease-in-out infinite;pointer-events:none}
