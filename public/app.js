@@ -213,7 +213,7 @@ function openConnectModal(){
       +'<div style="display:flex;gap:8px;margin-top:14px">'
       +'<input type="text" id="cm-user" class="tm-input" style="flex:1" placeholder="Sleeper username" autocomplete="off" '
       +'onkeydown="if(event.key===\'Enter\')connectModalGo()">'
-      +'<button class="btn-primary" id="cm-go" style="padding:10px 18px;font-size:13px" onclick="connectModalGo()">Find leagues</button></div>'
+      +'<button class="btn-primary" id="cm-go" style="padding:10px 18px;font-size:13px" onclick="connectModalGo()">Let\'s go &rarr;</button></div>'
       +'<div class="cm-status" id="cm-status"></div>'
       +'<div id="cm-list"></div>'
       +'</div>';
