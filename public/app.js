@@ -1582,15 +1582,67 @@ function _deviceId(){
   return d;
 }
 // Open Stripe's Customer Portal so Pro users can update card or cancel anytime.
+// Manage subscription IN-APP (no redirect to Stripe): a modal with plan, renewal
+// date, and cancel/resume. Card updates still use Stripe, added separately if needed.
 async function sageManageBilling(){
   var user=localStorage.getItem('tm_username')||'';
   if(!user)return;
+  var host=document.getElementById('manage-modal');
+  if(!host){
+    host=document.createElement('div');host.id='manage-modal';
+    host.style.cssText='position:fixed;inset:0;background:rgba(6,4,12,.66);z-index:1200;display:flex;align-items:center;justify-content:center;padding:20px';
+    host.addEventListener('click',function(ev){if(ev.target===host)host.style.display='none';});
+    document.body.appendChild(host);
+  }
+  host.style.display='flex';
+  host.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:420px;width:100%;padding:26px;text-align:center;color:var(--muted)">Loading your plan&hellip;</div>';
   try{
-    var r=await fetch('/api/billing/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:user})});
-    var d=await r.json().catch(function(){return {};});
-    if(d.url){window.location.href=d.url;return;}
-    alert(d.error||'Could not open billing right now. Try again in a moment.');
-  }catch(_){alert('Could not open billing right now. Try again in a moment.');}
+    var d=await (await fetch('/api/billing/subscription?user='+encodeURIComponent(user))).json();
+    _renderManageModal(d);
+  }catch(_){ if(host.firstChild)host.firstChild.textContent='Could not load your plan. Try again in a moment.'; }
+}
+function _manageClose(){var h=document.getElementById('manage-modal');if(h)h.style.display='none';}
+function _renderManageModal(d){
+  var host=document.getElementById('manage-modal');if(!host)return;
+  var card='background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:420px;width:100%;padding:28px;text-align:center;position:relative';
+  if(!d||(!d.pro&&!d.status)){
+    host.innerHTML='<div style="'+card+'">'
+      +'<button onclick="_manageClose()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">&times;</button>'
+      +'<div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">You are on the free plan</div>'
+      +'<button class="btn-primary" style="padding:11px 22px;font-size:14px;margin-top:6px" onclick="_manageClose();sageUpgrade()">Go Pro</button></div>';
+    return;
+  }
+  var when=d.periodEnd?new Date(d.periodEnd*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
+  var price=(d.amount!=null)?('$'+Number(d.amount).toFixed(2)+' / '+(d.interval||'month')):'';
+  var canceling=d.cancelAtPeriodEnd;
+  host.innerHTML='<div style="'+card+'">'
+    +'<button onclick="_manageClose()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&times;</button>'
+    +'<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:8px">&#10022; TradeMind Pro</div>'
+    +'<div style="font-family:var(--font-head);font-size:30px;font-weight:800;color:var(--text)">'+price+'</div>'
+    +'<div style="font-size:13px;color:'+(canceling?'var(--yellow)':'var(--muted2)')+';margin:10px 0 22px;line-height:1.5">'
+      +(canceling?('Your plan ends on <strong>'+when+'</strong>. You keep Pro until then.'):('Renews on <strong style="color:var(--text)">'+when+'</strong>.'))
+    +'</div>'
+    +(canceling
+        ?'<button class="btn-primary" style="padding:11px 24px;font-size:14px" onclick="_manageResume()">Resume subscription</button>'
+        :'<button onclick="_manageCancel()" style="padding:11px 24px;font-size:14px;background:none;border:1px solid var(--border2);color:var(--muted2);border-radius:100px;cursor:pointer;font-weight:600">Cancel subscription</button>')
+    +'<div style="margin-top:16px"><span onclick="_manageClose()" style="font-size:12px;color:var(--muted);cursor:pointer">Keep browsing TradeMind</span></div></div>';
+}
+async function _manageRefresh(){
+  var user=localStorage.getItem('tm_username')||'';
+  try{var s=await (await fetch('/api/billing/subscription?user='+encodeURIComponent(user))).json();_renderManageModal(s);try{_refreshProStatus();}catch(_){}}catch(_){}
+}
+async function _manageCancel(){
+  var user=localStorage.getItem('tm_username')||'';if(!user)return;
+  if(!confirm('Cancel TradeMind Pro? You keep Pro until the end of your current billing period.'))return;
+  try{var d=await (await fetch('/api/billing/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:user})})).json();
+    if(d.ok)_manageRefresh();else alert(d.error||'Could not cancel right now.');
+  }catch(_){alert('Could not cancel right now.');}
+}
+async function _manageResume(){
+  var user=localStorage.getItem('tm_username')||'';if(!user)return;
+  try{var d=await (await fetch('/api/billing/resume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:user})})).json();
+    if(d.ok)_manageRefresh();else alert(d.error||'Could not resume right now.');
+  }catch(_){alert('Could not resume right now.');}
 }
 async function sageUpdateQuota(){
   var el=document.getElementById('sage-quota');if(!el)return;

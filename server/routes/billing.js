@@ -167,5 +167,55 @@ router.post('/portal', async (req, res) => {
   }
 });
 
+// ── In-app subscription management (no Stripe redirect) ────────────────────
+// GET /api/billing/subscription?user= -> plan details for the in-app Manage modal
+router.get('/subscription', async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) return res.status(503).json({ error: 'not configured' });
+  const user = String(req.query.user || '').trim().toLowerCase().slice(0, 40);
+  const e = await loadEnt();
+  const rec = e.byUser[user];
+  if (!rec || !rec.sub) return res.json({ pro: false });
+  try {
+    const s = await stripe.subscriptions.retrieve(rec.sub);
+    const item = s.items && s.items.data && s.items.data[0];
+    const price = item && item.price;
+    res.json({
+      pro: s.status === 'active' || s.status === 'trialing',
+      status: s.status,
+      amount: price ? price.unit_amount / 100 : null,
+      interval: price && price.recurring ? price.recurring.interval : 'month',
+      periodEnd: s.current_period_end,
+      cancelAtPeriodEnd: !!s.cancel_at_period_end,
+    });
+  } catch (err) { res.status(502).json({ error: err.message }); }
+});
+// POST /api/billing/cancel { user } -> cancel at period end (keeps Pro until then)
+router.post('/cancel', async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) return res.status(503).json({ error: 'not configured' });
+  const user = String((req.body || {}).user || '').trim().toLowerCase().slice(0, 40);
+  const e = await loadEnt();
+  const rec = e.byUser[user];
+  if (!rec || !rec.sub) return res.status(404).json({ error: 'No subscription found for this account.' });
+  try {
+    const s = await stripe.subscriptions.update(rec.sub, { cancel_at_period_end: true });
+    res.json({ ok: true, cancelAtPeriodEnd: true, periodEnd: s.current_period_end });
+  } catch (err) { res.status(502).json({ error: err.message }); }
+});
+// POST /api/billing/resume { user } -> undo a scheduled cancellation
+router.post('/resume', async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) return res.status(503).json({ error: 'not configured' });
+  const user = String((req.body || {}).user || '').trim().toLowerCase().slice(0, 40);
+  const e = await loadEnt();
+  const rec = e.byUser[user];
+  if (!rec || !rec.sub) return res.status(404).json({ error: 'No subscription found for this account.' });
+  try {
+    const s = await stripe.subscriptions.update(rec.sub, { cancel_at_period_end: false });
+    res.json({ ok: true, cancelAtPeriodEnd: false, periodEnd: s.current_period_end });
+  } catch (err) { res.status(502).json({ error: err.message }); }
+});
+
 module.exports = router;
 module.exports.isPro = isPro;
