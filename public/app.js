@@ -195,6 +195,8 @@ function scrollToEl(el,center){
   var top=el.getBoundingClientRect().top+window.pageYOffset-(center?window.innerHeight/3:76);
   window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
 }
+// Escape hatch for anyone who lands on a tool page and feels lost.
+function _sageEscHtml(){return '<div style="margin-top:16px;font-size:13px;color:var(--muted2)">New here? <span onclick="switchScreen(\'sage\')" style="color:var(--accent-bright);cursor:pointer;font-weight:700">Just ask Sage &rarr;</span></div>';}
 function goConnectLeague(){
   // Connect from wherever you are: a modal, not a trip back to the analyzer.
   var cur=document.querySelector('.screen.active');
@@ -3149,7 +3151,7 @@ function renderLeagueTrades(){
   if(!leagueTrades.length){
     el.innerHTML=leagueRosters.length
       ?"<div class='empty-state'>No trades in this league yet.</div>"
-      :"<div class='empty-state'>No trade history loaded yet.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div>";
+      :"<div class='empty-state'>No trade history loaded yet.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
   }
 
@@ -4379,7 +4381,7 @@ function clearHistory(){localStorage.removeItem("tm_history");renderHistory();}
 function renderLeaguePersonalities(){
   var el=document.getElementById("league-personalities");
   if(!el)return;
-  if(!leagueRosters.length){el.innerHTML="<div class='empty-state'>Connect a league to see who's who.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div>";return;}
+  if(!leagueRosters.length){el.innerHTML="<div class='empty-state'>Connect a league to see who's who.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";return;}
   var archColors={K:'#f59e0b',F:'#f87171',D:'#fb923c',R:'#4ade80',M:'#94a3b8',W:'#facc15',Y:'#60a5fa',S:'#a78bfa',T:'#34d399'};
   var rows=leagueRosters.map(function(r){
     var u=leagueUsers.find(function(x){return x.user_id===r.owner_id;});
@@ -4746,7 +4748,7 @@ function generateTradeIdeas(){
   var el=document.getElementById("ideas-list-tab")||document.getElementById("ideas-list");
   if(!el)return;
   if(!leagueRosters.length||!userId){
-    el.innerHTML="<div class='ideas-empty'>Connect a league first to get trade ideas.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div>";
+    el.innerHTML="<div class='ideas-empty'>Connect a league first to get trade ideas.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
   }
   el.innerHTML="<div class='ideas-empty'>Analyzing your roster and finding the best moves...</div>";
@@ -5476,7 +5478,7 @@ function renderRosterGrade(){
   var el=document.getElementById("roster-grade-content");
   if(!el)return;
   if(!myRoster.length){
-    el.innerHTML="<div class='empty-state'>Connect a league to grade your roster.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div>";
+    el.innerHTML="<div class='empty-state'>Connect a league to grade your roster.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
   }
   var numTeams=leagueRosters.length||10;
@@ -5663,7 +5665,7 @@ function renderBuySell(){
   var el=document.getElementById("buysell-content");
   if(!el)return;
   if(!myRoster.length||!Object.keys(ktcFull).length){
-    el.innerHTML="<div class='empty-state'>Connect a league first so player values can load.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div>";
+    el.innerHTML="<div class='empty-state'>Connect a league first so player values can load.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
   }
   // My positional depth vs. league average
@@ -8741,7 +8743,7 @@ function renderWaiverTargets(){
   var el=document.getElementById('waiver-content');
   if(!el)return;
   if(!leagueRosters.length||!Object.keys(ktcFull).length){
-    el.innerHTML="<div class='empty-state'>Connect a league to see stash targets.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div>";
+    el.innerHTML="<div class='empty-state'>Connect a league to see stash targets.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
   }
   var rostered=new Set(),rosteredNames=new Set();
@@ -9139,6 +9141,8 @@ function refreshActiveCommunityTab(){
 function renderForumCompose(){
   var el=document.getElementById('forum-compose-inner');
   if(!el)return;
+  // If signed in via the main flow, use that identity for the community too.
+  if(!bkUsername){var _tu=localStorage.getItem('tm_username');if(_tu){bkUsername=_tu;try{updateBKDisplay();}catch(_){}}}
   if(!bkUsername){
     el.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0">Sign in with your Sleeper username to drop a hot take.</div>';
     return;
@@ -9153,6 +9157,7 @@ function renderForumCompose(){
 }
 
 async function postForumTake(){
+  if(!bkUsername){var _tu=localStorage.getItem('tm_username');if(_tu)bkUsername=_tu;}
   if(!bkUsername){alert('Sign in first.');return;}
   var titleEl=document.getElementById('forum-title-input');
   var bodyEl=document.getElementById('forum-body-input');
@@ -9224,6 +9229,7 @@ function renderForumPost(p){
 }
 
 async function voteForumPost(postId,vote,btn){
+  if(!bkUsername){var _tu=localStorage.getItem('tm_username');if(_tu)bkUsername=_tu;}
   if(!bkUsername){alert('Sign in to vote.');return;}
   var vkey='tm_fvoted_'+postId;
   try{if(localStorage.getItem(vkey)===String(vote))return;}catch(_){}
