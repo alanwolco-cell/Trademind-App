@@ -542,6 +542,10 @@ router.get('/player-trades', async (req, res) => {
 // self-referral and multi-accounting; self-referral is blocked outright; and each
 // referrer is hard-capped. Two-sided: the joiner also gets a welcome bonus.
 const MAX_REFERRALS = 10;
+// Questions each side gains on the day a referral lands. Both sides get the
+// same: the person sharing has to feel paid for the favour, and the person
+// arriving needs room to actually try Sage before deciding. Expires that day.
+const REFERRAL_BONUS = 2;
 router.post('/referral/claim', async (req, res) => {
   try {
     let { referrer, newUser, device } = req.body || {};
@@ -566,10 +570,10 @@ router.post('/referral/claim', async (req, res) => {
     db.refAccts[acct] = 1;
     db.refClaimed[newUser] = referrer;
     db.refDevices[device] = 1;
-    db.refBonus[newUser] = (db.refBonus[newUser] || 0) + 1; // welcome bonus for the joiner
+    grantReferralBonus(db, newUser, REFERRAL_BONUS); // welcome boost for the joiner, today only
     let credited = false;
     if ((db.refList[referrer] || []).length < MAX_REFERRALS) {
-      db.refBonus[referrer] = (db.refBonus[referrer] || 0) + 1;
+      grantReferralBonus(db, referrer, REFERRAL_BONUS);
       credited = true;
     }
     db.refList[referrer] = (db.refList[referrer] || []).concat(newUser);
@@ -584,9 +588,29 @@ router.get('/referral/status', async (req, res) => {
   res.json({ bonus: (db.refBonus || {})[user] || 0, referred: ((db.refList || {})[user] || []).length, cap: MAX_REFERRALS });
 });
 // Read-only helper for sage.js to extend a user's free weekly Sage allowance.
+// UTC day number, the same bucket sage.js counts usage in.
+const _dayNum = () => Math.floor(Date.now() / 86400000);
+
+// The referral bonus is a SAME-DAY boost, not a permanent raise. It gives both
+// sides room to actually use Sage on the day the referral lands and then
+// expires, so a handful of invites can never turn into a free unlimited plan.
+function grantReferralBonus(db, user, n) {
+  db.refBonus = db.refBonus || {};
+  const key = String(user || '').toLowerCase();
+  const day = _dayNum();
+  const cur = db.refBonus[key];
+  const today = (cur && typeof cur === 'object' && cur.day === day) ? (cur.n || 0) : 0;
+  db.refBonus[key] = { day, n: today + n };
+}
+
 async function getReferralBonus(user) {
-  try { const db = await readDb(); return (db.refBonus || {})[String(user || '').toLowerCase()] || 0; }
-  catch (_) { return 0; }
+  try {
+    const db = await readDb();
+    const rec = (db.refBonus || {})[String(user || '').toLowerCase()];
+    // Plain numbers are the old permanent form; they no longer grant anything.
+    if (!rec || typeof rec !== 'object') return 0;
+    return rec.day === _dayNum() ? (rec.n || 0) : 0;
+  } catch (_) { return 0; }
 }
 router.getReferralBonus = getReferralBonus;
 

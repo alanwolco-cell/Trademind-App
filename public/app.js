@@ -1723,7 +1723,7 @@ async function openReferral(){
   m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:20px';
   m.innerHTML="<div style='max-width:440px;width:100%;background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:18px;padding:24px 22px'>"
     +"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px'><div style='font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em'>Refer friends, earn Sage</div><span onclick='closeReferral()' style='cursor:pointer;color:var(--muted);font-size:20px;line-height:1'>&times;</span></div>"
-    +"<div style='font-size:13px;color:var(--muted2);line-height:1.55;margin:6px 0 16px'>Send this link to a friend. When they connect a real Sleeper league, you both get a bonus Ask Sage question. Up to "+(st.cap||10)+" from referrals.</div>"
+    +"<div style='font-size:13px;color:var(--muted2);line-height:1.55;margin:6px 0 16px'>Send this link to a friend. When they connect a real Sleeper league, you both get two extra Ask Sage questions that day. Up to "+(st.cap||10)+" from referrals.</div>"
     +"<div style='display:flex;gap:8px;margin-bottom:14px'><input id='referral-link-input' readonly value='"+link.replace(/'/g,"&#39;")+"' style='flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 12px;font-size:12.5px;color:var(--text);outline:none'><button onclick='copyReferral(this)' class='ideas-refresh' style='white-space:nowrap'>Copy</button></div>"
     +"<div style='display:flex;gap:10px'>"
     +"<div style='flex:1;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px'><div style='font-family:var(--font-head);font-size:26px;font-weight:800;color:var(--accent-bright)'>"+(st.referred||0)+"</div><div style='font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em'>Friends joined</div></div>"
@@ -1819,7 +1819,7 @@ async function sageUpdateQuota(){
     // plenty left. Hidden once they hit the referral cap.
     var ref='';
     if(left<=2&&(d.referralBonus||0)<10){
-      ref=' &middot; <span style="cursor:pointer;text-decoration:underline" onclick="openReferral()">Invite a friend, both get one</span>';
+      ref=' &middot; <span style="cursor:pointer;text-decoration:underline" onclick="openReferral()">Invite a friend, you both get two</span>';
     }
     el.innerHTML=(left>0?(left+' free question'+(left===1?'':'s')+' left '+span):('No free questions left '+span))+go+ref;
     el.style.display='block';

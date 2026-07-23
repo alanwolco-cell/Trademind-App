@@ -331,8 +331,11 @@ router.get('/quota', async (req, res) => {
   await bindNameIfUnclaimed(readAcctId(req), user);
   const pro = await isPro(readAcctId(req), user);
   const u = await peekUsage(user, ip, device, pro);
-  const dailyLimit = pro ? PRO_DAILY : FREE_DAILY;
+  // A referral boost only lands on the day it is earned, so it has to lift the
+  // DAILY ceiling too - raising just the weekly one would leave the person
+  // still blocked by the 3-a-day cap and the bonus would look broken.
   const refBonus = pro ? 0 : await community.getReferralBonus(user).catch(() => 0);
+  const dailyLimit = pro ? PRO_DAILY : FREE_DAILY + (refBonus || 0);
   const effWeekly = FREE_WEEKLY + (refBonus || 0);
   res.set('Cache-Control', 'no-store');
   res.json({
@@ -374,8 +377,9 @@ router.post('/chat', async (req, res) => {
         });
       }
       const _refBonus = await community.getReferralBonus(user.toLowerCase()).catch(() => 0);
+      const _effDaily = FREE_DAILY + (_refBonus || 0);
       const _effWeekly = FREE_WEEKLY + (_refBonus || 0);
-      if (u.day > FREE_DAILY || u.week > _effWeekly) {
+      if (u.day > _effDaily || u.week > _effWeekly) {
         const which = u.week > _effWeekly ? 'this week' : 'today';
         return res.status(429).json({
           error: "That is your free Sage for " + which + " - looks like you are putting me to work, which I love. Go Pro and ask me anything, anytime. I will be here before every move.",
