@@ -1549,6 +1549,25 @@ body{min-height:100vh;min-height:100dvh}
      last item must clear the iOS home indicator */
   .mob-menu-panel{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 
+  /* Ask Sage is the product, not a peer of the other four destinations, and as
+     a fifth grey glyph it read as one. The brand gradient in a raised badge is
+     the standard way an app names its primary action, and it keeps the slot so
+     the five destinations stay evenly spaced. */
+  #tabbar .tabbar-item[data-tab="sage"]{color:var(--accent-bright);font-weight:700}
+  #tabbar .tabbar-item[data-tab="sage"] svg{
+    width:42px;height:42px;padding:10px;box-sizing:border-box;
+    border-radius:50%;
+    background:linear-gradient(135deg,#9b72e8,#4fd8f5);
+    /* dark glyph on a fixed bright gradient: correct in either theme */
+    color:#0d0817;
+    margin-top:-14px;
+    box-shadow:0 6px 18px -4px rgba(155,114,232,.6);
+    transition:transform .15s;
+  }
+  /* the shared press state would paint a grey slab behind the badge */
+  #tabbar .tabbar-item[data-tab="sage"]:active{background:none}
+  #tabbar .tabbar-item[data-tab="sage"]:active svg{transform:scale(.93)}
+
   /* Footer on a phone: it ran long and ended in a wall of 11px legal text.
      Tighten the chrome, stack the links as real tap targets, and let the
      legal line breathe instead of splintering into slivers. */
