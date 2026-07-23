@@ -171,9 +171,13 @@
 
 .stand-table tbody tr{transition:background .15s}
 .stand-table tbody tr:hover td{background:rgba(155,114,232,.07)}
-/* The user's own row keeps its accent wash and must stay distinguishable
-   from a hovered neighbour. */
-.stand-table tr.st-me:hover td{background:linear-gradient(90deg,rgba(155,114,232,.18),rgba(155,114,232,.04))}
+
+/* The user's own row was tinted with a 90deg gradient set on the cell, so it
+   restarted at every <td> and striped the row. A flat tint plus one accent
+   edge marks the row without the banding. */
+.stand-table tr.st-me td{background:rgba(155,114,232,.10)}
+.stand-table tr.st-me td:first-child{box-shadow:inset 2px 0 0 var(--accent-bright)}
+.stand-table tr.st-me:hover td{background:rgba(155,114,232,.16)}
 
 /* Roster grade breakdown: same row rhythm and hover as the tables above. */
 .pos-grade-row{
