@@ -64,6 +64,40 @@ async function isPro(acctId) {
   } catch (_) { return false; }
 }
 
+// GET /api/billing/account -> what Stripe actually thinks this account is.
+// Owner-only. Answers the questions you cannot answer from the dashboard at a
+// glance: which country the account is registered in, whether it may take
+// charges yet, and exactly what Stripe is still waiting on. Returns no keys and
+// no customer data.
+router.get('/account', async (req, res) => {
+  const token = process.env.ADMIN_TOKEN;
+  const given = String(req.headers['x-admin-token'] || req.query.token || '');
+  if (!token) return res.status(503).json({ error: 'admin token not configured' });
+  const a = Buffer.from(given), b = Buffer.from(token);
+  if (!(a.length === b.length && require('crypto').timingSafeEqual(a, b))) {
+    return res.status(403).json({ error: 'not authorized' });
+  }
+  const stripe = getStripe();
+  if (!stripe) return res.status(503).json({ error: 'stripe not configured' });
+  res.set('Cache-Control', 'no-store');
+  try {
+    const acct = await stripe.accounts.retrieve();
+    const req_ = acct.requirements || {};
+    res.json({
+      country: acct.country,
+      defaultCurrency: acct.default_currency,
+      businessType: acct.business_type,
+      chargesEnabled: acct.charges_enabled,
+      payoutsEnabled: acct.payouts_enabled,
+      detailsSubmitted: acct.details_submitted,
+      disabledReason: req_.disabled_reason || null,
+      currentlyDue: req_.currently_due || [],
+      pastDue: req_.past_due || [],
+      pendingVerification: req_.pending_verification || [],
+    });
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
 // GET /api/billing/config -> the public info the browser needs for embedded checkout
 router.get('/config', (req, res) => {
   res.json({ publishableKey: PUB_KEY, configured: !!process.env.STRIPE_SECRET_KEY });
