@@ -1,0 +1,199 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   theme.css - system pass over Community, Research and My League.
+
+   These three screens were built at different times and drifted away from the
+   rest of the app: their surfaces used four different corner radii, their
+   section labels used four different sizes, and the purple-to-cyan accent that
+   defines the hero and Ask Sage never reached them, so they read as grey on
+   grey. Everything here pulls those screens back onto the values the rest of
+   the app already uses. Loaded last on purpose, so it settles the cascade
+   against styles.css and v11/v12 without needing !important.
+
+   Only existing CSS variables are used, so light and dark both hold.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── 1. Surfaces: one radius per nesting level ───────────────────────────────
+   The live skin defines two: --radius-lg (18px) for a top-level card or panel
+   and --radius (12px) for anything nested inside one. These blocks predate that
+   and shipped 8px, 10px, 11px and 14px corners side by side. */
+
+/* Community trade cards sat at 8px inside an 18px card, which read as a
+   different component family than the market panels beside them. Nested, so
+   they take the inner radius, like .mkt-mover already does. */
+.comm-card{
+  border-radius:var(--radius);
+  padding:1.125rem;
+}
+
+/* Also nested inside a card, and was the smallest radius on the screen. */
+.stand-wrap{border-radius:var(--radius)}
+
+/* Buy/Sell rows carried an 11px radius and a vertical gradient that no other
+   list in the app uses; flattening them matches .mkt-mover and .comm-card. */
+.bs-row{
+  background:var(--surface2);
+  border-radius:var(--radius);
+  padding:11px 13px;
+  margin-bottom:8px;
+}
+
+/* Market stat tiles sit as siblings of .mkt-panel, so they should share its
+   surface and border rather than looking like nested chips. */
+.mkt-stat{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:14px 16px;
+  transition:border-color .25s var(--ap-ease,ease);
+}
+
+/* Players database result cards: styling moved out of the inline attribute in
+   app.js so they follow the same radius and hover as every other list item. */
+.pdb-card{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:11px 13px;
+  cursor:pointer;
+  transition:border-color .2s var(--ap-ease,ease),background .2s var(--ap-ease,ease);
+}
+
+
+/* ── 2. Tabs: one active state, and the accent finally shows on desktop ──────
+   Research stacked two tab rows with two different active treatments: the
+   .inner-tab went neutral grey (v11) while the .ctx-seg-btn right under it
+   went purple. Same control, same screen, two answers. This aligns .inner-tab
+   to the accent treatment the rest of the app uses for "selected".
+
+   Scoped to desktop on purpose: the phone rules in v12.css already do this and
+   belong to the mobile pass, so nothing here reaches under 701px. */
+@media(min-width:701px){
+  html.v11 .inner-tab-bar, html.v12 .inner-tab-bar{
+    background:linear-gradient(135deg,rgba(155,114,232,.08),rgba(79,216,245,.035));
+    border-color:rgba(155,114,232,.16);
+  }
+  html.v11 .inner-tab.active, html.v12 .inner-tab.active{
+    background:linear-gradient(135deg,rgba(155,114,232,.24),rgba(79,216,245,.10));
+    color:var(--accent-bright);
+    font-weight:600;
+    box-shadow:0 0 0 1px rgba(155,114,232,.32) inset;
+  }
+  html.v11 .inner-tab:hover:not(.active), html.v12 .inner-tab:hover:not(.active){
+    color:var(--text);
+    background:rgba(155,114,232,.07);
+  }
+
+  /* Community's Refresh is the only button in the header row; grey made the
+     one interactive element up there the quietest thing on the screen. */
+  .comm-head .btn-sm{
+    background:linear-gradient(135deg,rgba(155,114,232,.16),rgba(79,216,245,.06));
+    border-color:rgba(155,114,232,.30);
+    color:var(--accent-bright);
+  }
+}
+
+
+/* ── 3. Where the accent goes ───────────────────────────────────────────────
+   Deliberately limited to four jobs: section markers, headline figures,
+   selected state, and the hover on a row you can click. Anything that already
+   carries meaning through colour (green risers, red fallers, grade letters) is
+   left alone. */
+
+/* A short gradient bar in front of every panel title. It is the cheapest way
+   to give each section a brand marker without tinting whole blocks. */
+.mkt-panel-title::before{
+  content:"";
+  width:3px;
+  height:13px;
+  border-radius:100px;
+  background:linear-gradient(135deg,#9b72e8,#4fd8f5);
+  flex-shrink:0;
+}
+
+/* Headline market figures. The riser and faller tiles keep green and red,
+   which is why this excludes them rather than colouring all four. */
+.mkt-stat-val:not(.mkt-up):not(.mkt-down){color:var(--accent-bright)}
+
+/* Every clickable row in these screens converges on one hover colour. */
+.comm-card:hover,
+.bs-row:hover,
+.mkt-stat:hover,
+.pdb-card:hover{border-color:rgba(155,114,232,.38)}
+
+/* v11 removed lift-on-hover everywhere else; Buy/Sell rows still had it. */
+.bs-row:hover{transform:none}
+.pdb-card:hover{background:var(--surface3)}
+
+
+/* ── 4. Type scale: one size for micro-labels, lining figures for numbers ────
+   These screens had uppercase micro-labels at 9px, 10px and 12px with three
+   different letter-spacings. One value now, matching .mkt-stat-lbl, which was
+   the most used. */
+.mkt-stat-lbl,
+.stand-table th,
+.qotd-label,
+.mkt-mover-pos{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+
+/* Figures that get compared down a column need lining, fixed-width digits.
+   v11 did this for the chart values and missed the tables and tiles. */
+.mkt-stat-val,
+.stand-table .st-num,
+.mkt-mover-pct,
+.comm-chip-lg{font-variant-numeric:tabular-nums}
+
+
+/* ── 5. Dense tables and lists ───────────────────────────────────────────────
+   The standings table is the densest thing in the app and had no header
+   contrast in dark mode (that rule existed for light only) and no row hover,
+   so reading across a row meant tracking with a finger. */
+.stand-table th{
+  background:var(--surface2);
+  color:var(--muted);
+  border-bottom:1px solid var(--border2);
+  padding:8px 10px;
+}
+.stand-table td{padding:9px 10px}
+
+/* Team is the only free-text column; everything else is a figure or a short
+   code, and right-aligning them makes the column edges line up. The nth-child
+   holds whether or not the Record and PF columns are present, because Team is
+   always second. */
+.stand-table th:not(:nth-child(2)),
+.stand-table td:not(:nth-child(2)){text-align:right}
+.stand-table th:nth-child(2),
+.stand-table td:nth-child(2){text-align:left}
+
+.stand-table tbody tr{transition:background .15s}
+.stand-table tbody tr:hover td{background:rgba(155,114,232,.07)}
+/* The user's own row keeps its accent wash and must stay distinguishable
+   from a hovered neighbour. */
+.stand-table tr.st-me:hover td{background:linear-gradient(90deg,rgba(155,114,232,.18),rgba(155,114,232,.04))}
+
+/* Roster grade breakdown: same row rhythm and hover as the tables above. */
+.pos-grade-row{
+  padding:11px 6px;
+  border-radius:var(--radius);
+  transition:background .15s;
+}
+.pos-grade-row:hover{background:rgba(155,114,232,.06)}
+.pos-grade-row > :last-child{font-variant-numeric:tabular-nums}
+
+/* Market movers were the one dense list with no vertical rhythm of its own. */
+.mkt-mover{padding:8px 8px}
+
+
+/* ── 6. Light theme corrections ─────────────────────────────────────────────
+   The accent overlays above are purple at low alpha, which works on both
+   backgrounds, but the two surfaces that changed family need light-mode
+   parity with the .card rule v11 sets. */
+[data-theme="light"] .mkt-stat{background:var(--surface);border-color:var(--border)}
+[data-theme="light"] .stand-table th{background:var(--surface2)}
+[data-theme="light"] .stand-table tbody tr:hover td{background:rgba(106,63,255,.06)}
+[data-theme="light"] .pos-grade-row:hover{background:rgba(106,63,255,.05)}
+[data-theme="light"] .pdb-card:hover{background:var(--surface2)}

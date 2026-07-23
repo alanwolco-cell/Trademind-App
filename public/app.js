@@ -6754,9 +6754,9 @@ function _runFilterPlayersDB(){
     }
     var safeName=p.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var safeId=p.id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<div onclick="openPlayerCard(\''+safeId+'\',\''+safeName+'\')" '+
-      'style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s" '+
-      'onmouseover="this.style.borderColor=\'var(--accent-bright)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+    // Surface and hover live in theme.css as .pdb-card so these cards share the
+    // radius, border and hover colour of every other list row in the app.
+    return '<div class="pdb-card" onclick="openPlayerCard(\''+safeId+'\',\''+safeName+'\')">' +
       '<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" '+
       'onerror="this.style.display=\'none\'" '+
       'style="width:44px;height:44px;border-radius:50%;object-fit:cover;display:block;margin-bottom:7px;background:var(--surface3)">' +
