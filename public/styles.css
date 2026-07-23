@@ -1595,3 +1595,16 @@ body{min-height:100vh;min-height:100dvh}
   .sage-caps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .sage-cap{justify-content:center;margin:0}
 }
+
+/* ── Where an auto-scroll lands ─────────────────────────────────────────────
+   The top bar is fixed at 60px, so any scrollIntoView or anchor jump parked
+   its target underneath it: the thing you clicked to reach ended up hidden
+   behind the nav. scroll-padding on the scrolling element fixes every call
+   site at once, including the ones that ask for block:"start", instead of
+   patching fifteen separate scrollIntoView calls.
+   On a phone the bottom tab bar covers the last stretch of the page too, so
+   reserve that as well. */
+html{scroll-padding-top:76px}
+@media(max-width:700px){
+  html{scroll-padding-top:72px;scroll-padding-bottom:84px}
+}

@@ -4656,8 +4656,8 @@ function generatePitch(give,get,oppProfile,you,opp,valueTier){
     avoid.push("Do not over-explain. Two sentences max. They will not read a paragraph.");
     message="What if - and hear me out - "+youGiving+" for "+youGetting+"? Think it shakes both rosters up in a good way. Let me know.";
   } else if(oppProfile.name==="The Spreadsheet Guy"){
-    angles.push({color:"var(--accent-bright)",label:"Come with the actual KTC numbers",text:"Open your message with the values, not the player names. They will check anyway - save them the step. Transparency reads as respect to an analytics-first manager."+(oppRosterNames.length?" They know their roster well: "+oppRosterNames.join(", ")+". Show you did your homework on their positional values too.":"")});
-    angles.push({color:"var(--green)",label:"Acknowledge if value is slightly off",text:"If the numbers are not perfectly even, acknowledge it before they bring it up. Say: I know KTC has this slightly in your favor - I am fine with that because this fills a need. Honesty disarms them completely."});
+    angles.push({color:"var(--accent-bright)",label:"Come with the actual numbers",text:"Open your message with the values, not the player names. They will check anyway - save them the step. Transparency reads as respect to an analytics-first manager."+(oppRosterNames.length?" They know their roster well: "+oppRosterNames.join(", ")+". Show you did your homework on their positional values too.":"")});
+    angles.push({color:"var(--green)",label:"Acknowledge if value is slightly off",text:"If the numbers are not perfectly even, acknowledge it before they bring it up. Say: I know the market has this slightly in your favor - I am fine with that because this fills a need. Honesty disarms them completely."});
     avoid.push("Do not use emotional arguments. He is a great teammate will make them respect you less.");
     message="Hey, ran the numbers on this - the market has "+youGiving+" at roughly even value with "+youGetting+". Think the trade makes sense for both rosters from a value standpoint. Worth a look?";
   } else if(oppProfile.name==="The Star Hoarder"){
@@ -5380,7 +5380,7 @@ function generateTradeIdeas(){
   }
 
   if(!topIdeas.length){
-    el.innerHTML="<div class='ideas-empty'>No ideas found yet - KTC data may still be loading. Try again in a moment.</div>";
+    el.innerHTML="<div class='ideas-empty'>No ideas found yet - market values may still be loading. Try again in a moment.</div>";
     return;
   }
 
