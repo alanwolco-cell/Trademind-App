@@ -76,25 +76,30 @@ async function saveEnt(e) {
 // per-month fair-use ceilings already cap what that can cost.
 const _live = (rec) => !!(rec && (rec.status === 'active' || rec.status === 'trialing'));
 
+// Finds the plan a caller is entitled to, and who owns it. Everything that
+// answers "does this person have Pro" must go through here: when the lookup
+// lived in two places they drifted apart, and a subscriber on their phone was
+// told they were Pro by one endpoint and offered the upgrade by the other.
+// Returns { rec, owner } where owner is the account key that bought it.
+async function resolvePlan(e, acctId, username) {
+  const u = String(username || '').trim().toLowerCase();
+  if (u && e.byUser[u] && _live(e.byAcct[e.byUser[u]])) {
+    return { rec: e.byAcct[e.byUser[u]], owner: e.byUser[u] };
+  }
+  const own = acctId ? e.byAcct[String(acctId)] : null;
+  // The buying browser still counts while its record carries no name to match
+  // on, and before sign-in there is no name to check at all.
+  if (_live(own) && (!String(own.username || '').trim() || !u)) {
+    return { rec: own, owner: String(acctId) };
+  }
+  return { rec: null, owner: null };
+}
+
 async function isPro(acctId, username) {
   try {
     const e = await loadEnt();
-    const u = String(username || '').trim().toLowerCase();
-
-    // 1. The name owns the plan. This is what carries it to their phone.
-    if (u && e.byUser[u] && _live(e.byAcct[e.byUser[u]])) return true;
-
-    // 2. The buying browser, but only while its record carries no name to
-    //    match on. That covers anyone who subscribed before the name was
-    //    recorded, without handing their plan to the next person who signs in
-    //    on their computer once it is.
-    const own = acctId ? e.byAcct[String(acctId)] : null;
-    if (_live(own) && !String(own.username || '').trim()) return true;
-
-    // 3. Before sign-in there is no name to check, so the key decides.
-    if (!u && _live(own)) return true;
-
-    return false;
+    const { rec } = await resolvePlan(e, acctId, username);
+    return _live(rec);
   } catch (_) { return false; }
 }
 
@@ -342,14 +347,18 @@ router.get('/subscription', async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'not configured' });
   const acctId = readAcctId(req);
   const e = await loadEnt();
-  const rec = acctId ? e.byAcct[acctId] : null;
-  if (!rec || !rec.sub) return res.json({ pro: false });
+  const { rec, owner } = await resolvePlan(e, acctId, req.query.user);
+  if (!rec || !rec.sub) return res.json({ pro: false, manageable: false });
+  // Reading the plan works anywhere the manager signs in; CHANGING it stays
+  // with the browser that bought it, which is the one holding the key.
+  const manageable = !!acctId && owner === String(acctId);
   try {
     const s = await stripe.subscriptions.retrieve(rec.sub);
     const item = s.items && s.items.data && s.items.data[0];
     const price = item && item.price;
     res.json({
       pro: s.status === 'active' || s.status === 'trialing',
+      manageable,
       status: s.status,
       amount: price ? price.unit_amount / 100 : null,
       interval: price && price.recurring ? price.recurring.interval : 'month',

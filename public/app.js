@@ -1781,9 +1781,15 @@ function _renderManageModal(d){
     +'<div style="font-size:13px;color:'+(canceling?'var(--yellow)':'var(--muted2)')+';margin:10px 0 22px;line-height:1.5">'
       +(canceling?('Your plan ends on <strong>'+when+'</strong>. You keep Pro until then.'):('Renews on <strong style="color:var(--text)">'+when+'</strong>.'))
     +'</div>'
-    +(canceling
-        ?'<button class="btn-primary" style="padding:11px 24px;font-size:14px" onclick="_manageResume()">Resume subscription</button>'
-        :'<button onclick="_manageCancel()" style="padding:11px 24px;font-size:14px;background:none;border:1px solid var(--border2);color:var(--muted2);border-radius:100px;cursor:pointer;font-weight:600">Cancel subscription</button>')
+    // Changing the plan stays with the browser that bought it, so on any other
+    // device we show the plan and say where to manage it. Showing a button that
+    // would just fail, or worse an upgrade offer to someone already paying, is
+    // how a subscriber ends up thinking they were charged for nothing.
+    +(d.manageable===false
+        ?'<div style="font-size:12.5px;color:var(--muted2);line-height:1.55;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">Your plan is active here. To change or cancel it, open TradeMind on the device you subscribed from.</div>'
+        :(canceling
+          ?'<button class="btn-primary" style="padding:11px 24px;font-size:14px" onclick="_manageResume()">Resume subscription</button>'
+          :'<button onclick="_manageCancel()" style="padding:11px 24px;font-size:14px;background:none;border:1px solid var(--border2);color:var(--muted2);border-radius:100px;cursor:pointer;font-weight:600">Cancel subscription</button>'))
     +'<div style="margin-top:16px"><span onclick="_manageClose()" style="font-size:12px;color:var(--muted);cursor:pointer">Keep browsing TradeMind</span></div></div>';
 }
 async function _manageRefresh(){
