@@ -170,14 +170,43 @@ router.get('/entitlements', async (req, res) => {
     const e = await loadEnt();
     res.json({
       total: Object.keys(e.byAcct).length,
-      indiceDeNombres: Object.keys(e.byUser).length,
+      nombresEnlazados: Object.keys(e.byUser),
       registros: Object.keys(e.byAcct).map(k => ({
         status: e.byAcct[k].status,
-        tieneNombre: !!String(e.byAcct[k].username || '').trim(),
+        nombre: String(e.byAcct[k].username || '') || null,
         tieneCliente: !!e.byAcct[k].customer,
         tieneSub: !!e.byAcct[k].sub,
       })),
     });
+  } catch (err) { res.status(502).json({ error: err.message }); }
+});
+
+// POST /api/billing/claim-name { user } -> owner-only repair.
+// Makes one name the single owner of the live subscription and drops every
+// other name pointing at it. Needed because the self-repair could bind more
+// than once: several serverless instances, each with its own cached copy, can
+// all believe the plan is still unnamed and each bind a different name.
+router.post('/claim-name', async (req, res) => {
+  const token = process.env.ADMIN_TOKEN;
+  const given = String(req.headers['x-admin-token'] || '');
+  if (!token) return res.status(503).json({ error: 'admin token not configured' });
+  const a = Buffer.from(given), b = Buffer.from(token);
+  if (!(a.length === b.length && require('crypto').timingSafeEqual(a, b))) {
+    return res.status(403).json({ error: 'not authorized' });
+  }
+  const u = String((req.body || {}).user || '').trim().toLowerCase().slice(0, 40);
+  if (!u) return res.status(400).json({ error: 'user required' });
+  try {
+    const e = await loadEnt();
+    const owner = Object.keys(e.byAcct).find(k => _live(e.byAcct[k]));
+    if (!owner) return res.status(404).json({ error: 'no active subscription' });
+    for (const name of Object.keys(e.byUser)) {
+      if (e.byUser[name] === owner && name !== u) delete e.byUser[name];
+    }
+    e.byAcct[owner].username = u;
+    e.byUser[u] = owner;
+    await saveEnt(e);
+    res.json({ ok: true, nombre: u, nombresEnlazados: Object.keys(e.byUser) });
   } catch (err) { res.status(502).json({ error: err.message }); }
 });
 
