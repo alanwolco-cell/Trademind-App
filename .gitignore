@@ -9,3 +9,6 @@ server/cache/
 .claude-flow/
 .DS_Store
 **/.claude-flow/
+
+# local Claude Code settings (per-machine, not shared)
+.claude/settings.local.json

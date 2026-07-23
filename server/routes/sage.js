@@ -153,6 +153,7 @@ const PRO_MONTHLY = 250;
 // One network/IP can't farm free questions with throwaway usernames past this.
 const IP_FREE_DAILY = 12;
 const { isPro } = require('./billing');
+const { readAcctId } = require('../lib/identity');
 const community = require('./community'); // for referral bonuses (extends free weekly)
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -274,7 +275,9 @@ router.get('/quota', async (req, res) => {
   const user = String(req.query.user || '').trim().toLowerCase().slice(0, 40);
   const device = String(req.query.device || '').slice(0, 64);
   const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
-  const pro = await isPro(user);
+  // Pro comes from the account key, not the typed username: a username is
+  // public, so anyone could otherwise claim someone else's paid limits.
+  const pro = await isPro(readAcctId(req));
   const u = await peekUsage(user, ip, device, pro);
   const dailyLimit = pro ? PRO_DAILY : FREE_DAILY;
   const refBonus = pro ? 0 : await community.getReferralBonus(user).catch(() => 0);
@@ -301,7 +304,7 @@ router.post('/chat', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Sign in with your Sleeper username to talk to Sage.' });
     const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
     const device = String((req.body || {}).device || '').slice(0, 64);
-    const pro = await isPro(user.toLowerCase());
+    const pro = await isPro(readAcctId(req));
     const u = await checkUsage(user.toLowerCase(), ip, device, pro);
     if (pro) {
       if (u.month > PRO_MONTHLY) {

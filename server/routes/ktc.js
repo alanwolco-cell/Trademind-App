@@ -3,6 +3,7 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
+const { allowCron } = require('../lib/identity');
 
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours — keeps dynasty values fresh
 
@@ -120,6 +121,7 @@ async function readSnapshots() {
 
 router.get('/snapshot', async (req, res) => {
   try {
+    if (!allowCron(req, res)) return;
     if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ error: 'blob not configured' });
     const today = new Date().toISOString().slice(0, 10);
     const snaps = await readSnapshots();

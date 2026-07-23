@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { put, list } = require('@vercel/blob');
+const { readAcctId, requireAcctId } = require('../lib/identity');
 
 // Community storage on Vercel Blob: one JSON document, read-modify-write.
 // Fine at launch scale; swap for a real DB when traffic demands it.
@@ -24,13 +25,57 @@ const POSTS_SINCE = 1784698977791; // 2026-07-22 launch reset
 // on the way out. Comments/opinions stay named on purpose.
 function publicPost(p) {
   const o = Object.assign({}, p);
-  delete o.username; delete o.voters;
+  delete o.username; delete o.voters; delete o.owner;
   o.anon = true;
   return o;
 }
 
 function configured() {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
+}
+
+// Account ids are an internal join key. They cannot be replayed as credentials
+// (the server only ever compares the hash of a key it was given), but shipping
+// them would let a reader correlate the same account across the forum, the
+// trade block and the anonymous feed. Strip them on the way out.
+function stripOwner(rec) {
+  if (!rec || typeof rec !== 'object') return rec;
+  const o = Object.assign({}, rec);
+  delete o.owner;
+  return o;
+}
+const stripOwners = (arr) => (Array.isArray(arr) ? arr.map(stripOwner) : arr);
+
+// Names nobody should be able to squat on: the founder's handle and anything a
+// reader would take as official. Without this, first-come-first-served would let
+// a stranger grab "trademind" or "wolco" on launch day and post as the house.
+// RESERVED_ACCT_ID is the account id allowed to use them; while it is unset the
+// names are simply unavailable, which is the safe default.
+const RESERVED_NAMES = new Set([
+  'wolco', 'trademind', 'sage', 'admin', 'support', 'staff', 'official', 'moderator', 'mod', 'team',
+]);
+const RESERVED_ACCT_ID = process.env.RESERVED_ACCT_ID || '';
+
+// ── Display-name binding ───────────────────────────────────────────────────
+// Comments and forum posts carry a name on purpose - that is what keeps the
+// community accountable. But the name arrived straight from the request body,
+// so anyone could sign a comment with another manager's handle and put words
+// in their mouth.
+//
+// First claim wins: the first account to post under a name owns it, and no
+// other account may use it afterwards. Not as strong as real accounts, but it
+// makes impersonating an established manager impossible instead of trivial.
+// Returns an error string when the name is taken, or '' when the caller may use it.
+function claimName(db, acctId, username) {
+  const name = String(username || '').trim().toLowerCase();
+  if (!name) return 'A name is required.';
+  if (!acctId) return 'Reconnect your account to post.';
+  if (RESERVED_NAMES.has(name) && acctId !== RESERVED_ACCT_ID) return 'That name is reserved.';
+  db.nameOwners = db.nameOwners || {};
+  const holder = db.nameOwners[name];
+  if (!holder) { db.nameOwners[name] = acctId; return ''; }
+  if (holder !== acctId) return 'That name is already in use by another manager.';
+  return '';
 }
 
 async function readDb() {
@@ -59,6 +104,21 @@ async function writeDb(db) {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
 router.get('/status', (req, res) => res.json({ configured: configured() }));
+
+// GET /api/community/whoami — the caller's own account id, derived from the key
+// their own browser sent. Safe to expose: it reveals nothing about anyone else
+// and the id cannot be replayed as a credential.
+//
+// Practical use: open this URL in the browser you post from, copy the id, and
+// set it as RESERVED_ACCT_ID in Vercel. That is what lets you (and nobody else)
+// post under the reserved names like "wolco" or "trademind".
+router.get('/whoami', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const acct = readAcctId(req);
+  res.json(acct
+    ? { acct, note: 'Set this as RESERVED_ACCT_ID in Vercel to claim the reserved names.' }
+    : { acct: null, note: 'No account key on this request. Open the site first so the browser mints one.' });
+});
 
 // Kept for frontend compatibility; BK is cosmetic karma now
 router.post('/user/init', async (req, res) => {
@@ -89,16 +149,21 @@ router.get('/feed', async (req, res) => {
   res.json(posts);
 });
 
-// GET /api/community/feed/mine?username=  — a manager's OWN published trades,
-// so they can come back and read the votes/comments they collected. Returns the
-// full record (they own it) but still no other users' identities.
+// GET /api/community/feed/mine — a manager's OWN published trades, so they can
+// come back and read the votes/comments they collected.
+//
+// Ownership is matched on the caller's ACCOUNT ID, never on a username passed
+// in the query. Sleeper usernames are public and enumerable, so the old
+// ?username= form let anyone walk the list of handles and map every
+// "anonymous" trade in the feed back to the manager who posted it - which
+// defeats the whole point of publishing anonymously.
 router.get('/feed/mine', async (req, res) => {
+  const owner = readAcctId(req);
+  if (!owner) return res.json([]);
   const db = await readDb();
-  const user = String(req.query.username || '').trim().toLowerCase();
-  if (!user) return res.json([]);
   const offset = parseInt(req.query.offset) || 0;
   const mine = db.posts.slice()
-    .filter(p => (p.created_at || 0) >= POSTS_SINCE && String(p.username || '').toLowerCase() === user)
+    .filter(p => (p.created_at || 0) >= POSTS_SINCE && p.owner && p.owner === owner)
     .sort((a, b) => b.created_at - a.created_at)
     .slice(offset, offset + 20)
     .map(p => Object.assign(publicPost(p), { mine: true }));
@@ -114,7 +179,7 @@ router.post('/post', async (req, res) => {
     const ctx = ['incoming', 'outgoing', 'processed'].includes(context) ? context : 'outgoing';
     const db = await readDb();
     const post = {
-      id: uid(), username, give_side, get_side,
+      id: uid(), username, owner: readAcctId(req), give_side, get_side,
       verdict: verdict || 'unknown', ktc_gap: ktc_gap || 0,
       headline: headline || '', league_type: league_type || 'dynasty',
       team_name: team_name || '', context: ctx, anon: true,
@@ -149,11 +214,15 @@ function applySwitchableVote(post, username, vote) {
 
 router.post('/vote/:postId', async (req, res) => {
   try {
-    const { vote, username } = req.body || {};
+    const { vote } = req.body || {};
+    // One vote per ACCOUNT. Keying on a client-supplied username meant a single
+    // person could stuff the ballot by sending a different name each time.
+    const voter = requireAcctId(req, res);
+    if (!voter) return;
     const db = await readDb();
     const post = db.posts.find(p => p.id === req.params.postId);
     if (!post) return res.status(404).json({ error: 'not found' });
-    const changed = applySwitchableVote(post, username, vote === 1 ? 1 : -1);
+    const changed = applySwitchableVote(post, voter, vote === 1 ? 1 : -1);
     if (changed) await writeDb(db);
     res.json({ upvotes: post.upvotes || 0, downvotes: post.downvotes || 0, your_vote: vote === 1 ? 1 : -1 });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -161,16 +230,20 @@ router.post('/vote/:postId', async (req, res) => {
 
 router.get('/opinions/:postId', async (req, res) => {
   const db = await readDb();
-  res.json(db.opinions[req.params.postId] || []);
+  res.json(stripOwners(db.opinions[req.params.postId] || []));
 });
 
 router.post('/opinions', async (req, res) => {
   try {
     const { post_id, username, text } = req.body || {};
     if (!post_id || !username || !text) return res.status(400).json({ error: 'missing fields' });
+    const acct = requireAcctId(req, res);
+    if (!acct) return;
     const db = await readDb();
+    const nameErr = claimName(db, acct, username);
+    if (nameErr) return res.status(403).json({ error: nameErr });
     if (!db.opinions[post_id]) db.opinions[post_id] = [];
-    const op = { id: uid(), post_id, username, text: String(text).slice(0, 500), like_count: 0, created_at: Date.now() };
+    const op = { id: uid(), post_id, username, owner: acct, text: String(text).slice(0, 500), like_count: 0, created_at: Date.now() };
     db.opinions[post_id].push(op);
     await writeDb(db);
     res.json({ opinion: op });
@@ -193,15 +266,19 @@ router.post('/opinion-like/:opinionId', async (req, res) => {
 router.get('/forum', async (req, res) => {
   const db = await readDb();
   const offset = parseInt(req.query.offset) || 0;
-  res.json(db.forum.slice().sort((a, b) => b.created_at - a.created_at).slice(offset, offset + 20));
+  res.json(stripOwners(db.forum.slice().sort((a, b) => b.created_at - a.created_at).slice(offset, offset + 20)));
 });
 
 router.post('/forum/post', async (req, res) => {
   try {
     const { username, text } = req.body || {};
     if (!username || !text) return res.status(400).json({ error: 'missing fields' });
+    const acct = requireAcctId(req, res);
+    if (!acct) return;
     const db = await readDb();
-    const post = { id: uid(), username, text: String(text).slice(0, 500), upvotes: 0, downvotes: 0, created_at: Date.now() };
+    const nameErr = claimName(db, acct, username);
+    if (nameErr) return res.status(403).json({ error: nameErr });
+    const post = { id: uid(), username, owner: acct, text: String(text).slice(0, 500), upvotes: 0, downvotes: 0, created_at: Date.now() };
     db.forum.unshift(post);
     if (db.forum.length > 500) db.forum.length = 500;
     await writeDb(db);
@@ -211,11 +288,13 @@ router.post('/forum/post', async (req, res) => {
 
 router.post('/forum/vote/:postId', async (req, res) => {
   try {
-    const { vote, username } = req.body || {};
+    const { vote } = req.body || {};
+    const voter = requireAcctId(req, res);
+    if (!voter) return;
     const db = await readDb();
     const post = db.forum.find(p => p.id === req.params.postId);
     if (!post) return res.status(404).json({ error: 'not found' });
-    const changed = applySwitchableVote(post, username, vote === 1 ? 1 : -1);
+    const changed = applySwitchableVote(post, voter, vote === 1 ? 1 : -1);
     if (changed) await writeDb(db);
     res.json({ upvotes: post.upvotes || 0, downvotes: post.downvotes || 0, your_vote: vote === 1 ? 1 : -1 });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -223,16 +302,20 @@ router.post('/forum/vote/:postId', async (req, res) => {
 
 router.get('/forum/replies/:postId', async (req, res) => {
   const db = await readDb();
-  res.json(db.replies[req.params.postId] || []);
+  res.json(stripOwners(db.replies[req.params.postId] || []));
 });
 
 router.post('/forum/reply', async (req, res) => {
   try {
     const { post_id, username, text } = req.body || {};
     if (!post_id || !username || !text) return res.status(400).json({ error: 'missing fields' });
+    const acct = requireAcctId(req, res);
+    if (!acct) return;
     const db = await readDb();
+    const nameErr = claimName(db, acct, username);
+    if (nameErr) return res.status(403).json({ error: nameErr });
     if (!db.replies[post_id]) db.replies[post_id] = [];
-    const reply = { id: uid(), post_id, username, text: String(text).slice(0, 500), created_at: Date.now() };
+    const reply = { id: uid(), post_id, username, owner: acct, text: String(text).slice(0, 500), created_at: Date.now() };
     db.replies[post_id].push(reply);
     await writeDb(db);
     res.json({ reply });
@@ -325,7 +408,7 @@ router.get('/rankings', async (req, res) => {
 router.get('/block', async (req, res) => {
   try {
     const db = await readDb();
-    const list = (db.block || []).slice().sort((a, b) => b.created_at - a.created_at).slice(0, 120);
+    const list = stripOwners((db.block || []).slice().sort((a, b) => b.created_at - a.created_at).slice(0, 120));
     res.set('Cache-Control', 'public, max-age=20');
     res.json({ listings: list });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -338,12 +421,16 @@ router.post('/block', async (req, res) => {
     if (!username || !player_name || !['shopping', 'wanted'].includes(type)) {
       return res.status(400).json({ error: 'missing fields' });
     }
+    const acct = requireAcctId(req, res);
+    if (!acct) return;
     const db = await readDb();
+    const nameErr = claimName(db, acct, username);
+    if (nameErr) return res.status(403).json({ error: nameErr });
     if (!db.block) db.block = [];
-    // One live listing per user+player+type; re-listing bumps it to the top
-    db.block = db.block.filter(l => !(l.username === username && l.player_name === player_name && l.type === type));
+    // One live listing per account+player+type; re-listing bumps it to the top
+    db.block = db.block.filter(l => !(l.owner === acct && l.player_name === player_name && l.type === type));
     const listing = {
-      id: uid(), username: String(username).slice(0, 40), type,
+      id: uid(), username: String(username).slice(0, 40), owner: acct, type,
       player_id: player_id ? String(player_id) : null,
       player_name: String(player_name).slice(0, 60),
       pos: String(pos || '').slice(0, 4), team: String(team || '').slice(0, 4),
@@ -358,12 +445,16 @@ router.post('/block', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// DELETE /api/community/block/:id?username=  — owner takes the listing down
+// DELETE /api/community/block/:id — owner takes their own listing down.
+// Matched on account id: the old ?username= form let anyone delete anyone's
+// listings just by naming them.
 router.delete('/block/:id', async (req, res) => {
   try {
+    const acct = requireAcctId(req, res);
+    if (!acct) return;
     const db = await readDb();
     const before = (db.block || []).length;
-    db.block = (db.block || []).filter(l => !(l.id === req.params.id && l.username === req.query.username));
+    db.block = (db.block || []).filter(l => !(l.id === req.params.id && l.owner === acct));
     if (db.block.length !== before) await writeDb(db);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -387,11 +478,17 @@ router.post('/feedback', async (req, res) => {
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-// Only the founder's own username unlocks the inbox. Weak gate (no passwords yet)
-// but feedback text is low-stakes; hardens when magic-link auth lands.
+// Admin inbox. A Sleeper username is public information, so it cannot be the
+// key to an admin surface - anyone who knew the founder's handle could read
+// every message users had sent. Gated on ADMIN_TOKEN instead; with no token
+// configured the inbox stays shut rather than falling back to the old check.
 router.get('/feedback', async (req, res) => {
-  const user = String(req.query.username || '').trim().toLowerCase();
-  if (user !== ADMIN_USER) return res.status(403).json({ error: 'not authorized' });
+  const token = process.env.ADMIN_TOKEN;
+  const given = String(req.headers['x-admin-token'] || req.query.token || '');
+  if (!token) return res.status(503).json({ error: 'admin inbox not configured' });
+  const a = Buffer.from(given), b = Buffer.from(token);
+  const ok = a.length === b.length && require('crypto').timingSafeEqual(a, b);
+  if (!ok) return res.status(403).json({ error: 'not authorized' });
   const db = await readDb();
   res.json(db.feedback || []);
 });
@@ -453,11 +550,19 @@ router.post('/referral/claim', async (req, res) => {
     if (!referrer || !newUser || !device) return res.status(400).json({ error: 'missing fields' });
     if (referrer === newUser) return res.json({ ok: false, reason: 'self' });
     if (!configured()) return res.status(503).json({ error: 'storage not configured' });
+    // Every bonus here is a free Claude call, so this endpoint spends real money.
+    // The device check alone was client-supplied and trivially rotated; pin the
+    // claim to the account key as well, one claim per account, forever.
+    const acct = requireAcctId(req, res);
+    if (!acct) return;
     const db = await readDb();
     db.refBonus = db.refBonus || {}; db.refClaimed = db.refClaimed || {};
     db.refDevices = db.refDevices || {}; db.refList = db.refList || {};
+    db.refAccts = db.refAccts || {};
     if (db.refClaimed[newUser]) return res.json({ ok: false, reason: 'already' });
     if (db.refDevices[device]) return res.json({ ok: false, reason: 'device' });
+    if (db.refAccts[acct]) return res.json({ ok: false, reason: 'device' });
+    db.refAccts[acct] = 1;
     db.refClaimed[newUser] = referrer;
     db.refDevices[device] = 1;
     db.refBonus[newUser] = (db.refBonus[newUser] || 0) + 1; // welcome bonus for the joiner

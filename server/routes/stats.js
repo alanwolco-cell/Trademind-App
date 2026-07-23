@@ -3,6 +3,7 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
+const { allowCron } = require('../lib/identity');
 const { put, list } = require('@vercel/blob');
 
 // Matchup engine built on free nflverse data:
@@ -301,6 +302,7 @@ router.get('/adp', async (req, res) => {
 
 // GET /api/stats/build — warm/rebuild the dataset (also usable via cron)
 router.get('/build', async (req, res) => {
+  if (!allowCron(req, res)) return;
   try { mem = await buildDataset(); res.json({ ok: true, players: Object.keys(mem.players).length, teams: mem.teams }); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });

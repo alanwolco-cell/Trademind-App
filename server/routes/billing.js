@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const router = express.Router();
+const { readAcctId, requireAcctId } = require('../lib/identity');
 
 // The Pro plan price (test mode). Overridable via env for live mode later.
 const PRICE_ID = process.env.STRIPE_PRICE_ID || 'price_1TvXEhCLgUN9IYFApEHe2fVg';
@@ -18,14 +19,19 @@ function getStripe() {
 
 // ── Entitlement store: who is Pro. Blob-backed (writes only happen on a
 //    purchase/cancel, so volume is tiny), cached in memory for 30s so a Sage
-//    request doesn't hit blob every time. Keyed by lowercased Sleeper username
-//    (the app's identity today) with a customer-id index for subscription events.
+//    request doesn't hit blob every time.
+//
+//    Keyed by ACCOUNT ID (sha256 of the browser's account key), never by
+//    username. A Sleeper username is public information, so keying on it let
+//    anyone who knew your handle read your plan, open your Stripe billing
+//    portal, or cancel the subscription you were paying for. The username is
+//    still recorded alongside the record, but only as a support label.
 const ENT_PATH = 'entitlements/pro.json';
 let _ent = null, _entTs = 0;
 
 async function loadEnt() {
   if (_ent && Date.now() - _entTs < 30000) return _ent;
-  let data = { byUser: {}, byCustomer: {} };
+  let data = { byAcct: {}, byCustomer: {} };
   try {
     const { list } = require('@vercel/blob');
     const { blobs } = await list({ prefix: ENT_PATH, limit: 1 });
@@ -34,7 +40,7 @@ async function loadEnt() {
       if (j && typeof j === 'object') data = j;
     }
   } catch (_) { if (_ent) return _ent; }
-  data.byUser = data.byUser || {};
+  data.byAcct = data.byAcct || {};
   data.byCustomer = data.byCustomer || {};
   _ent = data; _entTs = Date.now();
   return _ent;
@@ -48,11 +54,12 @@ async function saveEnt(e) {
   } catch (err) { console.error('[billing] saveEnt:', err.message); }
 }
 
-async function isPro(user) {
-  if (!user) return false;
+// Takes an ACCOUNT ID (see lib/identity), not a username.
+async function isPro(acctId) {
+  if (!acctId) return false;
   try {
     const e = await loadEnt();
-    const rec = e.byUser[String(user).toLowerCase()];
+    const rec = e.byAcct[String(acctId)];
     return !!(rec && (rec.status === 'active' || rec.status === 'trialing'));
   } catch (_) { return false; }
 }
@@ -70,28 +77,33 @@ router.post('/checkout', async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Checkout is not turned on yet.' });
   const user = String((req.body || {}).user || '').trim().toLowerCase().slice(0, 40);
   if (!user) return res.status(401).json({ error: 'Sign in first, then upgrade.' });
+  // The subscription is bound to the account key, not the typed username, so
+  // only this browser can later manage or cancel it. The username rides along
+  // as a support label so a human can match a Stripe customer to a manager.
+  const acctId = requireAcctId(req, res);
+  if (!acctId) return;
   const embedded = !!(req.body || {}).embedded;
   try {
     const origin = req.headers.origin || ('https://' + (req.headers.host || 'trademind-starter.vercel.app'));
-    if (embedded) {
-      const session = await stripe.checkout.sessions.create({
-        ui_mode: 'embedded',
-        mode: 'subscription',
-        line_items: [{ price: PRICE_ID, quantity: 1 }],
-        client_reference_id: user,
-        allow_promotion_codes: true,
-        return_url: origin + '/sage?upgraded=1&session_id={CHECKOUT_SESSION_ID}',
-      });
-      return res.json({ clientSecret: session.client_secret });
-    }
-    const session = await stripe.checkout.sessions.create({
+    const common = {
       mode: 'subscription',
       line_items: [{ price: PRICE_ID, quantity: 1 }],
-      client_reference_id: user,
+      client_reference_id: acctId,
+      metadata: { acct: acctId, username: user },
+      subscription_data: { metadata: { acct: acctId, username: user } },
       allow_promotion_codes: true,
+    };
+    if (embedded) {
+      const session = await stripe.checkout.sessions.create(Object.assign({}, common, {
+        ui_mode: 'embedded',
+        return_url: origin + '/sage?upgraded=1&session_id={CHECKOUT_SESSION_ID}',
+      }));
+      return res.json({ clientSecret: session.client_secret });
+    }
+    const session = await stripe.checkout.sessions.create(Object.assign({}, common, {
       success_url: origin + '/sage?upgraded=1',
       cancel_url: origin + '/sage',
-    });
+    }));
     res.json({ url: session.url });
   } catch (e) {
     console.error('[billing] checkout:', e.message);
@@ -106,35 +118,39 @@ router.post('/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const whsec = process.env.STRIPE_WEBHOOK_SECRET;
   let event;
+  // No signing secret means we cannot tell Stripe from a stranger, and a forged
+  // `checkout.session.completed` would hand out a free Pro plan. Refuse to
+  // process anything rather than trust an unsigned event.
+  if (!whsec) {
+    console.error('[billing] webhook rejected: STRIPE_WEBHOOK_SECRET is not set');
+    return res.status(503).json({ error: 'webhook not configured' });
+  }
   try {
-    if (whsec) {
-      event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, whsec);
-    } else {
-      // No signing secret set yet: accept unverified so the flow can be tested.
-      // SET STRIPE_WEBHOOK_SECRET in production to reject forged events.
-      event = (req.body && req.body.type) ? req.body : JSON.parse((req.rawBody || Buffer.from('{}')).toString());
-      console.warn('[billing] webhook UNVERIFIED - set STRIPE_WEBHOOK_SECRET');
-    }
+    event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, whsec);
   } catch (err) {
     console.error('[billing] webhook signature:', err.message);
     return res.status(400).send('bad signature');
   }
   try {
     const e = await loadEnt();
-    const apply = (user, customer, status, extra) => {
-      user = String(user || '').toLowerCase();
-      if (!user && customer) user = e.byCustomer[customer];
-      if (!user) return;
-      e.byUser[user] = Object.assign({}, e.byUser[user], { status, customer, updated: Date.now() }, extra || {});
-      if (customer) e.byCustomer[customer] = user;
+    const apply = (acct, customer, status, extra) => {
+      acct = String(acct || '');
+      if (!acct && customer) acct = e.byCustomer[customer];
+      if (!acct) return;
+      e.byAcct[acct] = Object.assign({}, e.byAcct[acct], { status, customer, updated: Date.now() }, extra || {});
+      if (customer) e.byCustomer[customer] = acct;
     };
     const o = (event.data && event.data.object) || {};
+    const metaAcct = (o.metadata && o.metadata.acct) || null;
     if (event.type === 'checkout.session.completed') {
-      apply(o.client_reference_id, o.customer, 'active', { sub: o.subscription });
+      apply(o.client_reference_id || metaAcct, o.customer, 'active', {
+        sub: o.subscription,
+        username: (o.metadata && o.metadata.username) || undefined,
+      });
     } else if (event.type === 'customer.subscription.updated') {
-      apply(null, o.customer, o.status, { sub: o.id, periodEnd: o.current_period_end });
+      apply(metaAcct, o.customer, o.status, { sub: o.id, periodEnd: o.current_period_end });
     } else if (event.type === 'customer.subscription.deleted') {
-      apply(null, o.customer, 'canceled', { sub: o.id });
+      apply(metaAcct, o.customer, 'canceled', { sub: o.id });
     }
     await saveEnt(e);
   } catch (err) {
@@ -145,18 +161,20 @@ router.post('/webhook', async (req, res) => {
 
 // GET /api/billing/status?user=  -> { pro, configured }
 router.get('/status', async (req, res) => {
-  const user = String(req.query.user || '').trim().toLowerCase().slice(0, 40);
+  // Read-only and polled by the UI, so an anonymous caller gets "not pro"
+  // rather than an error.
   res.set('Cache-Control', 'no-store');
-  res.json({ pro: await isPro(user), configured: !!process.env.STRIPE_SECRET_KEY });
+  res.json({ pro: await isPro(readAcctId(req)), configured: !!process.env.STRIPE_SECRET_KEY });
 });
 
 // POST /api/billing/portal  { user } -> { url } (manage/cancel subscription)
 router.post('/portal', async (req, res) => {
   const stripe = getStripe();
   if (!stripe) return res.status(503).json({ error: 'Billing is not turned on yet.' });
-  const user = String((req.body || {}).user || '').trim().toLowerCase().slice(0, 40);
+  const acctId = requireAcctId(req, res);
+  if (!acctId) return;
   const e = await loadEnt();
-  const rec = e.byUser[user];
+  const rec = e.byAcct[acctId];
   if (!rec || !rec.customer) return res.status(404).json({ error: 'No subscription found for this account.' });
   try {
     const origin = req.headers.origin || ('https://' + (req.headers.host || ''));
@@ -172,9 +190,9 @@ router.post('/portal', async (req, res) => {
 router.get('/subscription', async (req, res) => {
   const stripe = getStripe();
   if (!stripe) return res.status(503).json({ error: 'not configured' });
-  const user = String(req.query.user || '').trim().toLowerCase().slice(0, 40);
+  const acctId = readAcctId(req);
   const e = await loadEnt();
-  const rec = e.byUser[user];
+  const rec = acctId ? e.byAcct[acctId] : null;
   if (!rec || !rec.sub) return res.json({ pro: false });
   try {
     const s = await stripe.subscriptions.retrieve(rec.sub);
@@ -194,9 +212,10 @@ router.get('/subscription', async (req, res) => {
 router.post('/cancel', async (req, res) => {
   const stripe = getStripe();
   if (!stripe) return res.status(503).json({ error: 'not configured' });
-  const user = String((req.body || {}).user || '').trim().toLowerCase().slice(0, 40);
+  const acctId = requireAcctId(req, res);
+  if (!acctId) return;
   const e = await loadEnt();
-  const rec = e.byUser[user];
+  const rec = e.byAcct[acctId];
   if (!rec || !rec.sub) return res.status(404).json({ error: 'No subscription found for this account.' });
   try {
     const s = await stripe.subscriptions.update(rec.sub, { cancel_at_period_end: true });
@@ -207,9 +226,10 @@ router.post('/cancel', async (req, res) => {
 router.post('/resume', async (req, res) => {
   const stripe = getStripe();
   if (!stripe) return res.status(503).json({ error: 'not configured' });
-  const user = String((req.body || {}).user || '').trim().toLowerCase().slice(0, 40);
+  const acctId = requireAcctId(req, res);
+  if (!acctId) return;
   const e = await loadEnt();
-  const rec = e.byUser[user];
+  const rec = e.byAcct[acctId];
   if (!rec || !rec.sub) return res.status(404).json({ error: 'No subscription found for this account.' });
   try {
     const s = await stripe.subscriptions.update(rec.sub, { cancel_at_period_end: false });

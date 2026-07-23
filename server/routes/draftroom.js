@@ -258,6 +258,17 @@ router.get('/:code', async (req, res) => {
     res.set('Cache-Control', 'no-store');
     // trim the payload: clients only need the top of the pool
     const out = Object.assign({}, doc, { pool: doc.pool.slice(0, 40), poolLeft: doc.pool.length });
+    // Strip client ids. `cid` is the bearer secret that /kick, /start, /pause
+    // and /resume check to prove you are the host - shipping it in the room's
+    // public read let anyone with the room code read the host's id, replay it,
+    // and take over the draft. Clients keep their own cid locally; none of them
+    // needs anyone else's.
+    delete out.hostCid;
+    out.seats = (doc.seats || []).map(s => {
+      const t = Object.assign({}, s);
+      delete t.cid;
+      return t;
+    });
     res.json(out);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

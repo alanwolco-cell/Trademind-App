@@ -15,6 +15,22 @@ const sageRoutes = require('./routes/sage');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Don't advertise the stack to anyone fingerprinting the service.
+app.disable('x-powered-by');
+
+// Baseline security headers. No CSP here on purpose: the UI relies on inline
+// styles and inline on* handlers, so a real policy would black out the site.
+// Adding one means moving those to external handlers first - worth doing, but
+// it is a refactor, not a header.
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // payment= must keep Stripe's embedded checkout iframe working.
+  res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(self "https://js.stripe.com")');
+  next();
+});
+
 // CORS locked to TradeMind's own origins. A missing Origin (server-to-server,
 // the Stripe webhook, health checks) is allowed; browser requests from any other
 // website are refused, so nobody can build a front-end on top of this API.
@@ -43,7 +59,16 @@ app.use('/api/room', require('./routes/draftroom'));
 app.use('/api/billing', require('./routes/billing'));
 
 // Serve frontend
-app.use(express.static(path.join(__dirname, '../public')));
+// Static assets: a short TTL so repeat views skip the revalidation round-trip,
+// but short enough that a deploy is picked up in minutes. Filenames are not
+// content-hashed, so a long max-age would serve stale JS after every deploy.
+app.use(express.static(path.join(__dirname, '../public'), {
+  setHeaders: (res, filePath) => {
+    if (/\.(css|js|png|jpg|jpeg|svg|webp|woff2?)$/i.test(filePath)) {
+      res.set('Cache-Control', 'public, max-age=300, must-revalidate');
+    }
+  },
+}));
 
 // Public player pages: /player/jahmyr-gibbs — same SPA, SEO-friendly meta tags
 const fs = require('fs');

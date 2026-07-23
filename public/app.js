@@ -2,6 +2,47 @@
 if(history.scrollRestoration)history.scrollRestoration='manual';
 window.scrollTo(0,0);
 
+// ── Account key ─────────────────────────────────────────────────────────────
+// One random secret per browser, minted on first visit. It is what proves "this
+// is the same person" to the server: a Sleeper username is public, so anyone
+// could type yours, and the server can no longer take a username's word for it.
+// This key is what actually owns your published trades, your Pro subscription
+// and your votes. It never leaves this browser except as a request header.
+function tmAcct(){
+  try{
+    var k=localStorage.getItem('tm_acct');
+    if(k&&/^[A-Za-z0-9_-]{24,128}$/.test(k))return k;
+    var b=new Uint8Array(32);
+    (window.crypto||window.msCrypto).getRandomValues(b);
+    k=Array.prototype.map.call(b,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+    localStorage.setItem('tm_acct',k);
+    return k;
+  }catch(_){
+    // Private mode with storage blocked: fall back to a per-session key so the
+    // app still works, accepting that ownership resets when the tab closes.
+    if(!window._tmAcctMem)window._tmAcctMem=String(Date.now())+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+    return window._tmAcctMem;
+  }
+}
+// Attach the key to every same-origin /api call, so no individual call site has
+// to remember to do it.
+(function(){
+  var _fetch=window.fetch.bind(window);
+  window.fetch=function(input,init){
+    try{
+      var url=(typeof input==='string')?input:(input&&input.url)||'';
+      var sameOrigin=url.indexOf('/api/')===0||url.indexOf(location.origin+'/api/')===0;
+      if(sameOrigin){
+        init=init||{};
+        var h=new Headers(init.headers||(typeof input==='object'&&input.headers)||{});
+        h.set('x-tm-acct',tmAcct());
+        init=Object.assign({},init,{headers:h});
+      }
+    }catch(_){}
+    return _fetch(input,init);
+  };
+})();
+
 
 // Theme: dark by default, persisted
 function applyTheme(t){
@@ -2132,7 +2173,8 @@ async function postBlockListing(){
   }catch(_){if(st)st.textContent='Could not post the listing. Try again in a moment.';}
 }
 async function removeBlockListing(id){
-  try{await fetch('/api/community/block/'+id+'?username='+encodeURIComponent(bkUsername||''),{method:'DELETE'});}catch(_){}
+  // The server matches the listing against the account key header, not a name.
+  try{await fetch('/api/community/block/'+id,{method:'DELETE'});}catch(_){}
   loadTradeBlock();
 }
 function analyzeBlockListing(idx){
@@ -10179,7 +10221,8 @@ async function loadMyTrades(reset){
   if(!bkUsername){feed.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px">Sign in with your Sleeper username to see the trades you\'ve published.</div>';return;}
   feed.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted)">Loading your trades...</div>';
   try{
-    var res=await fetch('/api/community/feed/mine?username='+encodeURIComponent(bkUsername));
+    // Ownership travels in the account key header, not in a guessable username.
+    var res=await fetch('/api/community/feed/mine');
     var posts=res.ok?await res.json():[];
     if(!posts.length){feed.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px">You haven\'t published any trades yet. Analyze a trade, then hit "Post to Community" to get opinions.</div>';return;}
     feed.innerHTML=posts.map(renderTradePost).join('');
