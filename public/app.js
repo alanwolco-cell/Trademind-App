@@ -9829,19 +9829,11 @@ switchScreen=function(name){
   // Show hero first - update CTA for returning user
   var badgeEl=document.getElementById('hero-badge-text');
   if(badgeEl)badgeEl.textContent='Welcome back, '+savedUser+'';
-  // Returning user: reveal the hero's fast-path "Analyze a trade" button (hidden
-  // for first-timers) so they can jump straight into the tool from the top.
+  // The hero CTA ships visible for everyone now, so there is nothing to reveal
+  // here. Kept as a no-op guard in case an older cached index.html still has
+  // the inline display:none.
   var heroCta=document.getElementById('hero-cta');
   if(heroCta)heroCta.style.display='';
-  var enterBtn=document.getElementById('hero-enter-btn');
-  if(enterBtn){
-    enterBtn.textContent='Analyze a trade →';
-    enterBtn.removeAttribute('href');
-    enterBtn.onclick=function(e){
-      e.preventDefault();
-      switchScreen('analyze');showAnalyzeTab('analyzer');
-    };
-  }
   // No signing in every visit: the saved account and league connect themselves
   // in the background while the hero stays put. The connect card is NOISE for
   // a signed-in user - hide it entirely; loadLeague keeps it hidden on success
