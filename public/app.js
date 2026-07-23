@@ -9645,9 +9645,26 @@ checkShareParam();
     if(new URLSearchParams(window.location.search).get('upgraded')!=='1')return;
     var u=new URL(window.location.href);u.searchParams.delete('upgraded');
     history.replaceState({},'',u.pathname+u.search);
-    setTimeout(function(){
-      alert("You're Pro. Unlimited Sage is unlocked - thank you for backing TradeMind.");
-    },400);
+    // Stripe sends the buyer back the instant the card clears, but Pro is
+    // granted by the webhook, which lands a beat later. Repainting once here
+    // would show a stale "Go Pro" and force a reload to see the thing they
+    // just paid for, so poll until the entitlement actually appears.
+    var tries=0;
+    (function poll(){
+      tries++;
+      _refreshProStatus().then(function(){
+        try{sageUpdateQuota();}catch(_){}
+        if(window._isPro||tries>=10){
+          setTimeout(function(){
+            alert(window._isPro
+              ? "You're Pro. Unlimited Sage is unlocked - thank you for backing TradeMind."
+              : "Payment received. Pro unlocks in a few seconds - no need to do anything.");
+          },250);
+          return;
+        }
+        setTimeout(poll,1200);
+      }).catch(function(){ if(tries<10)setTimeout(poll,1200); });
+    })();
   }catch(_){}
 })();
 // Seed history state and activate the correct screen from the URL path
@@ -9804,6 +9821,17 @@ async function _refreshProStatus(){
   _applyProLabel();
 }
 function sagePillPro(){ if(window._isPro){sageManageBilling();}else{sageUpgrade();} }
+
+// Catch-all for entitlement changes that happen off-screen: a webhook that
+// lands slower than the post-checkout poll, or a plan cancelled from another
+// tab. Re-checks when the tab comes back to the foreground, so the UI can
+// never sit on a stale Pro state waiting for a manual reload.
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden)return;
+  if(!localStorage.getItem('tm_username'))return;
+  try{_refreshProStatus();}catch(_){}
+  try{sageUpdateQuota();}catch(_){}
+});
 
 // Patch switchScreen to update nav-item-btn active states
 var _origSwitchScreen=switchScreen;
