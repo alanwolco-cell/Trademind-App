@@ -1608,3 +1608,40 @@ html{scroll-padding-top:76px}
 @media(max-width:700px){
   html{scroll-padding-top:72px;scroll-padding-bottom:84px}
 }
+
+/* ── Phone mock draft ───────────────────────────────────────────────────────
+   Measured at 390px: the card's 28px of padding left the board, the player
+   list and Sage's writeup 280px to share, so every column inside them was
+   being squeezed past readable. Buy the width back first, then fix what is
+   still too small to tap. Scoped to #screen-mock so the ID outranks the skin
+   rules without needing !important. */
+@media(max-width:700px){
+  /* the overflow fix above pins these with !important, so matching it is the
+     only way to hand the draft back the last few pixels of gutter */
+  #screen-mock{padding-left:10px!important;padding-right:10px!important}
+  #screen-mock .card{padding:14px 12px}
+
+  /* the player search shipped a hard flex basis of 180px, so on a phone half
+     the row sat empty next to a box too narrow to read a name in */
+  #md-board .tm-input{flex:1 1 auto!important;max-width:none}
+
+  /* Sage's pros and cons rendered as two 89px columns: four words a line, each
+     point running a dozen lines down the phone. The columns are written inline
+     by the renderer, so this is the one place !important is the only lever. */
+  #md-board .pcwrap>div{grid-template-columns:1fr!important;gap:7px!important}
+
+  /* the primary action was a 196px button at the end of a 996px form */
+  #md-setup button{width:100%;min-height:52px;font-size:15px}
+
+  /* Position filters stay on one scrolling line, so they never cost a second
+     row of height, but the row has to actually scroll: it was nowrap with
+     visible overflow, which is how content escapes its box. */
+  #screen-mock div:has(>.md-pos-chip){overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #screen-mock div:has(>.md-pos-chip)::-webkit-scrollbar{display:none}
+  #screen-mock .md-pos-chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+
+  /* controls that measured 24px to 31px tall */
+  #screen-mock .md-view-btn{min-height:40px;display:inline-flex;align-items:center;padding:0 12px}
+  #screen-mock .opp-select{min-height:40px}
+  #screen-mock .tm-input{min-height:44px}
+}
