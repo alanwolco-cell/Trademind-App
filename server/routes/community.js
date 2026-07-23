@@ -7,10 +7,26 @@ const { put, list } = require('@vercel/blob');
 const DOC_PATH = 'community/db.json';
 let cache = null;
 let cacheTs = 0;
-const CACHE_MS = 5000;
+const CACHE_MS = 1500; // short, so a just-posted trade shows up almost immediately
 
 function emptyDb() {
-  return { posts: [], opinions: {}, forum: [], replies: {}, users: {}, ranks: {} };
+  return { posts: [], opinions: {}, forum: [], replies: {}, users: {}, ranks: {},
+    refBonus: {}, refClaimed: {}, refDevices: {}, refList: {} };
+}
+
+// Launch reset: trades published before this instant are hidden from every public
+// view (the pre-launch test trades). New posts stamp created_at > now, so they
+// pass. This "removes existing published trades" without a destructive wipe.
+const POSTS_SINCE = 1784698977791; // 2026-07-22 launch reset
+
+// Trades are published ANONYMOUSLY: the public feed never exposes who posted.
+// We keep `username` in storage (so "My Trades" and ownership work) but strip it
+// on the way out. Comments/opinions stay named on purpose.
+function publicPost(p) {
+  const o = Object.assign({}, p);
+  delete o.username; delete o.voters;
+  o.anon = true;
+  return o;
 }
 
 function configured() {
@@ -65,21 +81,50 @@ router.post('/charge', (req, res) => res.json({ ok: true })); // analysis is fre
 router.get('/feed', async (req, res) => {
   const db = await readDb();
   const offset = parseInt(req.query.offset) || 0;
-  const posts = db.posts.slice().sort((a, b) => b.created_at - a.created_at).slice(offset, offset + 20);
+  const posts = db.posts.slice()
+    .filter(p => (p.created_at || 0) >= POSTS_SINCE)
+    .sort((a, b) => b.created_at - a.created_at)
+    .slice(offset, offset + 20)
+    .map(publicPost);
   res.json(posts);
+});
+
+// GET /api/community/feed/mine?username=  — a manager's OWN published trades,
+// so they can come back and read the votes/comments they collected. Returns the
+// full record (they own it) but still no other users' identities.
+router.get('/feed/mine', async (req, res) => {
+  const db = await readDb();
+  const user = String(req.query.username || '').trim().toLowerCase();
+  if (!user) return res.json([]);
+  const offset = parseInt(req.query.offset) || 0;
+  const mine = db.posts.slice()
+    .filter(p => (p.created_at || 0) >= POSTS_SINCE && String(p.username || '').toLowerCase() === user)
+    .sort((a, b) => b.created_at - a.created_at)
+    .slice(offset, offset + 20)
+    .map(p => Object.assign(publicPost(p), { mine: true }));
+  res.json(mine);
 });
 
 router.post('/post', async (req, res) => {
   try {
-    const { username, give_side, get_side, verdict, ktc_gap, headline, league_type, team_name } = req.body || {};
+    const { username, give_side, get_side, verdict, ktc_gap, headline, league_type, team_name, context, description, league_settings, rosters } = req.body || {};
     if (!username || !give_side || !get_side) return res.status(400).json({ error: 'missing fields' });
     if (!configured()) return res.status(503).json({ error: 'storage not configured' });
+    // How the trade came about, so readers know what opinion you're after.
+    const ctx = ['incoming', 'outgoing', 'processed'].includes(context) ? context : 'outgoing';
     const db = await readDb();
     const post = {
       id: uid(), username, give_side, get_side,
       verdict: verdict || 'unknown', ktc_gap: ktc_gap || 0,
       headline: headline || '', league_type: league_type || 'dynasty',
-      team_name: team_name || '', upvotes: 0, downvotes: 0,
+      team_name: team_name || '', context: ctx, anon: true,
+      description: (description || '').toString().slice(0, 280),
+      league_settings: (league_settings && typeof league_settings === 'object') ? league_settings : null,
+      rosters: (rosters && typeof rosters === 'object') ? {
+        mine: Array.isArray(rosters.mine) ? rosters.mine.slice(0, 30) : [],
+        theirs: Array.isArray(rosters.theirs) ? rosters.theirs.slice(0, 30) : [],
+      } : null,
+      upvotes: 0, downvotes: 0,
       created_at: Date.now(),
     };
     db.posts.unshift(post);
@@ -324,6 +369,33 @@ router.delete('/block/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── PRIVATE FEEDBACK: anyone can send it, only the founder can read it ───────
+const ADMIN_USER = 'wolco';
+router.post('/feedback', async (req, res) => {
+  try {
+    const { username, text } = req.body || {};
+    if (!text || !String(text).trim()) return res.status(400).json({ error: 'empty' });
+    if (!configured()) return res.status(503).json({ error: 'storage not configured' });
+    const db = await readDb();
+    if (!db.feedback) db.feedback = [];
+    db.feedback.unshift({
+      id: uid(), from: (username || 'anonymous').toString().slice(0, 40),
+      text: String(text).slice(0, 1200), created_at: Date.now(),
+    });
+    if (db.feedback.length > 1000) db.feedback.length = 1000;
+    await writeDb(db);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Only the founder's own username unlocks the inbox. Weak gate (no passwords yet)
+// but feedback text is low-stakes; hardens when magic-link auth lands.
+router.get('/feedback', async (req, res) => {
+  const user = String(req.query.username || '').trim().toLowerCase();
+  if (user !== ADMIN_USER) return res.status(403).json({ error: 'not authorized' });
+  const db = await readDb();
+  res.json(db.feedback || []);
+});
+
 // ── TRADE INDEX: market comps from real TradeMind trades ────────────────────
 // GET /api/community/trade-index — most-traded players in the last 30 days
 router.get('/trade-index', async (req, res) => {
@@ -354,16 +426,62 @@ router.get('/player-trades', async (req, res) => {
     const db = await readDb();
     const hit = (side) => (side || []).some(a => ((a && (a.name || a)) + '').toLowerCase() === q);
     const deals = (db.posts || [])
-      .filter(p => hit(p.give_side) || hit(p.get_side))
+      .filter(p => (p.created_at || 0) >= POSTS_SINCE && (hit(p.give_side) || hit(p.get_side)))
       .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
       .slice(0, 8)
       .map(p => ({
         id: p.id, created_at: p.created_at, league_type: p.league_type,
-        give_side: p.give_side, get_side: p.get_side, verdict: p.verdict, username: p.username
+        give_side: p.give_side, get_side: p.get_side, verdict: p.verdict, context: p.context || 'outgoing'
       }));
     res.set('Cache-Control', 'public, max-age=60');
     res.json({ deals });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// ── REFERRALS: earn a bonus Sage question per friend who joins via your link ──
+// Un-abusable by design: the reward only fires when the referred person connects a
+// REAL Sleeper league (hard to fake) for the first time; one claim per device kills
+// self-referral and multi-accounting; self-referral is blocked outright; and each
+// referrer is hard-capped. Two-sided: the joiner also gets a welcome bonus.
+const MAX_REFERRALS = 10;
+router.post('/referral/claim', async (req, res) => {
+  try {
+    let { referrer, newUser, device } = req.body || {};
+    referrer = String(referrer || '').trim().toLowerCase().slice(0, 40);
+    newUser = String(newUser || '').trim().toLowerCase().slice(0, 40);
+    device = String(device || '').slice(0, 64);
+    if (!referrer || !newUser || !device) return res.status(400).json({ error: 'missing fields' });
+    if (referrer === newUser) return res.json({ ok: false, reason: 'self' });
+    if (!configured()) return res.status(503).json({ error: 'storage not configured' });
+    const db = await readDb();
+    db.refBonus = db.refBonus || {}; db.refClaimed = db.refClaimed || {};
+    db.refDevices = db.refDevices || {}; db.refList = db.refList || {};
+    if (db.refClaimed[newUser]) return res.json({ ok: false, reason: 'already' });
+    if (db.refDevices[device]) return res.json({ ok: false, reason: 'device' });
+    db.refClaimed[newUser] = referrer;
+    db.refDevices[device] = 1;
+    db.refBonus[newUser] = (db.refBonus[newUser] || 0) + 1; // welcome bonus for the joiner
+    let credited = false;
+    if ((db.refList[referrer] || []).length < MAX_REFERRALS) {
+      db.refBonus[referrer] = (db.refBonus[referrer] || 0) + 1;
+      credited = true;
+    }
+    db.refList[referrer] = (db.refList[referrer] || []).concat(newUser);
+    await writeDb(db);
+    res.json({ ok: true, referrerCredited: credited });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+router.get('/referral/status', async (req, res) => {
+  const user = String(req.query.username || req.query.user || '').trim().toLowerCase().slice(0, 40);
+  if (!user) return res.json({ bonus: 0, referred: 0, cap: MAX_REFERRALS });
+  const db = await readDb();
+  res.json({ bonus: (db.refBonus || {})[user] || 0, referred: ((db.refList || {})[user] || []).length, cap: MAX_REFERRALS });
+});
+// Read-only helper for sage.js to extend a user's free weekly Sage allowance.
+async function getReferralBonus(user) {
+  try { const db = await readDb(); return (db.refBonus || {})[String(user || '').toLowerCase()] || 0; }
+  catch (_) { return 0; }
+}
+router.getReferralBonus = getReferralBonus;
 
 module.exports = router;

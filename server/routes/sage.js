@@ -125,6 +125,7 @@ Grounding rules:
 - TEAMMATES & TARGET COMPETITION - this is where memory fails hardest. Before you name a player's teammates, the receivers/backs he competes with, or "the other weapons" on his offense, CONFIRM each of those players is STILL on that team THIS season. Star veterans and WR1/RB1 types change teams every single offseason, and a name you remember alongside him may have LEFT - which frees up targets and improves your player's outlook, the opposite of what you'd conclude if you named the departed player as competition. If the provided data does not confirm a teammate's current team, SEARCH before naming him. NEVER list a player who has left as current competition - it inverts the entire read.
 - WORDING: do not call players "pieces" or "assets", and avoid filler like "a nice complementary piece" - it reads as spammy and vague. Name the real role instead: your WR3, a bench flex, depth behind your starters, a weekly starter.
 - Trade advice quality bar: weigh value gap AND age curve AND the manager's window (ask which if it changes the verdict and they haven't said). A verdict that ignores one of these is a bad verdict.
+- AGE IS POSITION-SPECIFIC (dynasty only - age is irrelevant in redraft): a year of age does NOT mean the same thing across positions, so NEVER compare raw ages across positions or call a younger player the "age win" without checking his position. QBs age slowest and hold value into their mid-to-late 30s; TEs age well and often peak late; RBs fall off hard around 27-28; WRs decline in their late 20s. So a 27-year-old QB has a LONGER runway than a 24-year-old RB, and trading a young QB for a slightly younger WR is usually an age DOWNGRADE, not an upgrade. Reason about each player's remaining window at HIS position, never by the age number alone.
 - NEVER answer about a different player than the one asked about. If the asked player is not in your data, search for him or say you do not have his current value - do not substitute a similarly named or similar-role player.
 - Never invent stats, values, or news. Every number you state must come from the values below or a search you ran this turn. If a claim depends on current facts you have not verified, search first or say you are not certain - never guess.
 - NEGOTIATION COACH: when the user pastes a conversation from their league chat, asks how to reply to a manager, or says NEGOTIATION COACH MODE, switch to coaching. Reply with (1) the exact message they should send next - written in their casual league-chat voice, persuasive but never desperate - then (2) one line of strategy. Use the market values to anchor the ask. HARD RULE: never offer up anything the user said they refuse to give - work around their constraints, and if the deal is impossible within them, say so and suggest the closest viable alternative.
@@ -152,6 +153,7 @@ const PRO_MONTHLY = 250;
 // One network/IP can't farm free questions with throwaway usernames past this.
 const IP_FREE_DAILY = 12;
 const { isPro } = require('./billing');
+const community = require('./community'); // for referral bonuses (extends free weekly)
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const _memCnt = {}; // in-memory fallback: bucketKey -> count
@@ -275,13 +277,16 @@ router.get('/quota', async (req, res) => {
   const pro = await isPro(user);
   const u = await peekUsage(user, ip, device, pro);
   const dailyLimit = pro ? PRO_DAILY : FREE_DAILY;
+  const refBonus = pro ? 0 : await community.getReferralBonus(user).catch(() => 0);
+  const effWeekly = FREE_WEEKLY + (refBonus || 0);
   res.set('Cache-Control', 'no-store');
   res.json({
     pro,
     dayUsed: u.day, weekUsed: u.week, monthUsed: u.month,
-    dailyLimit, weeklyLimit: pro ? null : FREE_WEEKLY, monthlyLimit: pro ? PRO_MONTHLY : null,
+    dailyLimit, weeklyLimit: pro ? null : effWeekly, monthlyLimit: pro ? PRO_MONTHLY : null,
+    referralBonus: refBonus || 0,
     dailyLeft: Math.max(0, dailyLimit - u.day),
-    weeklyLeft: pro ? null : Math.max(0, FREE_WEEKLY - u.week),
+    weeklyLeft: pro ? null : Math.max(0, effWeekly - u.week),
     monthlyLeft: pro ? Math.max(0, PRO_MONTHLY - u.month) : null,
   });
 });
@@ -313,8 +318,10 @@ router.post('/chat', async (req, res) => {
           upgrade: true,
         });
       }
-      if (u.day > FREE_DAILY || u.week > FREE_WEEKLY) {
-        const which = u.week > FREE_WEEKLY ? 'this week' : 'today';
+      const _refBonus = await community.getReferralBonus(user.toLowerCase()).catch(() => 0);
+      const _effWeekly = FREE_WEEKLY + (_refBonus || 0);
+      if (u.day > FREE_DAILY || u.week > _effWeekly) {
+        const which = u.week > _effWeekly ? 'this week' : 'today';
         return res.status(429).json({
           error: "That is your free Sage for " + which + " - looks like you are putting me to work, which I love. Go Pro and ask me anything, anytime. I will be here before every move.",
           upgrade: true,

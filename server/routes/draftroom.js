@@ -21,13 +21,22 @@ function snakeOrder(teams, rounds) {
   }
   return order;
 }
+// Host is tracked by client id so the host can pick any draft slot without
+// losing pause/resume powers. Older rooms with no hostCid fall back to seat 0.
+function _isHost(doc, body) {
+  const cid = String((body || {}).cid || '');
+  if (doc.hostCid) return cid === doc.hostCid;
+  return parseInt((body || {}).seat) === 0;
+}
 // Vercel Blob enforces a ~60s minimum CDN cache on overwritten paths - deadly
 // for a live draft. So every update is a NEW versioned blob (unique URL, never
 // cached stale) and reads resolve the highest version. Old versions are deleted
 // best-effort after each write.
 async function readRoom(code) {
   const c = roomCache[code];
-  if (c && Date.now() - c.ts < 1000) return c.doc;
+  // Short cache so a live draft feels near-instant across devices, but still
+  // absorbs bursty polling from several clients hitting the same instance.
+  if (c && Date.now() - c.ts < 350) return c.doc;
   const { blobs } = await list({ prefix: ROOM_PREFIX + code + '-', limit: 100 });
   if (!blobs.length) return null;
   blobs.sort((a, b) => (a.pathname < b.pathname ? 1 : -1)); // vNNN descending
@@ -93,14 +102,16 @@ router.post('/create', async (req, res) => {
     const rounds = Math.min(16, Math.max(3, parseInt(b.rounds) || 8));
     const pool = Array.isArray(b.pool) ? b.pool.slice(0, 260) : [];
     if (pool.length < teams * rounds) return res.status(400).json({ error: 'pool too small' });
+    const hostCid = String(b.cid || '').slice(0, 40) || null;
     const doc = {
       code: code4(), created: Date.now(), status: 'lobby', teams, rounds,
       clock: Math.min(300, Math.max(10, parseInt(b.clock) || 60)),
-      seats: Array.from({ length: teams }, (_, i) => ({ name: i === 0 ? (String(b.name || 'Host').slice(0, 24)) : null, claimed: i === 0, cid: i === 0 ? (String(b.cid || '').slice(0, 40) || null) : null })),
+      hostCid,
+      seats: Array.from({ length: teams }, (_, i) => ({ name: i === 0 ? (String(b.name || 'Host').slice(0, 24)) : null, claimed: i === 0, cid: i === 0 ? hostCid : null })),
       order: snakeOrder(teams, rounds), pickIdx: 0, picks: [], pool,
     };
     await writeRoom(doc);
-    res.json({ code: doc.code, seat: 0 });
+    res.json({ code: doc.code, seat: 0, host: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -112,14 +123,63 @@ router.post('/:code/join', async (req, res) => {
     // one seat per person: same device rejoining gets its existing seat back
     if (cid) {
       const mine = doc.seats.findIndex(s => s.claimed && s.cid === cid);
-      if (mine >= 0) return res.json({ code: doc.code, seat: mine, rejoined: true });
+      if (mine >= 0) return res.json({ code: doc.code, seat: mine, rejoined: true, host: doc.hostCid === cid });
     }
     if (doc.status !== 'lobby') return res.status(400).json({ error: 'draft already started' });
     const seat = doc.seats.findIndex(s => !s.claimed);
     if (seat < 0) return res.status(400).json({ error: 'room full' });
     doc.seats[seat] = { name: String((req.body || {}).name || 'Manager').slice(0, 24), claimed: true, cid: cid || null };
     await writeRoom(doc);
-    res.json({ code: doc.code, seat });
+    res.json({ code: doc.code, seat, host: doc.hostCid === cid });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Pick (or move to) a specific draft slot in the lobby - Sleeper-style. The
+// caller's claim moves from wherever it is to the chosen open seat; host
+// identity follows the person (hostCid), not the seat number.
+router.post('/:code/seat', async (req, res) => {
+  try {
+    const doc = await readRoom(String(req.params.code).toUpperCase());
+    if (!doc) return res.status(404).json({ error: 'room not found' });
+    if (doc.status !== 'lobby') return res.status(400).json({ error: 'draft already started' });
+    const cid = String((req.body || {}).cid || '').slice(0, 40);
+    const target = parseInt((req.body || {}).seat);
+    if (!(target >= 0 && target < doc.teams)) return res.status(400).json({ error: 'bad seat' });
+    const cur = cid ? doc.seats.findIndex(s => s.claimed && s.cid === cid) : -1;
+    if (target === cur) {
+      // same seat: this is a rename (set your display name in the lobby)
+      const nm = (req.body || {}).name ? String(req.body.name).slice(0, 24) : '';
+      if (nm && cur >= 0 && doc.seats[cur].name !== nm) { doc.seats[cur].name = nm; await writeRoom(doc); }
+      return res.json({ ok: true, seat: cur, host: doc.hostCid === cid });
+    }
+    // the target must be free (someone else can't be bumped)
+    if (doc.seats[target].claimed) return res.status(409).json({ error: 'that seat was just taken' });
+    const name = ((req.body || {}).name ? String(req.body.name).slice(0, 24) : '')
+      || (cur >= 0 ? doc.seats[cur].name : '') || 'Manager';
+    if (cur >= 0) doc.seats[cur] = { name: null, claimed: false, cid: null };
+    doc.seats[target] = { name, claimed: true, cid: cid || null };
+    await writeRoom(doc);
+    res.json({ ok: true, seat: target, host: doc.hostCid === cid });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Host-only: open a seat back up (remove whoever is in it) while still in the
+// lobby. The host manages the room; they can't remove their own seat (they'd
+// just claim a different open one instead).
+router.post('/:code/kick', async (req, res) => {
+  try {
+    const doc = await readRoom(String(req.params.code).toUpperCase());
+    if (!doc) return res.status(404).json({ error: 'room not found' });
+    if (!_isHost(doc, req.body)) return res.status(403).json({ error: 'only the host can manage seats' });
+    if (doc.status !== 'lobby') return res.status(400).json({ error: 'draft already started' });
+    const seat = parseInt((req.body || {}).seat);
+    if (!(seat >= 0 && seat < doc.teams)) return res.status(400).json({ error: 'bad seat' });
+    if (doc.seats[seat].claimed && doc.seats[seat].cid && doc.seats[seat].cid === doc.hostCid) {
+      return res.status(400).json({ error: 'that is your own seat' });
+    }
+    doc.seats[seat] = { name: null, claimed: false, cid: null };
+    await writeRoom(doc);
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -128,6 +188,9 @@ router.post('/:code/start', async (req, res) => {
     const doc = await readRoom(String(req.params.code).toUpperCase());
     if (!doc) return res.status(404).json({ error: 'room not found' });
     if (doc.status !== 'lobby') return res.status(400).json({ error: 'already started' });
+    const scid = String((req.body || {}).cid || '');
+    const startHost = doc.hostCid ? (scid === doc.hostCid) : true;
+    if (!startHost) return res.status(403).json({ error: 'only the host can start' });
     doc.status = 'drafting';
     autoPickIfNeeded(doc);
     await writeRoom(doc);
@@ -141,7 +204,7 @@ router.post('/:code/pause', async (req, res) => {
   try {
     const doc = await readRoom(String(req.params.code).toUpperCase());
     if (!doc) return res.status(404).json({ error: 'room not found' });
-    if (parseInt((req.body || {}).seat) !== 0) return res.status(403).json({ error: 'only the host can pause' });
+    if (!_isHost(doc, req.body)) return res.status(403).json({ error: 'only the host can pause' });
     if (doc.status !== 'drafting') return res.status(400).json({ error: 'not drafting' });
     enforceClock(doc);
     if (doc.status === 'drafting') {
@@ -157,7 +220,7 @@ router.post('/:code/resume', async (req, res) => {
   try {
     const doc = await readRoom(String(req.params.code).toUpperCase());
     if (!doc) return res.status(404).json({ error: 'room not found' });
-    if (parseInt((req.body || {}).seat) !== 0) return res.status(403).json({ error: 'only the host can resume' });
+    if (!_isHost(doc, req.body)) return res.status(403).json({ error: 'only the host can resume' });
     if (doc.status !== 'paused') return res.status(400).json({ error: 'not paused' });
     doc.status = 'drafting';
     doc.deadline = Date.now() + (doc.pausedLeft || (doc.clock || 60) * 1000);

@@ -221,7 +221,7 @@ router.get('/nfl', async (req, res) => {
       if (t && !/espn/i.test(t) && t.length > 10) headlines.push(t);
     }
 
-    res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600');
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=3600');
     res.json({
       headlines: rw.map(i => i.title).slice(0, 8).concat(headlines).slice(0, 15),
       trending_add: trendAdd,
@@ -235,7 +235,7 @@ router.get('/nfl', async (req, res) => {
 
 // GET /api/news/articles — rich NFL news: headline, description, link, image
 const NodeCache2 = require('node-cache');
-const artCache = new NodeCache2({ stdTTL: 900 });
+const artCache = new NodeCache2({ stdTTL: 120 }); // 2-min so new drops surface fast
 // og:image lookups are the same for a given article URL for hours - cache long so
 // we only ever fetch a page's picture once, not on every /articles rebuild.
 const ogCache = new NodeCache2({ stdTTL: 6 * 3600 });
@@ -392,7 +392,7 @@ router.get('/articles', async (req, res) => {
     await Promise.all(need.map(async a => { const img = await ogImage(a.link); if (img) a.image = img; }));
     const out = { articles: deduped.length >= 3 ? deduped : articles.slice(0, 6) };
     artCache.set('articles', out);
-    res.set('Cache-Control', 'public, max-age=300, s-maxage=900, stale-while-revalidate=86400');
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
     res.json(out);
   } catch (e) { res.status(502).json({ error: e.message, articles: [] }); }
 });

@@ -55,3 +55,14 @@ html.v12 .hero{align-items:center;min-height:calc(100svh - 108px)}
 html.v12 body.ticker-on .hero,
 html.v12 .ticker-visible .hero{min-height:calc(100svh - 142px)}
 html.v12 .hero-inner{padding-top:0;padding-bottom:0}
+
+/* Primary action buttons wear the brand's Unbounded display face, not SF Pro,
+   so "Analyze", "Analyze My Trade", "Load into analyzer" read premium/branded. */
+html.v12 .btn-primary,
+html.v12 .btn-load,
+html.v12 #sage-chat-send,
+html.v12 .ideas-refresh{
+  font-family:var(--font-head);
+  letter-spacing:-.01em;
+  font-weight:600;
+}

@@ -9,26 +9,26 @@
 <meta property="og:description" content="A trade calculator built different - the one that actually works. Dynasty and redraft analysis using live market values + opponent psychology.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademind-starter.vercel.app/">
-<meta property="og:image" content="https://trademind-starter.vercel.app/og.png?v=2026072259">
+<meta property="og:image" content="https://trademind-starter.vercel.app/og.png?v=2026072309">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - Fantasy Football Trade Calculator">
 <meta name="twitter:description" content="A trade calculator built different - the one that actually works. Know the move.">
-<meta name="twitter:image" content="https://trademind-starter.vercel.app/og.png?v=2026072259">
+<meta name="twitter:image" content="https://trademind-starter.vercel.app/og.png?v=2026072309">
 <link rel="canonical" href="https://trademind-starter.vercel.app/">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c5cbf'/%3E%3Ctext x='32' y='44' text-anchor='middle' fill='%23fff' font-size='34' font-weight='900' font-family='system-ui,sans-serif'%3ETM%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='64' x2='64' y2='0' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%239b72e8'/%3E%3Cstop offset='1' stop-color='%234fd8f5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23140f24'/%3E%3Cpath d='M32 4 L38.4 25.6 L60 32 L38.4 38.4 L32 60 L25.6 38.4 L4 32 L25.6 25.6 Z' fill='url(%23g)'/%3E%3C/svg%3E">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
 <!-- The ?v= stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072259">
+<link rel="stylesheet" href="/styles.css?v=2026072309">
 <!-- v12 (Apple design, Unbounded headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072259" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072309" id="skin-default">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -40,7 +40,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072259">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072309">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -105,14 +105,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <span class="nav-dd-item" onclick="openResearchTab('tab-buysell')">Buy / Sell</span>
         <span class="nav-dd-item" onclick="openResearchTab('tab-compare')">Compare Players</span>
         <span class="nav-dd-item" onclick="openResearchTab('tab-startsit')">Start / Sit</span>
-        <span class="nav-dd-item" onclick="openResearchTab('tab-waiver')">Stash Targets</span>
         <span class="nav-dd-item" onclick="openResearchTab('tab-players-db')">Players</span>
         <span class="nav-dd-item" onclick="openResearchTab('tab-market')">Market</span>
-        <span class="nav-dd-item" onclick="openResearchTab('tab-rankem');try{rankEmNext()}catch(e){}">Rank 'Em</span>
-        <div class="nav-dd-sep"></div>
-        <div class="nav-dd-label">Knowledge</div>
-        <span class="nav-dd-item" onclick="switchScreen('learn');closeAllDropdowns()">Dynasty 101</span>
-        <span class="nav-dd-item" onclick="switchScreen('learn');switchInnerTab(document.querySelectorAll('#screen-learn .inner-tab')[3],'tab-about','screen-learn');closeAllDropdowns()">About TradeMind</span>
       </div>
     </div>
     <!-- Ask Sage (direct) -->
@@ -188,6 +182,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         Community Feed
       </div>
       <div class="nav-dd-sep" style="margin:4px 0"></div>
+      <div class="user-dd-item" onclick="openReferral();closeAllDropdowns()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6M19 8v6"/></svg>
+        Refer friends, earn Sage
+      </div>
       <div class="user-dd-item" id="user-dd-pro" onclick="sagePillPro();closeAllDropdowns()" style="color:var(--accent-bright)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.3L12 17.8 5.7 21.5l1.7-7.3L2 9.5l7.1-.6z"/></svg>
         <span id="user-dd-pro-label">Go Pro</span>
@@ -213,7 +211,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-buysell')">Buy / Sell</button>
       <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-compare')">Compare Players</button>
       <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-startsit')">Start / Sit</button>
-      <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-rankem')">Rank 'Em</button>
       <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-players-db')">Players</button>
       <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-market')">Market</button>
       <button class="mob-menu-item" onclick="mobGo('sage')">Ask Sage</button>
@@ -224,8 +221,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <button class="mob-menu-item mob-sub" onclick="mobGo('mock','history')">Draft History</button>
       <button class="mob-menu-item" onclick="mobGo('news')">News</button>
       <button class="mob-menu-item" onclick="mobGo('community')">Community</button>
-      <button class="mob-menu-item" onclick="mobGo('learn')">Learn</button>
-      <button class="mob-menu-item mob-sub" onclick="mobGo('learn');switchInnerTab(document.querySelectorAll('#screen-learn .inner-tab')[3],'tab-about','screen-learn')">About TradeMind</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn()">Learn</button>
+      <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn();switchLearnTab(document.querySelectorAll('#community-tab-learn .inner-tab')[3],'tab-about')">About TradeMind</button>
     </div>
   </div>
 
@@ -249,7 +246,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="hero-ring hero-ring-1"></div>
       <div class="hero-ring hero-ring-2"></div>
       <div class="hero-ring hero-ring-3"></div>
-      <svg class="sage-hero-svg" viewBox="0 0 120 106" width="150" height="150" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="shBG" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="shEG" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="shEGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="shBGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><ellipse cx="60" cy="56" rx="54" ry="47" fill="rgba(91,33,182,0.22)" filter="url(#shBGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#shBG)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#shBG)"/><rect x="4" y="43" width="112" height="27" fill="url(#shBG)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="29" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="69" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><path d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <svg class="sage-hero-svg" viewBox="0 0 120 106" width="150" height="150" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="shBG" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="shEG" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="shEGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="shBGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><radialGradient id="shAura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#8b6bff" stop-opacity="0.6"/><stop offset="52%" stop-color="#67e8f9" stop-opacity="0.16"/><stop offset="100%" stop-color="#67e8f9" stop-opacity="0"/></radialGradient></defs><ellipse class="sage-aura" cx="60" cy="56" rx="78" ry="68" fill="url(#shAura)"/><ellipse cx="60" cy="56" rx="56" ry="49" fill="rgba(91,33,182,0.30)" filter="url(#shBGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#shBG)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#shBG)"/><rect x="4" y="43" width="112" height="27" fill="url(#shBG)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="29" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="69" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><path d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
     </div>
     <!-- Headline -->
     <h1>Become the<br>smartest manager<br><span class="hl">in your league.</span></h1>
@@ -431,7 +428,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <!-- YOUR SITUATION PROFILER -->
             <div class="profiler-section" id="your-section" style="display:none">
               <div class="your-title">Should YOU do this trade?</div>
-              <div class="your-sub">Answer 3 quick questions about your situation. This helps us tell you if this trade actually makes sense for where you are in your dynasty.</div>
+              <div class="your-sub">These personalize the <strong style="color:var(--text)">"should YOU do it"</strong> call - they don't change the value math (that's pure value). Your team window is remembered across trades. In a hurry? <span onclick="skipYouQuestions()" style="color:var(--accent-bright);cursor:pointer;font-weight:600">Skip to the value read</span>.</div>
+
+              <div id="q1-chip" class="q1-chip" style="display:none"></div>
 
               <div class="progress-dots">
                 <div class="pdot active" id="ypip-0"></div>
@@ -512,7 +511,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="verdict-top">
             <!-- REX -->
             <div class="sage-wrap" id="sage-wrap">
-              <svg class="sage-svg" viewBox="0 0 120 106" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sageBodyGrad" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="sageEyeGrad" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="sageEyeGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="sageBodyGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><ellipse cx="60" cy="56" rx="54" ry="47" fill="rgba(91,33,182,0.22)" filter="url(#sageBodyGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#sageBodyGrad)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#sageBodyGrad)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#sageBodyGrad)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#sageBodyGrad)"/><rect x="4" y="43" width="112" height="27" fill="url(#sageBodyGrad)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-eye-l" x="29" y="65" width="22" height="6" rx="3" fill="url(#sageEyeGrad)" filter="url(#sageEyeGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-eye-r" x="69" y="65" width="22" height="6" rx="3" fill="url(#sageEyeGrad)" filter="url(#sageEyeGlow)"/><path class="sage-mouth sage-mouth-neutral" d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/><path class="sage-mouth sage-mouth-win" d="M 44 83 Q 60 95 76 83" stroke="#67e8f9" stroke-width="2.5" fill="none" stroke-linecap="round" filter="url(#sageEyeGlow)"/><path class="sage-mouth sage-mouth-reject" d="M 50 89 Q 60 82 70 89" stroke="rgba(167,139,250,0.5)" stroke-width="2" fill="none" stroke-linecap="round"/><path class="sage-mouth sage-mouth-think" d="M 48 85 Q 60 85 72 85" stroke="rgba(103,232,249,0.45)" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="3 3"/></svg>
+              <svg class="sage-svg" viewBox="0 0 120 106" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sageBodyGrad" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="sageEyeGrad" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="sageEyeGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="sageBodyGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><radialGradient id="sageAura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#8b6bff" stop-opacity="0.6"/><stop offset="52%" stop-color="#67e8f9" stop-opacity="0.16"/><stop offset="100%" stop-color="#67e8f9" stop-opacity="0"/></radialGradient></defs><ellipse class="sage-aura" cx="60" cy="56" rx="78" ry="68" fill="url(#sageAura)"/><ellipse cx="60" cy="56" rx="56" ry="49" fill="rgba(91,33,182,0.30)" filter="url(#sageBodyGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#sageBodyGrad)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#sageBodyGrad)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#sageBodyGrad)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#sageBodyGrad)"/><rect x="4" y="43" width="112" height="27" fill="url(#sageBodyGrad)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-eye-l" x="29" y="65" width="22" height="6" rx="3" fill="url(#sageEyeGrad)" filter="url(#sageEyeGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-eye-r" x="69" y="65" width="22" height="6" rx="3" fill="url(#sageEyeGrad)" filter="url(#sageEyeGlow)"/><path class="sage-mouth sage-mouth-neutral" d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/><path class="sage-mouth sage-mouth-win" d="M 44 83 Q 60 95 76 83" stroke="#67e8f9" stroke-width="2.5" fill="none" stroke-linecap="round" filter="url(#sageEyeGlow)"/><path class="sage-mouth sage-mouth-reject" d="M 50 89 Q 60 82 70 89" stroke="rgba(167,139,250,0.5)" stroke-width="2" fill="none" stroke-linecap="round"/><path class="sage-mouth sage-mouth-think" d="M 48 85 Q 60 85 72 85" stroke="rgba(103,232,249,0.45)" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="3 3"/></svg>
               <div class="sage-tag">Sage</div>
             </div>
             <!-- Verdict text -->
@@ -560,30 +559,30 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
         <!-- SCENARIOS: best case / worst case -->
         <div id="scenarios-card" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-          <div style="background:var(--surface2);border:1px solid var(--green-dim);border-radius:var(--radius);padding:.875rem">
+          <div class="verdict-panel" style="padding:.875rem .875rem .875rem 1rem">
             <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">✓ Best case</div>
             <div id="scenario-best" style="font-size:12px;color:var(--muted2);line-height:1.6">-</div>
           </div>
-          <div style="background:var(--surface2);border:1px solid var(--red-dim);border-radius:var(--radius);padding:.875rem">
-            <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">✗ Worst case</div>
+          <div class="verdict-panel" style="padding:.875rem .875rem .875rem 1rem">
+            <div style="font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">Worst case</div>
             <div id="scenario-worst" style="font-size:12px;color:var(--muted2);line-height:1.6">-</div>
           </div>
         </div>
 
         <!-- FIT CARDS -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
-          <div class="bd-card" id="fit-you" style="border-left:3px solid var(--green)">
-            <div class="bd-label" style="color:var(--green)">Do YOU need this?</div>
+        <div class="fit-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+          <div class="bd-card" id="fit-you">
+            <div class="bd-label" style="color:var(--muted)">Do YOU need this?</div>
             <div class="bd-val" id="bc-value">-</div>
             <div class="bd-desc" id="bc-value-desc">-</div>
           </div>
-          <div class="bd-card" id="fit-them" style="border-left:3px solid var(--accent-bright)">
-            <div class="bd-label" style="color:var(--accent-bright)">Do THEY want this?</div>
+          <div class="bd-card" id="fit-them">
+            <div class="bd-label" style="color:var(--muted)">Do THEY want this?</div>
             <div class="bd-val" id="bc-need">-</div>
             <div class="bd-desc" id="bc-need-desc">-</div>
           </div>
-          <div class="bd-card" id="fit-timing" style="border-left:3px solid var(--yellow)">
-            <div class="bd-label" style="color:var(--yellow)">Good time to ask?</div>
+          <div class="bd-card" id="fit-timing">
+            <div class="bd-label" style="color:var(--muted)">Good time to ask?</div>
             <div class="bd-val" id="bc-psych">-</div>
             <div class="bd-desc" id="bc-psych-desc">-</div>
           </div>
@@ -593,24 +592,34 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="signals-card" style="margin-bottom:12px">
           <div class="signal-title" style="display:flex;align-items:center;justify-content:space-between">Reading your opponent<span id="opp-explain-toggle" onclick="toggleOppExplain()" style="font-size:10px;font-weight:500;color:var(--accent-bright);cursor:pointer;letter-spacing:0;text-transform:none">How we calculate this ▾</span></div>
           <div id="opp-explain-box" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted2);line-height:1.7;border-left:3px solid var(--accent-bright)">These are <strong style="color:var(--text)">behavioral estimates, not probabilities</strong>. We build them from two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience and total market value → which manager archetype they fit) and their <strong style="color:var(--text)">actual trade history in this league</strong> (how often they trade, whether they hoard or ship picks, and whether they win or lose value in deals).<br><strong style="color:var(--text)">Urgency</strong> - archetype baseline, pushed higher if they've been trading picks away for players (win-now behavior).<br><strong style="color:var(--text)">Stubbornness</strong> - pushed higher if they barely trade, lower if they're a high-volume dealer.<br><strong style="color:var(--text)">Hype chaser</strong> - how much their archetype historically overvalues recent performance. Use it to decide WHICH of your players to feature in the pitch.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">How bad do they need a deal?</div>
-              <div class="sig-pct" id="sig1-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">Their urgency</div>
-              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig1" style="background:var(--accent-bright);width:0%;height:100%"></div></div>
+          <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="oppGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9b72e8"/><stop offset="1" stop-color="#4fd8f5"/></linearGradient></defs></svg>
+          <div id="oppread-calc-wrap" style="text-align:center;margin:10px 0 16px">
+            <button id="oppread-calc-btn" class="oppread-calc" onclick="calculateOppRead()"><span class="oppread-calc-spark">&#10022;</span> Calculate the read</button>
+          </div>
+          <div class="oppread-grid" id="oppread-grid" style="opacity:.3;transition:opacity .4s ease">
+            <div class="oppread-cell">
+              <div class="oppread-q">How bad do they need a deal?</div>
+              <div class="oppread-ring">
+                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig1-ring" cx="44" cy="44" r="38" stroke="url(#oppGrad)"/></svg>
+                <div class="oppread-pct" id="sig1-val">-</div>
+              </div>
+              <div class="oppread-label">Their urgency</div>
             </div>
-            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">How attached are they to their guys?</div>
-              <div class="sig-pct" id="sig2-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">How stubborn they are</div>
-              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig2" style="background:var(--yellow);width:0%;height:100%"></div></div>
+            <div class="oppread-cell">
+              <div class="oppread-q">How attached are they to their guys?</div>
+              <div class="oppread-ring">
+                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig2-ring" cx="44" cy="44" r="38" stroke="url(#oppGrad)"/></svg>
+                <div class="oppread-pct" id="sig2-val">-</div>
+              </div>
+              <div class="oppread-label">How stubborn they are</div>
             </div>
-            <div style="background:var(--surface2);border-radius:var(--radius);padding:.75rem;text-align:center">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Do they chase hype?</div>
-              <div class="sig-pct" id="sig3-val" style="font-size:22px;font-family:var(--font-head);font-weight:700">-</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">Easy to sell to</div>
-              <div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:6px;overflow:hidden"><div class="sig-fill" id="sig3" style="background:var(--red);width:0%;height:100%"></div></div>
+            <div class="oppread-cell">
+              <div class="oppread-q">Do they chase hype?</div>
+              <div class="oppread-ring">
+                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig3-ring" cx="44" cy="44" r="38" stroke="url(#oppGrad)"/></svg>
+                <div class="oppread-pct" id="sig3-val">-</div>
+              </div>
+              <div class="oppread-label">Easy to sell to</div>
             </div>
           </div>
         </div>
@@ -618,14 +627,14 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
         <!-- PITCH SECTION -->
         <div class="pitch-card" id="pitch-card" style="display:none">
-          <div class="pitch-header">
-            
+          <div class="pitch-header" onclick="togglePitch()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px">
             <div>
               <div class="pitch-title">How to sell this trade</div>
               <div class="pitch-sub">What to say when you message them - based on how they think</div>
             </div>
+            <span id="pitch-chevron" style="font-size:12px;color:var(--accent-bright);background:var(--accent-dim);border:1px solid rgba(167,139,250,.4);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .2s;flex:none">&#9662;</span>
           </div>
-          <div id="pitch-angles"></div>
+          <div id="pitch-angles" style="display:none"></div>
           </div>
 
         <div class="result-actions">
@@ -633,9 +642,22 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <button class="action-btn" onclick="saveToHistory()">Save to history</button>
           <button class="action-btn" onclick="newTrade()">New trade</button>
         </div>
+        <div id="share-context-row" style="display:none;margin-top:14px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:7px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">How did this trade come about?</div>
+          <div class="ctx-seg" id="share-context-seg">
+            <button type="button" class="ctx-seg-btn active" data-ctx="outgoing" onclick="setShareContext(this)">I'm offering this</button>
+            <button type="button" class="ctx-seg-btn" data-ctx="incoming" onclick="setShareContext(this)">It was offered to me</button>
+            <button type="button" class="ctx-seg-btn" data-ctx="processed" onclick="setShareContext(this)">Already accepted</button>
+          </div>
+          <textarea id="share-desc-input" maxlength="280" rows="2" placeholder="Add context so people can weigh in (optional) - your thinking, your roster situation, what you're worried about..." style="width:100%;box-sizing:border-box;margin-top:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);font-family:var(--font-body);resize:vertical;outline:none"></textarea>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted2);cursor:pointer;user-select:none">
+            <input type="checkbox" id="share-rosters-optin" checked style="width:16px;height:16px;accent-color:var(--accent-bright);cursor:pointer">
+            Show both rosters so people can judge the trade in context
+          </label>
+        </div>
         <button class="share-trade-btn" id="share-community-btn" onclick="shareTradeToForum()" style="display:none">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="10" r="10" fill="#0d0d1a"/><defs><linearGradient id="bkgs" x1="20%" y1="0%" x2="80%" y2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><path d="M11.5 4L7 11h3.5L8 16l8-8h-4z" fill="url(#bkgs)"/></svg>
-          Post to Community - let people vote on this trade
+          Post to Community anonymously - let people vote on this trade
         </button>
           </div><!-- end result-panel -->
         </div><!-- end right-col -->
@@ -651,7 +673,19 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div class="ideas-title">Trade Ideas for You</div>
             <div class="ideas-sub" id="ideas-tab-sub">Load your league to see personalized ideas</div>
           </div>
-          <button class="ideas-refresh" onclick="refreshTradeIdeas()">New ideas ↺</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <select class="opp-select" id="ideas-tab-league-switch" style="width:auto;min-width:150px;font-size:12px;display:none" onchange="if(this.value)switchToLeague(this.value)"></select>
+            <button class="ideas-refresh" onclick="refreshTradeIdeas()">New ideas ↺</button>
+          </div>
+        </div>
+        <div class="ideas-filter">
+          <input type="text" id="ideas-context-input" placeholder="What are you after? e.g. a young WR, a win-now RB, more QB depth..." maxlength="140" onkeydown="if(event.key==='Enter')applyIdeaFilters()">
+          <div class="ideas-filter-excl">
+            <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Won't trade</span>
+            <div class="ac-wrap" style="position:relative;flex:1;min-width:150px"><input type="text" id="ideas-exclude-input" placeholder="Add a player you won't move..." autocomplete="off" oninput="ideaExcludeSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();}"><div class="ac-dropdown" id="ideas-exclude-dd" style="right:auto;width:320px;max-width:100%"></div></div>
+            <span id="ideas-exclude-chips" style="display:flex;flex-wrap:wrap;gap:6px"></span>
+          </div>
+          <button class="ideas-refresh" style="align-self:flex-start" onclick="applyIdeaFilters()">Apply filters</button>
         </div>
         <div id="ideas-list-tab"><div class="ideas-empty">Load your league first, then come back here for ideas.</div></div>
       </div>
@@ -710,11 +744,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- RESEARCH SCREEN -->
     <div class="screen" id="screen-research">
       <div class="inner-tab-bar">
-        <div class="inner-tab active" onclick="switchInnerTab(this,'tab-buysell','screen-research');renderBuySell()">Buy / Sell</div>
-        <div class="inner-tab" onclick="switchInnerTab(this,'tab-rankem','screen-research');rankEmNext()">Rank 'Em</div>
+        <div class="inner-tab active" onclick="switchInnerTab(this,'tab-buysell','screen-research');renderBuySell();renderWaiverTargets()">Buy / Sell</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-compare','screen-research')">Compare</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-startsit','screen-research')">Start / Sit</div>
-        <div class="inner-tab" onclick="switchInnerTab(this,'tab-waiver','screen-research');renderWaiverTargets()">Stash Targets</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-players-db','screen-research');renderPlayersDB()">Players</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-market','screen-research');renderMarketTab()">Market</div>
       </div>
@@ -722,6 +754,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
     <!-- BUY / SELL TAB -->
     <div id="tab-buysell" class="tab-content active">
+      <div class="ctx-seg" id="bs-seg" style="margin-bottom:14px;max-width:360px">
+        <button type="button" class="ctx-seg-btn active" onclick="bsView('signals',this)">Buy / Sell signals</button>
+        <button type="button" class="ctx-seg-btn" onclick="bsView('stash',this)">Stash targets</button>
+      </div>
+      <div id="bs-view-signals">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
           <div>
@@ -732,24 +769,18 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         </div>
         <div id="buysell-content"><div class="empty-state">Loading player values...</div></div>
       </div>
-    </div>
-
-    <!-- ASK SAGE (START/SIT) TAB -->
-    <div id="tab-rankem" class="tab-content">
+      </div>
+      <div id="bs-view-stash" style="display:none">
       <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
-          <div style="font-size:16px;font-weight:700">Rank 'Em</div>
-          <div class="inner-tab-bar" style="margin:0;border:none">
-            <div class="inner-tab active" id="rankem-mode-dynasty" onclick="rankEmSetMode('dynasty')">Dynasty</div>
-            <div class="inner-tab" id="rankem-mode-redraft" onclick="rankEmSetMode('redraft')">Redraft</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:2px">Stash Targets</div>
+            <div style="font-size:12px;color:var(--muted)">High-value players not on any roster in your league</div>
           </div>
+          <button class="btn-sm" onclick="renderWaiverTargets()">Refresh ↺</button>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Pick who you'd rather have. Every vote feeds a live community consensus ranking - built by the crowd, not one algorithm.</div>
-        <div id="rankem-mode-label" style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">Dynasty: who would you rather build with?</div>
-        <div id="rankem-matchup" style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:18px"></div>
-        <div style="text-align:center;margin-bottom:18px"><button class="btn-sm" onclick="rankEmNext(true)">Skip / new matchup</button></div>
-        <div style="font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Community consensus</div>
-        <div id="rankem-board"><div class="empty-state">Cast a vote to see the crowd's board.</div></div>
+        <div id="waiver-content"><div class="empty-state">Connect a league to see stash targets.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div></div>
+      </div>
       </div>
     </div>
 
@@ -809,18 +840,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div id="asksage-result"></div>
       </div>
     </div>
-    <div id="tab-waiver" class="tab-content">
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <div>
-            <div style="font-size:16px;font-weight:700;margin-bottom:2px">Stash Targets</div>
-            <div style="font-size:12px;color:var(--muted)">High-value players not on any roster in your league</div>
-          </div>
-          <button class="btn-sm" onclick="renderWaiverTargets()">Refresh ↺</button>
-        </div>
-        <div id="waiver-content"><div class="empty-state">Connect a league to see stash targets.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button></div></div>
-      </div>
-    </div>
     <!-- PLAYERS TAB -->
     <div id="tab-players-db" class="tab-content">
       <div class="card">
@@ -870,7 +889,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div id="pdb-stat-info" style="display:none;margin-bottom:10px;padding:10px 14px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent-bright);font-size:12px;color:var(--muted2);line-height:1.7"></div>
 
         <div id="pdb-count" style="font-size:11px;color:var(--muted);margin-bottom:4px"></div>
-        <div style="font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.5">Stat chips (2025 season, from real play-by-play data): <strong style="color:var(--muted2)">Tgt</strong> = share of team targets · <strong style="color:var(--muted2)">AY</strong> = share of team air yards · <strong style="color:var(--muted2)">YAC</strong> = yards after catch per reception · <strong style="color:var(--muted2)">YPC</strong> = yards per carry. Deep dives in <span style="color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="switchScreen('learn');switchInnerTab(document.querySelectorAll('#screen-learn .inner-tab')[1],'tab-nerdstats','screen-learn')">Learn → The Nerd Stats</span>.</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.5">Stat chips (2025 season, from real play-by-play data): <strong style="color:var(--muted2)">Tgt</strong> = share of team targets · <strong style="color:var(--muted2)">AY</strong> = share of team air yards · <strong style="color:var(--muted2)">YAC</strong> = yards after catch per reception · <strong style="color:var(--muted2)">YPC</strong> = yards per carry. Deep dives in <span style="color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="goLearn();switchLearnTab(document.querySelectorAll('#community-tab-learn .inner-tab')[1],'tab-nerdstats')">Community → Learn → The Nerd Stats</span>.</div>
         <div id="pdb-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px"></div>
       </div>
     </div>
@@ -927,11 +946,17 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
            Every visit starts a fresh chat; past conversations live in the sidebar. -->
       <div class="sage-layout">
       <aside class="sage-side" id="sage-side" aria-label="Past chats"></aside>
-      <div class="card" id="sage-chat-card" style="margin-bottom:14px;padding-top:26px">
-        <div id="sage-greeting" style="text-align:center;margin:26px 0 30px">
+      <div class="card sage-centered" id="sage-chat-card" style="margin-bottom:14px">
+        <div id="sage-greeting" style="text-align:center;margin:8px 0 30px">
           <svg width="52" height="46" viewBox="0 0 120 106" fill="none" style="margin-bottom:12px;opacity:.9"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
-          <div style="font-family:var(--font-head);font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--text)">Ask me anything.</div>
-          <div style="font-size:12.5px;color:var(--muted);margin-top:6px">The friend everyone texts before hitting Accept.</div>
+          <div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(100deg,var(--text) 38%,var(--accent-bright));-webkit-background-clip:text;background-clip:text;color:transparent">Ask me anything.</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:7px">The friend everyone texts before hitting Accept.</div>
+          <div class="sage-caps">
+            <span class="sage-cap"><b>Reads</b> your roster</span>
+            <span class="sage-cap"><b>Knows</b> your league</span>
+            <span class="sage-cap"><b>Live</b> market values</span>
+            <span class="sage-cap"><b>Never</b> emotional</span>
+          </div>
           <button class="btn-sm" id="sage-connect-hint" style="display:none;margin-top:12px" onclick="goConnectLeague()">Connect your Sleeper league so Sage sees your roster →</button>
         </div>
         <div id="sage-chat-log" class="sage-chat-log"></div>
@@ -983,22 +1008,32 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <button class="btn-sm" style="margin-top:10px" onclick="ldStop()">Stop following</button>
           </div>
         </div>
-        <div id="mp-card" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px">
-          <div style="font-size:14px;font-weight:700;margin-bottom:2px">Draft with friends <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
+        <div id="mp-card" style="display:none;margin-bottom:16px;padding:22px 22px;background:radial-gradient(520px 200px at 12% -20%,rgba(124,92,191,.16),transparent 60%),linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:16px">
+          <div id="mp-card-header" style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
+            <span class="mp-live-dot"></span>
+            <div style="font-size:17px;font-weight:800;letter-spacing:-.02em">Draft with friends <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
+          </div>
           <!-- STEP 1: one clear choice -->
           <div id="mp-choose">
-            <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Live against real people. Same draft board as the solo mock below.</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:520px">
-              <div onclick="mpCreate()" style="cursor:pointer;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface3);text-align:center">
-                <div style="font-size:13px;font-weight:700">Create a room</div>
-                <div style="font-size:10.5px;color:var(--muted);margin-top:3px">You get a code to share</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px;max-width:560px;line-height:1.55">Spin up a private room and draft live against real people - same board as the solo mock, real-time picks, everyone on the clock together. No account needed - just a name.</div>
+            <div style="max-width:380px;margin-bottom:16px">
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px">Your name in the room</label>
+              <input type="text" id="mp-name" class="tm-input" maxlength="24" placeholder="e.g. Alex - no Sleeper account needed" style="width:100%">
+              <div id="mp-name-hint" style="display:none;font-size:11.5px;color:var(--accent-bright);margin-top:6px">Add a name so your friends know who you are, then Create or Join.</div>
+            </div>
+            <div class="mpx-grid">
+              <div class="mpx-card" onclick="mpCreate()">
+                <div class="mpx-ic" style="background:var(--accent-dim)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#a78bfa" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+                <div class="mpx-t">Create a room</div>
+                <div class="mpx-s">Get a 4-letter code to share with your league</div>
               </div>
-              <div onclick="mpShowJoin()" style="cursor:pointer;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface3);text-align:center">
-                <div style="font-size:13px;font-weight:700">Join a room</div>
-                <div style="font-size:10.5px;color:var(--muted);margin-top:3px">Got a code? Enter it here</div>
+              <div class="mpx-card" onclick="mpShowJoin()">
+                <div class="mpx-ic" style="background:rgba(79,216,245,.14)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#4fd8f5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M4 12h11M11 8l4 4-4 4"/></svg></div>
+                <div class="mpx-t">Join a room</div>
+                <div class="mpx-s">Got a code from a friend? Jump into their draft</div>
               </div>
             </div>
-            <div id="mp-join-row" style="display:none;margin-top:10px;align-items:center;gap:8px">
+            <div id="mp-join-row" style="display:none;margin-top:12px;align-items:center;gap:8px">
               <input type="text" id="mp-join-code" class="tm-input" style="width:120px;text-transform:uppercase;text-align:center;font-size:18px;font-weight:700;letter-spacing:.3em" maxlength="4" placeholder="CODE">
               <button class="btn-load" style="width:auto;padding:10px 22px" onclick="mpJoin()">Join</button>
             </div>
@@ -1009,7 +1044,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div id="mp-bar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap"></div>
         </div>
         <div id="md-setup">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(96deg,var(--text) 42%,var(--accent-bright));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px">Build your mock draft</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Set the room, pick your seat, choose a strategy. The AI drafts everyone else.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;padding:16px;background:linear-gradient(180deg,var(--surface2),var(--surface3));border:1px solid var(--border);border-radius:14px">
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Mode</div>
             <select id="md-mode" class="opp-select" style="width:100%" onchange="setLeagueModeManual(this.value)"><option value="redraft">Redraft</option><option value="dynasty">Dynasty</option></select></div>
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Teams</div>
@@ -1023,7 +1060,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Rounds</div>
             <select id="md-rounds" class="opp-select" style="width:100%"><option>5</option><option selected>8</option><option>12</option><option>15</option></select></div>
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Pick timer</div>
-            <select id="md-clock" class="opp-select" style="width:100%"><option value="0">Off</option><option value="30">30s</option><option value="60" selected>60s</option><option value="90">90s</option></select></div>
+            <select id="md-clock" class="opp-select" style="width:100%"><option value="0" selected>Off</option><option value="30">30s</option><option value="60">60s</option><option value="90">90s</option></select></div>
           </div>
           <div style="margin-bottom:16px">
             <div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">How does your league usually draft? <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></div>
@@ -1041,7 +1078,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           </div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Draft strategy</div>
           <div id="md-strats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px"></div>
-          <button class="btn-load" style="width:auto;padding:12px 30px" onclick="startMockDraft()">Start mock draft</button>
+          <button class="btn-load" id="md-start-btn" style="width:auto;padding:12px 30px" onclick="startMockDraft()">Start mock draft</button>
         </div>
         <div id="md-history-wrap" style="display:none"><div id="md-history"></div></div>
         <div id="md-board" style="display:none">
@@ -1052,6 +1089,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <button class="btn-sm" id="md-undo-btn" onclick="mdUndo()" title="Take back your last pick (AI picks after it come back too)">Undo my pick</button>
             <button class="btn-sm md-solo-ctl" onclick="mdRestartDraft()" title="Same settings, fresh board">Restart</button>
             <button class="btn-sm md-solo-ctl" onclick="mdBackToSetup()" title="Change teams, rounds, timer or strategy">Settings</button>
+            <button class="btn-sm md-solo-ctl" onclick="mdShowMyRoster()" title="See the players you've drafted so far">My team</button>
             <span id="md-needs" style="display:flex;gap:6px;font-size:10px;font-weight:700"></span>
             <span style="display:inline-flex;border:1px solid var(--border);border-radius:100px;overflow:hidden;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
               <button class="md-view-btn" data-view="board" onclick="mdSetView('board')" style="background:var(--accent-bright);border:none;color:#0d0817;padding:5px 11px;cursor:pointer">Board</button>
@@ -1074,7 +1112,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           </div>
           <div id="md-sage" style="display:none;margin:12px 0;padding:14px 16px;background:linear-gradient(135deg,rgba(124,92,191,.14) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.3);border-radius:12px"></div>
           <div id="md-player-peek" style="display:none;margin:0 0 12px;padding:12px 16px;background:var(--surface2);border:1px solid rgba(79,216,245,.3);border-radius:12px"></div>
-          <div class="md-cols">
+          <div class="md-cols" id="md-available">
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 6px;flex-wrap:wrap">
                 <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Available players</div>
@@ -1111,10 +1149,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- LEARN SCREEN -->
     <div class="screen" id="screen-learn">
       <div class="inner-tab-bar">
-        <div class="inner-tab active" onclick="switchInnerTab(this,'tab-dynasty101','screen-learn')">Dynasty 101</div>
-        <div class="inner-tab" onclick="switchInnerTab(this,'tab-nerdstats','screen-learn')">The Nerd Stats</div>
-        <div class="inner-tab" onclick="switchInnerTab(this,'tab-archetypes','screen-learn')">Manager Archetypes</div>
-        <div class="inner-tab" onclick="switchInnerTab(this,'tab-about','screen-learn')">About</div>
+        <div class="inner-tab active" onclick="switchLearnTab(this,'tab-dynasty101')">Dynasty 101</div>
+        <div class="inner-tab" onclick="switchLearnTab(this,'tab-nerdstats')">The Nerd Stats</div>
+        <div class="inner-tab" onclick="switchLearnTab(this,'tab-archetypes')">Manager Archetypes</div>
+        <div class="inner-tab" onclick="switchLearnTab(this,'tab-about')">About</div>
       </div>
 
 
@@ -1124,7 +1162,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div style="font-size:16px;font-weight:700;margin-bottom:4px">Dynasty 101</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:1.5rem">Everything a beginner needs to know about dynasty fantasy football</div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div class="learn-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-bright);margin-bottom:12px">Key Terms</div>
 
@@ -1281,11 +1319,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- NEWS SCREEN -->
     <div class="screen" id="screen-news">
       <div class="card" style="margin-bottom:14px">
-        <div style="font-size:16px;font-weight:700;margin-bottom:2px">Fantasy Wire</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Analyst takes and the day's stories, fantasy first.</div>
-        <div style="font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Analyst Corner <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:none">· scrolls on its own, grab it to browse</span></div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(96deg,var(--text) 42%,var(--accent-bright));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px">Fantasy Wire</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:18px">The takes and headlines that actually move fantasy value, in one place.</div>
+        <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px">Analyst Corner <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Auto-scrolling, drag to browse</span></div>
         <div id="analyst-corner" class="auto-rail" style="margin-bottom:20px"></div>
-        <div style="font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Headlines <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:none">· scrolls on its own, grab it to browse</span></div>
+        <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px">Headlines <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Auto-scrolling, drag to browse</span></div>
         <div id="news-grid" class="auto-rail"><div class="empty-state">Loading headlines...</div></div>
       </div>
     </div>
@@ -1306,33 +1344,26 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <!-- Inner tabs -->
         <div class="inner-tab-bar" id="community-tab-bar" style="margin-bottom:14px">
           <div class="inner-tab active" id="ctab-trades" onclick="switchCommunityTab('trades')">Trade Feed</div>
+          <div class="inner-tab" id="ctab-mine" onclick="switchCommunityTab('mine')">My Trades</div>
           <div class="inner-tab" id="ctab-forum" onclick="switchCommunityTab('forum')">Hot Takes</div>
-          <div class="inner-tab" id="ctab-block" onclick="switchCommunityTab('block')">Trade Block</div>
+          <div class="inner-tab" id="ctab-learn" onclick="switchCommunityTab('learn')">Learn</div>
+          <div class="inner-tab" id="ctab-feedback" onclick="switchCommunityTab('feedback')">Feedback</div>
 
         </div>
         <!-- Trade Feed panel -->
         <div id="community-tab-trades">
+          <div style="position:relative;margin-bottom:12px">
+            <input type="text" id="trade-search-input" class="tm-input" style="width:100%;box-sizing:border-box" placeholder="Search a player to see every community trade they were in..." autocomplete="off" oninput="tradeSearchInput()">
+            <div id="trade-search-dd" class="ac-dropdown"></div>
+          </div>
+          <div id="trade-search-results" style="display:none;margin-bottom:14px"></div>
           <div id="community-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading community trades...</div></div>
           <div style="text-align:center;margin-top:8px"><button id="load-more-btn" class="btn-sm" onclick="loadMoreFeed()" style="display:none">Load more</button></div>
         </div>
-        <!-- Trade Block panel -->
-        <div id="community-tab-block" style="display:none">
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px">
-            <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Put a player on the block</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <div class="ac-wrap" style="flex:1;min-width:170px;position:relative"><input type="text" id="block-player" class="tm-input" style="width:100%" placeholder="Player name..." autocomplete="off" oninput="blockPlayerSearch()"><div class="ac-dropdown" id="block-player-dd"></div></div>
-              <select id="block-type" class="opp-select" style="width:auto"><option value="shopping">Shopping him</option><option value="wanted">Want him</option></select>
-              <input type="text" id="block-note" class="tm-input" style="flex:1.4;min-width:160px" placeholder="Note (optional) - what are you looking for?" maxlength="180">
-              <button class="btn-load" style="width:auto;padding:10px 20px" onclick="postBlockListing()">List it</button>
-            </div>
-            <div id="block-status" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
-          </div>
-          <div style="display:flex;gap:6px;margin-bottom:10px" id="block-filters">
-            <button class="md-pos-chip active" data-f="" onclick="setBlockFilter(this)">All</button>
-            <button class="md-pos-chip" data-f="shopping" onclick="setBlockFilter(this)">Shopping</button>
-            <button class="md-pos-chip" data-f="wanted" onclick="setBlockFilter(this)">Wanted</button>
-          </div>
-          <div id="block-list"><div class="empty-state">Loading the block...</div></div>
+        <!-- My Trades panel -->
+        <div id="community-tab-mine" style="display:none">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Trades you have published, so you can come back and read what the community said. Only you see this list - everyone else sees them anonymously.</div>
+          <div id="mytrades-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading your trades...</div></div>
         </div>
         <!-- Hot Takes (Forum) panel -->
         
@@ -1344,6 +1375,19 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           </div>
           <div id="forum-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading hot takes...</div></div>
           <div style="text-align:center;margin-top:8px"><button id="forum-load-more-btn" class="btn-sm" onclick="loadMoreForumFeed()" style="display:none">Load more</button></div>
+        </div>
+        <!-- Learn panel: the Dynasty 101 / Nerd Stats / Archetypes / About content
+             is relocated here from the old standalone Learn screen on first open. -->
+        <div id="community-tab-learn" style="display:none"><div style="padding:32px;text-align:center;color:var(--muted)">Loading...</div></div>
+        <!-- Feedback: anyone can send it; only the founder sees what comes in -->
+        <div id="community-tab-feedback" style="display:none">
+          <div style="font-size:12.5px;color:var(--muted2);margin-bottom:14px;line-height:1.5">Tell us what to fix, add, or change. This goes straight to the founder and stays private - other users never see it.</div>
+          <textarea id="feedback-input" maxlength="1200" rows="4" placeholder="What's working, what's not, what you wish TradeMind did..." style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--text);font-family:var(--font-body);resize:vertical;outline:none"></textarea>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+            <button class="ideas-refresh" onclick="submitFeedback()">Send feedback</button>
+            <span id="feedback-status" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+          <div id="feedback-admin" style="display:none;margin-top:22px"></div>
         </div>
       </div>
     </div><!-- end screen-community -->
@@ -1469,14 +1513,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <span style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:5px">Get the verdict</span>
     </div>
   </div>
-  <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="22" height="22" fill="none">
-      <defs><linearGradient id="ftgrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#7c5cbf"/></linearGradient></defs>
-      <rect width="32" height="32" rx="8" fill="url(#ftgrad)" opacity=".18"/>
-      <polyline points="5,22 11,14 16,18 21,10 27,14" stroke="url(#ftgrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="27" cy="14" r="2.5" fill="#a78bfa"/>
+  <div onclick="goHome()" style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;cursor:pointer" title="Back to home">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" height="24" style="flex-shrink:0" fill="none">
+      <defs><linearGradient id="ftgrad" x1="0" y1="32" x2="32" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#9b72e8"/><stop offset="100%" stop-color="#4fd8f5"/></linearGradient></defs>
+      <path d="M16 2 L19.2 12.8 L30 16 L19.2 19.2 L16 30 L12.8 19.2 L2 16 L12.8 12.8 Z" fill="url(#ftgrad)"/>
     </svg>
-    <div class="footer-logo" style="margin-bottom:0"><span style="font-weight:400;color:var(--muted2)">Trade</span><span>Mind</span></div>
+    <span class="tm-wordmark" style="font-size:19px">TRADEMIND</span>
   </div>
   <div class="footer-sub">A trade calculator built different &mdash; smart dynasty and redraft analysis that actually works. Know the move before you make it.</div>
   <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
@@ -1498,7 +1540,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072259"></script>
+<script src="/app.js?v=2026072309"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">
