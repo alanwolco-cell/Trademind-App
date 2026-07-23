@@ -103,7 +103,10 @@ html.v12 .ideas-refresh{
   html.v12 .sage-cap b{color:var(--accent-bright)}
 
   /* every field in the app focused to a grey outline, so the one element the
-     user is actually touching gave back the least signal */
+     user is actually touching gave back the least signal. .tm-input is listed
+     explicitly because the rule above that kills its ring is a class deeper
+     than a bare `input`, and would otherwise still win. */
+  html.v12 .tm-input:focus,
   html.v12 input:focus,
   html.v12 textarea:focus,
   html.v12 select:focus{
