@@ -5732,20 +5732,35 @@ function vegasProjFor(name){
   for(var i=0;i<keys.length;i++){if(norm(keys[i])===want)return window._vegasProj[keys[i]];}
   return null;
 }
+// Percentage of the player's own value, so the sentence means something
+// without knowing the vendor's scale. Falls back to a plain direction when we
+// cannot work out what he was worth before the move.
+function pctMove(p){
+  var t=Number(p&&p.trend)||0, v=Number(p&&(p.value!=null?p.value:p.dyn))||0, base=v-t;
+  var pc=base>0?Math.round(Math.abs(t)/base*100):0;
+  return pc?pc+'%':'sharply';
+}
+function capFirst(x){return String(x||'').charAt(0).toUpperCase()+String(x||'').slice(1);}
 // One shared market opinion so the site never contradicts itself: the same
 // signals drive the Buy/Sell lists and the player card chip.
 function sageMarketRead(pid){
   var fc=ktcFull[pid]; var p=allPlayers[pid];
   if(!fc||!p)return null;
   var t=fc.trend30Day||0, age=p.age||26, isR=leagueMode==='redraft';
+  // Movement as a percentage of the player's own value, never the raw index
+  // number. "+331" sounds like a fact about the player when it is really a
+  // fact about one vendor's scale, and it means nothing without knowing what
+  // he was worth to begin with. "up 9%" travels on its own.
+  var _base=(fc.value||0)-t, _pct=_base>0?Math.round(Math.abs(t)/_base*100):0;
+  var moved=function(dir){ return dir+(_pct?' '+_pct+'%':'')+' in 30 days'; };
   if(t>=100&&(isR||age>=27))return {k:'sell-high',label:'Sell-high window',color:'var(--red)',
-    why:'Price is up '+t+' in 30 days'+(isR?'':' at age '+age)+' - this is when you cash out, not buy in.'};
+    why:'Price is '+moved('up')+(isR?'':' at age '+age)+' - this is when you cash out, not buy in.'};
   if(t<=-150&&!isR&&age<=25)return {k:'buy-low',label:'Buy-low window',color:'var(--green)',
-    why:'Down '+Math.abs(t)+' in 30 days at age '+age+' - the market is discounting a young player.'};
+    why:capFirst(moved('down'))+' at age '+age+' - the market is discounting a young player.'};
   if(t<=-150&&(isR||age>=29))return {k:'fading',label:'Fading - be careful',color:'var(--yellow)',
-    why:'Down '+Math.abs(t)+' in 30 days'+(isR?'':' at age '+age)+' - could keep sliding. Only buy at a real discount.'};
+    why:capFirst(moved('down'))+(isR?'':' at age '+age)+' - could keep sliding. Only buy at a real discount.'};
   if(t>=100)return {k:'rising',label:'Rising - pay up or pass',color:'var(--cyan,#4fd8f5)',
-    why:'Up '+t+' in 30 days. Buying now means paying the hot price - fine if you believe it, but you are not early.'};
+    why:capFirst(moved('up'))+'. Buying now means paying the hot price - fine if you believe it, but you are not early.'};
   return {k:'hold',label:'Stable market',color:'var(--muted)',
     why:'No strong market signal either way - trade him on fit and value, not timing.'};
 }
@@ -6280,7 +6295,7 @@ function renderBuySell(){
   var watchList=players.filter(function(p){
     return !p.iOwn&&p.trend>=200&&p.age<=26&&!buyNow.find(function(b){return b.id===p.id;});
   }).map(function(p){
-    return Object.assign({},p,{reason:footballReason(p)+'<strong style="color:var(--text)">The market:</strong> up '+p.trend+' in 30 days at age '+p.age+'. Not screaming buy yet, but if he keeps this pace the price gets away from you. '+fitReason(p,true)});
+    return Object.assign({},p,{reason:footballReason(p)+'<strong style="color:var(--text)">The market:</strong> up '+pctMove(p)+' in 30 days at age '+p.age+'. Not screaming buy yet, but if he keeps this pace the price gets away from you. '+fitReason(p,true)});
   }).sort(function(a,b){return b.trend-a.trend;}).slice(0,12);
 
   // Rotate the pools so Refresh shows different suggestions each time
@@ -9577,7 +9592,7 @@ function renderWaiverTargets(){
     var note=getPlayerContextNote(p.name);
     var why=(note?'<strong style="color:var(--text)">The situation:</strong> '+note.note.split(';').slice(0,2).join(';')+'. ':'')
       +'<strong style="color:var(--text)">Why now:</strong> nobody in your league rosters him'
-      +(p.trend>100?' and his price is climbing (+'+p.trend+' in 30 days). Beat your leaguemates to it':p.trend<-100?' and his price just dipped, which is exactly when stashes are cheapest':' and the market still sees real value here')+'.';
+      +(p.trend>100?' and his price is climbing ('+pctMove(p)+' in 30 days). Beat your leaguemates to it':p.trend<-100?' and his price just dipped, which is exactly when stashes are cheapest':' and the market still sees real value here')+'.';
     html+='<div style="background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)">';
     html+='<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer" onclick="var w=this.parentNode.querySelector(\'.stash-why\');w.style.display=w.style.display===\'none\'?\'block\':\'none\'">';
     html+='<div style="font-size:14px;font-weight:700;color:var(--muted);min-width:22px;text-align:center">'+(i+1)+'</div>';
