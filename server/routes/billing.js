@@ -42,6 +42,13 @@ async function loadEnt() {
   } catch (_) { if (_ent) return _ent; }
   data.byAcct = data.byAcct || {};
   data.byCustomer = data.byCustomer || {};
+  data.byUser = data.byUser || {};
+  // Backfill the username index for anyone who subscribed before it existed,
+  // so their plan reaches their phone without them having to do anything.
+  for (const acct in data.byAcct) {
+    const u = String((data.byAcct[acct] || {}).username || '').trim().toLowerCase();
+    if (u && !data.byUser[u]) data.byUser[u] = acct;
+  }
   _ent = data; _entTs = Date.now();
   return _ent;
 }
@@ -54,13 +61,40 @@ async function saveEnt(e) {
   } catch (err) { console.error('[billing] saveEnt:', err.message); }
 }
 
-// Takes an ACCOUNT ID (see lib/identity), not a username.
-async function isPro(acctId) {
-  if (!acctId) return false;
+// Who gets Pro, and why it is keyed on the Sleeper name.
+//
+// Access follows the MANAGER, not the browser. Keying it on the account key
+// alone got both halves wrong: the buyer signing in on their phone was told
+// they had no Pro, while anyone else using the buyer's computer inherited it
+// just by sitting down. A manager expects their plan to follow their name onto
+// every device, and to leave when someone else signs in.
+//
+// The account key stays the credential for MANAGING the plan - cancel, resume,
+// billing portal, plan details - so knowing someone's public Sleeper name still
+// buys you nothing there. The residual exposure is that a person who knows a
+// subscriber's name could borrow their unlimited Sage; the per-day and
+// per-month fair-use ceilings already cap what that can cost.
+const _live = (rec) => !!(rec && (rec.status === 'active' || rec.status === 'trialing'));
+
+async function isPro(acctId, username) {
   try {
     const e = await loadEnt();
-    const rec = e.byAcct[String(acctId)];
-    return !!(rec && (rec.status === 'active' || rec.status === 'trialing'));
+    const u = String(username || '').trim().toLowerCase();
+
+    // 1. The name owns the plan. This is what carries it to their phone.
+    if (u && e.byUser[u] && _live(e.byAcct[e.byUser[u]])) return true;
+
+    // 2. The buying browser, but only while its record carries no name to
+    //    match on. That covers anyone who subscribed before the name was
+    //    recorded, without handing their plan to the next person who signs in
+    //    on their computer once it is.
+    const own = acctId ? e.byAcct[String(acctId)] : null;
+    if (_live(own) && !String(own.username || '').trim()) return true;
+
+    // 3. Before sign-in there is no name to check, so the key decides.
+    if (!u && _live(own)) return true;
+
+    return false;
   } catch (_) { return false; }
 }
 
@@ -173,6 +207,9 @@ router.post('/webhook', async (req, res) => {
       if (!acct) return;
       e.byAcct[acct] = Object.assign({}, e.byAcct[acct], { status, customer, updated: Date.now() }, extra || {});
       if (customer) e.byCustomer[customer] = acct;
+      // Index the name so the plan reaches every device this manager signs in on.
+      const uname = String(e.byAcct[acct].username || '').trim().toLowerCase();
+      if (uname) e.byUser[uname] = acct;
     };
     const o = (event.data && event.data.object) || {};
     const metaAcct = (o.metadata && o.metadata.acct) || null;
@@ -198,7 +235,7 @@ router.get('/status', async (req, res) => {
   // Read-only and polled by the UI, so an anonymous caller gets "not pro"
   // rather than an error.
   res.set('Cache-Control', 'no-store');
-  res.json({ pro: await isPro(readAcctId(req)), configured: !!process.env.STRIPE_SECRET_KEY });
+  res.json({ pro: await isPro(readAcctId(req), req.query.user), configured: !!process.env.STRIPE_SECRET_KEY });
 });
 
 // POST /api/billing/portal  { user } -> { url } (manage/cancel subscription)

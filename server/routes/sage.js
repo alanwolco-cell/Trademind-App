@@ -326,9 +326,9 @@ router.get('/quota', async (req, res) => {
   const user = String(req.query.user || '').trim().toLowerCase().slice(0, 40);
   const device = String(req.query.device || '').slice(0, 64);
   const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
-  // Pro comes from the account key, not the typed username: a username is
-  // public, so anyone could otherwise claim someone else's paid limits.
-  const pro = await isPro(readAcctId(req));
+  // Pro follows the manager's name so it works on every device they sign in
+  // on; the account key still guards anything that CHANGES the plan.
+  const pro = await isPro(readAcctId(req), user);
   const u = await peekUsage(user, ip, device, pro);
   const dailyLimit = pro ? PRO_DAILY : FREE_DAILY;
   const refBonus = pro ? 0 : await community.getReferralBonus(user).catch(() => 0);
@@ -355,7 +355,7 @@ router.post('/chat', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Sign in with your Sleeper username to talk to Sage.' });
     const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
     const device = String((req.body || {}).device || '').slice(0, 64);
-    const pro = await isPro(readAcctId(req));
+    const pro = await isPro(readAcctId(req), user);
     const u = await checkUsage(user.toLowerCase(), ip, device, pro);
     if (pro) {
       if (u.month > PRO_MONTHLY) {
