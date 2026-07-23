@@ -855,6 +855,7 @@ footer{padding:3rem 1.5rem 2.5rem;border-top:1px solid rgba(155,114,232,.18);tex
 .footer-logo{font-family:var(--font-head);font-size:22px;font-weight:700;color:var(--text);margin-bottom:.375rem}
 .footer-logo span{color:var(--accent-bright)}
 .footer-sub{font-size:12px;color:var(--muted)}
+.footer-legal{margin-top:16px;font-size:11px;color:var(--muted)}
 
 /* TAB BAR OVERFLOW */
 .tab-bar{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -1505,4 +1506,50 @@ body{min-height:100vh;min-height:100dvh}
 @media(max-width:560px){
   .comm-head{flex-direction:column;align-items:stretch;gap:10px}
   .comm-head .btn-sm{width:100%;padding:11px 14px}
+}
+
+/* ── Phone tab bar ──────────────────────────────────────────────────────────
+   Native apps keep primary navigation under the thumb. The burger is retired
+   on phones and becomes the "More" tab, so the drawer keeps every secondary
+   destination without competing for the same job. */
+#tabbar{display:none}
+@media(max-width:700px){
+  #tabbar{
+    display:flex;
+    position:fixed;left:0;right:0;bottom:0;
+    z-index:900;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    /* inset as padding, not margin, so the bar's surface still bleeds behind
+       the iOS home indicator instead of leaving a bare strip */
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    backdrop-filter:saturate(170%) blur(16px);
+    -webkit-backdrop-filter:saturate(170%) blur(16px);
+  }
+  #tabbar .tabbar-item{
+    flex:1 1 0;min-width:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    min-height:56px;padding:8px 2px 7px;
+    background:none;border:0;border-radius:0;
+    color:var(--muted);
+    font-family:var(--font-body);font-size:10px;font-weight:600;line-height:1;
+    letter-spacing:.005em;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:color .15s;
+  }
+  #tabbar .tabbar-item svg{width:22px;height:22px;flex-shrink:0}
+  #tabbar .tabbar-item.active{color:var(--accent-bright)}
+  #tabbar .tabbar-item:active{background:var(--surface2)}
+  /* keep the end of every page clear of the bar */
+  body{padding-bottom:calc(57px + env(safe-area-inset-bottom,0px))}
+  #nav-burger{display:none!important}
+
+  /* Footer on a phone: it ran long and ended in a wall of 11px legal text.
+     Tighten the chrome, stack the links as real tap targets, and let the
+     legal line breathe instead of splintering into slivers. */
+  footer{padding:2rem 1.25rem 1.75rem;margin-top:2rem}
+  .footer-sub{font-size:12.5px;line-height:1.6;max-width:34ch;margin:0 auto}
+  footer .nav-link{padding:6px 4px;min-height:32px;display:inline-flex;align-items:center}
+  .footer-legal{margin-top:18px;font-size:10.5px;line-height:1.7;color:var(--muted);max-width:38ch;margin-left:auto;margin-right:auto}
+  #how-mini{margin-bottom:20px!important;padding:14px 16px!important}
 }

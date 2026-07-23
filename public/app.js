@@ -9842,7 +9842,36 @@ switchScreen=function(name){
     b.classList.toggle('active',b.dataset.screen===name);
   });
   closeAllDropdowns();
+  tabbarSync(name);
 };
+
+// ── Phone tab bar ────────────────────────────────────────────────────────────
+// The four direct tabs cannot cover every screen, so anything they don't own
+// (League, Research, News, Community) lights up "More" instead of leaving the
+// bar with nothing selected, which reads as broken.
+var _TABBAR_DIRECT=['home','analyze','sage','mock'];
+function tabbarSync(name){
+  var bar=document.getElementById('tabbar');
+  if(!bar)return;
+  var target=_TABBAR_DIRECT.indexOf(name)===-1?'more':name;
+  bar.querySelectorAll('.tabbar-item').forEach(function(b){
+    b.classList.toggle('active',b.dataset.tab===target);
+  });
+}
+function tabGo(name){
+  var drawerOpen=(document.getElementById('mob-menu')||{classList:{contains:function(){return false;}}}).classList.contains('open');
+  if(name==='more'){mobMenuToggle();return;}
+  if(drawerOpen)mobMenuToggle(); // never leave the drawer covering the screen we just opened
+  if(name==='home'){goHome();return;}
+  switchScreen(name);
+  if(name==='mock'){try{mdRenderStrats();mdPrefillFromLeague();}catch(_){}}
+}
+// Paint the initial state from the DOM: the route restore below may or may not
+// have run yet, so trusting a call order here would leave the bar blank.
+try{
+  var _initScr=(document.querySelector('.screen.active')||{}).id;
+  tabbarSync(_initScr?_initScr.replace('screen-',''):'home');
+}catch(_){}
 
 // ── Auto-restore session from localStorage ───────────────────────────────────
 (function restoreSession(){
