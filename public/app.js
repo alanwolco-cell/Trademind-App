@@ -4456,6 +4456,24 @@ function mobGo(screen,tab){
     if(tab&&screen==='research')openResearchTab(tab);
   }catch(_){}
 }
+// The drawer listed all nineteen destinations at once, so reaching Community
+// meant scrolling past every Research and Draft subsection. Group them and keep
+// exactly one group open, which is what makes the list short enough to scan.
+function mobGroupToggle(btn){
+  var group=btn.parentElement;
+  if(!group)return;
+  var wasOpen=group.classList.contains('open');
+  var panel=group.parentElement||document;
+  panel.querySelectorAll('.mob-group.open').forEach(function(g){
+    g.classList.remove('open');
+    var p=g.querySelector('.mob-parent');
+    if(p)p.setAttribute('aria-expanded','false');
+  });
+  if(!wasOpen){
+    group.classList.add('open');
+    btn.setAttribute('aria-expanded','true');
+  }
+}
 function sndWhoosh(){
   if(!_sndOn)return;var ctx=_ac();if(!ctx)return;
   var t=ctx.currentTime;
@@ -9887,6 +9905,8 @@ switchScreen=function(name){
   });
   closeAllDropdowns();
   tabbarSync(name);
+  // the draft sections render lazily, so folding has to happen on arrival
+  if(name==='mock'){try{ctxFoldBlurbs();}catch(_){}}
 };
 
 // ── Phone tab bar ────────────────────────────────────────────────────────────
@@ -9900,6 +9920,42 @@ function tabbarSync(name){
   var target=_TABBAR_DIRECT.indexOf(name)===-1?'more':name;
   bar.querySelectorAll('.tabbar-item').forEach(function(b){
     b.classList.toggle('active',b.dataset.tab===target);
+  });
+}
+// ── Phone: fold the tool blurbs ──────────────────────────────────────────────
+// Each of these sections opens with a sentence or two explaining what it does.
+// Useful the first time, dead weight on every visit after, and on a 390px
+// screen it is what pushes the actual tool below the fold. Folded closed on a
+// phone, left untouched on a desktop where the height is free.
+var _CTX_SECTIONS=[
+  ['md-setup','About the solo mock'],
+  ['mp-card','About drafting with friends'],
+  ['ld-card','About live draft assist']
+];
+function ctxFoldBlurbs(){
+  if(!window.matchMedia||!window.matchMedia('(max-width:700px)').matches)return;
+  _CTX_SECTIONS.forEach(function(pair){
+    var host=document.getElementById(pair[0]);
+    if(!host||host.dataset.ctxFolded==='1')return;
+    // the blurb is the first prose leaf the section renders: no child elements,
+    // small type, and long enough to be a sentence rather than a label
+    var nodes=host.querySelectorAll('div,p'), blurb=null;
+    for(var i=0;i<nodes.length;i++){
+      var n=nodes[i];
+      if(n.children.length)continue;
+      if((n.textContent||'').trim().length<55)continue;
+      if(parseFloat(getComputedStyle(n).fontSize)>13.5)continue;
+      blurb=n;break;
+    }
+    if(!blurb||!blurb.parentNode)return;
+    var det=document.createElement('details');
+    det.className='ctx-fold';
+    var sum=document.createElement('summary');
+    sum.textContent=pair[1];
+    det.appendChild(sum);
+    blurb.parentNode.insertBefore(det,blurb);
+    det.appendChild(blurb);
+    host.dataset.ctxFolded='1';
   });
 }
 function tabGo(name){
