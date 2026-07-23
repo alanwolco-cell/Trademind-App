@@ -1545,6 +1545,9 @@ body{min-height:100vh;min-height:100dvh}
   /* keep the end of every page clear of the bar */
   body{padding-bottom:calc(57px + env(safe-area-inset-bottom,0px))}
   #nav-burger{display:none!important}
+  /* the drawer is now the "More" destination and runs past the fold, so its
+     last item must clear the iOS home indicator */
+  .mob-menu-panel{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 
   /* Footer on a phone: it ran long and ended in a wall of 11px legal text.
      Tighten the chrome, stack the links as real tap targets, and let the
