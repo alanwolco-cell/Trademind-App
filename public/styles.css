@@ -1517,7 +1517,9 @@ body{min-height:100vh;min-height:100dvh}
   #tabbar{
     display:flex;
     position:fixed;left:0;right:0;bottom:0;
-    z-index:900;
+    /* under the phone drawer (400) so "More" covers the bar it came from,
+       and well under the modal layer */
+    z-index:350;
     background:var(--surface);
     border-top:1px solid var(--border);
     /* inset as padding, not margin, so the bar's surface still bleeds behind
@@ -1552,4 +1554,21 @@ body{min-height:100vh;min-height:100dvh}
   footer .nav-link{padding:6px 4px;min-height:32px;display:inline-flex;align-items:center}
   .footer-legal{margin-top:18px;font-size:10.5px;line-height:1.7;color:var(--muted);max-width:38ch;margin-left:auto;margin-right:auto}
   #how-mini{margin-bottom:20px!important;padding:14px 16px!important}
+}
+
+/* ── Phone touch targets and cramped blocks ─────────────────────────────────
+   Measured at 390x844: inner tabs sat at 34.8px, the small buttons at 31px,
+   both well under a comfortable thumb. The draft context box also clipped its
+   own placeholder (63px box, 81px of text). */
+@media(max-width:700px){
+  .inner-tab{min-height:42px;display:inline-flex;align-items:center}
+  .btn-sm{min-height:40px}
+  #md-context{min-height:88px}
+  .sage-sugg{min-height:42px;display:flex;align-items:center;justify-content:center}
+}
+@media(max-width:560px){
+  /* four one-line claims stacked into a 130px column of mostly empty space;
+     two per row reads as one block instead of a list */
+  .sage-caps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .sage-cap{justify-content:center;margin:0}
 }
