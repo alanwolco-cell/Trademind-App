@@ -3303,13 +3303,21 @@ async function loadLiveFeed(lid, season){
       return "<div class='ticker-item'><span class='dot' style='background:"+it.color+"'></span>"+img+"<span style='color:"+it.color+"'>"+it.text+"</span> · "+it.sub+"</div>";
     }).join("");
 
-    // Recalculate animation duration based on content width
+    // Duration follows the content so the ticker always moves at the same
+    // speed. The old 20s floor quietly broke that: a short feed is only a few
+    // hundred pixels wide, so forcing 20s dragged it down to roughly 20px per
+    // second and it read as frozen. The floor now only guards against a
+    // near-empty feed spinning absurdly fast.
     var speed=115; // px per second
-    setTimeout(function(){
+    var applyDur=function(){
       var w=ticker.scrollWidth/2;
-      var dur=Math.max(20,w/speed);
-      ticker.style.animationDuration=dur+"s";
-    },100);
+      if(!w)return;
+      ticker.style.animationDuration=Math.max(8,w/speed)+"s";
+    };
+    // Player thumbnails land after the first measure and change the width, so
+    // measure again once they are in.
+    setTimeout(applyDur,100);
+    setTimeout(applyDur,1500);
   }catch(e){
     console.warn("Live feed failed:",e.message);
   }

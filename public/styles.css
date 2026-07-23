@@ -1645,3 +1645,11 @@ html{scroll-padding-top:76px}
   #screen-mock .opp-select{min-height:40px}
   #screen-mock .tm-input{min-height:44px}
 }
+
+/* The alerts panel is anchored to a button sitting near the right edge, and at
+   280px wide it ran off the left of a phone screen with its text cut. Pin it
+   to the viewport instead of the button so it always fits, whatever the button
+   position ends up being. */
+@media(max-width:700px){
+  #alerts-dd{position:fixed;left:10px;right:10px;top:64px;min-width:0;width:auto;max-height:min(60vh,420px)}
+}
