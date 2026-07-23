@@ -1813,7 +1813,15 @@ async function sageUpdateQuota(){
     var left=Math.min(d.dailyLeft,d.weeklyLeft);
     var span=(d.weeklyLeft<d.dailyLeft)?'this week':'today';
     var go=' &middot; <span style="color:var(--accent-bright);cursor:pointer;text-decoration:underline" onclick="sageUpgrade()">Go Pro for unlimited</span>';
-    el.innerHTML=(left>0?(left+' free question'+(left===1?'':'s')+' left '+span):('No free questions left '+span))+go;
+    // Referrals used to live only in the account dropdown, where nobody looks.
+    // Running low on questions is the one moment a manager actually wants more,
+    // so the offer sits here - and only then, so it never nags someone who has
+    // plenty left. Hidden once they hit the referral cap.
+    var ref='';
+    if(left<=2&&(d.referralBonus||0)<10){
+      ref=' &middot; <span style="cursor:pointer;text-decoration:underline" onclick="openReferral()">Invite a friend, both get one</span>';
+    }
+    el.innerHTML=(left>0?(left+' free question'+(left===1?'':'s')+' left '+span):('No free questions left '+span))+go+ref;
     el.style.display='block';
   }catch(_){el.style.display='none';}
 }

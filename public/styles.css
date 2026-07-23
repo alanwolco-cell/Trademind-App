@@ -1468,3 +1468,21 @@ body{min-height:100vh;min-height:100dvh}
   .hero-proof{display:grid;grid-template-columns:repeat(2,auto);justify-content:center;gap:9px 20px}
   .hero-proof-sep{display:none}
 }
+
+/* ── Top bar: Ask Sage on the centre line ───────────────────────────────────
+   The row was centred as a block, but Ask Sage is not the middle of that
+   block: the three tabs to its left are wider than the three to its right,
+   which pushed it 26px right of centre. Three grid zones with equal side
+   columns put it dead centre and keep it there whatever the labels say. */
+@media(min-width:1201px){
+  .nav-links{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:0}
+  .nav-side{display:flex;align-items:center;gap:.25rem}
+  .nav-side-l{justify-content:flex-end}
+  .nav-side-r{justify-content:flex-start}
+}
+/* Below the collapse point the bar scrolls sideways, so the groups must not
+   create boxes of their own - display:contents hands the tabs straight back
+   to the scrolling flex row. */
+@media(max-width:1200px){
+  .nav-side{display:contents}
+}
