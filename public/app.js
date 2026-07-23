@@ -5741,6 +5741,17 @@ function sageMarketRead(pid){
   return {k:'hold',label:'Stable market',color:'var(--muted)',
     why:'No strong market signal either way - trade him on fit and value, not timing.'};
 }
+// Market movement in words, not raw numbers. The underlying value scale is
+// FantasyCalc's internal one, so "+120" reads like a fact about the player when
+// it is really a fact about one vendor's index. Managers think in direction and
+// strength, so say that instead. Positional ranks stay: RB26 is meaningful on
+// its own, a 120-point swing is not.
+function trendWord(t){
+  var n=Number(t)||0, a=Math.abs(n);
+  if(a<40)  return {txt:'Steady',   dir:0};
+  if(n>0)   return {txt:a>=400?'Surging':a>=150?'Rising':'Ticking up',   dir:1};
+  return    {txt:a>=400?'Sliding':a>=150?'Falling':'Ticking down',       dir:-1};
+}
 function openPlayerCard(pid, name){
   var modal=document.getElementById("player-modal");
   if(!modal)return;
@@ -5832,7 +5843,7 @@ function openPlayerCard(pid, name){
 
   // ── Dynasty meta stats from FantasyCalc ──
   var trend=fc&&fc.trend30Day?fc.trend30Day:null;
-  var trendStr=trend!=null?(trend>0?"▲ +"+trend:trend<0?"▼ "+trend:"→ 0")+" pts (30d)":"-";
+  var trendStr=trend!=null?((trendWord(trend).dir>0?"▲ ":trendWord(trend).dir<0?"▼ ":"→ ")+trendWord(trend).txt+" (30d)"):"-";
   var trendColor=trend>0?"var(--green)":trend<0?"var(--red)":"var(--muted)";
   var overallRank=fc&&fc.overallRank?"#"+fc.overallRank:"-";
   var posRank=fc&&fc.positionRank?pos+" #"+fc.positionRank:"-";
@@ -6297,7 +6308,7 @@ function renderBuySell(){
     window._bsPlayers.push(p);
     var col=posColors[p.pos]||'var(--muted)';
     var trendCol=p.trend>0?'var(--green)':'var(--red)';
-    var trendStr=p.trend>0?'+'+p.trend:String(p.trend);
+    var trendStr=trendWord(p.trend).txt;
     return '<div class="bs-row">'
       +'<div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleBsWhy('+idx+')">'
       +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0" onclick="event.stopPropagation();openBsCard('+idx+')" onerror="this.style.display=\'none\'">'
@@ -6317,7 +6328,11 @@ function renderBuySell(){
     return h+'</div>';
   }
   var html='<div style="font-size:11px;color:var(--muted);margin-bottom:16px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)">Signals factor in your team\'s positional needs, player age curve, and live FantasyCalc market values. Falling value on a young player = buy opportunity, not a sell signal.</div>';
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">';
+  // auto-fit + min() so the two signal columns become one when there is not
+  // room for both. Plain `1fr 1fr` never shrinks past its content, so on a
+  // phone the second column started past the right edge of the screen and took
+  // its player rows with it.
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:20px">';
   html+='<div><div style="font-size:13px;font-weight:700;color:var(--green);border-bottom:2px solid var(--green);padding-bottom:6px;margin-bottom:14px">Buy Side</div>';
   if(!buyNow.length&&!buyLow.length&&!watchList.length){
     html+='<div style="font-size:12px;color:var(--muted)">No strong buy signals right now based on your team needs.</div>';
@@ -9550,7 +9565,7 @@ function renderWaiverTargets(){
   targets.forEach(function(p,i){
     var col=posColors[p.pos]||'var(--muted)';
     var trendCol=p.trend>100?'var(--green)':p.trend<-100?'var(--red)':'var(--muted)';
-    var trendStr=p.trend>0?'+'+p.trend:p.trend<0?String(p.trend):'0';
+    var trendStr=trendWord(p.trend).txt;
     var note=getPlayerContextNote(p.name);
     var why=(note?'<strong style="color:var(--text)">The situation:</strong> '+note.note.split(';').slice(0,2).join(';')+'. ':'')
       +'<strong style="color:var(--text)">Why now:</strong> nobody in your league rosters him'
