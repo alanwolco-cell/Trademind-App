@@ -1486,3 +1486,23 @@ body{min-height:100vh;min-height:100dvh}
 @media(max-width:1200px){
   .nav-side{display:contents}
 }
+
+/* ── Ask Sage on a phone ────────────────────────────────────────────────────
+   A rule at 820px already stacked this layout, but the later, more specific
+   `#screen-sage .sage-layout` re-imposed the two columns at every width. The
+   result on a 390px phone was a 235px chat squeezed next to a chat-history
+   rail, with the heading and the composer wrapping mid-word. The rail belongs
+   under the conversation on a phone, not beside it. */
+@media(max-width:820px){
+  #screen-sage .sage-layout{grid-template-columns:1fr;gap:10px}
+  #screen-sage .sage-side{position:static;max-height:150px;order:2}
+}
+
+/* The community header packed a title, a badge, a sentence and a Refresh
+   button onto one row, so on a phone the sentence wrapped around the button
+   and the whole block read as cramped. Stack them and let the button span the
+   width, which also makes it a comfortable tap target. */
+@media(max-width:560px){
+  .comm-head{flex-direction:column;align-items:stretch;gap:10px}
+  .comm-head .btn-sm{width:100%;padding:11px 14px}
+}
