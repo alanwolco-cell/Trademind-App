@@ -4881,7 +4881,9 @@ function switchScreen(name,_noPush){
   var hs=document.getElementById('home-story');
   if(hs)hs.style.display=isHome?'block':'none';
   var hp=document.getElementById('home-problem');
-  if(hp)hp.style.display=isHome?'block':'none';  // the problem narrative is home-only too
+  // flex, not block: the section centres its content vertically, and setting
+  // block here was quietly undoing that on every screen switch.
+  if(hp)hp.style.display=isHome?'flex':'none';  // the problem narrative is home-only too
   // Hide the tool section entirely on home. Its inner screens are already
   // inactive, but the <section> keeps its 60px top+bottom padding, which was
   // showing as ~120px of empty space between the hero and the story below.
