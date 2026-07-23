@@ -94,6 +94,12 @@ app.get('/player/:slug', (req, res) => {
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, '../public/privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, '../public/terms.html')));
 
+// Setup helper: shows this browser's account id. It has to be a page, not a
+// bare API call - the account key travels in a header that only the app's fetch
+// wrapper adds, so typing /api/community/whoami into the address bar always
+// looks anonymous.
+app.get('/whoami', (req, res) => res.sendFile(path.join(__dirname, '../public/whoami.html')));
+
 // Lightweight client error beacon -> Vercel logs. Zero-cost visibility into
 // runtime breakage in the field. Point BEACON at Sentry later if wanted: the
 // client just POSTs {msg, url, ua}; this logs it where `vercel logs` can see.

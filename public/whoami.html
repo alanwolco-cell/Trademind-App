@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Tu identificador de cuenta | TradeMind</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;background:#0d0817;color:#e7e3f0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+  .wrap{max-width:620px;margin:0 auto;padding:56px 22px 80px}
+  h1{font-size:26px;margin:0 0 6px}
+  p{color:#a9a2bd}
+  .box{background:#171130;border:1px solid #2b2447;border-radius:12px;padding:20px;margin:26px 0}
+  code{font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#9b72e8;word-break:break-all}
+  button{background:linear-gradient(135deg,#9b72e8,#4fd8f5);color:#fff;border:0;border-radius:100px;
+    font:600 15px/1 inherit;padding:13px 24px;cursor:pointer;margin-top:16px;min-height:44px}
+  button:disabled{opacity:.5;cursor:default}
+  .muted{color:#8f88a3;font-size:13px}
+  .err{color:#ffb4a2}
+  a{color:#9b72e8}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tu identificador de cuenta</h1>
+  <p>Este es el valor de <code>RESERVED_ACCT_ID</code>. Sirve para que solo tú puedas
+     publicar con los nombres reservados de TradeMind.</p>
+
+  <div class="box">
+    <div id="out"><span class="muted">Leyendo…</span></div>
+    <button id="copy" disabled>Copiar</button>
+  </div>
+
+  <p class="muted">Sale de la llave que guardó <em>este</em> navegador. Si usas otro
+     navegador o borras los datos del sitio, el identificador es distinto.</p>
+</div>
+
+<script>
+(function(){
+  var out = document.getElementById('out');
+  var btn = document.getElementById('copy');
+  var value = null;
+
+  function fail(msg, hint){
+    out.innerHTML = '<div class="err">' + msg + '</div>' +
+      (hint ? '<div class="muted" style="margin-top:8px">' + hint + '</div>' : '');
+  }
+
+  var key = null;
+  try { key = localStorage.getItem('tm_acct'); } catch (e) {
+    return fail('Este navegador tiene el almacenamiento bloqueado.',
+      'Prueba fuera del modo privado.');
+  }
+
+  if (!key) {
+    return fail('Todavía no hay ninguna llave en este navegador.',
+      'Abre <a href="/">trademindff.com</a>, espera a que cargue, y vuelve aquí.');
+  }
+
+  // Ask the server rather than hashing here, so this page can never disagree
+  // with what the API actually considers your account.
+  fetch('/api/community/whoami', { headers: { 'x-tm-acct': key } })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.acct) return fail('El servidor no reconoció la llave.');
+      value = d.acct;
+      out.innerHTML = '<code>' + d.acct + '</code>';
+      btn.disabled = false;
+    })
+    .catch(function(){ fail('No se pudo contactar con el servidor.'); });
+
+  btn.addEventListener('click', function(){
+    if (!value) return;
+    navigator.clipboard.writeText(value).then(function(){
+      btn.textContent = 'Copiado';
+      setTimeout(function(){ btn.textContent = 'Copiar'; }, 1800);
+    }).catch(function(){
+      btn.textContent = 'Selecciona y copia a mano';
+    });
+  });
+})();
+</script>
+</body>
+</html>

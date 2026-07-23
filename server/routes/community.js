@@ -109,15 +109,16 @@ router.get('/status', (req, res) => res.json({ configured: configured() }));
 // their own browser sent. Safe to expose: it reveals nothing about anyone else
 // and the id cannot be replayed as a credential.
 //
-// Practical use: open this URL in the browser you post from, copy the id, and
-// set it as RESERVED_ACCT_ID in Vercel. That is what lets you (and nobody else)
-// post under the reserved names like "wolco" or "trademind".
+// Typing this URL into the address bar will always look anonymous: the account
+// key rides in a header that only the app's fetch wrapper attaches, and a plain
+// navigation does not go through it. Use the /whoami PAGE instead, which reads
+// the key from localStorage and calls this with the header set.
 router.get('/whoami', (req, res) => {
   res.set('Cache-Control', 'no-store');
   const acct = readAcctId(req);
   res.json(acct
     ? { acct, note: 'Set this as RESERVED_ACCT_ID in Vercel to claim the reserved names.' }
-    : { acct: null, note: 'No account key on this request. Open the site first so the browser mints one.' });
+    : { acct: null, note: 'No account key on this request. Open https://trademindff.com/whoami instead - a bare address-bar visit never carries the header.' });
 });
 
 // Kept for frontend compatibility; BK is cosmetic karma now
