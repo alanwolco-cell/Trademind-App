@@ -1458,3 +1458,13 @@ body{min-height:100vh;min-height:100dvh}
   .comm-vote-btn,.comm-opinion-btn{min-height:40px;padding:9px 14px;font-size:13px}
   .comm-vote-btn{gap:6px}
 }
+
+/* The four proof points sit in a wrapping flex row with the dots as their own
+   spans, so on a phone the row breaks after the third span and leaves a
+   separator dangling at the end of the first line. A 2x2 grid gives four
+   evenly sized cells and lets alignment do the separating, so the dots are
+   not needed at all below this width. */
+@media(max-width:700px){
+  .hero-proof{display:grid;grid-template-columns:repeat(2,auto);justify-content:center;gap:9px 20px}
+  .hero-proof-sep{display:none}
+}
