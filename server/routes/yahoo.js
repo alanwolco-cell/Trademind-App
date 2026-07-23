@@ -6,7 +6,7 @@ const router = express.Router();
 // DORMANT until credentials exist. To activate:
 //   1. Create an app at https://developer.yahoo.com/apps/create/
 //      - API Permissions: Fantasy Sports (Read)
-//      - Redirect URI: https://trademind-starter.vercel.app/api/yahoo/callback
+//      - Redirect URI: https://trademindff.com/api/yahoo/callback
 //   2. Add YAHOO_CLIENT_ID + YAHOO_CLIENT_SECRET to Vercel env, redeploy.
 // The frontend checks /api/yahoo/status and shows the login button automatically.
 

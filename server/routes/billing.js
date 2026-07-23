@@ -84,7 +84,7 @@ router.post('/checkout', async (req, res) => {
   if (!acctId) return;
   const embedded = !!(req.body || {}).embedded;
   try {
-    const origin = req.headers.origin || ('https://' + (req.headers.host || 'trademind-starter.vercel.app'));
+    const origin = req.headers.origin || ('https://' + (req.headers.host || 'trademindff.com'));
     const common = {
       mode: 'subscription',
       line_items: [{ price: PRICE_ID, quantity: 1 }],
