@@ -99,6 +99,57 @@ async function buildGrounding() {
   return out;
 }
 
+// ── Naming players in a conversation ────────────────────────────────────────
+// Deciding who the user is talking about is what lets Sage quote a real value
+// instead of guessing. The old test was `lastName.length > 4`, which silently
+// hid two whole categories:
+//
+//   - Short surnames. Nix, Love, Hall, Cook, Ward, Lamb, Goff, Rice, Reed and
+//     Bell all failed it. Measured against the live FantasyCalc list, 91
+//     players outside the cached top list could never be grounded at all.
+//   - EVERY rookie pick. A pick's last word is "1.01" or "1st", so all 64 pick
+//     entries failed, and 54 of them sit outside the cached list. Dynasty runs
+//     on picks, so "my 2026 2nd for Jayden Reed" grounded neither side of the
+//     trade - the exact question this product exists to answer.
+//
+// The length cutoff was a blunt way to stop "Hill" firing inside "uphill".
+// Word boundaries do that properly, so the cutoff is gone.
+const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
+// Surnames that are also words people actually type when talking about trades.
+// "I love this trade", "he is still young", "what is the price", "training
+// camp" - these would each drag in a player nobody mentioned. They still match
+// on the full name, so "Jordan Love" works. Everything else stays matchable:
+// keeping Ward, Hall, Cook, Rice or Hill out of this list matters more than the
+// rare false positive, because those are players people ask about constantly.
+const AMBIGUOUS_SURNAMES = new Set(['love', 'young', 'price', 'camp', 'green']);
+const rxEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const hasWord = (hay, needle) => new RegExp('\\b' + rxEscape(needle) + '\\b').test(hay);
+
+function namedInConvo(name, txt) {
+  const lower = String(name || '').toLowerCase();
+  if (!lower) return false;
+  if (txt.includes(lower)) return true;
+
+  // Rookie picks. "2026 Pick 1.01" is spoken as "1.01", which is distinctive
+  // enough on its own. "2026 1st" needs the year too, or a stray "1st" would
+  // drag in every draft year at once.
+  const slot = lower.match(/(\d)\.(\d{2})/);
+  if (slot) return hasWord(txt, slot[0]);
+  const round = lower.match(/^(\d{4})\s+(1st|2nd|3rd|4th)$/);
+  if (round) {
+    const words = { '1st': 'first', '2nd': 'second', '3rd': 'third', '4th': 'fourth' };
+    return txt.includes(round[1]) && (hasWord(txt, round[2]) || hasWord(txt, words[round[2]]));
+  }
+
+  const parts = lower.split(/\s+/).filter(Boolean);
+  let last = parts[parts.length - 1];
+  // "Marvin Harrison Jr" is a Harrison, not a Jr - otherwise every suffixed
+  // player would match every other one.
+  if (NAME_SUFFIXES.has(last) && parts.length > 2) last = parts[parts.length - 2];
+  if (last.length < 3 || AMBIGUOUS_SURNAMES.has(last)) return false;
+  return hasWord(txt, last);
+}
+
 const SAGE_PERSONA = `You are Sage, the resident fantasy football brain of TradeMind (trademindff.com), a trade calculator for dynasty and redraft leagues.
 ACCURACY OVER SPEED: for any question about a player's current role, depth chart, or starting job, verify with web search BEFORE answering unless the provided scout context explicitly covers it. Never name a player's competition from memory. If you realize mid-answer you are unsure, search first, answer once - never publish a correction to your own previous message.
 When the news is genuinely good for the user - a clear win, a rising player they own - you may close with "Life is good." Use it sparingly, only when it fits.
@@ -355,13 +406,9 @@ router.post('/chat', async (req, res) => {
     const model = HEAVY_RE.test((lastUser && lastUser.content) || '') ? 'claude-opus-4-8' : 'claude-sonnet-5';
 
     // Exact values for players named in the conversation - prevents the model
-    // from confusing a player outside the top-80 with a similar one inside it
+    // from confusing a player outside the cached list with a similar one inside it.
     const convoTxt = history.map(m => m.content).join(' ').toLowerCase();
-    const mentioned = (g.allPlayers || []).filter(p => {
-      const parts = p.name.toLowerCase().split(' ');
-      const last = parts[parts.length - 1];
-      return convoTxt.includes(p.name.toLowerCase()) || (last.length > 4 && convoTxt.includes(last));
-    }).slice(0, 12);
+    const mentioned = (g.allPlayers || []).filter(p => namedInConvo(p.name, convoTxt)).slice(0, 20);
     const rmap = g.rosterMap || {};
     // Situational scout notes shipped by the client (departures, arrivals,
     // target-share shifts, coaching changes). This is the context that turns
@@ -498,3 +545,6 @@ router.get('/status', (req, res) => {
 });
 
 module.exports = router;
+// Exported so the player matcher can be exercised directly. Getting this wrong
+// is invisible in production: Sage just quietly answers without the data.
+module.exports.namedInConvo = namedInConvo;
