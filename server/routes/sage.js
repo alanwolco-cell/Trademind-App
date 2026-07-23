@@ -203,7 +203,7 @@ const PRO_DAILY = 25;
 const PRO_MONTHLY = 250;
 // One network/IP can't farm free questions with throwaway usernames past this.
 const IP_FREE_DAILY = 12;
-const { isPro } = require('./billing');
+const { isPro, bindNameIfUnclaimed } = require('./billing');
 const { readAcctId } = require('../lib/identity');
 const community = require('./community'); // for referral bonuses (extends free weekly)
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -328,6 +328,7 @@ router.get('/quota', async (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
   // Pro follows the manager's name so it works on every device they sign in
   // on; the account key still guards anything that CHANGES the plan.
+  await bindNameIfUnclaimed(readAcctId(req), user);
   const pro = await isPro(readAcctId(req), user);
   const u = await peekUsage(user, ip, device, pro);
   const dailyLimit = pro ? PRO_DAILY : FREE_DAILY;

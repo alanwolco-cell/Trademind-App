@@ -132,6 +132,55 @@ router.get('/account', async (req, res) => {
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
+// One-time repair. A subscription bought before the name was recorded is
+// stranded on the browser that paid: it cannot reach that manager's phone, and
+// it follows whoever else signs in on that computer. The moment the buying
+// browser tells us which name it belongs to, bind the two together.
+//
+// Only the holder of the account key can trigger this, and only onto a name
+// nobody else has claimed, so it cannot be used to take over a plan.
+async function bindNameIfUnclaimed(acctId, username) {
+  const u = String(username || '').trim().toLowerCase();
+  if (!acctId || !u) return;
+  try {
+    const e = await loadEnt();
+    const rec = e.byAcct[String(acctId)];
+    if (!_live(rec)) return;
+    if (String(rec.username || '').trim()) return; // already named
+    if (e.byUser[u]) return;                       // name belongs to someone else
+    rec.username = u;
+    e.byUser[u] = String(acctId);
+    await saveEnt(e);
+    console.log('[billing] bound orphaned subscription to a name');
+  } catch (_) {}
+}
+
+// GET /api/billing/entitlements -> owner-only shape check. Never returns keys,
+// customer ids or names; just enough to tell whether a plan is stranded.
+router.get('/entitlements', async (req, res) => {
+  const token = process.env.ADMIN_TOKEN;
+  const given = String(req.headers['x-admin-token'] || req.query.token || '');
+  if (!token) return res.status(503).json({ error: 'admin token not configured' });
+  const a = Buffer.from(given), b = Buffer.from(token);
+  if (!(a.length === b.length && require('crypto').timingSafeEqual(a, b))) {
+    return res.status(403).json({ error: 'not authorized' });
+  }
+  res.set('Cache-Control', 'no-store');
+  try {
+    const e = await loadEnt();
+    res.json({
+      total: Object.keys(e.byAcct).length,
+      indiceDeNombres: Object.keys(e.byUser).length,
+      registros: Object.keys(e.byAcct).map(k => ({
+        status: e.byAcct[k].status,
+        tieneNombre: !!String(e.byAcct[k].username || '').trim(),
+        tieneCliente: !!e.byAcct[k].customer,
+        tieneSub: !!e.byAcct[k].sub,
+      })),
+    });
+  } catch (err) { res.status(502).json({ error: err.message }); }
+});
+
 // GET /api/billing/config -> the public info the browser needs for embedded checkout
 router.get('/config', (req, res) => {
   res.json({ publishableKey: PUB_KEY, configured: !!process.env.STRIPE_SECRET_KEY });
@@ -235,6 +284,7 @@ router.get('/status', async (req, res) => {
   // Read-only and polled by the UI, so an anonymous caller gets "not pro"
   // rather than an error.
   res.set('Cache-Control', 'no-store');
+  await bindNameIfUnclaimed(readAcctId(req), req.query.user);
   res.json({ pro: await isPro(readAcctId(req), req.query.user), configured: !!process.env.STRIPE_SECRET_KEY });
 });
 
@@ -310,3 +360,4 @@ router.post('/resume', async (req, res) => {
 
 module.exports = router;
 module.exports.isPro = isPro;
+module.exports.bindNameIfUnclaimed = bindNameIfUnclaimed;
