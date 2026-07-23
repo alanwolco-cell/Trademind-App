@@ -1551,7 +1551,7 @@ body{min-height:100vh;min-height:100dvh}
      legal line breathe instead of splintering into slivers. */
   footer{padding:2rem 1.25rem 1.75rem;margin-top:2rem}
   .footer-sub{font-size:12.5px;line-height:1.6;max-width:34ch;margin:0 auto}
-  footer .nav-link{padding:6px 4px;min-height:32px;display:inline-flex;align-items:center}
+  footer .nav-link{padding:8px 4px;min-height:40px;display:inline-flex;align-items:center}
   .footer-legal{margin-top:18px;font-size:10.5px;line-height:1.7;color:var(--muted);max-width:38ch;margin-left:auto;margin-right:auto}
   #how-mini{margin-bottom:20px!important;padding:14px 16px!important}
 }
@@ -1564,6 +1564,7 @@ body{min-height:100vh;min-height:100dvh}
   .inner-tab{min-height:42px;display:inline-flex;align-items:center}
   .btn-sm{min-height:40px}
   #md-context{min-height:88px}
+  .sage-side-new,.btn-load{min-height:40px}
   .sage-sugg{min-height:42px;display:flex;align-items:center;justify-content:center}
 }
 @media(max-width:560px){
