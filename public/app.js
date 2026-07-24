@@ -1646,7 +1646,7 @@ function _proBenefitsHtml(){
     +'</div>'
     +'<button class="btn-primary" style="width:100%;padding:14px;font-size:15px;cursor:pointer" onclick="sageCheckout(this)">Continue &nbsp;&middot;&nbsp; $6.99/mo</button>'
     +'<div style="text-align:center;margin-top:11px"><span onclick="sageCloseUpgrade()" style="font-size:12px;color:var(--muted);cursor:pointer">Not right now</span></div>'
-    +'<div style="text-align:center;margin-top:13px;font-size:11px;color:var(--muted)">&#128274; Secure payment, powered by Stripe</div>';
+    +'<div style="text-align:center;margin-top:13px;font-size:11px;color:var(--muted)">Secure payment, powered by Stripe</div>';
 }
 function sageUpgrade(){
   try{tmTrack('go_pro_clicked');}catch(_){}
@@ -1792,7 +1792,7 @@ function _renderManageModal(d){
   if(!d||(!d.pro&&!d.status)){
     host.innerHTML='<div style="'+card+'">'
       +'<button onclick="_manageClose()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">&times;</button>'
-      +'<div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">You are on the free plan</div>'
+      +'<div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">You have not gone Pro yet</div>'
       +'<button class="btn-primary" style="padding:11px 22px;font-size:14px;margin-top:6px" onclick="_manageClose();sageUpgrade()">Go Pro</button></div>';
     return;
   }
@@ -1852,7 +1852,7 @@ async function sageUpdateQuota(){
     if(left<=2&&(d.referralBonus||0)<10){
       ref=' &middot; <span style="cursor:pointer;text-decoration:underline" onclick="openReferral()">Invite a friend, you both get two</span>';
     }
-    el.innerHTML=(left>0?(left+' free question'+(left===1?'':'s')+' left '+span):('No free questions left '+span))+go+ref;
+    el.innerHTML=(left>0?(left+' question'+(left===1?'':'s')+' left '+span):('No questions left '+span))+go+ref;
     el.style.display='block';
   }catch(_){el.style.display='none';}
 }
@@ -3781,8 +3781,8 @@ async function runAnalysis(){
     var getVals=getInputEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}).filter(function(v){return v>0;}).sort(function(a,b){return b-a;});
     var consolidating=gc>rc;
     if(leagueSize<12){
-      if(consolidating){effGap+=300;_depthNote='In a '+leagueSize+'-team league, sending two for the best player is the right shape: waivers replace your depth for free and the open roster spot has value of its own.';}
-      else{effGap-=300;_depthNote='Careful with 1-for-2 in a '+leagueSize+'-team league: depth is nearly free on waivers here, so extra bodies are worth less than the sheet says. Make sure the value edge is real.';}
+      if(consolidating){effGap+=300;_depthNote='In a '+leagueSize+'-team league, sending two for the best player is the right shape: waivers replace your depth anyway and the open roster spot has value of its own.';}
+      else{effGap-=300;_depthNote='Careful with 1-for-2 in a '+leagueSize+'-team league: depth is cheap on waivers here, so extra bodies are worth less than the sheet says. Make sure the value edge is real.';}
     } else if(!consolidating&&rc>gc){
       var needsHelp=sit!=null&&sit>=1;
       var anchor=giveVals[0]||0;
@@ -7971,7 +7971,7 @@ function mdProsCons(p){
     var avg=(window._advDst||{})[p.id]!=null?window._advDst[p.id]:(window._advDst||{})[p.team];
     if(avg!=null&&avg<75)pros.push('Gave up just '+avg+' fantasy points per game to opposing skill players last season, a top-shelf unit');
     else if(avg!=null)pros.push('Allowed '+avg+' fantasy points per game last season, a serviceable baseline');
-    pros.push('Streaming defenses is free, so a late pick here loses you nothing');
+    pros.push('You can stream defenses off waivers all year, so a late pick here loses you nothing');
     pros.push('A good defense wins you the weeks your offense goes quiet');
     pros.push('Sacks and takeaways stack points in bunches, one big quarter wins the position for the week');
     cons.push('Defense scoring swings wildly year to year, last season\'s ranking is a weak predictor');
@@ -9310,8 +9310,8 @@ function mdRenderHistory(){
         +face
         +'<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:600">'+h.teams+'-team · slot '+h.slot+' · '+h.strat+' <span style="font-size:10px;color:var(--muted);font-weight:500">'+new Date(h.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'})+'</span></div>'
         +'<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+h.roster.slice(0,4).join(' · ')+(h.roster.length>4?' · +'+(h.roster.length-4):'')+'</div></div>'
-        +'<button class="btn-sm" style="'+(h.rating===1?'color:var(--green);border-color:var(--green)':'')+'" onclick="mdRateHistory('+e.i+',1)" title="Liked it">&#128077;</button>'
-        +'<button class="btn-sm" style="'+(h.rating===-1?'color:var(--red);border-color:var(--red)':'')+'" onclick="mdRateHistory('+e.i+',-1)" title="Not it">&#128078;</button>'
+        +'<button class="btn-sm" style="'+(h.rating===1?'color:var(--green);border-color:var(--green)':'')+'" onclick="mdRateHistory('+e.i+',1)" title="Liked it">Good</button>'
+        +'<button class="btn-sm" style="'+(h.rating===-1?'color:var(--red);border-color:var(--red)':'')+'" onclick="mdRateHistory('+e.i+',-1)" title="Not it">Bad</button>'
         +(h.picksAll&&h.picksAll.length?'<button class="btn-sm" onclick="mdViewHistory('+e.i+')" title="See the whole draft">View</button>':'')
         +'<button class="btn-sm" onclick="mdDownloadRoster('+e.i+')" title="Download as image">PNG</button>'
         +'</div>';
