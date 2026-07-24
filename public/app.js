@@ -2535,6 +2535,16 @@ document.addEventListener('click',function(e){
 });
 
 var _lastOppUid=null;
+// A roster's owner_id is only its PRIMARY owner. Sleeper also has co-owners,
+// and the opponent dropdown is built from leagueUsers (user_id), so a
+// co-owned team appeared in the list and then matched no roster at all: the
+// board rendered empty with nothing explaining why. Check co_owners too.
+function _rosterForUser(uid){
+  if(!uid||!Array.isArray(leagueRosters))return null;
+  return leagueRosters.find(function(r){return r.owner_id===uid;})
+      || leagueRosters.find(function(r){return Array.isArray(r.co_owners)&&r.co_owners.indexOf(uid)>=0;})
+      || null;
+}
 async function loadOppRoster(){
   var uid=document.getElementById("opp-select").value;
   if(!uid)return;
@@ -2549,8 +2559,15 @@ async function loadOppRoster(){
   if(Object.keys(allPlayers).length<100){
     try{await ensurePlayersLoaded();}catch(_){}
   }
-  var obj=leagueRosters.find(function(r){return r.owner_id===uid;});
+  var obj=_rosterForUser(uid);
   oppRoster=obj?(obj.players||[]).map(function(pid){return allPlayers[pid];}).filter(Boolean).sort(function(a,b){return po(a.pos)-po(b.pos);}):[];
+  // Never fail silently. An empty board with no explanation reads as broken,
+  // and this is the step right before someone analyses a trade.
+  if(!obj||!oppRoster.length){
+    var _b=document.getElementById('board-opp');
+    if(_b)_b.innerHTML='<div class="bb-empty">Could not load that roster. Pick another team, or reload your league from the top of this page.</div>';
+    console.warn('[TM] opponent roster not resolved for user',uid,'rosters:',(leagueRosters||[]).length);
+  }
   // Get the selected season from league meta
   var season=ACTIVE_SEASON;
   oppPicks=obj?buildPicksForRoster(obj,leaguePicks,season):[];
@@ -3703,7 +3720,7 @@ async function runAnalysis(){
   if(!Object.keys(ktcById).length){
     try{await fetchKtcValues(leagueFormat.has2QB||leagueFormat.hasSuperFlex?2:1,leagueFormat.ppr,leagueMode!=='redraft',true);}catch(_){}
   }
-  var oppRosterObj=leagueRosters.find(function(r){return r.owner_id===document.getElementById("opp-select").value;});
+  var oppRosterObj=_rosterForUser(document.getElementById("opp-select").value);
   var oppRosterId=oppRosterObj?oppRosterObj.roster_id:null;
   var p=oppRosterId?inferOppProfileFromHistory(oppRoster,oppRosterId):inferOppProfile(oppRoster);
   var sit=youAnswers[0],feel=youAnswers[2];
