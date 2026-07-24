@@ -3290,37 +3290,121 @@ function goBackYou(qi){
   document.getElementById("you-badge").classList.remove("show");
 }
 
-function showYouVerdict(){
-  var sit=youAnswers[0],reason=youAnswers[1],feel=youAnswers[2];
-  var icon,verdict,desc;
-  if(feel===2){
-    icon="STOP";verdict="DO NOT DO THIS TRADE";
-    desc="Your gut is telling you no. In dynasty, regret on giveaway is the number one cause of seller's remorse. If you would regret losing these players, the numbers do not matter. Pass.";
-  }else if(feel===3&&sit!==2){
-    icon="WARN";verdict="PROCEED WITH CAUTION";
-    desc="You are only doing this because the spreadsheet says to. That is dangerous without conviction. If you do not believe in what you are getting, you will not trust the move when it matters.";
-  }else if(sit===0&&reason===1&&feel!==0){
-    icon="WARN";verdict="THINK TWICE";
-    desc="You are a contender and someone sent you this offer. That means they need something from you. Do not panic-react to an inbound offer. Countering for more is almost always the right move.";
-  }else if(sit===0&&reason===3){
-    icon="GO";verdict="PULL THE TRIGGER";
-    desc="You are trying to sell high while the window is open. Smart. In dynasty the best time to sell is when a player's value exceeds their expected future production. Do not overthink it.";
-  }else if(sit===2&&reason===1&&feel===0){
-    icon="GO";verdict="ACCEPT - THIS IS YOUR PATH";
-    desc="You are rebuilding and received this offer. If you are comfortable losing those players, this aligns perfectly with your direction. Picks and youth are your currency right now.";
-  }else if(sit===1&&reason===2){
-    icon="GO";verdict="SMART MOVE FOR YOUR WINDOW";
-    desc="You have a young core and a positional hole to fill. A well-timed need trade at this stage of your build can accelerate your window by a full season. Do it.";
-  }else if(sit===0&&reason===0&&feel<=1){
-    icon="GO";verdict="SEND IT - YOU KNOW WHAT YOU NEED";
-    desc="You initiated this, you are a contender, and you are willing to pay the price. That is the mindset of a championship manager. Execute.";
-  }else if(feel===1&&reason===1){
-    icon="WARN";verdict="COUNTER FIRST";
-    desc="Slight hesitation on an inbound offer is almost always a sign to counter, not accept. Push back. You might get more, and if they decline, your hesitation was telling you something.";
-  }else{
-    icon="INFO";verdict="CHECK YOUR PRIORITIES FIRST";
-    desc="This trade does not send a clear signal either way. Before deciding, ask: does what you are getting move you closer to your dynasty goal? If yes, do it. If you are not sure, do not.";
+// ─── BLENDED TRADE VERDICT ───────────────────────────────────────────────────
+// The value is the fact and dominates; strategic context and gut feeling are a
+// soft nudge that can lift a close call but can never flip a real value edge.
+// This replaces the old hard overrides where feel===2 ("I'd regret it") forced a
+// hard NO no matter how lopsided the value was in the user's favor. Now the value
+// has to beat a soft hesitation, not be vetoed by it. See tradeScore() below.
+function _tmClamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+
+// compCONTEXTO (±20, ±16.5 redraft): strategic fit from window (Q1) x goal (Q2).
+// Dynasty semantics -> sit: 0=contending 1=building 2=rebuilding 3=unsure(window);
+// reason: 0=initiated 1=inbound 2=fill-need 3=sell-high. The window x goal matrix
+// is the mandatory minimum; we deliberately do NOT invent the finer signals
+// (need/age/scarcity/timing) here because clean data for them is not available at
+// this call site.
+function _tmContext(sit,reason,redraft){
+  var ctx=0, halve=false, unsurePenalty=0;
+  if(sit===3){ halve=true; unsurePenalty=-1; } // window Unsure: soften everything, small tax
+  if(sit===0){ // contending
+    if(reason===2)ctx+=7;        // contending + fill-need
+    else if(reason===3)ctx+=5;   // contending + sell-high
+    else if(reason===0)ctx+=3;   // contending + initiated
+    else if(reason===1)ctx-=2;   // contending + inbound (they need something from you)
+  } else if(sit===1){ // building
+    if(reason===2)ctx+=6;        // building + fill-need
+    else if(reason===3)ctx+=3;   // building + sell-high
+    else if(reason===0)ctx+=2;   // building + initiated
+  } else if(sit===2){ // rebuilding
+    if(reason===3)ctx+=6;        // rebuilding + sell-high
+    else if(reason===1)ctx+=7;   // rebuilding + inbound ~= receiving youth/picks (your currency)
+    else if(reason===2)ctx-=3;   // rebuilding + fill-need (wrong direction for a rebuild)
   }
+  if(halve){ ctx=ctx*0.5 + unsurePenalty; }
+  var cap=redraft?16.5:20;
+  return _tmClamp(ctx,-cap,cap);
+}
+
+// Map score -> verdict banner. Bands: >=72 SEND IT, 58-72 DO IT (value wins),
+// 46-58 CLOSE, 32-46 COUNTER FIRST, <32 WALK AWAY.
+function _tmBand(score,feel){
+  if(score>=72)return {score:score,verdict:"SEND IT",icon:"GO",desc:"This is a clear win. Do it."};
+  if(score>=58){
+    // When the gut is hesitant but the value still wins, name the tension out loud
+    // so the recommendation reads as deliberate, not as ignoring the user's feel.
+    var d=(feel===1||feel===2)
+      ?"Your gut says no, but the value coming back is enough. In dynasty a gap this size outweighs a soft hesitation. Make it."
+      :"The value is on your side and the fit works. Make it.";
+    return {score:score,verdict:"DO IT, THE VALUE WINS",icon:"GO",desc:d};
+  }
+  if(score>=46)return {score:score,verdict:"CLOSE, YOUR CALL",icon:"WARN",desc:"The value is near even, so your read is the tiebreaker. Counter if you want an edge."};
+  if(score>=32)return {score:score,verdict:"COUNTER FIRST",icon:"WARN",desc:"You are paying up here. Ask for a bit more before you send it."};
+  return {score:score,verdict:"WALK AWAY",icon:"STOP",desc:"The value is not there. Pass."};
+}
+
+// tradeScore: Score = 50 (even) + compVALOR (the fact, ±30) + softTotal, clamped
+// to [0,100]. softTotal = clamp(compCONTEXTO + modFEEL, -26, +22) is the guarantee
+// that sentiment can nudge but never flip a real value edge.
+function tradeScore(effGap,giveKtc,getKtc,youAnswers,leagueMode,hasKtc){
+  var redraft=leagueMode==='redraft';
+  var sit=youAnswers?youAnswers[0]:null;
+  var reason=youAnswers?youAnswers[1]:null;
+  var feel=youAnswers?youAnswers[2]:null;
+  // Redraft asks the same questions in a different option order; remap Q1/Q2 to
+  // the dynasty semantics compCONTEXTO expects. Q3 (feel) already aligns.
+  if(redraft){
+    var _rSit={0:0,1:1,2:3,3:2}, _rRea={0:2,1:0,2:3,3:0};
+    if(sit!=null&&_rSit[sit]!=null)sit=_rSit[sit];
+    if(reason!=null&&_rRea[reason]!=null)reason=_rRea[reason];
+  }
+  // modFEEL (Q3 lean, additive, separate from context): fine +2, hesitant -5,
+  // would-regret -12, only-numbers -4.
+  var modFEEL=0;
+  if(feel===0)modFEEL=2;else if(feel===1)modFEEL=-5;else if(feel===2)modFEEL=-12;else if(feel===3)modFEEL=-4;
+
+  // No KTC: the ONLY regime where feel is allowed to dominate the read.
+  if(!hasKtc){
+    var ctxNo=_tmContext(sit,reason,redraft);
+    return _tmBand(_tmClamp(50 + 1.5*ctxNo + 2*modFEEL, 0, 100), feel);
+  }
+
+  // Dealbreaker gate (runs BEFORE the score). D1 hard fleece: a big raw value
+  // loss walks, regardless of feel or context. (feel===2 is NO LONGER a
+  // dealbreaker - it is just -12 in modFEEL.) D2-D4 need flags we do not have
+  // clean data for at this call site, so they are omitted cleanly.
+  if(effGap<=-1500){
+    return {score:12,verdict:"WALK AWAY",icon:"STOP",desc:"This is a big value loss. Walk away."};
+  }
+
+  // compVALOR (±30, ±33 redraft): tanh keeps it bounded; tau adapts to deal size
+  // so a 1000-gap on smalls is not read like a 1000-gap on a blockbuster.
+  var base=Math.max(giveKtc,getKtc);
+  var tau=900*_tmClamp(base/5000,0.5,2);
+  var valAmp=redraft?33:30; // redraft: age does not count, so value carries more
+  var compVALOR=valAmp*Math.tanh(effGap/tau);
+
+  // compCONTEXTO caps at ±16.5 in redraft (age drops out, context is worth less).
+  var compCTX=_tmContext(sit,reason,redraft);
+
+  // softTotal clamp is the hard ceiling/floor on sentiment - value stays in charge.
+  var softTotal=_tmClamp(compCTX+modFEEL,-26,22);
+  return _tmBand(_tmClamp(50 + compVALOR + softTotal, 0, 100), feel);
+}
+
+function showYouVerdict(){
+  var icon,verdict,desc;
+  // Blend the gut-check answers with whatever value is on the board so the
+  // standalone verdict matches the full Analyze read. If no players are entered
+  // yet, hasKtc is false and tradeScore falls back to a context+feel verdict.
+  var giveEls=Array.from(document.querySelectorAll("#give-players input")).filter(function(i){return i.value.trim();});
+  var getEls=Array.from(document.querySelectorAll("#get-players input")).filter(function(i){return i.value.trim();});
+  var giveKtc=giveEls.reduce(function(s,i){return s+getKtcValue(i.value.trim(),i.dataset.playerId);},0);
+  var getKtc=getEls.reduce(function(s,i){return s+getKtcValue(i.value.trim(),i.dataset.playerId);},0);
+  var hasKtc=giveKtc>0||getKtc>0;
+  var effGap=getKtc-giveKtc;
+  var r=tradeScore(effGap,giveKtc,getKtc,youAnswers,leagueMode,hasKtc);
+  verdict=r.verdict;desc=r.desc;icon=r.icon;
   document.getElementById("you-type").textContent=verdict;
   document.getElementById("you-badge").style.background=icon==="GO"?"rgba(34,197,94,0.1)":icon==="STOP"?"rgba(239,68,68,0.1)":"rgba(245,158,11,0.1)";
   document.getElementById("you-badge").style.borderColor=icon==="GO"?"rgba(34,197,94,0.35)":icon==="STOP"?"rgba(239,68,68,0.35)":"rgba(245,158,11,0.35)";
@@ -3995,104 +4079,17 @@ async function runAnalysis(){
   // sit: 0=contender, 1=building, 2=rebuilding, 3=unsure
   // reason: 0=I initiated, 1=inbound, 2=fill a hole, 3=sell high
   // feel: 0=fine with it, 1=hesitant, 2=would regret, 3=only for numbers
-  var sit=youAnswers[0], reason=youAnswers[1], feel=youAnswers[2];
-  // The redraft questions use their own option order; remap sit + reason to the
-  // verdict's dynasty-derived semantics so every branch below fires correctly.
-  // (feel already aligns: 0=fine ... 2=regret ... 3=only-numbers.)
-  if(leagueMode==='redraft'){
-    var _rSit={0:0,1:1,2:3,3:2}; // Contender/In-mix/Middle/Longshot -> contender/building/unsure/dont-chase
-    var _rRea={0:2,1:0,2:3,3:0}; // Fill-hole/Upgrade/Sell-hot/Buy-low -> fill-hole/initiated/sell-high/initiated
-    if(sit!=null&&_rSit[sit]!=null)sit=_rSit[sit];
-    if(reason!=null&&_rRea[reason]!=null)reason=_rRea[reason];
-  }
-  var hasAnswers=(sit!==null||feel!==null);
+  // Blended situation verdict. The old discrete if-tree hard-overrode a great
+  // value to a NO whenever feel===2 ("I'd regret it"); tradeScore replaces that
+  // with a value-first score where a soft hesitation is a -12 nudge, never a veto.
+  // youAnswers is passed RAW (tradeScore does its own redraft remap internally).
+  var feel=youAnswers?youAnswers[2]:null;
+  var hasAnswers=(youAnswers&&(youAnswers[0]!==null||youAnswers[2]!==null));
+  var yv, yd, yicon;
   if(hasAnswers){
-    var yv, yd, yicon;
-    if(valueTier==="getting_fleeced"){
-      // Value is terrible - no answer combination should flip this to GO
-      if(feel===0||feel===null){
-        yv="HOLD UP - YOU'RE GETTING ROBBED";
-        yd="You said you're fine with this, but the value says you're losing this deal by a significant margin. That's not a trade - that's a gift. Counter hard or walk away.";
-        yicon="STOP";
-      } else if(feel===2){
-        yv="YOUR GUT IS RIGHT - DON'T DO IT";
-        yd="You already feel like you'd regret it, and the numbers back that up. This is a bad deal on paper AND in your gut. Easy no.";
-        yicon="STOP";
-      } else {
-        yv="BAD DEAL - WALK AWAY";
-        yd="No matter how you spin your situation, the value gap here is too wide. Push back or move on.";
-        yicon="STOP";
-      }
-    } else if(valueTier==="losing"){
-      if(feel===2){
-        yv="YOUR GUT AND THE MATH BOTH SAY NO";
-        yd="You're already hesitant AND you're overpaying. Both signals pointing the same direction is about as clear as it gets. Counter or pass.";
-        yicon="STOP";
-      } else if(sit===2){
-        // Rebuilding + losing value = absolutely not
-        yv="BAD MOVE FOR A REBUILD";
-        yd="Rebuilders need to accumulate value, not give it away. This trade moves you in the wrong direction. You should be on the other side of this.";
-        yicon="STOP";
-      } else if(sit===0&&reason===3){
-        // Contender selling high, losing value - odd combination but possible
-        yv="WAIT - YOU'RE STILL OVERPAYING";
-        yd="Even if you want to sell high, you need to get fair value back. Right now you're giving more than you're getting. Counter before agreeing.";
-        yicon="WARN";
-      } else if(feel===0&&sit===0){
-        yv="COUNTER BEFORE YOU AGREE";
-        yd="You're a contender and you want these players, but you're overpaying. Ask for a little more - you have leverage.";
-        yicon="WARN";
-      } else {
-        yv="YOU'RE OVERPAYING - PUSH BACK";
-        yd="Your situation doesn't change the fact that you're giving more than you're getting. Try to squeeze a bit more out of the other side first.";
-        yicon="WARN";
-      }
-    } else if(valueTier==="even"){
-      if(feel===2){
-        yv="PASS IF YOUR GUT SAYS NO";
-        yd="The numbers are about even, so this comes down to conviction. You said you'd regret losing your guys - trust that feeling.";
-        yicon="WARN";
-      } else if(sit===0&&feel===0){
-        yv="LEAN YES IF IT FILLS A NEED";
-        yd="Fair deal and you're a contender who wants this. Even trades at the top of a roster make sense when the fit is right. Pull the trigger.";
-        yicon="GO";
-      } else if(sit===2){
-        yv="PROBABLY PASS";
-        yd="Rebuilders should target trades where they're winning value, not breaking even. Hold out for something better.";
-        yicon="WARN";
-      } else {
-        yv="CLOSE CALL - GO WITH YOUR GUT";
-        yd="The value is pretty even. Your situation and gut instinct are the tiebreaker here. If you want it, do it. If you're unsure, counter.";
-        yicon="WARN";
-      }
-    } else if(valueTier==="winning"||valueTier==="crushing"){
-      if(feel===2){
-        yv="YOUR GUT SAYS NO, BUT THE VALUE SAYS YES";
-        yd="You'd regret losing your side - that matters. But you are winning on value here. Ask yourself: is the attachment to these players worth passing on a good deal?";
-        yicon="WARN";
-      } else if(sit===2&&reason!==3){
-        yv="GREAT VALUE FOR A REBUILD";
-        yd="You're winning on value AND rebuilding - this is exactly what you want. Assets at a discount. Lock it in.";
-        yicon="GO";
-      } else if(sit===0&&feel===0){
-        yv="YES - WINNING VALUE AND YOU WANT IT";
-        yd="You're a contender, you want this, and you're getting the better end. There's nothing here that says no. Send it.";
-        yicon="GO";
-      } else if(sit===1&&feel===0){
-        yv="SMART MOVE - GOOD VALUE FOR YOUR BUILD";
-        yd="You're building toward a window and picking up value. That's the game. This one accelerates your timeline.";
-        yicon="GO";
-      } else {
-        yv="DO IT - YOU'RE WINNING THIS TRADE";
-        yd="The numbers are in your favor. Whatever your situation, winning value is winning value. Execute.";
-        yicon="GO";
-      }
-    } else {
-      // No KTC data
-      if(feel===2){yv="PASS - YOUR GUT SAYS NO";yd="No value data, but your gut says no. That's enough. Pass.";yicon="WARN";}
-      else if(sit===0&&feel===0){yv="LEAN YES";yd="You're a contender who wants this. Go for it.";yicon="GO";}
-      else{yv="CHECK YOUR PRIORITIES";yd="Make sure what you're getting actually moves you closer to your dynasty goal.";yicon="INFO";}
-    }
+    // effGap already carries the roster-math depth adjustments from above.
+    var _sv=tradeScore(effGap,giveKtc,getKtc,youAnswers,leagueMode,hasKtc);
+    yv=_sv.verdict; yd=_sv.desc; yicon=_sv.icon;
   }
   // ── End correlated verdict ──────────────────────────────────────────────────
 
