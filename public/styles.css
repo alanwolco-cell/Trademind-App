@@ -1805,3 +1805,103 @@ html{scroll-padding-top:76px}
   border-radius:var(--radius);
 }
 @media(max-width:700px){.bb-howto{font-size:12px;padding:8px 10px}}
+
+/* ══ HERO: two columns, product on the right ═══════════════════════════════
+   The old hero was a 620px centred column inside a 1280px page: ~330px of
+   empty background down each side, ~75px above the badge and ~120px below the
+   proof line. Nothing filled it, which is what read as "vibecoded". The copy
+   now sits on a left edge and a real screenshot of a verdict fills the right
+   half, so the same viewport carries content instead of background.
+   Appended at the end of the file so it beats the earlier .hero rules; the
+   v11/v12 skins re-assert what they own in v12.css. */
+.hero-inner{
+  display:grid;
+  grid-template-columns:minmax(0,0.92fr) minmax(0,1.08fr);
+  align-items:center;
+  gap:clamp(24px,3.4vw,56px);
+  max-width:1240px;
+  width:100%;
+  text-align:left;
+  padding:32px 40px 40px;
+  box-sizing:border-box;
+}
+.hero-copy{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+/* Sage is inside the screenshot now, so the 150px portrait plus its three
+   rings was duplicated weight and pure vertical cost. */
+.hero .hero-sage-stage{display:none}
+.hero-inner h1{text-align:left;margin-bottom:1rem}
+.hero-tagline{text-align:left;max-width:34em;margin-bottom:1.6rem}
+.hero-cta{justify-content:flex-start}
+/* Secondary proof: outlined chips, quiet enough not to compete with the CTA */
+.hero-proof{justify-content:flex-start;gap:8px;margin-top:20px}
+.hero-chip{
+  display:inline-flex;align-items:center;
+  padding:6px 12px;border-radius:100px;
+  border:1px solid var(--border2);
+  background:rgba(255,255,255,.03);
+  font-size:12px;color:var(--muted2);font-weight:500;white-space:nowrap;
+}
+
+/* The screenshot bleeds past the right edge of the column so the composition
+   has no gutter of dead background; the mask dissolves its bottom and right
+   edges into the page instead of ending on a hard rectangle. */
+.hero-shot{
+  position:relative;min-width:0;
+  margin-right:calc(-1 * clamp(24px, 6vw, 96px));
+  perspective:1600px;
+  pointer-events:none;
+}
+.hero-shot img{
+  display:block;width:100%;height:auto;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.09);
+  transform:rotateY(-13deg) rotateX(3deg) rotateZ(1deg) scale(1.06);
+  transform-origin:left center;
+  box-shadow:0 40px 90px -30px rgba(0,0,0,.9);
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 52%,rgba(0,0,0,.35) 84%,transparent 100%);
+          mask-image:linear-gradient(to bottom,#000 0%,#000 52%,rgba(0,0,0,.35) 84%,transparent 100%);
+}
+@media(prefers-reduced-motion:reduce){.hero-shot img{transform:none}}
+
+/* Below ~1000px the two columns stop fitting: stack, keep the copy first so
+   the headline and the CTA stay at the top of the fold, and let the shot sit
+   under them flat (the 3D tilt only reads at width). */
+@media(max-width:1000px){
+  .hero-inner{
+    grid-template-columns:minmax(0,1fr);
+    gap:24px;
+    max-width:640px;
+    text-align:center;
+    padding:20px 22px 32px;
+  }
+  .hero-copy{align-items:center}
+  .hero-inner h1,.hero-tagline{text-align:center}
+  .hero-tagline{margin-left:auto;margin-right:auto}
+  .hero-cta,.hero-proof{justify-content:center}
+  .hero-shot{margin-right:0;perspective:none}
+  .hero-shot img{
+    transform:none;
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 62%,transparent 100%);
+            mask-image:linear-gradient(to bottom,#000 0%,#000 62%,transparent 100%);
+  }
+}
+@media(max-width:700px){
+  .hero-chip{font-size:11px;padding:5px 10px}
+  /* The fixed bottom bar is ~56px: nothing in the hero may end under it. */
+  .hero-inner{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+  /* Shrunk to phone width the whole panel becomes unreadable grey noise. Show
+     a zoomed crop of its top instead - the verdict headline stays legible,
+     which is the only part that has to survive at this size. */
+  .hero-shot{
+    overflow:hidden;max-height:250px;
+    border:1px solid rgba(255,255,255,.09);border-radius:12px;
+  }
+  .hero-shot img{
+    width:152%;max-width:none;margin-left:-26%;
+    border:0;border-radius:0;box-shadow:none;
+    /* Stops short of the 250px crop so the panel dissolves instead of ending
+       on the hard edge of its own overflow box. */
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 70%);
+            mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 70%);
+  }
+}

@@ -121,3 +121,32 @@ html.v12 .ideas-refresh{
     box-shadow:0 0 0 3px rgba(155,114,232,.22);
   }
 }
+
+/* ══ HERO v12: let the two-column composition through ══════════════════════
+   styles.css now lays the hero out as copy-left / product-right, but four
+   rules earlier in this file (and in v11) are scoped to html.v12 and beat it:
+   the 720px column, the headline clamp, the full-viewport min-height and the
+   zeroed padding. Re-state them for the new composition. */
+html.v12 .hero-inner{max-width:1240px;padding:32px 40px 40px}
+
+/* Two lines in a ~500px column, so the face can be larger than it was at
+   three centred lines while taking less vertical space. */
+html.v12 .hero-inner h1{font-size:clamp(30px,3.6vw,46px);line-height:1.02}
+
+/* The hero used to be pinned to the full viewport and its content centred,
+   which manufactured ~75px of empty background above the badge and ~120px
+   below the proof line at 1280x800. It now sizes to its content: the fold
+   still fills, and the section underneath peeks as a scroll hint instead of
+   sitting behind a screen of black. */
+html.v12 .hero,
+html.v12 body.ticker-on .hero,
+html.v12 .ticker-visible .hero{min-height:0;align-items:center}
+
+@media(max-width:1000px){
+  html.v12 .hero-inner{max-width:640px;padding:20px 22px 32px}
+  html.v12 .hero-inner h1{font-size:clamp(30px,7.6vw,42px)}
+}
+@media(max-width:640px){
+  /* The !important pair in styles.css targets html.v12 directly, so match it. */
+  html.v12 .hero-inner{padding-top:16px!important;padding-bottom:28px!important}
+}

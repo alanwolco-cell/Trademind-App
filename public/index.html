@@ -9,14 +9,14 @@
 <meta property="og:description" content="Trade advice built on context, not generic rankings. Dynasty and redraft analysis using live market values + opponent psychology.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=1112026072401">
+<meta property="og:image" content="https://trademindff.com/og.png?v=1112026072403">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - Fantasy Football Trade Calculator">
 <meta name="twitter:description" content="Trade advice built on context, not generic rankings. Know the move.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=1112026072401">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=1112026072403">
 <link rel="canonical" href="https://trademindff.com/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='64' x2='64' y2='0' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%239b72e8'/%3E%3Cstop offset='1' stop-color='%234fd8f5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23140f24'/%3E%3Cpath d='M32 4 L38.4 25.6 L60 32 L38.4 38.4 L32 60 L25.6 38.4 L4 32 L25.6 25.6 Z' fill='url(%23g)'/%3E%3C/svg%3E">
 <script defer src="/_vercel/insights/script.js"></script>
@@ -25,14 +25,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=1112026072401">
+<link rel="stylesheet" href="/styles.css?v=1112026072403">
 <!-- v12 (Apple design, Unbounded headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=1112026072401" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=1112026072403" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=1112026072401">
+<link rel="stylesheet" href="/theme.css?v=1112026072403">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -44,7 +44,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=1112026072401">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=1112026072403">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -266,17 +266,27 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div class="hpart" style="left:42%;top:85%;width:3px;height:3px;background:rgba(167,139,250,.7);box-shadow:0 0 6px rgba(167,139,250,.8);--d:9s;--del:-1s;--dx:10px;--dy:-20px;--sc:1.5;--lo:.2;--hi:.65"></div>
   </div>
   <div class="hero-inner">
+   <!-- LEFT: the claim. Left-aligned and two lines so the eye lands on one
+        edge instead of hunting the centre of three ragged centred lines. -->
+   <div class="hero-copy">
     <div class="hero-badge"><span class="hero-badge-dot"></span><span id="hero-badge-text">Fantasy Football Intelligence</span></div>
-    <!-- Sage centered stage -->
+    <!-- Sage's portrait used to open the hero at 150px with three animated
+         rings around it. The product shot on the right now carries the visual
+         weight, and Sage is already inside it (he signs every verdict), so the
+         stage is hidden by CSS on the home hero: it bought ~115px of vertical
+         space, which is what put the headline and the CTA above the fold on a
+         390x844 phone. Markup kept because the boot/idle eye animation and any
+         cached stylesheet still reference it. -->
     <div class="hero-sage-stage">
       <div class="hero-ring hero-ring-1"></div>
       <div class="hero-ring hero-ring-2"></div>
       <div class="hero-ring hero-ring-3"></div>
       <svg class="sage-hero-svg" viewBox="0 0 120 106" width="150" height="150" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="shBG" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="shEG" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="shEGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="shBGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><radialGradient id="shAura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#8b6bff" stop-opacity="0.6"/><stop offset="52%" stop-color="#67e8f9" stop-opacity="0.16"/><stop offset="100%" stop-color="#67e8f9" stop-opacity="0"/></radialGradient></defs><ellipse class="sage-aura" cx="60" cy="56" rx="78" ry="68" fill="url(#shAura)"/><ellipse cx="60" cy="56" rx="56" ry="49" fill="rgba(91,33,182,0.30)" filter="url(#shBGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#shBG)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#shBG)"/><rect x="4" y="43" width="112" height="27" fill="url(#shBG)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="29" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="69" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><path d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
     </div>
-    <!-- Headline -->
-    <h1>Become the<br>sharpest manager<br><span class="hl">in your league.</span></h1>
-    <p class="hero-tagline">Trade advice built on context, not generic rankings. Sage reads your roster, your league and your opponent before every call.</p>
+    <!-- Headline. Two lines, not three: at this size a third line pushed the
+         CTA under the fold on a phone and made the block read as a paragraph. -->
+    <h1>Know the trade<br><span class="hl">before you send it.</span></h1>
+    <p class="hero-tagline">Sage reads your roster, your league and the manager on the other side, then tells you what the offer is actually worth.</p>
     <!-- Returning users get a fast path straight into the tool from the top.
          Shown to everyone. It used to be hidden until a saved username existed,
          which left a first-time visitor with no action above the fold at all -
@@ -285,15 +295,24 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div class="hero-cta" id="hero-cta">
       <a href="#" id="hero-enter-btn" class="btn-primary" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Analyze a trade →</a>
     </div>
+    <!-- Proof points as outlined chips instead of a dot-separated run of grey
+         text: they now read as three distinct facts next to the CTA rather
+         than one long caption the eye skips. -->
     <div class="hero-proof">
-      <span>No signup needed</span>
-      <span class="hero-proof-sep">·</span>
-      <span>Dynasty &amp; redraft</span>
-      <span class="hero-proof-sep">·</span>
-      <span>Answers in seconds</span>
-      <span class="hero-proof-sep">·</span>
-      <span>Live market values</span>
+      <span class="hero-chip">No signup needed</span>
+      <span class="hero-chip">Dynasty &amp; redraft</span>
+      <span class="hero-chip">Answers in seconds</span>
     </div>
+   </div>
+
+   <!-- RIGHT: the product itself. A real verdict on a real 2-for-2 trade,
+        tilted and faded into the background so the column has no hard bottom
+        edge and no empty black left over beside the copy. Decorative: the
+        headline already carries the meaning, so alt stays empty for
+        screen readers. -->
+   <div class="hero-shot" aria-hidden="true">
+     <img src="/hero-product.png?v=1" width="1520" height="1040" alt="" decoding="async" fetchpriority="high">
+   </div>
   </div>
 </div>
 
@@ -1626,7 +1645,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=1112026072401"></script>
+<script src="/app.js?v=1112026072403"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">
