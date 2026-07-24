@@ -18,30 +18,29 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Trade advice built on context, not generic rankings. Dynasty and redraft analysis using live market values + opponent psychology.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026072440">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026072441">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - Fantasy Football Trade Advice">
 <meta name="twitter:description" content="Trade advice built on context, not generic rankings. Know the move.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072440">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072441">
 <link rel="canonical" href="https://trademindff.com/">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='64' x2='64' y2='0' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%239b72e8'/%3E%3Cstop offset='1' stop-color='%234fd8f5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23140f24'/%3E%3Cpath d='M32 4 L38.4 25.6 L60 32 L38.4 38.4 L32 60 L25.6 38.4 L4 32 L25.6 25.6 Z' fill='url(%23g)'/%3E%3C/svg%3E">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072440">
+<link rel="stylesheet" href="/styles.css?v=2026072441">
 <!-- v12 (Apple design, Unbounded headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072440" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072441" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026072440">
+<link rel="stylesheet" href="/theme.css?v=2026072441">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -53,7 +52,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072440">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072441">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -103,7 +102,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="nav-dd-label">League Tools</div>
         <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelector('#screen-league .inner-tab'),'tab-roster-grade','screen-league');renderRosterGrade();closeAllDropdowns()">Roster Grade</span>
         <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelectorAll('#screen-league .inner-tab')[1],'tab-league-trades','screen-league');renderLeagueTrades();closeAllDropdowns()">League Trades</span>
-        <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelectorAll('#screen-league .inner-tab')[2],'tab-history','screen-league');closeAllDropdowns()">My History</span>
         <div class="nav-dd-sep"></div>
         <span class="nav-dd-item" onclick="switchScreen('analyze');showAnalyzeTab('ideas');closeAllDropdowns()">Trade Ideas</span>
       </div>
@@ -702,10 +700,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             Show both rosters so people can judge the trade in context
           </label>
         </div>
-        <button class="share-trade-btn" id="share-community-btn" onclick="shareTradeToForum()" style="display:none">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="10" r="10" fill="#0d0d1a"/><defs><linearGradient id="bkgs" x1="20%" y1="0%" x2="80%" y2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><path d="M11.5 4L7 11h3.5L8 16l8-8h-4z" fill="url(#bkgs)"/></svg>
-          Post to Community anonymously - let people vote on this trade
-        </button>
+        <button class="share-trade-btn" id="share-community-btn" onclick="shareTradeToForum()" style="display:none">Post to Community anonymously - let people vote on this trade</button>
           </div><!-- end result-panel -->
         </div><!-- end right-col -->
       </div><!-- end analyzer-grid -->
@@ -745,7 +740,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="inner-tab-bar">
         <div class="inner-tab active" onclick="switchInnerTab(this,'tab-roster-grade','screen-league');renderRosterGrade()">Roster Grade</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-league-trades','screen-league');renderLeagueTrades()">League Trades</div>
-        <div class="inner-tab" onclick="switchInnerTab(this,'tab-history','screen-league')">My History</div>
         <div style="margin-left:auto;flex-shrink:0"><button class="btn-sm" id="sync-btn" onclick="syncRoster()">↺ Sync Roster</button></div>
       </div>
 
@@ -1485,18 +1479,18 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <h2 style="font-family:var(--font-head);font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.02em;text-align:center;margin:2px 0 22px">trust <span class="hl">Sage</span></h2>
 
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bright)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.3"/><path d="M15.5 14.5c2.8.2 5 2 5 5"/></svg>
-        <div><div style="display:flex;align-items:center;gap:7px;font-size:16px;font-weight:700;color:var(--text)"><span style="flex:none;width:18px;height:18px;border-radius:50%;background:var(--accent-bright);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">&#10003;</span>Knows your team.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Reads your entire roster, not just the players in the trade.</div></div>
+        <span class="trust-index" aria-hidden="true">01</span>
+        <div><div style="font-size:16px;font-weight:700;color:var(--text)">Knows your team.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Reads your entire roster, not just the players in the trade.</div></div>
       </div>
 
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bright)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><path d="M10 13v3M14 13v3M8 20h8M9 20a3 3 0 0 1 6 0"/></svg>
-        <div><div style="display:flex;align-items:center;gap:7px;font-size:16px;font-weight:700;color:var(--text)"><span style="flex:none;width:18px;height:18px;border-radius:50%;background:var(--accent-bright);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">&#10003;</span>Understands your league.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Scoring, settings, roster size, dynasty or redraft.</div></div>
+        <span class="trust-index" aria-hidden="true">02</span>
+        <div><div style="font-size:16px;font-weight:700;color:var(--text)">Understands your league.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Scoring, settings, roster size, dynasty or redraft.</div></div>
       </div>
 
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bright)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1 5 3 3 0 0 0 2 4 2.5 2.5 0 0 0 5 .3V4.5A2.5 2.5 0 0 0 9 4z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1 5 3 3 0 0 1-2 4 2.5 2.5 0 0 1-5 .3"/></svg>
-        <div><div style="display:flex;align-items:center;gap:7px;font-size:16px;font-weight:700;color:var(--text)"><span style="flex:none;width:18px;height:18px;border-radius:50%;background:var(--accent-bright);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">&#10003;</span>Never gets emotional.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">No hype. No bias. Just logic.</div></div>
+        <span class="trust-index" aria-hidden="true">03</span>
+        <div><div style="font-size:16px;font-weight:700;color:var(--text)">Never gets emotional.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">No hype. No bias. Just logic.</div></div>
       </div>
     </div>
   </div>
@@ -1594,10 +1588,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
   </div>
   <div onclick="goHome()" style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;cursor:pointer" title="Back to home">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" height="24" style="flex-shrink:0" fill="none">
-      <defs><linearGradient id="ftgrad" x1="0" y1="32" x2="32" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#9b72e8"/><stop offset="100%" stop-color="#4fd8f5"/></linearGradient></defs>
-      <path d="M16 2 L19.2 12.8 L30 16 L19.2 19.2 L16 30 L12.8 19.2 L2 16 L12.8 12.8 Z" fill="url(#ftgrad)"/>
-    </svg>
     <span class="tm-wordmark" style="font-size:19px">TRADEMIND</span>
   </div>
   <div class="footer-sub">Trade advice built on context, not generic rankings. Know the move before you make it.</div>
@@ -1648,7 +1638,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072440"></script>
+<script src="/app.js?v=2026072441"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">

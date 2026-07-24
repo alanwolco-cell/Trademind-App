@@ -367,8 +367,8 @@ function setSageState(state){
   var asset=w.querySelector('.sage-asset');
   if(asset){
     var name=state==='win'?'win':state==='reject'?'no':state==='even'?'even':'thinking';
-    asset.src='/assets/sage/sage-raven-'+name+'.png';
-    asset.alt=state==='win'?'Sage approves the trade':state==='reject'?'Sage advises against the trade':'Sage is reviewing the trade';
+    asset.dataset.state=name;
+    asset.setAttribute('aria-label',state==='win'?'Sage approves the trade':state==='reject'?'Sage advises against the trade':'Sage is reviewing the trade');
   }
 }
 
@@ -378,14 +378,12 @@ function setSageState(state){
 function upgradeSageAssets(){
   document.querySelectorAll('.sage-svg,.sage-hero-svg,svg[viewBox="0 0 120 106"]').forEach(function(old){
     if(old.dataset.sageUpgraded)return;
-    var img=document.createElement('img');
-    img.className=(old.classList.contains('sage-hero-svg')?'sage-hero-svg ':'')+'sage-asset';
-    img.src='/assets/sage/sage-raven.png';
-    img.alt='Sage, TradeMind’s fantasy football analyst';
-    img.width=Number(old.getAttribute('width'))||160;
-    img.height=Number(old.getAttribute('height'))||160;
+    var img=document.createElement('span');
+    img.className=(old.classList.contains('sage-hero-svg')?'sage-hero-svg ':'')+'sage-asset sage-mark';
+    img.textContent='S';
+    img.setAttribute('role','img');
+    img.setAttribute('aria-label','Sage, TradeMind’s fantasy football analyst');
     if(old.getAttribute('style'))img.setAttribute('style',old.getAttribute('style'));
-    img.decoding='async';
     old.dataset.sageUpgraded='true';
     old.replaceWith(img);
   });
@@ -4710,7 +4708,7 @@ function generatePitch(give,get,oppProfile,you,opp,valueTier){
   if(!card)return;
   if(valueTier==='getting_fleeced'){
     card.style.display="block";
-    card.innerHTML='<div class="pitch-header"><div class="pitch-icon"><span style="font-weight:800;color:var(--accent-bright)">!</span></div><div><div class="pitch-title" style="color:var(--text)">Do not make this trade</div><div class="pitch-sub">The value gap is too large. There is no good way to pitch this - it is just a bad deal for you.</div></div></div>';
+    card.innerHTML='<div class="pitch-header"><div><div class="pitch-title" style="color:var(--text)">Do not make this trade</div><div class="pitch-sub">The value gap is too large. There is no good way to pitch this - it is just a bad deal for you.</div></div></div>';
     return;
   }
   card.style.display="block";
@@ -5921,7 +5919,7 @@ function openPlayerCard(pid, name){
 
   // ── Injury ──
   var inj=document.getElementById("pm-injury");
-  if(injury){inj.textContent="⚠ "+injury+(injNotes?" - "+injNotes:"");inj.style.display="block";}
+  if(injury){inj.textContent="Injury: "+injury+(injNotes?" - "+injNotes:"");inj.style.display="block";}
   else{inj.style.display="none";}
 
   // ── Photo: Sleeper thumb (always works), ESPN fallback not needed ──

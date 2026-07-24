@@ -544,7 +544,13 @@ body.ticker-on{padding-top:94px}
 /* ── SAGE MASCOT ─────────────────────────── */
 .sage-wrap{flex-shrink:0;width:96px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:default}
 .sage-svg{overflow:visible;width:90px;height:90px}
-.sage-asset{display:block;width:90px;height:90px;object-fit:contain;overflow:visible}
+.sage-asset{display:flex;width:90px;height:90px;overflow:visible}
+.sage-mark{align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:50%;background:var(--surface2);color:var(--accent-bright);font-family:var(--font-head);font-size:34px;font-weight:800;letter-spacing:-.12em;line-height:1}
+.sage-mark[data-state="win"]{color:var(--green);border-color:rgba(74,222,128,.42)}
+.sage-mark[data-state="no"]{color:var(--red);border-color:rgba(248,113,113,.42)}
+.sage-mark[data-state="even"]{color:var(--yellow);border-color:rgba(251,191,36,.42)}
+.trust-index{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;margin-top:1px;border-top:1px solid var(--accent-bright);color:var(--accent-bright);font-size:10px;font-weight:800;letter-spacing:.08em}
+.sage-wrap .sage-asset{animation:sageBobRich 4s ease-in-out infinite;transform-origin:center bottom}
 .sage-tag{font-size:10px;font-weight:800;color:var(--accent-bright);letter-spacing:.1em;text-transform:uppercase;opacity:.8}
 .sage-mouth{display:none}
 @keyframes sageBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
@@ -615,15 +621,18 @@ html.sage-idle .hero .sage-hero-eye{
 .sage-hero-eye{animation:sageEyeGlowPulse 2.8s ease-in-out infinite}
 /* Thinking */
 .sage-wrap.thinking .sage-svg{animation:sageThink 1.1s ease-in-out infinite}
+.sage-wrap.thinking .sage-asset{animation:sageThink 1.1s ease-in-out infinite}
 .sage-wrap.thinking .sage-mouth-neutral{display:none}.sage-wrap.thinking .sage-mouth-think{display:block}
 .sage-wrap.thinking .sage-eye-l,.sage-wrap.thinking .sage-eye-r{animation:sageEyePulse 1.1s ease-in-out infinite}
 /* Win */
 .sage-wrap.win .sage-svg{animation:sageBounce .75s cubic-bezier(.36,.07,.19,.97) forwards,sageBob 3s .75s ease-in-out infinite}
+.sage-wrap.win .sage-asset{animation:sageBounce .75s cubic-bezier(.36,.07,.19,.97) forwards,sageBob 3s .75s ease-in-out infinite}
 .sage-wrap.win .sage-mouth-neutral{display:none}.sage-wrap.win .sage-mouth-win{display:block}
 .sage-wrap.win .sage-eye-l,.sage-wrap.win .sage-eye-r{transform:scaleY(1.7);transform-box:fill-box;transform-origin:center}
 .sage-wrap.win .sage-stars{animation:sageStars 1.2s ease-out forwards}
 /* Reject */
 .sage-wrap.reject .sage-svg{animation:sageShake .55s cubic-bezier(.36,.07,.19,.97) forwards}
+.sage-wrap.reject .sage-asset{animation:sageShake .55s cubic-bezier(.36,.07,.19,.97) forwards}
 .sage-wrap.reject .sage-mouth-neutral{display:none}.sage-wrap.reject .sage-mouth-reject{display:block}
 .sage-wrap.reject .sage-eye-l,.sage-wrap.reject .sage-eye-r{transform:scaleY(0.35);transform-box:fill-box;transform-origin:center}
 /* Neutral */
@@ -837,8 +846,7 @@ html.sage-idle .hero .sage-hero-eye{
 
 /* PITCH SECTION */
 .pitch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:12px}
-.pitch-header{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
-.pitch-icon{width:36px;height:36px;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.pitch-header{margin-bottom:1rem}
 .pitch-title{font-size:15px;font-weight:700;color:var(--text)}
 .pitch-sub{font-size:12px;color:var(--muted);margin-top:1px}
 .pitch-angle{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem;margin-bottom:8px}
