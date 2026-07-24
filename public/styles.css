@@ -130,7 +130,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .oppread-calc{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-body);font-size:13.5px;font-weight:700;color:#fff;background:#9b72e8;border:none;border-radius:100px;padding:11px 26px;cursor:pointer;box-shadow:0 6px 22px -6px rgba(124,92,191,.7);transition:transform .16s,box-shadow .16s,filter .16s}
 .oppread-calc:hover{transform:translateY(-1px);filter:brightness(1.06);box-shadow:0 9px 28px -8px rgba(124,92,191,.85)}
 .oppread-calc:active{transform:translateY(0)}
-.oppread-calc-spark{font-size:13px;animation:sageSpark 2.2s ease-in-out infinite}
 .q1-chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted2);background:var(--surface2);border:1px solid rgba(167,139,250,.3);border-radius:100px;padding:7px 14px;margin-bottom:12px}
 .q1-chip strong{color:var(--accent-bright);font-weight:700}
 .nav-links{display:flex;gap:.25rem;margin-left:auto;align-items:center}
@@ -142,13 +141,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .nav-item-btn:not(.sage-hot):hover{background:rgba(167,139,250,.1);color:var(--text);opacity:1}
 .nav-item-btn.active:not(.sage-hot),.nav-item-btn.screen-nav.active:not(.sage-hot){background:rgba(155,114,232,.15);color:var(--accent-bright);opacity:1;font-weight:600}
 .nav-item-btn:hover,.nav-item-btn.active{color:var(--text);background:var(--surface2)}
-/* Ask Sage: the money tab - accent color + sparkle so it pulls the eye */
+/* Ask Sage: the primary tab - flat accent fill so it pulls the eye. No sparkle. */
 .nav-item-btn.sage-hot{color:#fff;font-weight:700;background:#9b72e8;border-radius:100px;box-shadow:0 3px 14px -4px rgba(124,92,191,.75);transition:filter .18s,box-shadow .18s,transform .18s}
-.nav-item-btn.sage-hot .sage-spark{color:#fff;margin-right:4px;font-size:12px;display:inline-block;animation:sageSpark 2.4s ease-in-out infinite}
-@keyframes sageSpark{0%,100%{opacity:.72;transform:scale(1)}50%{opacity:1;transform:scale(1.28)}}
 .nav-item-btn.sage-hot:hover,.nav-item-btn.sage-hot.active{color:#fff;filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 6px 20px -5px rgba(124,92,191,.9)}
-.nav-item-btn.sage-hot:hover .sage-spark,.nav-item-btn.sage-hot.active .sage-spark{color:#fff}
-@media(prefers-reduced-motion:reduce){.nav-item-btn.sage-hot .sage-spark{animation:none}}
 .nav-item-btn .caret{font-size:9px;opacity:.5;transition:transform .15s}
 .nav-item:hover .caret,.nav-item.open .caret{transform:rotate(180deg)}
 .nav-dropdown{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;min-width:180px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.4);padding-top:12px;margin-top:0}
@@ -200,7 +195,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 }
 /* Sage stage - centered with rings */
 .hero-sage-stage{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-bottom:32px}
-.hero-sage-stage::before{content:'';position:absolute;inset:-50px;border-radius:50%;background:radial-gradient(circle,rgba(155,114,232,.14) 0%,transparent 68%);animation:sagePulseGlow 3.5s ease-in-out infinite;pointer-events:none}
+/* Ambient glow removed: the pulsing purple halo read as AI-generated flourish. */
+.hero-sage-stage::before{content:none}
 .hero-ring{position:absolute;border-radius:50%;border:1px solid rgba(167,139,250,.18);animation:heroRing 4s ease-in-out infinite}
 .hero-ring-1{inset:-28px;animation-delay:0s}
 .hero-ring-2{inset:-48px;animation-delay:.9s;border-color:rgba(167,139,250,.1)}
@@ -548,6 +544,7 @@ body.ticker-on{padding-top:94px}
 /* ── SAGE MASCOT ─────────────────────────── */
 .sage-wrap{flex-shrink:0;width:96px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:default}
 .sage-svg{overflow:visible;width:90px;height:90px}
+.sage-asset{display:block;width:90px;height:90px;object-fit:contain;overflow:visible}
 .sage-tag{font-size:10px;font-weight:800;color:var(--accent-bright);letter-spacing:.1em;text-transform:uppercase;opacity:.8}
 .sage-mouth{display:none}
 @keyframes sageBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
@@ -614,6 +611,7 @@ html.sage-idle .hero .sage-hero-eye{
 .sage-wrap.reject .sage-eye-l,.sage-wrap.reject .sage-eye-r{transform:scaleY(0.35)!important;transform-box:fill-box;transform-origin:center;transition:transform .2s}
 /* Hero Sage SVG */
 .sage-hero-svg{animation:sageBobRich 4s ease-in-out infinite;transform-origin:center bottom;overflow:visible}
+.hero .sage-asset{width:112px;height:99px;animation:sageBobRich 4s ease-in-out infinite;transform-origin:center bottom}
 .sage-hero-eye{animation:sageEyeGlowPulse 2.8s ease-in-out infinite}
 /* Thinking */
 .sage-wrap.thinking .sage-svg{animation:sageThink 1.1s ease-in-out infinite}
@@ -728,7 +726,8 @@ html.sage-idle .hero .sage-hero-eye{
 .sage-hero-bubble{background:var(--surface);border:1px solid rgba(167,139,250,.3);border-radius:16px;padding:18px 22px;font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.02em;line-height:1.5;text-align:center;max-width:300px;box-shadow:0 0 32px rgba(124,92,191,.18);position:relative}
 .sage-hero-bubble::after{content:'';position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);width:0;height:0;border:11px solid transparent;border-top-color:var(--surface);border-bottom:0}
 .sage-hero-figure{position:relative;display:inline-flex;align-items:center;justify-content:center;width:176px;height:176px}
-.sage-glow-ring{position:absolute;inset:-20px;border-radius:50%;background:radial-gradient(circle,rgba(155,114,232,.12) 0%,transparent 70%);animation:sagePulseGlow 3s ease-in-out infinite;pointer-events:none}
+/* Ambient glow removed: flat, no pulsing purple aura around the Sage mark. */
+.sage-glow-ring{display:none}
 .sage-hero-byline{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600}
 /* Breakdown toggle */
 .breakdown-toggle{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 16px;color:var(--muted2);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;transition:all .15s;font-family:var(--font-body)}
@@ -925,7 +924,9 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 /* The page background is flat. A tinted, animated wash used to sit behind
    every screen at z-index:-1, which is why no surface ever read as the neutral
    grey its token declared. */
-.tm-wordmark{font-family:var(--font-head);font-weight:700;font-size:15px;letter-spacing:.01em;background:linear-gradient(90deg,#e8ecf8 0%,#9b72e8 35%,#c4b5fd 50%,#9b72e8 65%,#e8ecf8 100%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 6s linear infinite}
+/* Plain text wordmark. No gradient, no background-clip:text (which would paint
+   the text transparent and leave it invisible once the gradient fill is gone). */
+.tm-wordmark{font-family:var(--font-head);font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--text)}
 @keyframes shimmer{to{background-position:200% center}}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
@@ -1204,7 +1205,8 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 #screen-sage #sage-chat-card{background:var(--surface)}
 #sage-greeting svg,.sage-hero-svg{animation:sageFloat 5.5s ease-in-out infinite}
 #sage-greeting{position:relative}
-#sage-greeting::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(155,114,232,.12),transparent 68%);filter:blur(14px);pointer-events:none;z-index:0}
+/* Ambient glow removed behind the greeting: cleaner, no purple blur halo. */
+#sage-greeting::before{content:none}
 #sage-greeting>*{position:relative;z-index:1}
 @keyframes sageFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 @media(prefers-reduced-motion:reduce){#sage-greeting svg,.sage-hero-svg{animation:none}}
@@ -1283,6 +1285,7 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 .hero-tagline{margin-bottom:1.5rem}
 @media(max-height:760px){
   .hero .sage-hero-svg{width:92px;height:81px}
+  .hero .sage-asset{width:92px;height:81px}
   .hero-sage-stage{margin-bottom:10px}
   .hero-inner h1{font-size:clamp(32px,5vw,52px)}
 }
@@ -1568,8 +1571,9 @@ body{min-height:100vh;min-height:100dvh}
   #tabbar .tabbar-item[data-tab="sage"] svg{
     width:42px;height:42px;padding:10px;box-sizing:border-box;
     border-radius:50%;
-    background:linear-gradient(135deg,#9b72e8,#4fd8f5);
-    /* dark glyph on a fixed bright gradient: correct in either theme */
+    /* Flat accent fill instead of a gradient; still reads as the primary
+       action in the bottom bar, and the dark glyph stays legible on it. */
+    background:var(--accent-bright);
     color:#0d0817;
     margin-top:-14px;
     box-shadow:0 6px 18px -4px rgba(155,114,232,.6);

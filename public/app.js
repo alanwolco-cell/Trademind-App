@@ -364,7 +364,34 @@ function setSageState(state){
   var w=document.getElementById('sage-wrap');
   if(!w)return;
   w.className='sage-wrap '+state;
+  var asset=w.querySelector('.sage-asset');
+  if(asset){
+    var name=state==='win'?'win':state==='reject'?'no':state==='even'?'even':state==='alert'?'alert':'thinking';
+    asset.src='/assets/sage/sage-'+name+'.svg';
+    asset.alt=state==='win'?'Sage approves the trade':state==='reject'?'Sage advises against the trade':'Sage is reviewing the trade';
+  }
 }
+
+/* Sage is a product character, not a generic emoji. Swap the legacy inline
+   blobs for the reusable football-avatar kit so every screen shares the same
+   visual language and the verdict can express its actual recommendation. */
+function upgradeSageAssets(){
+  document.querySelectorAll('.sage-svg,.sage-hero-svg,svg[viewBox="0 0 120 106"]').forEach(function(old){
+    if(old.dataset.sageUpgraded)return;
+    var img=document.createElement('img');
+    img.className=(old.classList.contains('sage-hero-svg')?'sage-hero-svg ':'')+'sage-asset';
+    img.src='/assets/sage/sage-master.png';
+    img.alt='Sage, TradeMind’s fantasy football analyst';
+    img.width=Number(old.getAttribute('width'))||160;
+    img.height=Number(old.getAttribute('height'))||160;
+    if(old.getAttribute('style'))img.setAttribute('style',old.getAttribute('style'));
+    img.decoding='async';
+    old.dataset.sageUpgraded='true';
+    old.replaceWith(img);
+  });
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',upgradeSageAssets);
+else upgradeSageAssets();
 
 // Sage idle behaviors: gaze + blink
 (function sageIdleInit(){
@@ -479,8 +506,6 @@ function updateModeUI(){
     badge.style.background=leagueMode==='redraft'?'rgba(251,191,36,.15)':'rgba(99,102,241,.15)';
     badge.style.color=leagueMode==='redraft'?'var(--yellow)':'var(--accent-bright)';
   }
-  var heroBadge=document.getElementById("hero-badge-text");
-  if(heroBadge) heroBadge.textContent='Fantasy Football Intelligence';
   updateQuestionsForMode();
 }
 
@@ -1776,7 +1801,7 @@ function _renderManageModal(d){
   var canceling=d.cancelAtPeriodEnd;
   host.innerHTML='<div style="'+card+'">'
     +'<button onclick="_manageClose()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&times;</button>'
-    +'<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:8px">&#10022; TradeMind Pro</div>'
+    +'<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:8px">TradeMind Pro</div>'
     +'<div style="font-family:var(--font-head);font-size:30px;font-weight:800;color:var(--text)">'+price+'</div>'
     +'<div style="font-size:13px;color:'+(canceling?'var(--yellow)':'var(--muted2)')+';margin:10px 0 22px;line-height:1.5">'
       +(canceling?('Your plan ends on <strong>'+when+'</strong>. You keep Pro until then.'):('Renews on <strong style="color:var(--text)">'+when+'</strong>.'))
@@ -1815,7 +1840,7 @@ async function sageUpdateQuota(){
   if(!user){el.style.display='none';return;}
   try{
     var d=await (await fetch('/api/sage/quota?user='+encodeURIComponent(user)+'&device='+encodeURIComponent(_deviceId()))).json();
-    if(d.pro){el.innerHTML='<span style="color:var(--accent-bright);font-weight:700">&#10022; Pro</span> &middot; Unlimited Sage &middot; <span onclick="sageManageBilling()" style="cursor:pointer;text-decoration:underline">Manage</span>';el.style.display='block';return;}
+    if(d.pro){el.innerHTML='<span style="color:var(--accent-bright);font-weight:700">Pro</span> &middot; Unlimited Sage &middot; <span onclick="sageManageBilling()" style="cursor:pointer;text-decoration:underline">Manage</span>';el.style.display='block';return;}
     var left=Math.min(d.dailyLeft,d.weeklyLeft);
     var span=(d.weeklyLeft<d.dailyLeft)?'this week':'today';
     var go=' &middot; <span style="color:var(--accent-bright);cursor:pointer;text-decoration:underline" onclick="sageUpgrade()">Go Pro for unlimited</span>';
@@ -9161,23 +9186,16 @@ async function mdDownloadRoster(i){
     var x=cv.getContext('2d');x.scale(S,S);
     var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
     function rr(x0,y0,w,hh,r){x.beginPath();x.moveTo(x0+r,y0);x.arcTo(x0+w,y0,x0+w,y0+hh,r);x.arcTo(x0+w,y0+hh,x0,y0+hh,r);x.arcTo(x0,y0+hh,x0,y0,r);x.arcTo(x0,y0,x0+w,y0,r);x.closePath();}
-    // background
-    var bg=x.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#100a22');bg.addColorStop(1,'#0a0716');
-    x.fillStyle=bg;x.fillRect(0,0,W,H);
-    // header: spark + wordmark, matched to the site nav (small spark beside
-    // gradient Unbounded wordmark, purple to cyan left to right)
-    var g=x.createLinearGradient(28,52,56,24);g.addColorStop(0,'#9b72e8');g.addColorStop(1,'#4fd8f5');
-    x.save();x.translate(42,44);x.fillStyle=g;x.beginPath();
-    [[0,-14],[3.2,-3.2],[14,0],[3.2,3.2],[0,14],[-3.2,3.2],[-14,0],[-3.2,-3.2]].forEach(function(pt,j){j?x.lineTo(pt[0],pt[1]):x.moveTo(pt[0],pt[1]);});
-    x.closePath();x.fill();x.restore();
+    // background: flat dark, no gradient
+    x.fillStyle='#0d0817';x.fillRect(0,0,W,H);
+    // header: plain wordmark, matched to the site nav. No star glyph and no
+    // gradient fill - flat light text at the left margin, like the live logo.
     x.font='700 19px Unbounded, Outfit, Arial';
     try{x.letterSpacing='0.5px';}catch(_){}
-    var wmW=x.measureText('TRADEMIND').width;
-    var wg=x.createLinearGradient(66,0,66+wmW,0);wg.addColorStop(0,'#9b72e8');wg.addColorStop(1,'#4fd8f5');
-    x.fillStyle=wg;x.fillText('TRADEMIND',66,51);
+    x.fillStyle='#f5eff0';x.fillText('TRADEMIND',28,51);
     try{x.letterSpacing='0px';}catch(_){}
     x.fillStyle='#8f88b4';x.font='500 12.5px -apple-system, Arial';
-    x.fillText('Mock draft · '+h.teams+' teams · pick '+h.slot+' · '+h.strat+' · '+new Date(h.ts).toLocaleDateString(),66,72);
+    x.fillText('Mock draft · '+h.teams+' teams · pick '+h.slot+' · '+h.strat+' · '+new Date(h.ts).toLocaleDateString(),28,72);
     x.fillStyle='#5e5786';x.font='700 10px Arial';x.fillText('MY ROSTER',28,HEAD-10);
     var done=0;
     var imgs=rows.map(function(r){

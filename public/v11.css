@@ -80,13 +80,13 @@ html.v11 .nav-item.active, html.v12 .nav-item.active{opacity:1;font-weight:500}
    shorthand resets background-clip to border-box, which paints a solid bar
    over transparent text and the wordmark vanishes. Re-declared here so the
    clip survives regardless of source order. */
+/* Flat wordmark under the v11/v12 skins. The old rule painted a gradient
+   through background-clip:text; both the gradient and the clip are removed so
+   the text renders as a normal solid colour (and never turns invisible). */
 html.v11 .tm-wordmark, html.v12 .tm-wordmark{
   animation:none;
-  background-image:linear-gradient(94deg,#9b72e8,#4fd8f5);
-  background-size:100% auto;
-  -webkit-background-clip:text;
-  background-clip:text;
-  -webkit-text-fill-color:transparent;
+  background:none;
+  color:var(--text);
   letter-spacing:-.02em;
   font-weight:600;
 }
@@ -376,4 +376,4 @@ html.v11[data-theme="light"] body, html.v12[data-theme="light"] body{background:
 html.v11[data-theme="light"] .nav, html.v12[data-theme="light"] .nav{background:rgba(246,246,247,.85);border-bottom-color:rgba(20,16,43,.08);box-shadow:none}
 html.v11[data-theme="light"] .card, html.v12[data-theme="light"] .card{background:var(--surface);border-color:var(--border)}
 html.v11[data-theme="light"] .hero, html.v12[data-theme="light"] .hero{background:var(--bg)}
-html.v11[data-theme="light"] .tm-wordmark, html.v12[data-theme="light"] .tm-wordmark{background-image:linear-gradient(94deg,#6a3fff,#0396b8)}
+html.v11[data-theme="light"] .tm-wordmark, html.v12[data-theme="light"] .tm-wordmark{background:none;color:var(--text)}

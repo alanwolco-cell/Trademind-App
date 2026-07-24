@@ -9,14 +9,14 @@
 <meta property="og:description" content="Trade advice built on context, not generic rankings. Dynasty and redraft analysis using live market values + opponent psychology.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=1112026072403">
+<meta property="og:image" content="https://trademindff.com/og.png?v=1112026072430">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - Fantasy Football Trade Calculator">
 <meta name="twitter:description" content="Trade advice built on context, not generic rankings. Know the move.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=1112026072403">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=1112026072430">
 <link rel="canonical" href="https://trademindff.com/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='64' x2='64' y2='0' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%239b72e8'/%3E%3Cstop offset='1' stop-color='%234fd8f5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23140f24'/%3E%3Cpath d='M32 4 L38.4 25.6 L60 32 L38.4 38.4 L32 60 L25.6 38.4 L4 32 L25.6 25.6 Z' fill='url(%23g)'/%3E%3C/svg%3E">
 <script defer src="/_vercel/insights/script.js"></script>
@@ -25,14 +25,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=1112026072403">
+<link rel="stylesheet" href="/styles.css?v=1112026072430">
 <!-- v12 (Apple design, Unbounded headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=1112026072403" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=1112026072430" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=1112026072403">
+<link rel="stylesheet" href="/theme.css?v=1112026072430">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -44,7 +44,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=1112026072403">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=1112026072430">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -67,16 +67,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
 <nav class="nav">
   <div class="nav-logo" onclick="goHome()" title="Home">
-    <!-- The Spark: the moment you see the move nobody else sees. No bubble. -->
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="26" height="26" style="flex-shrink:0" fill="none">
-      <defs>
-        <linearGradient id="tmgrad" x1="0" y1="32" x2="32" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#9b72e8"/>
-          <stop offset="100%" stop-color="#4fd8f5"/>
-        </linearGradient>
-      </defs>
-      <path d="M16 2 L19.2 12.8 L30 16 L19.2 19.2 L16 30 L12.8 19.2 L2 16 L12.8 12.8 Z" fill="url(#tmgrad)"/>
-    </svg>
+    <!-- Plain text wordmark: no star glyph, no gradient. The owner will add a
+         real logo later; until then TRADEMIND reads as a sober product name. -->
     <span class="tm-wordmark">TRADEMIND</span>
   </div>
   <div class="nav-links">
@@ -122,7 +114,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div><!-- /nav-side-l -->
     <!-- Ask Sage: the centre zone -->
     <div class="nav-item">
-      <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')"><span class="sage-spark">&#10022;</span>Ask Sage</button>
+      <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')">Ask Sage</button>
     </div>
     <div class="nav-side nav-side-r">
     <!-- Mock Draft (direct) -->
@@ -135,13 +127,16 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('history');closeAllDropdowns()">Draft History</span>
       </div>
     </div>
-    <!-- News + Community (direct). Learn lives inside Research now - it had a
-         one-item dropdown and a whole top-level tab is too much chrome for that. -->
+    <!-- News and Community are the two secondary content feeds. Folded into one
+         "More" dropdown so the top bar carries fewer items; both screens keep
+         their original onclick handlers and stay reachable, and the phone drawer
+         still lists them directly. -->
     <div class="nav-item">
-      <button class="nav-item-btn screen-nav" data-screen="news" onclick="switchScreen('news');loadNewsGrid();loadAnalystCorner()">News</button>
-    </div>
-    <div class="nav-item">
-      <button class="nav-item-btn screen-nav" data-screen="community" onclick="switchScreen('community');loadCommunityFeed()">Community</button>
+      <button class="nav-item-btn" onclick="void 0">More <span class="caret">▾</span></button>
+      <div class="nav-dropdown">
+        <span class="nav-dd-item" onclick="switchScreen('news');loadNewsGrid();loadAnalystCorner();closeAllDropdowns()">News</span>
+        <span class="nav-dd-item" onclick="switchScreen('community');loadCommunityFeed();closeAllDropdowns()">Community</span>
+      </div>
     </div>
     </div><!-- /nav-side-r -->
   </div>
@@ -269,7 +264,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
    <!-- LEFT: the claim. Left-aligned and two lines so the eye lands on one
         edge instead of hunting the centre of three ragged centred lines. -->
    <div class="hero-copy">
-    <div class="hero-badge"><span class="hero-badge-dot"></span><span id="hero-badge-text">Fantasy Football Intelligence</span></div>
     <!-- Sage's portrait used to open the hero at 150px with three animated
          rings around it. The product shot on the right now carries the visual
          weight, and Sage is already inside it (he signs every verdict), so the
@@ -294,14 +288,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
          account, so there is nothing to gate. -->
     <div class="hero-cta" id="hero-cta">
       <a href="#" id="hero-enter-btn" class="btn-primary" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Analyze a trade →</a>
-    </div>
-    <!-- Proof points as outlined chips instead of a dot-separated run of grey
-         text: they now read as three distinct facts next to the CTA rather
-         than one long caption the eye skips. -->
-    <div class="hero-proof">
-      <span class="hero-chip">No signup needed</span>
-      <span class="hero-chip">Dynasty &amp; redraft</span>
-      <span class="hero-chip">Answers in seconds</span>
     </div>
    </div>
 
@@ -646,7 +632,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div id="opp-explain-box" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted2);line-height:1.7;border-left:3px solid var(--accent-bright)">These are <strong style="color:var(--text)">behavioral estimates, not probabilities</strong>. We build them from two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience and total market value → which manager archetype they fit) and their <strong style="color:var(--text)">actual trade history in this league</strong> (how often they trade, whether they hoard or ship picks, and whether they win or lose value in deals).<br><strong style="color:var(--text)">Urgency</strong> - archetype baseline, pushed higher if they've been trading picks away for players (win-now behavior).<br><strong style="color:var(--text)">Stubbornness</strong> - pushed higher if they barely trade, lower if they're a high-volume dealer.<br><strong style="color:var(--text)">Hype chaser</strong> - how much their archetype historically overvalues recent performance. Use it to decide WHICH of your players to feature in the pitch.</div>
           <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="oppGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9b72e8"/><stop offset="1" stop-color="#9b72e8"/></linearGradient></defs></svg>
           <div id="oppread-calc-wrap" style="text-align:center;margin:10px 0 16px">
-            <button id="oppread-calc-btn" class="oppread-calc" onclick="calculateOppRead()"><span class="oppread-calc-spark">&#10022;</span> Calculate the read</button>
+            <button id="oppread-calc-btn" class="oppread-calc" onclick="calculateOppRead()">Calculate the read</button>
           </div>
           <div class="oppread-grid" id="oppread-grid" style="opacity:.3;transition:opacity .4s ease">
             <div class="oppread-cell">
@@ -1475,13 +1461,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- MEET SAGE -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:34px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
       <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">
-        <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(155,114,232,.14),transparent 68%)"></div>
         <div style="position:absolute;inset:14px;border-radius:50%;border:1px solid rgba(167,139,250,.22)"></div>
         <svg width="80" height="72" viewBox="0 0 120 106" fill="none" style="position:relative"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
       </div>
       <h2 style="font-family:var(--font-head);font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;margin:0">Meet <span class="hl">Sage.</span></h2>
       <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.14em;margin-top:12px;line-height:1.7">Your trusted fantasy<br>football advisor</div>
-      <div style="display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--accent-bright)"><span style="height:1px;width:52px;background:rgba(255,255,255,.14)"></span>&#10022;<span style="height:1px;width:52px;background:rgba(255,255,255,.14)"></span></div>
+      <div style="margin:20px 0"><span style="display:block;height:1px;width:116px;background:rgba(255,255,255,.14)"></span></div>
       <div style="font-size:15px;color:var(--muted2);line-height:1.7">Always in your corner<br>before every trade.</div>
     </div>
 
@@ -1510,7 +1495,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <!-- Beginner reassurance: lowers the barrier for anyone who feels lost. Routes to Ask Sage. -->
   <div style="max-width:920px;margin:var(--sp-block) auto 0;text-align:center">
     <a href="#" onclick="event.preventDefault();switchScreen('sage')" style="display:inline-flex;align-items:center;gap:9px;font-size:14px;color:var(--muted2);background:rgba(155,114,232,.08);border:1px solid rgba(155,114,232,.28);border-radius:100px;padding:11px 22px;text-decoration:none;transition:border-color .18s,color .18s" onmouseover="this.style.borderColor='rgba(155,114,232,.55)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='rgba(155,114,232,.28)';this.style.color='var(--muted2)'">
-      <span style="color:var(--accent-bright)">&#10022;</span>Don't know anything about fantasy football? <strong style="color:var(--accent-bright)">Just ask Sage &rarr;</strong>
+      Don't know anything about fantasy football? <strong style="color:var(--accent-bright)">Just ask Sage &rarr;</strong>
     </a>
   </div>
 
@@ -1622,7 +1607,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <span>Analyze</span>
   </button>
   <button type="button" class="tabbar-item" data-tab="sage" onclick="tabGo('sage')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.3 6.5 6.5 2.3-6.5 2.3-2.3 6.5-2.3-6.5L3.2 12l6.5-2.3z"/></svg>
+    <!-- Chat bubble, not a sparkle: Sage is an advisor you ask, and the star
+         glyph read as the generic AI-assistant sparkle we are removing. -->
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 20l1.4-4.2A8.4 8.4 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg>
     <span>Sage</span>
   </button>
   <button type="button" class="tabbar-item" data-tab="mock" onclick="tabGo('mock')">
@@ -1645,7 +1632,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=1112026072403"></script>
+<script src="/app.js?v=1112026072430"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">
