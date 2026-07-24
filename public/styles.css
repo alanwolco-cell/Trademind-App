@@ -1737,3 +1737,60 @@ html{scroll-padding-top:76px}
   .md-ch-row>div:first-of-type>div:first-of-type{font-size:15.5px!important;line-height:1.25!important}
   .md-ch-row>div:first-of-type>div:nth-of-type(2){font-size:11.5px!important;margin-top:3px!important}
 }
+
+/* ── The cost block and the founder note ───────────────────────────────────
+   Two additions from user feedback. The cost block sits between "how it
+   works" and the CTA, where the reader understands the product but has not
+   yet been asked to act; naming what going wrong looks like is what turns
+   interest into a click. The founder note closes the page on a person, which
+   is the one thing a competing calculator cannot copy.
+   Deliberately quiet: no gradients, one accent, type doing the work. */
+.cost-block{
+  border:1px solid var(--border);
+  border-left:2px solid var(--accent-bright);
+  border-radius:var(--radius);
+  background:var(--surface);
+  padding:26px 28px;
+  text-align:left;
+}
+.cost-title{
+  font-family:var(--font-head);font-size:17px;font-weight:700;
+  color:var(--text);margin-bottom:14px;letter-spacing:-.01em;
+}
+.cost-list{margin:0;padding-left:0;list-style:none}
+.cost-list li{
+  position:relative;padding-left:20px;margin:9px 0;
+  font-size:15px;line-height:1.6;color:var(--muted2);
+}
+.cost-list li::before{
+  content:'';position:absolute;left:0;top:.62em;
+  width:6px;height:6px;border-radius:50%;background:var(--accent-bright);opacity:.75;
+}
+
+.founder-block{
+  max-width:660px;
+  padding-top:var(--sp-block,64px);
+  padding-bottom:var(--sp-block,64px);
+  text-align:left;
+}
+.founder-label{
+  font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent-bright);margin-bottom:18px;
+}
+.founder-block p{
+  font-size:16px;line-height:1.75;color:var(--muted2);margin:0 0 16px;
+}
+/* The opening line carries the whole section, so it gets the emphasis. */
+.founder-lead{font-size:18px!important;color:var(--text)!important}
+.founder-close{
+  font-family:var(--font-head);font-size:17px;font-weight:700;
+  color:var(--text)!important;margin-top:26px!important;
+}
+.founder-sign{font-size:13px;color:var(--muted);margin-top:6px}
+
+@media(max-width:700px){
+  .cost-block{padding:20px 18px}
+  .cost-list li{font-size:14.5px}
+  .founder-block p{font-size:15px}
+  .founder-lead{font-size:16.5px!important}
+}
