@@ -277,7 +277,7 @@ async function connectModalGo(){
   go.disabled=true;st.textContent='Looking up '+name+'...';
   try{
     var r=await fetch('/api/sleeper/user/'+encodeURIComponent(name));
-    if(!r.ok){st.textContent=r.status===404?'Username not found. Check the exact spelling in your Sleeper app.':'Sleeper error. Try again.';go.disabled=false;return;}
+    if(!r.ok){st.textContent=r.status===404?'Username not found. That is the handle you log into Sleeper with, not your team name.':'Sleeper error. Try again.';go.disabled=false;return;}
     var user=await r.json();
     if(!user||!user.user_id){st.textContent='No account found for that username.';go.disabled=false;return;}
     userId=user.user_id;
@@ -1010,7 +1010,7 @@ async function loadUser(autoLeagueId){
       return;
     }
     if(!userRes.ok){
-      log(userRes.status===404?"Username not found. Check exact spelling in your Sleeper app.":"Sleeper error. Try again.","var(--red)");
+      log(userRes.status===404?"We could not find that username on Sleeper. It is the handle you log into the Sleeper app with, not your team or league name. If you do not use Sleeper, import an ESPN league below instead.":"Sleeper error. Try again.","var(--red)");
       if(btn){btn.disabled=false;btn.textContent="Connect league →";}
       return;
     }
@@ -2267,7 +2267,11 @@ async function loadTradeAlerts(){
   if(!dd)return;
   var leagues=(window._myLeagues||[]).slice(0,3);
   if(leagueId&&!leagues.some(function(l){return l.league_id===leagueId;}))leagues.unshift({league_id:leagueId,name:leagueName});
-  if(!leagues.length){dd.innerHTML='<div style="padding:12px;font-size:11px;color:var(--muted)">Connect a league to get trade alerts.</div>';return;}
+  // Was a dead end: it told you to connect a league without giving you any way
+  // to do it, so the panel looked broken. Now the message IS the action.
+  if(!leagues.length){dd.innerHTML='<div style="padding:14px;text-align:center">'
+    +'<div style="font-size:12px;color:var(--muted2);line-height:1.5;margin-bottom:10px">Connect a league and Sage will tell you the moment a trade lands.</div>'
+    +'<button class="btn-sm" onclick="closeAllDropdowns();goConnectLeague()">Connect a league</button></div>';return;}
   var seen=0;try{seen=parseInt(localStorage.getItem('tm_alerts_seen')||'0');}catch(_){}
   var items=[];
   for(var i=0;i<leagues.length;i++){
