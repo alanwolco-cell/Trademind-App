@@ -4648,8 +4648,13 @@ function renderVsBattle(giveInputEls,getInputEls,ktcGap,hasKtc,valueTier){
   var gs=sideOf(giveInputEls),ts=sideOf(getInputEls);
   if(!gs.length||!ts.length)return;
   var g=gs[0],t=ts[0];
-  var giveWins=hasKtc?(ktcGap<0):false;   // ktcGap = get - give; give side "wins the trade value" if you receive less
-  var even=hasKtc&&Math.abs(ktcGap)<250;  // tighter "even" band so a clear winner gets crowned more often
+  // Crown from valueTier, the SAME signal the verdict headline uses, not the raw
+  // ktcGap. On uneven trades effGap (roster-spot economics) can flip the sign vs
+  // raw market value, so crowning off ktcGap would crown the opposite side from
+  // the headline sitting right below it. bothEat already reads valueTier for the
+  // same reason - this keeps giveWins/even in step with it.
+  var giveWins=(valueTier==='losing'||valueTier==='getting_fleeced'); // you lose = the give side "won"
+  var even=(valueTier==='even');
   function bubbles(side,cls){
     return side.map(function(a,i){
       var big=i===0;
