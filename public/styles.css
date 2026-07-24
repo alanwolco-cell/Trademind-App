@@ -1690,3 +1690,39 @@ html{scroll-padding-top:76px}
   .ctx-fold[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
   .ctx-fold>:not(summary){padding:0 12px 12px;margin:0}
 }
+
+/* ── Drafting on a phone ────────────────────────────────────────────────────
+   Measured mid-draft at 390px: the available-player list rendered eighth in
+   the column, behind the board (322px), the queue (81px) and Sage's writeup
+   (766px). The one surface you actually act on started 1330px below the fold,
+   which is why drafting felt like it showed nothing useful. Reordering puts
+   the list first and demotes the rest to reference you scroll down to. */
+@media(max-width:700px){
+  #md-board{display:flex;flex-direction:column}
+  #md-status{order:1}
+  #md-board>div:not([id]){order:2}
+  #md-available{order:3}
+  #md-queue-wrap{order:4}
+  #md-sage{order:5}
+  #md-draftboard{order:6}
+  #md-foot{order:7}
+
+  /* whose pick it is has to survive scrolling the list */
+  #md-status{
+    position:sticky;top:60px;z-index:5;
+    background:var(--surface);
+    border:1px solid rgba(155,114,232,.45);
+    border-radius:10px;
+    padding:10px 12px;margin-bottom:8px;
+    font-size:13px!important;font-weight:700;
+    color:var(--accent-bright);
+    box-shadow:0 6px 16px -8px rgba(0,0,0,.6);
+  }
+
+  /* Sleeper scans fast because the name is the biggest thing in the row. Ours
+     was 12px, smaller than the body copy around it. The row is drawn with
+     inline styles, so !important is the only lever here. */
+  .md-ch-row{min-height:64px!important}
+  .md-ch-row>div:first-of-type>div:first-of-type{font-size:15.5px!important;line-height:1.25!important}
+  .md-ch-row>div:first-of-type>div:nth-of-type(2){font-size:11.5px!important;margin-top:3px!important}
+}
