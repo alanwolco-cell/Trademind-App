@@ -751,13 +751,11 @@ html.sage-idle .hero .sage-hero-eye{
 
 /* BREAKDOWN */
 .breakdown-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
-.bd-card{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:1rem 1rem 1rem 1.15rem;box-shadow:0 6px 22px -12px rgba(124,92,191,.5);transition:border-color .16s,box-shadow .16s,transform .16s}
-.bd-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#9b72e8}
+.bd-card{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:1rem;box-shadow:0 6px 22px -12px rgba(124,92,191,.5);transition:border-color .16s,box-shadow .16s,transform .16s}
 .bd-card:hover{transform:translateY(-1px);border-color:rgba(155,114,232,.4);box-shadow:0 9px 28px -10px rgba(124,92,191,.65)}
 /* the whole verdict now speaks the "Calculate the read" language: dark galactic
    surface, lilac->cyan gradient accents, a soft purple glow. */
 .verdict-panel{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border2);border-radius:14px;box-shadow:0 6px 22px -12px rgba(124,92,191,.5)}
-.verdict-panel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#9b72e8}
 .bd-label{font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500}
 .bd-tooltip{font-size:10px;color:var(--accent-bright);cursor:help;margin-left:4px}
 .bd-val{font-family:var(--font-body);font-size:19px;font-weight:800;letter-spacing:-.01em;line-height:1.15;margin-bottom:5px}
