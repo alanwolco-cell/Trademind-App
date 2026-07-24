@@ -2,6 +2,32 @@
 if(history.scrollRestoration)history.scrollRestoration='manual';
 window.scrollTo(0,0);
 
+// ── Missing-headshot safety net ──────────────────────────────────────────────
+// Sleeper has no photo for every player (rookies, practice-squad call-ups) and
+// no logo for every team edge case, so those .jpg/.png files 404. Nearly every
+// <img> in the app hides itself on error (display:none / visibility:hidden),
+// which leaves an empty hole in a row of faces. Catch those failures once,
+// globally, in the capture phase - before each element's own inline onerror can
+// hide it - and drop in a neutral silhouette (players) or generic mark (logos)
+// so a slot always reads as "no photo" instead of a broken gap. One net covers
+// trade rows, autocomplete, player cards, mock draft, community and the ticker.
+var TM_PH_PLAYER="data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="#2a2140"/><circle cx="20" cy="15" r="7" fill="#5a4d7a"/><path d="M6 38c0-8 6.5-13 14-13s14 5 14 13z" fill="#5a4d7a"/></svg>');
+var TM_PH_TEAM="data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="none" stroke="#5a4d7a" stroke-width="2.5"/><path d="M12 20h16M20 12v16" stroke="#5a4d7a" stroke-width="2.5"/></svg>');
+window.addEventListener('error',function(e){
+  var img=e.target;
+  if(!img||img.tagName!=='IMG')return;
+  if(img.dataset.tmPh)return;                 // already swapped - avoid any loop
+  var src=img.getAttribute('src')||'';
+  var isPlayer=src.indexOf('players/thumb/')!==-1||src.indexOf('players%2Fthumb')!==-1;
+  var isTeam=src.indexOf('team_logos/')!==-1||src.indexOf('team_logos%2F')!==-1;
+  if(!isPlayer&&!isTeam)return;               // leave news/community images alone
+  img.dataset.tmPh='1';
+  e.stopImmediatePropagation();               // stop the inline onerror from hiding it
+  img.src=isPlayer?TM_PH_PLAYER:TM_PH_TEAM;
+  img.style.visibility='visible';
+  if(img.style.display==='none')img.style.display='';
+},true);
+
 // ── Account key ─────────────────────────────────────────────────────────────
 // One random secret per browser, minted on first visit. It is what proves "this
 // is the same person" to the server: a Sleeper username is public, so anyone
@@ -3536,6 +3562,59 @@ function renderLeagueTrades(){
   var tradesHtml="<div style='font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>All trades (this season + last)</div><div style='display:grid;gap:10px'>";
   sorted.forEach(function(t){
     var rids=t.roster_ids||[];
+    // 3+ team trades: the 1-vs-1 value math below only looks at rids[0]/rids[1],
+    // so a third team's players get dropped and the "winner" would be a lie built
+    // on partial data. Render an honest multi-team card instead and bail out.
+    if(rids.length>2){
+      var recv={};
+      rids.forEach(function(rid){recv[rid]=[];});
+      Object.entries(t.adds||{}).forEach(function(e){
+        var pid=e[0],receiver=e[1];
+        var pname=(allPlayers[pid]&&allPlayers[pid].name)||("Player "+pid);
+        if(recv[receiver])recv[receiver].push({name:pname,val:ktcById[pid]||0,pid:pid});
+      });
+      (t.draft_picks||[]).forEach(function(pk){
+        var label=pk.season+" Round "+pk.round;
+        var pickKey=(pk.season+" round "+pk.round).toLowerCase();
+        var nowOwner=pk.owner_id;
+        if(recv[nowOwner])recv[nowOwner].push({name:label,val:ktcValues[pickKey]||0,isPick:true});
+      });
+      var mDate=new Date(t.created).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      var mSeason=t._season?" · "+t._season:"";
+      var mHtml="<div style='border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;background:var(--surface)'>";
+      mHtml+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
+      mHtml+="<div style='font-size:11px;color:var(--muted)'>"+mDate+mSeason+"</div>";
+      mHtml+="<div style='font-size:11px;font-weight:600;color:var(--accent-bright)'>"+rids.length+"-team trade</div></div>";
+      mHtml+="<div style='display:grid;gap:8px'>";
+      rids.forEach(function(rid){
+        var got=recv[rid]||[];
+        var tot=got.reduce(function(s,x){return s+x.val;},0);
+        mHtml+="<div style='padding:10px;background:var(--surface3);border-radius:6px;border:1px solid var(--border)'>";
+        mHtml+="<div style='font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px'>"+getRosterName(rid)+"</div>";
+        mHtml+="<div style='font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px'>received</div>";
+        if(got.length){
+          got.forEach(function(it){
+            mHtml+="<div style='font-size:12px;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:6px'>";
+            if(!it.isPick&&it.pid){
+              mHtml+="<img src='https://sleepercdn.com/content/nfl/players/thumb/"+it.pid+".jpg' style='width:20px;height:20px;border-radius:50%;object-fit:cover;cursor:pointer' onclick='openPlayerCard(\""+it.pid+"\",\""+String(it.name).replace(/\"/g,"")+"\")' onerror='this.style.display=\"none\"'>";
+            }else{
+              mHtml+="<div style='width:20px;height:20px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--accent-bright);flex-shrink:0'>PK</div>";
+            }
+            mHtml+=it.name+(it.val?"<span style='color:var(--muted);font-size:11px;margin-left:4px'>"+playerTierLabel(it.val).short+"</span>":"");
+            mHtml+="</div>";
+          });
+        }else{
+          mHtml+="<div style='font-size:12px;color:var(--muted)'>-</div>";
+        }
+        if(tot)mHtml+="<div style='margin-top:6px;font-size:12px;font-weight:700;color:var(--muted)'>"+playerTierLabel(tot).short+" haul</div>";
+        mHtml+="</div>";
+      });
+      mHtml+="</div>";
+      mHtml+="<div style='font-size:10px;color:var(--muted);margin-top:8px'>Multi-team deals move value in a loop, so there is no single winner to crown here.</div>";
+      mHtml+="</div>";
+      tradesHtml+=mHtml;
+      return;
+    }
     var r1=rids[0],r2=rids[1];
     var n1=getRosterName(r1),n2=getRosterName(r2);
 
@@ -3562,8 +3641,10 @@ function renderLeagueTrades(){
     // r1 received: r2gave  |  r2 received: r1gave
     var v1=r1gave.reduce(function(s,x){return s+x.val;},0); // what r1 gave (= r2 received)
     var v2=r2gave.reduce(function(s,x){return s+x.val;},0); // what r2 gave (= r1 received)
-    // winner: team that received more value
-    var r1won=v2>v1,r2won=v1>v2;
+    // winner: team that came out 300+ market value ahead. Same threshold the
+    // standings W-L table uses, so the label and the record never disagree - a
+    // thin edge reads as "Even" here just like it counts as neither W nor L there.
+    var r1won=(v2-v1)>=300,r2won=(v1-v2)>=300;
     var winner=r1won?n1:r2won?n2:"Even";
     var date=new Date(t.created).toLocaleDateString("en-US",{month:"short",day:"numeric"});
     var seasonLabel=t._season?" · "+t._season:"";
@@ -5219,10 +5300,15 @@ function generateTradeIdeas(){
     var _opts='<option value="">Switch league...</option>'+_ls.map(function(l){
       return '<option value="'+l.league_id+'"'+(l.league_id===leagueId?' disabled':'')+'>'+(l.name||'League').replace(/</g,'&lt;')+'</option>';
     }).join('');
+    // Signature of the current options. "New ideas" re-runs this whole function,
+    // and blindly rewriting the <select>'s innerHTML each time yanks it back to
+    // "Switch league..." mid-interaction and makes it flicker/glitch. Only touch
+    // the DOM when the league list or active league actually changed.
+    var _sig=leagueId+'|'+_opts;
     ['ideas-league-switch','ideas-tab-league-switch'].forEach(function(id){
       var sel=document.getElementById(id);
       if(!sel)return;
-      sel.innerHTML=_opts;
+      if(sel._tmOptSig!==_sig){sel.innerHTML=_opts;sel._tmOptSig=_sig;}
       sel.style.display=_ls.length>1?'':'none';
     });
   }catch(_){}

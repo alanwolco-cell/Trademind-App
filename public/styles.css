@@ -215,6 +215,7 @@ h1 .hl{color:var(--accent-bright)}
 .hero-villain{display:none}
 /* CTA */
 .hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:0}
+.hero-noaccount{flex-basis:100%;margin:14px 0 0;font-size:13px;font-weight:500;color:var(--muted);text-align:center}
 /* Aurora Drift: a living purple->cyan gradient drifts across the primary CTA */
 .btn-primary{background:var(--accent-bright);color:#fff;font-size:15px;font-weight:700;padding:15px 36px;border:none;border-radius:100px;cursor:pointer;transition:transform .2s,box-shadow .3s;text-decoration:none;display:inline-block;letter-spacing:.01em;box-shadow:0 5px 30px rgba(124,92,191,.5),0 1px 0 rgba(255,255,255,.18) inset}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(155,114,232,.36),0 1px 0 rgba(255,255,255,.22) inset}
@@ -1842,6 +1843,7 @@ html{scroll-padding-top:76px}
 .hero-inner h1{text-align:left;margin-bottom:1rem}
 .hero-tagline{text-align:left;max-width:34em;margin-bottom:1.6rem}
 .hero-cta{justify-content:flex-start}
+  .hero-noaccount{text-align:left}
 /* Secondary proof: outlined chips, quiet enough not to compete with the CTA */
 .hero-proof{justify-content:flex-start;gap:8px;margin-top:20px}
 .hero-chip{
@@ -1885,7 +1887,7 @@ html{scroll-padding-top:76px}
     padding:20px 22px 32px;
   }
   .hero-copy{align-items:center}
-  .hero-inner h1,.hero-tagline{text-align:center}
+  .hero-inner h1,.hero-tagline,.hero-noaccount{text-align:center}
   .hero-tagline{margin-left:auto;margin-right:auto}
   .hero-cta,.hero-proof{justify-content:center}
   .hero-shot{margin-right:0;perspective:none}
