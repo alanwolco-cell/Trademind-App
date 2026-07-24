@@ -24,8 +24,8 @@
   --red-dim:rgba(217,138,160,0.12);
   --yellow:#e6c07a;
   --yellow-dim:rgba(230,192,122,0.12);
-  --font-head:'Unbounded','Outfit',system-ui,sans-serif;
-  --font-body:'Outfit',system-ui,sans-serif;
+  --font-head:'Archivo','Inter',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
   --radius:8px;
   --radius-lg:12px;
   /* Vertical rhythm. Landing sections used to set their own gaps ad hoc, which

@@ -1,21 +1,25 @@
-/* ── TradeMind v12 concept: APPLE, KEEPING UNBOUNDED ──────────────────────
-   Preview-only (?v12). Identical to v11 in every way except one: the
-   headline face stays Unbounded, so TradeMind keeps its own voice while
-   the body copy, spacing, surfaces and motion go Apple.
+/* ── TradeMind v12 concept: APPLE BASE, ARCHIVO HEADLINES ─────────────────
+   The live skin. Identical to v11 in every way except one: the headline face
+   is Archivo (a neutral editorial grotesque) rather than SF Pro, so TradeMind
+   keeps its own voice while the body copy, spacing, surfaces and motion go
+   Apple.
 
    v11.css is scoped to `html.v11, html.v12`, so importing it here applies
    the whole Apple base, and the rules below override only the type.
    @import must stay first in the file. */
-@import url('/v11.css?v=2026072401');
+@import url('/v11.css?v=2026072450');
 
 html.v12{
-  /* the brand face, kept, everywhere a headline lives */
-  --font-head:'Unbounded','Outfit',system-ui,sans-serif;
+  /* the brand face: Archivo, a neutral editorial grotesque, everywhere a
+     headline lives. Replaces Unbounded, whose rounded geometry read as a
+     generic AI-startup logo. */
+  --font-head:'Archivo','Inter',system-ui,sans-serif;
   /* body/UI stays SF Pro, inherited from v11 via --font-body */
 }
 
-/* Unbounded is a wide display face: it needs less negative tracking than
-   SF Pro or it collides with itself at large sizes */
+/* Archivo is a normal-width grotesque, so unlike Unbounded it takes the same
+   tight tracking as SF Pro, and it carries a heavier weight without looking
+   inflated - that is what gives the titles their editorial confidence. */
 html.v12 h1,
 html.v12 h2,
 html.v12 h3,
@@ -24,31 +28,23 @@ html.v12 .verdict-headline,
 html.v12 .mkt-panel-title,
 html.v12 .mkt-chart-name{
   font-family:var(--font-head);
-  letter-spacing:-.01em;
-  font-weight:600;
+  letter-spacing:-.02em;
+  font-weight:700;
 }
 
-/* the wordmark is Unbounded here, so give it the brand's own weight back */
+/* the wordmark: Archivo at a masthead weight with a hair of positive tracking,
+   so TRADEMIND reads as a set-in-metal product name, not a logotype. */
 html.v12 .tm-wordmark{
   font-family:var(--font-head);
-  font-weight:700;
-  letter-spacing:.01em;
+  font-weight:800;
+  letter-spacing:.04em;
+  font-size:16px;
 }
 
-/* Unbounded is wider than SF Pro: at 62px "Win every trade." needs ~616px of
-   content box, and the stock 620px hero-inner leaves only ~572px after padding,
-   so each phrase wrapped again below its <br>. Give the column the room the
-   face actually needs, with a little margin. */
-html.v12 .hero-inner{max-width:720px}
-
-/* "Life is good / when you know / the move." runs three lines in Unbounded -
-   step the size down so the block stays balanced and never wraps a 4th line */
-html.v12 .hero-inner h1{font-size:clamp(30px,4.4vw,50px)}
-
-/* The rule above pinned every headline to 600, but the section headings below
-   the hero carry font-weight:800 in their own markup, so the most important
-   line on the site rendered lighter than the copy under it. Match them, and
-   take the tracking Unbounded needs at display size. */
+/* The headline block above pins every heading to 700, but the hero title is the
+   most important line on the site and carries font-weight:800 in its own markup.
+   Match that, with the tight tracking Archivo takes at display size. The hero
+   column width and headline size are set later, in the two-column block below. */
 html.v12 .hero h1{font-weight:800;letter-spacing:-.03em}
 
 /* The opening screen is one balanced composition: hero fills the viewport and
@@ -62,8 +58,8 @@ html.v12 body.ticker-on .hero,
 html.v12 .ticker-visible .hero{min-height:calc(100svh - 142px)}
 html.v12 .hero-inner{padding-top:0;padding-bottom:0}
 
-/* Primary action buttons wear the brand's Unbounded display face, not SF Pro,
-   so "Analyze", "Analyze My Trade", "Load into analyzer" read premium/branded. */
+/* Primary action buttons wear the brand's Archivo display face, not SF Pro,
+   so "Analyze", "Analyze My Trade", "Load into analyzer" read branded. */
 html.v12 .btn-primary,
 html.v12 .btn-load,
 html.v12 #sage-chat-send,
