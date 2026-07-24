@@ -366,8 +366,8 @@ function setSageState(state){
   w.className='sage-wrap '+state;
   var asset=w.querySelector('.sage-asset');
   if(asset){
-    var name=state==='win'?'win':state==='reject'?'no':state==='even'?'even':state==='alert'?'alert':'thinking';
-    asset.src='/assets/sage/sage-'+name+'.svg';
+    var name=state==='win'?'win':state==='reject'?'no':state==='even'?'even':'thinking';
+    asset.src='/assets/sage/sage-raven-'+name+'.png';
     asset.alt=state==='win'?'Sage approves the trade':state==='reject'?'Sage advises against the trade':'Sage is reviewing the trade';
   }
 }
@@ -380,7 +380,7 @@ function upgradeSageAssets(){
     if(old.dataset.sageUpgraded)return;
     var img=document.createElement('img');
     img.className=(old.classList.contains('sage-hero-svg')?'sage-hero-svg ':'')+'sage-asset';
-    img.src='/assets/sage/sage-master.png';
+    img.src='/assets/sage/sage-raven.png';
     img.alt='Sage, TradeMind’s fantasy football analyst';
     img.width=Number(old.getAttribute('width'))||160;
     img.height=Number(old.getAttribute('height'))||160;
