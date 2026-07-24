@@ -9,22 +9,25 @@
 
 /* ── tokens ─────────────────────────────────────────────────────────────── */
 html.v11, html.v12{
-  /* near-black with a purple cast, instead of the blue-grey #111827 */
-  --bg:#08060f;
-  --surface:#141420;
-  --surface2:#1c1c2a;
-  --surface3:#252536;
+  /* Neutral near-black. This skin used to add a purple cast on top of the
+     base palette (#08060f, #1c1c2a): stacked with the aurora that used to sit
+     behind the page it tinted every screen violet, which is exactly the tell
+     that made the product read as generated. The greys carry no hue now, so
+     the accent is the only colour on a screen that is not data. */
+  --bg:#050507;
+  --surface:#121214;
+  --surface2:#1c1c20;
+  --surface3:#2a2a30;
   /* hairlines: Apple's borders are thinner and quieter */
   --border:rgba(255,255,255,.08);
-  --border2:rgba(255,255,255,.14);
-  /* Apple's real dark-mode text greys, paired with TradeMind purple */
-  --text:#f5f5f7;
-  --muted:#86868b;
-  --muted2:#a1a1a6;
-  /* the brand, kept */
+  --border2:rgba(255,255,255,.15);
+  --text:#ffffff;
+  --muted:#9a9aa5;
+  --muted2:#c6c6ce;
+  /* the brand, kept - flat, never ramped */
   --accent:#7c5cbf;
   --accent-bright:#9b72e8;
-  --accent-dim:rgba(139,107,255,.14);
+  --accent-dim:rgba(155,114,232,.13);
   --green:#30d158;
   --red:#ff453a;
   --yellow:#ff9f0a;
@@ -53,7 +56,7 @@ html.v11 h3, html.v12 h3{
 
 /* ── nav: thin, translucent, quiet ──────────────────────────────────────── */
 html.v11 .nav, html.v12 .nav{
-  background:rgba(8,6,15,.72);
+  background:rgba(5,5,7,.78);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
   backdrop-filter:saturate(180%) blur(20px);
   border-bottom:1px solid transparent;
@@ -111,11 +114,9 @@ html.v11 .tm-wordmark, html.v12 .tm-wordmark{
   html.v11 .nav-item-btn, html.v12 .nav-item-btn{padding:6px 9px}
 }
 
-/* ── primary button: Aurora Drift (living purple->cyan gradient) ─────────── */
+/* ── primary button: one flat accent, the only saturated fill per screen ── */
 html.v11 .btn-primary, html.v12 .btn-primary{
-  background:linear-gradient(90deg,#7c5cbf,#9b72e8,#4fd8f5,#9b72e8,#7c5cbf);
-  background-size:300% 100%;
-  animation:tmDrift 18s ease-in-out infinite alternate;
+  background:var(--accent-bright);
   color:#fff;
   font-family:var(--font-body);
   font-size:15px;
@@ -128,7 +129,7 @@ html.v11 .btn-primary, html.v12 .btn-primary{
 }
 html.v11 .btn-primary:hover, html.v12 .btn-primary:hover{
   transform:translateY(-2px);
-  box-shadow:0 12px 42px rgba(103,232,249,.42),inset 0 1px 0 rgba(255,255,255,.22);
+  box-shadow:0 10px 30px rgba(155,114,232,.34),inset 0 1px 0 rgba(255,255,255,.22);
 }
 html.v11 .btn-primary:active, html.v12 .btn-primary:active{transform:translateY(0);box-shadow:0 2px 10px rgba(124,92,191,.3)}
 /* small buttons: subtle lift to match the primary's interactive feel */
@@ -162,7 +163,7 @@ html.v11 .tm-input:focus, html.v12 .tm-input:focus{
 
 /* ── hero: one idea, big and tight, no theatre ──────────────────────────── */
 html.v11 .hero, html.v12 .hero{
-  background:radial-gradient(ellipse at 50% -10%,rgba(139,107,255,.18) 0%,transparent 60%);
+  background:var(--bg);
   min-height:auto;
 }
 /* Apple does not float particles behind a headline */
@@ -355,15 +356,15 @@ html.v11 .mkt-panel, html.v12 .mkt-panel{
    The tokens above pin the dark palette; without these overrides the theme
    toggle changed data-theme but the skin stayed dark. */
 html.v11[data-theme="light"], html.v12[data-theme="light"]{
-  --bg:#f6f4fc;
+  --bg:#f6f6f7;
   --surface:#ffffff;
-  --surface2:#f1eefa;
-  --surface3:#e7e2f6;
-  --border:rgba(20,16,43,.12);
-  --border2:rgba(20,16,43,.2);
-  --text:#17122e;
-  --muted:#6b6490;
-  --muted2:#4d4670;
+  --surface2:#f1f1f3;
+  --surface3:#e6e6e9;
+  --border:rgba(0,0,0,.12);
+  --border2:rgba(0,0,0,.2);
+  --text:#111113;
+  --muted:#6c6c76;
+  --muted2:#45454e;
   --accent:#6a3fff;
   --accent-bright:#6a3fff;
   --accent-dim:rgba(106,63,255,.1);
@@ -372,7 +373,7 @@ html.v11[data-theme="light"], html.v12[data-theme="light"]{
   --yellow:#b7791f;
 }
 html.v11[data-theme="light"] body, html.v12[data-theme="light"] body{background:var(--bg);color:var(--text)}
-html.v11[data-theme="light"] .nav, html.v12[data-theme="light"] .nav{background:rgba(246,244,252,.85);border-bottom-color:rgba(20,16,43,.08);box-shadow:none}
+html.v11[data-theme="light"] .nav, html.v12[data-theme="light"] .nav{background:rgba(246,246,247,.85);border-bottom-color:rgba(20,16,43,.08);box-shadow:none}
 html.v11[data-theme="light"] .card, html.v12[data-theme="light"] .card{background:var(--surface);border-color:var(--border)}
-html.v11[data-theme="light"] .hero, html.v12[data-theme="light"] .hero{background:radial-gradient(ellipse at 50% -10%,rgba(106,63,255,.1) 0%,transparent 60%)}
+html.v11[data-theme="light"] .hero, html.v12[data-theme="light"] .hero{background:var(--bg)}
 html.v11[data-theme="light"] .tm-wordmark, html.v12[data-theme="light"] .tm-wordmark{background-image:linear-gradient(94deg,#6a3fff,#0396b8)}

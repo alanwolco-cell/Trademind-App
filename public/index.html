@@ -9,14 +9,14 @@
 <meta property="og:description" content="Trade advice built on context, not generic rankings. Dynasty and redraft analysis using live market values + opponent psychology.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026072335">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026072336">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - Fantasy Football Trade Calculator">
 <meta name="twitter:description" content="Trade advice built on context, not generic rankings. Know the move.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072335">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072336">
 <link rel="canonical" href="https://trademindff.com/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='64' x2='64' y2='0' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%239b72e8'/%3E%3Cstop offset='1' stop-color='%234fd8f5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23140f24'/%3E%3Cpath d='M32 4 L38.4 25.6 L60 32 L38.4 38.4 L32 60 L25.6 38.4 L4 32 L25.6 25.6 Z' fill='url(%23g)'/%3E%3C/svg%3E">
 <script defer src="/_vercel/insights/script.js"></script>
@@ -25,14 +25,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700;800&display=swap" rel="stylesheet">
 <!-- The ?v= stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072335">
+<link rel="stylesheet" href="/styles.css?v=2026072336">
 <!-- v12 (Apple design, Unbounded headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072335" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072336" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026072335">
+<link rel="stylesheet" href="/theme.css?v=2026072336">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -44,7 +44,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072335">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072336">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -620,7 +620,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="signals-card" style="margin-bottom:12px">
           <div class="signal-title" style="display:flex;align-items:center;justify-content:space-between">Reading your opponent<span id="opp-explain-toggle" onclick="toggleOppExplain()" style="font-size:10px;font-weight:500;color:var(--accent-bright);cursor:pointer;letter-spacing:0;text-transform:none">How we calculate this ▾</span></div>
           <div id="opp-explain-box" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted2);line-height:1.7;border-left:3px solid var(--accent-bright)">These are <strong style="color:var(--text)">behavioral estimates, not probabilities</strong>. We build them from two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience and total market value → which manager archetype they fit) and their <strong style="color:var(--text)">actual trade history in this league</strong> (how often they trade, whether they hoard or ship picks, and whether they win or lose value in deals).<br><strong style="color:var(--text)">Urgency</strong> - archetype baseline, pushed higher if they've been trading picks away for players (win-now behavior).<br><strong style="color:var(--text)">Stubbornness</strong> - pushed higher if they barely trade, lower if they're a high-volume dealer.<br><strong style="color:var(--text)">Hype chaser</strong> - how much their archetype historically overvalues recent performance. Use it to decide WHICH of your players to feature in the pitch.</div>
-          <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="oppGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9b72e8"/><stop offset="1" stop-color="#4fd8f5"/></linearGradient></defs></svg>
+          <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="oppGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9b72e8"/><stop offset="1" stop-color="#9b72e8"/></linearGradient></defs></svg>
           <div id="oppread-calc-wrap" style="text-align:center;margin:10px 0 16px">
             <button id="oppread-calc-btn" class="oppread-calc" onclick="calculateOppRead()"><span class="oppread-calc-spark">&#10022;</span> Calculate the read</button>
           </div>
@@ -977,7 +977,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="card sage-centered" id="sage-chat-card" style="margin-bottom:14px">
         <div id="sage-greeting" style="text-align:center;margin:8px 0 30px">
           <svg width="52" height="46" viewBox="0 0 120 106" fill="none" style="margin-bottom:12px;opacity:.9"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
-          <div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(100deg,var(--text) 38%,var(--accent-bright));-webkit-background-clip:text;background-clip:text;color:transparent">Ask me anything.</div>
+          <div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--text)">Ask me anything.</div>
           <div style="font-size:13px;color:var(--muted);margin-top:7px">The friend everyone texts before hitting Accept.</div>
           <div class="sage-caps">
             <span class="sage-cap"><b>Reads</b> your roster</span>
@@ -1015,7 +1015,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <button class="btn-sm md-sec-btn" data-sec="live" onclick="mdShowSection('live')">Live assist</button>
           <button class="btn-sm md-sec-btn" data-sec="history" onclick="mdShowSection('history')">History</button>
         </div>
-        <div id="ld-card" style="display:none;margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,rgba(124,92,191,.12) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.3);border-radius:12px">
+        <div id="ld-card" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
             <div>
               <div style="font-size:14px;font-weight:700">Live Draft Assist <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
@@ -1036,7 +1036,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <button class="btn-sm" style="margin-top:10px" onclick="ldStop()">Stop following</button>
           </div>
         </div>
-        <div id="mp-card" style="display:none;margin-bottom:16px;padding:22px 22px;background:radial-gradient(520px 200px at 12% -20%,rgba(124,92,191,.16),transparent 60%),linear-gradient(180deg,var(--surface2),var(--surface));border:1px solid var(--border);border-radius:16px">
+        <div id="mp-card" style="display:none;margin-bottom:16px;padding:22px 22px;background:radial-gradient(520px 200px at 12% -20%,rgba(124,92,191,.16),transparent 60%),var(--surface2);border:1px solid var(--border);border-radius:16px">
           <div id="mp-card-header" style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
             <span class="mp-live-dot"></span>
             <div style="font-size:17px;font-weight:800;letter-spacing:-.02em">Draft with friends <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
@@ -1056,7 +1056,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
                 <div class="mpx-s">Get a 4-letter code to share with your league</div>
               </div>
               <div class="mpx-card" onclick="mpShowJoin()">
-                <div class="mpx-ic" style="background:rgba(79,216,245,.14)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#4fd8f5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M4 12h11M11 8l4 4-4 4"/></svg></div>
+                <div class="mpx-ic" style="background:rgba(255,255,255,.06)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--muted2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M4 12h11M11 8l4 4-4 4"/></svg></div>
                 <div class="mpx-t">Join a room</div>
                 <div class="mpx-s">Got a code from a friend? Jump into their draft</div>
               </div>
@@ -1072,9 +1072,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div id="mp-bar" style="display:none;align-items:center;gap:12px;flex-wrap:wrap"></div>
         </div>
         <div id="md-setup">
-          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(96deg,var(--text) 42%,var(--accent-bright));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px">Build your mock draft</div>
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:3px">Build your mock draft</div>
           <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Set the room, pick your seat, choose a strategy. The AI drafts everyone else.</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;padding:16px;background:linear-gradient(180deg,var(--surface2),var(--surface3));border:1px solid var(--border);border-radius:14px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Mode</div>
             <select id="md-mode" class="opp-select" style="width:100%" onchange="setLeagueModeManual(this.value)"><option value="redraft">Redraft</option><option value="dynasty">Dynasty</option></select></div>
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Teams</div>
@@ -1138,8 +1138,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">My queue</span>
             <span id="md-queue" style="display:flex;gap:6px;flex-wrap:wrap"></span>
           </div>
-          <div id="md-sage" style="display:none;margin:12px 0;padding:14px 16px;background:linear-gradient(135deg,rgba(124,92,191,.14) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.3);border-radius:12px"></div>
-          <div id="md-player-peek" style="display:none;margin:0 0 12px;padding:12px 16px;background:var(--surface2);border:1px solid rgba(79,216,245,.3);border-radius:12px"></div>
+          <div id="md-sage" style="display:none;margin:12px 0;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:12px"></div>
+          <div id="md-player-peek" style="display:none;margin:0 0 12px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px"></div>
           <div class="md-cols" id="md-available">
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 6px;flex-wrap:wrap">
@@ -1347,7 +1347,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- NEWS SCREEN -->
     <div class="screen" id="screen-news">
       <div class="card" style="margin-bottom:14px">
-        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(96deg,var(--text) 42%,var(--accent-bright));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px">Fantasy Wire</div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:3px">Fantasy Wire</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:18px">The takes and headlines that actually move fantasy value, in one place.</div>
         <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px">Analyst Corner <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Auto-scrolling, drag to browse</span></div>
         <div id="analyst-corner" class="auto-rail" style="margin-bottom:20px"></div>
@@ -1431,7 +1431,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 <!-- Centred vertically on purpose: the block used to sit against the top of a
      full-height section, which left 32px above it and 222px below. Now the
      breathing room is split evenly above and below. -->
-<div class="wrap" id="home-problem" style="min-height:calc(100svh - 142px);display:flex;flex-direction:column;justify-content:center;padding-top:40px;padding-bottom:40px;text-align:center">
+<div class="wrap" id="home-problem" style="padding-top:var(--sp-section);padding-bottom:var(--sp-section);text-align:center">
   <h2 style="font-family:var(--font-head);font-size:clamp(30px,4.6vw,50px);font-weight:800;letter-spacing:-.03em;line-height:1.06;color:var(--text);margin:0 auto 28px;max-width:15ch;text-wrap:balance">Stop second guessing <span class="hl">every trade.</span></h2>
   <div style="max-width:520px;margin:0 auto;font-size:clamp(16px,2.2vw,19px);line-height:2.05;color:var(--muted)">
     <div>You've watched three YouTube videos.</div>
@@ -1443,7 +1443,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<div class="wrap" id="home-story" style="padding-top:0">
+<div class="wrap" id="home-story" style="padding-top:0;padding-bottom:var(--sp-section)">
   <!-- Compact two-card pitch: everything the old villain/guide/plan/CTA stack
        said, in one screen. Left = who Sage is; right = why to trust him. -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;max-width:920px;margin:0 auto">
@@ -1451,13 +1451,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- MEET SAGE -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:34px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
       <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">
-        <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.35),transparent 68%)"></div>
+        <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(155,114,232,.14),transparent 68%)"></div>
         <div style="position:absolute;inset:14px;border-radius:50%;border:1px solid rgba(167,139,250,.22)"></div>
         <svg width="80" height="72" viewBox="0 0 120 106" fill="none" style="position:relative"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
       </div>
       <h2 style="font-family:var(--font-head);font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;margin:0">Meet <span class="hl">Sage.</span></h2>
       <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.14em;margin-top:12px;line-height:1.7">Your trusted fantasy<br>football advisor</div>
-      <div style="display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--accent-bright)"><span style="height:1px;width:52px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.5))"></span>&#10022;<span style="height:1px;width:52px;background:linear-gradient(90deg,rgba(167,139,250,.5),transparent)"></span></div>
+      <div style="display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--accent-bright)"><span style="height:1px;width:52px;background:rgba(255,255,255,.14)"></span>&#10022;<span style="height:1px;width:52px;background:rgba(255,255,255,.14)"></span></div>
       <div style="font-size:15px;color:var(--muted2);line-height:1.7">Always in your corner<br>before every trade.</div>
     </div>
 
@@ -1484,14 +1484,14 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 
   <!-- Beginner reassurance: lowers the barrier for anyone who feels lost. Routes to Ask Sage. -->
-  <div style="max-width:920px;margin:18px auto 0;text-align:center">
+  <div style="max-width:920px;margin:var(--sp-block) auto 0;text-align:center">
     <a href="#" onclick="event.preventDefault();switchScreen('sage')" style="display:inline-flex;align-items:center;gap:9px;font-size:14px;color:var(--muted2);background:rgba(155,114,232,.08);border:1px solid rgba(155,114,232,.28);border-radius:100px;padding:11px 22px;text-decoration:none;transition:border-color .18s,color .18s" onmouseover="this.style.borderColor='rgba(155,114,232,.55)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='rgba(155,114,232,.28)';this.style.color='var(--muted2)'">
-      <span style="color:#4fd8f5">&#10022;</span>Don't know anything about fantasy football? <strong style="color:var(--accent-bright)">Just ask Sage &rarr;</strong>
+      <span style="color:var(--accent-bright)">&#10022;</span>Don't know anything about fantasy football? <strong style="color:var(--accent-bright)">Just ask Sage &rarr;</strong>
     </a>
   </div>
 
   <!-- How it works: the old 4-step plan, compressed to one thin row -->
-  <div style="max-width:920px;margin:22px auto 0">
+  <div style="max-width:920px;margin:var(--sp-block) auto 0">
     <div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.16em;text-align:center;margin-bottom:12px">How it works</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
       <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px">
@@ -1514,7 +1514,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 
   <!-- The one action, at the persuasion peak -->
-  <div style="text-align:center;margin:26px auto 44px">
+  <div style="text-align:center;margin:var(--sp-block) auto 0">
     <a href="#" class="btn-primary" style="display:inline-block" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer');setTimeout(function(){scrollToEl(document.getElementById('analyzer'))},80)">Analyze My Trade &rarr;</a>
     <div style="font-size:12px;color:var(--muted);margin-top:14px">Life is good when you know the move.</div>
   </div>
@@ -1597,7 +1597,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072335"></script>
+<script src="/app.js?v=2026072336"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">

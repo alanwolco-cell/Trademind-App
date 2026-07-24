@@ -70,11 +70,11 @@
    belong to the mobile pass, so nothing here reaches under 701px. */
 @media(min-width:701px){
   html.v11 .inner-tab-bar, html.v12 .inner-tab-bar{
-    background:linear-gradient(135deg,rgba(155,114,232,.08),rgba(79,216,245,.035));
+    background:rgba(155,114,232,.07);
     border-color:rgba(155,114,232,.16);
   }
   html.v11 .inner-tab.active, html.v12 .inner-tab.active{
-    background:linear-gradient(135deg,rgba(155,114,232,.24),rgba(79,216,245,.10));
+    background:rgba(155,114,232,.20);
     color:var(--accent-bright);
     font-weight:600;
     box-shadow:0 0 0 1px rgba(155,114,232,.32) inset;
@@ -87,7 +87,7 @@
   /* Community's Refresh is the only button in the header row; grey made the
      one interactive element up there the quietest thing on the screen. */
   .comm-head .btn-sm{
-    background:linear-gradient(135deg,rgba(155,114,232,.16),rgba(79,216,245,.06));
+    background:rgba(155,114,232,.13);
     border-color:rgba(155,114,232,.30);
     color:var(--accent-bright);
   }
@@ -107,7 +107,7 @@
   width:3px;
   height:13px;
   border-radius:100px;
-  background:linear-gradient(135deg,#9b72e8,#4fd8f5);
+  background:#9b72e8;
   flex-shrink:0;
 }
 
@@ -218,14 +218,14 @@
 .mkt-panel-title::before,.comm-section-title::before,.pdb-title::before{
   content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
   width:3px;height:1.05em;border-radius:2px;
-  background:linear-gradient(180deg,#9b72e8,#4fd8f5);
+  background:#9b72e8;
 }
 
 /* Active inner tab was a slightly lighter grey on grey. Scoped to match the
    skin's own specificity, which targets these directly and would otherwise
    keep winning. */
 html.v11 .inner-tab.active,html.v12 .inner-tab.active,.inner-tab.active{
-  background:linear-gradient(135deg,rgba(155,114,232,.22),rgba(79,216,245,.14));
+  background:rgba(155,114,232,.19);
   border-color:rgba(155,114,232,.45);color:var(--text);
 }
 html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.inner-tab:hover:not(.active){
@@ -237,7 +237,7 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .comm-card,.pdb-card,.bs-row{position:relative;overflow:hidden}
 .comm-card::before,.pdb-card::before,.bs-row::before{
   content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
-  background:linear-gradient(180deg,rgba(155,114,232,.85),rgba(79,216,245,.5));
+  background:rgba(155,114,232,.7);
   opacity:.34;transition:opacity .16s ease;
 }
 .comm-card:hover::before,.pdb-card:hover::before,.bs-row:hover::before{opacity:1}

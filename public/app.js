@@ -1721,7 +1721,7 @@ async function openReferral(){
   var m=document.getElementById('referral-modal');
   if(!m){m=document.createElement('div');m.id='referral-modal';m.onclick=function(e){if(e.target===m)closeReferral();};document.body.appendChild(m);}
   m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:20px';
-  m.innerHTML="<div style='max-width:440px;width:100%;background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:18px;padding:24px 22px'>"
+  m.innerHTML="<div style='max-width:440px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 22px'>"
     +"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px'><div style='font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em'>Refer friends, earn Sage</div><span onclick='closeReferral()' style='cursor:pointer;color:var(--muted);font-size:20px;line-height:1'>&times;</span></div>"
     +"<div style='font-size:13px;color:var(--muted2);line-height:1.55;margin:6px 0 16px'>Send this link to a friend. When they connect a real Sleeper league, you both get two extra Ask Sage questions that day. Up to "+(st.cap||10)+" from referrals.</div>"
     +"<div style='display:flex;gap:8px;margin-bottom:14px'><input id='referral-link-input' readonly value='"+link.replace(/'/g,"&#39;")+"' style='flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 12px;font-size:12.5px;color:var(--text);outline:none'><button onclick='copyReferral(this)' class='ideas-refresh' style='white-space:nowrap'>Copy</button></div>"
@@ -1846,6 +1846,30 @@ function _lfRules(){
     return rl.join(', ');
   }catch(_){return '';}
 }
+// What the manager actually told us, in their own words. These three answers
+// were collected right before the analysis and then dropped on the floor: they
+// never reached Sage, who instead got a `situation` the app INFERRED from
+// roster value and age. So a manager could say "I'm contending", get ranked
+// 9th by the algorithm, and be answered as a rebuilder. Stated beats inferred.
+const _YOU_WINDOW=['contending, likes this roster to make a run',
+                   'in the mix, a piece or two away',
+                   'middle, could go either way',
+                   'longshot, thin or slow start, swinging for upside'];
+const _YOU_GOAL=['fill a hole in the starting lineup',
+                 'upgrade a spot already covered',
+                 'sell a hot player before he cools',
+                 'buy a struggling stud at a discount'];
+const _YOU_LEAN=['likes the trade, wants a sanity check',
+                 'undecided, could go either way',
+                 'leaning against it',
+                 'wants to be talked out of it'];
+function _youSaid(){
+  var o={};
+  if(youAnswers[0]!=null&&_YOU_WINDOW[youAnswers[0]])o.window=_YOU_WINDOW[youAnswers[0]];
+  if(youAnswers[1]!=null&&_YOU_GOAL[youAnswers[1]])o.goal=_YOU_GOAL[youAnswers[1]];
+  if(youAnswers[2]!=null&&_YOU_LEAN[youAnswers[2]])o.lean=_YOU_LEAN[youAnswers[2]];
+  return Object.keys(o).length?o:null;
+}
 function _sageLeagueCtx(){
   try{
     if(!leagueRosters||!leagueRosters.length||!Object.keys(ktcById||{}).length)return {mode:leagueMode};
@@ -1888,8 +1912,8 @@ function _sageLeagueCtx(){
         if(core.length)rosters.push({team:String(tn).slice(0,28),mine:r0.owner_id===userId,core:core});
       });
     }catch(_){}
-    return {mode:leagueMode,keeper:!!window._isKeeper,league:leagueName||'',teams:n,record:g?(w+'-'+l):'',situation:sit,why:why,rules:_lfRules(),lastMock:_sageLastMock(),rosters:rosters};
-  }catch(_){return {mode:leagueMode,keeper:!!window._isKeeper,rules:_lfRules(),lastMock:_sageLastMock()};}
+    return {mode:leagueMode,keeper:!!window._isKeeper,league:leagueName||'',teams:n,record:g?(w+'-'+l):'',situation:sit,why:why,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock(),rosters:rosters};
+  }catch(_){return {mode:leagueMode,keeper:!!window._isKeeper,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock()};}
 }
 // Latest mock draft as one compact line so Sage can grade it in chat
 function _sageLastMock(){
@@ -1916,7 +1940,7 @@ async function sageContextRead(give,get,valueTier){
   if(!el){
     el=document.createElement('div');
     el.id='verdict-ctx';
-    el.style.cssText='margin:10px 0 12px;padding:11px 14px;background:linear-gradient(135deg,rgba(124,92,191,.14) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.3);border-radius:11px;font-size:12.5px;color:var(--muted2);line-height:1.6';
+    el.style.cssText='margin:10px 0 12px;padding:11px 14px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:11px;font-size:12.5px;color:var(--muted2);line-height:1.6';
     body.parentElement.insertBefore(el,body.nextSibling);
   }
   el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage on your context</div><span class="sage-status">Factoring it in...</span>';
@@ -3453,7 +3477,7 @@ function renderLeagueTrades(){
     +"<th>#</th><th>Team</th>"+(hasGames?"<th>Record</th><th>PF</th>":"")+"<th>Trades</th><th>Trade W-L</th><th>Value +/-</th>"
     +"</tr></thead><tbody>";
   tableRows.forEach(function(row,i){
-    var netColor=row.net>=300?"var(--green)":row.net<=-300?"var(--red)":"#4fd8f5";
+    var netColor=row.net>=300?"var(--green)":row.net<=-300?"var(--red)":"var(--accent-bright)";
     var netTxt=row.net>=1000?"Big wins":row.net>=300?"Ahead":row.net<=-1000?"Big losses":row.net<=-300?"Behind":"Win-win trader";
     lbHtml+="<tr"+(row.isMe?" class='st-me'":"")+"><td class='st-num'>"+(i+1)+"</td>"
       +"<td class='st-team'>"+row.name+(row.isMe?" <span style='font-size:9px;color:var(--accent-bright);font-weight:700'>YOU</span>":"")+"</td>"
@@ -3828,7 +3852,7 @@ async function runAnalysis(){
       if(vh&&!document.getElementById('meet-sage-strip')){
         var ms=document.createElement('div');
         ms.id='meet-sage-strip';
-        ms.style.cssText='margin:0 0 14px;padding:12px 16px;background:linear-gradient(135deg,rgba(124,92,191,.16) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.35);border-radius:12px;font-size:12.5px;color:var(--muted2);line-height:1.6';
+        ms.style.cssText='margin:0 0 14px;padding:12px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.35);border-radius:12px;font-size:12.5px;color:var(--muted2);line-height:1.6';
         ms.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Meet Sage</div>'
           +'Knows your team. Knows your league. Never gets emotional. Always in your corner. What you are about to read is one clear recommendation, built for YOUR situation - not a ranking.'
           +'<span style="float:right;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;margin-left:10px" onclick="this.parentElement.remove()">&times;</span>';
@@ -4781,8 +4805,8 @@ function renderLeaguePersonalities(){
     var c=archColors[row.prof.icon]||'#a78bfa';
     var avatarHtml=row.avatarUrl
       ?"<img src='"+row.avatarUrl+"' style='width:42px;height:42px;border-radius:12px;object-fit:cover;flex-shrink:0;border:2px solid "+c+"' onerror=\"this.style.display='none'\">"
-      :"<div style='width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,"+c+"33,"+c+"11);color:"+c+";display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:17px;flex-shrink:0;border:2px solid "+c+"55'>"+row.prof.icon+"</div>";
-    return "<div class='lb-row'"+(row.isMe?" style='border-color:rgba(155,114,232,.4);background:linear-gradient(90deg,rgba(155,114,232,.08),transparent)'":"")+">"
+      :"<div style='width:42px;height:42px;border-radius:12px;background:"+c+"22;color:"+c+";display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:17px;flex-shrink:0;border:2px solid "+c+"55'>"+row.prof.icon+"</div>";
+    return "<div class='lb-row'"+(row.isMe?" style='border-color:rgba(155,114,232,.4);background:rgba(155,114,232,.06)'":"")+">"
       +avatarHtml
       +"<div class='lb-info'><div class='lb-trade' style='font-size:14px'>"+row.name+(row.isMe?" <span style='font-size:10px;color:var(--accent-bright)'>YOU</span>":"")+"</div>"
       +"<div class='lb-meta'><span style='display:inline-block;padding:1px 9px;border-radius:100px;background:"+c+"22;color:"+c+";font-weight:700;font-size:11px;margin-right:6px'>"+oppName(row.prof)+"</span>"+(row.prof.why||"")+"</div></div>"
@@ -4875,7 +4899,7 @@ async function checkShareParam(){
       +'<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted)">Sage read the opponent as: <strong style="color:var(--accent-bright)">'+(t.profile||'Unknown')+'</strong></div>'
       +'<div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
       +'<button onclick="counterSharedTrade()" style="background:var(--surface2);border:1px solid rgba(155,114,232,.45);color:var(--accent-bright);font-weight:700;font-size:13px;padding:10px 24px;border-radius:100px;cursor:pointer;font-family:var(--font-body)">Counter this offer</button>'
-      +'<a href="/" style="display:inline-block;background:linear-gradient(135deg,#a87ef0 0%,#6b48c4 100%);color:#fff;font-weight:700;font-size:13px;padding:10px 26px;border-radius:100px;text-decoration:none">Analyze YOUR trade</a></div>';
+      +'<a href="/" style="display:inline-block;background:#9b72e8;color:#fff;font-weight:700;font-size:13px;padding:10px 26px;border-radius:100px;text-decoration:none">Analyze YOUR trade</a></div>';
     if(t.acc){
       var bar=document.getElementById("balance-bar");
       if(bar){var pct=Math.min(95,Math.max(5,t.acc));bar.style.width=pct+"%";bar.style.background=pct>=60?"var(--green)":pct>=45?"var(--yellow)":"var(--red)";}
@@ -4917,9 +4941,11 @@ function switchScreen(name,_noPush){
   var hs=document.getElementById('home-story');
   if(hs)hs.style.display=isHome?'block':'none';
   var hp=document.getElementById('home-problem');
-  // flex, not block: the section centres its content vertically, and setting
-  // block here was quietly undoing that on every screen switch.
-  if(hp)hp.style.display=isHome?'flex':'none';  // the problem narrative is home-only too
+  // Back to the default block flow. This used to be forced to flex so the
+  // section could centre its content inside a full-viewport box; it is now
+  // sized by its own content, and forcing flex here laid the headline and the
+  // copy out as a row instead of a column.
+  if(hp)hp.style.display=isHome?'':'none';  // the problem narrative is home-only too
   // Hide the tool section entirely on home. Its inner screens are already
   // inactive, but the <section> keeps its 60px top+bottom padding, which was
   // showing as ~120px of empty space between the hero and the story below.
@@ -5440,7 +5466,7 @@ function generateTradeIdeas(){
   var buildNote=build.phase==='rebuilding'?"Rebuilding":build.phase==='contending'?"Contending":"Building";
   var rankNote=build.leagueRank&&build.totalTeams?" · #"+build.leagueRank+"/"+build.totalTeams+" in league":"";
   var _fmtBadge="<span style='font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:100px;margin-right:8px;"+(leagueMode==='redraft'?"background:rgba(245,158,11,.16);color:#f59e0b":"background:rgba(167,139,250,.16);color:var(--accent-bright)")+"'>"+(leagueMode==='redraft'?'Redraft':'Dynasty')+"</span>";
-  var phaseHtml="<div style='font-size:11.5px;color:var(--muted2);margin-bottom:14px;padding:10px 14px;background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(255,255,255,.02));border:1px solid rgba(167,139,250,.2);border-left:3px solid var(--accent-bright);border-radius:10px'>"+_fmtBadge+"Team build: <strong style='color:var(--text)'>"+buildNote+"</strong> &middot; avg age "+build.avgAge+rankNote+"</div>";
+  var phaseHtml="<div style='font-size:11.5px;color:var(--muted2);margin-bottom:14px;padding:10px 14px;background:rgba(155,114,232,.09);border:1px solid rgba(167,139,250,.2);border-left:3px solid var(--accent-bright);border-radius:10px'>"+_fmtBadge+"Team build: <strong style='color:var(--text)'>"+buildNote+"</strong> &middot; avg age "+build.avgAge+rankNote+"</div>";
 
   // Apply the user's filters: never offer a player they said they won't trade, and
   // if their context names a position they want, float those ideas to the top.
@@ -5781,7 +5807,7 @@ function sageMarketRead(pid){
     why:capFirst(moved('down'))+' at age '+age+' - the market is discounting a young player.'};
   if(t<=-150&&(isR||age>=29))return {k:'fading',label:'Fading - be careful',color:'var(--yellow)',
     why:capFirst(moved('down'))+(isR?'':' at age '+age)+' - could keep sliding. Only buy at a real discount.'};
-  if(t>=100)return {k:'rising',label:'Rising - pay up or pass',color:'var(--cyan,#4fd8f5)',
+  if(t>=100)return {k:'rising',label:'Rising - pay up or pass',color:'var(--accent-bright)',
     why:capFirst(moved('up'))+'. Buying now means paying the hot price - fine if you believe it, but you are not early.'};
   return {k:'hold',label:'Stable market',color:'var(--muted)',
     why:'No strong market signal either way - trade him on fit and value, not timing.'};
@@ -5921,7 +5947,7 @@ function openPlayerCard(pid, name){
       var curveTxt=noteEntry.curve||'';
       var takeLine=curveTxt.indexOf(' - ')>=0?curveTxt.split(' - ').slice(1).join(' - '):curveTxt;
       var whyParts=noteEntry.note.split(';').map(function(s){return s.trim();}).slice(0,2).join('; ');
-      takeEl.innerHTML='<div style="margin:14px 0 4px;padding:14px 16px;background:linear-gradient(135deg,rgba(124,92,191,.12) 0%,var(--surface2) 100%);border:1px solid rgba(155,114,232,.25);border-radius:12px">'
+      takeEl.innerHTML='<div style="margin:14px 0 4px;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.25);border-radius:12px">'
         +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Sage\'s Take</div>'
         +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px">'+takeLine.charAt(0).toUpperCase()+takeLine.slice(1)+'</div>'
         +'<div style="font-size:12px;color:var(--muted2);line-height:1.6"><strong style="color:var(--text)">Why:</strong> '+whyParts+'.</div>'
@@ -8036,7 +8062,7 @@ function mdScoutQueue(p){
     var cons=mix(doc.cons||[],local.cons);
     els.forEach(function(w){
       w.innerHTML=_pcCols(pros,cons)
-        +(doc.college?'<div style="font-size:11px;color:var(--muted2);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><strong style="color:#4fd8f5">College:</strong> '+doc.college+'</div>':'')
+        +(doc.college?'<div style="font-size:11px;color:var(--muted2);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><strong style="color:var(--accent-bright)">College:</strong> '+doc.college+'</div>':'')
         +'<div style="font-size:9.5px;color:var(--muted);margin-top:4px">Includes this week\'s scouting from around the web.</div>';
       // Fade the fresh scouting in so it never hard-jumps the columns
       w.style.animation='none';void w.offsetWidth;w.style.animation='tmPcFade .35s ease';
@@ -8167,7 +8193,7 @@ function sndClockUrgent(){
 }
 function _clockPillHtml(left){
   var hot=left<=10;
-  return ' <span style="display:inline-block;font-family:var(--font-head);font-size:17px;font-weight:800;line-height:1;padding:4px 13px;border-radius:100px;border:1.5px solid '+(hot?'#f87171':'rgba(79,216,245,.55)')+';color:'+(hot?'#f87171':'var(--text)')+';vertical-align:-3px;margin-left:8px'+(hot?';background:rgba(248,113,113,.08)':'')+'">'+left+'s</span>';
+  return ' <span style="display:inline-block;font-family:var(--font-head);font-size:17px;font-weight:800;line-height:1;padding:4px 13px;border-radius:100px;border:1.5px solid '+(hot?'#f87171':'var(--border2)')+';color:'+(hot?'#f87171':'var(--text)')+';vertical-align:-3px;margin-left:8px'+(hot?';background:rgba(248,113,113,.08)':'')+'">'+left+'s</span>';
 }
 // Pick clock (solo mocks): counts down in the status line; at zero Sage
 // drafts his own recommendation for you, exactly like a real draft room.
@@ -8951,7 +8977,7 @@ async function mpPoll(){
       }).join('');
       lobby.innerHTML='<div style="text-align:center;padding:14px 0 6px">'
         +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.14em">Room code - send this to your friends</div>'
-        +'<div style="font-family:var(--font-head);font-size:42px;font-weight:800;letter-spacing:.35em;margin:6px 0 2px;padding-left:.35em;background:linear-gradient(90deg,var(--accent-bright),#4fd8f5);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">'+d.code+'</div>'
+        +'<div style="font-family:var(--font-head);font-size:42px;font-weight:800;letter-spacing:.35em;margin:6px 0 2px;padding-left:.35em;background:var(--accent-bright);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">'+d.code+'</div>'
         +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn-sm" id="mp-copy-btn" onclick="mpCopyCode()">Copy code</button><button class="btn-load" style="width:auto;padding:8px 18px" id="mp-link-btn" onclick="mpCopyLink()">Copy invite link</button></div></div>'
         +'<div style="max-width:300px;margin:2px auto 12px">'
         +'<input id="mp-lobby-name" class="tm-input" maxlength="24" value="'+String(MP.myName||'').replace(/"/g,"&quot;")+'" placeholder="Your name" onfocus="this.select()" oninput="MP.myName=this.value" onchange="mpRename(this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" style="width:100%;text-align:center">'
@@ -10815,7 +10841,7 @@ function renderTradePost(p){
     // Header: anonymous author + how the trade came about (published anonymously)
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px">'
     +'<div style="display:flex;align-items:center;gap:8px;min-width:0">'
-    +'<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent-dim),var(--surface3));flex:none"></div>'
+    +'<div style="width:30px;height:30px;border-radius:50%;background:var(--surface3);flex:none"></div>'
     +'<div style="min-width:0"><div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+author+'</div>'
     +'<div style="font-size:10px;color:var(--muted)">'+ts+'</div></div>'
     +'</div>'

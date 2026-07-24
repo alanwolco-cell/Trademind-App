@@ -150,7 +150,7 @@ function namedInConvo(name, txt) {
   return hasWord(txt, last);
 }
 
-const SAGE_PERSONA = `You are Sage, the resident fantasy football brain of TradeMind (trademindff.com), a trade calculator for dynasty and redraft leagues.
+const SAGE_PERSONA = `You are Sage, the resident fantasy football brain of TradeMind (trademindff.com), a trade advisor for dynasty and redraft leagues. You are not a calculator: a calculator compares numbers, you weigh a manager's roster, league, timing and opponent and then tell them what to do.
 ACCURACY OVER SPEED: for any question about a player's current role, depth chart, or starting job, verify with web search BEFORE answering unless the provided scout context explicitly covers it. Never name a player's competition from memory. If you realize mid-answer you are unsure, search first, answer once - never publish a correction to your own previous message.
 When the news is genuinely good for the user - a clear win, a rising player they own - you may close with "Life is good." Use it sparingly, only when it fits.
 SITUATION FIRST: a player's outlook is his situation, not just his value. Before answering about any player, weigh: teammates who left or arrived (a departed WR1 means more targets for the WR2), coaching and scheme changes, depth chart role, and age. If the scout context provided does not cover the player's current situation, USE WEB SEARCH to check for offseason moves before answering - never give an outlook from the value number alone.
@@ -464,7 +464,24 @@ router.post('/chat', async (req, res) => {
         + (lc.teams ? ', ' + lc.teams + ' teams' : '')
         + (lc.rules ? ', scoring: ' + String(lc.rules).slice(0, 240) + ' - weight every positional call to these exact rules' : '')
         + (lc.record ? ', their record ' + String(lc.record).slice(0, 12) : '')
-        + (lc.situation ? '. Their window: ' + String(lc.situation).slice(0, 80) + ' (' + String(lc.why || '').slice(0, 160) + ').' : '.');
+        + (lc.situation ? '. Their window, inferred from roster value and age: ' + String(lc.situation).slice(0, 80) + ' (' + String(lc.why || '').slice(0, 160) + ').' : '.');
+      // What the manager told us in their own words, moments before asking.
+      // These three answers used to be collected and then dropped, so the
+      // advice ignored them and testers noticed: the inputs changed nothing.
+      // Stated beats inferred - the roster maths can say "rebuilding" while
+      // the person running the team knows they are going for it.
+      const ys = lc.youSaid;
+      if (ys && typeof ys === 'object') {
+        const bits = [];
+        if (ys.window) bits.push('they describe themselves as ' + String(ys.window).slice(0, 90));
+        if (ys.goal) bits.push('what they want from this trade: ' + String(ys.goal).slice(0, 90));
+        if (ys.lean) bits.push('where they currently lean: ' + String(ys.lean).slice(0, 90));
+        if (bits.length) {
+          leagueTxt += '\nWHAT THE MANAGER JUST TOLD YOU (outranks the inferred window above - if the two disagree, believe the manager and say so in one short line): '
+            + bits.join('; ') + '.'
+            + ' Answer for the goal they named. If they lean one way and you disagree, say why in a sentence, do not just agree with them.';
+        }
+      }
       if (Array.isArray(lc.rosters) && lc.rosters.length) {
         leagueTxt += '\nEVERY ROSTER IN THEIR LEAGUE (top players by value; use these names freely - never say you cannot see rosters):\n'
           + lc.rosters.slice(0, 14).map(r =>
