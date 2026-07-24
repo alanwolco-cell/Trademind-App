@@ -1047,6 +1047,7 @@ async function loadUser(autoLeagueId){
     }
     userId=user.user_id;
     localStorage.setItem('tm_username', username);
+    try{if(window.posthog&&posthog.identify)posthog.identify(username);tmTrack('league_connected',{platform:'sleeper'});}catch(_){}
     try{sageSyncUser();}catch(_){}
     initBK(username);
     updateUserPill();
@@ -1650,6 +1651,7 @@ function _proBenefitsHtml(){
     +'<div style="text-align:center;margin-top:13px;font-size:11px;color:var(--muted)">&#128274; Secure payment, powered by Stripe</div>';
 }
 function sageUpgrade(){
+  try{tmTrack('go_pro_clicked');}catch(_){}
   var user=localStorage.getItem('tm_username')||'';
   if(!user){try{sageShowSignin();}catch(_){}return;}
   var m=document.getElementById('pro-modal');
@@ -2077,6 +2079,7 @@ async function sageChatSend(){
   if(!inp||!log)return;
   var q=inp.value.trim();
   if(!q||window._sageBusy)return;
+  try{tmTrack('sage_asked');}catch(_){}
   // Sage talks to signed-in managers only (protects the whole community's access)
   if(!localStorage.getItem('tm_username')){
     _sageHideGreeting();
@@ -3704,6 +3707,7 @@ function _anzToast(){
   }catch(_){}
 }
 async function runAnalysis(){
+  try{tmTrack('trade_analyzed');}catch(_){}
   // clean slate: a failed or interrupted run must never leave the PREVIOUS
   // trade's text under the NEW trade's crown
   try{
