@@ -2954,6 +2954,13 @@ function renderTradeBoards(){
     var c=document.getElementById('bb-count-'+side);
     if(c)c.textContent=n?n+' selected':'';
   });
+  // Portrait phones stack the two boards until an opponent roster is loaded, so
+  // "You send" reads full width instead of being squeezed beside a tall empty
+  // "You receive" column. The class flips the layout to side-by-side once the
+  // opponent's players exist. Desktop ignores it (always side-by-side).
+  var _wrap=(boards.get||boards.give);
+  _wrap=_wrap&&_wrap.closest('.bb-boards');
+  if(_wrap)_wrap.classList.toggle('has-opp',_boardAssets('get').length>0);
 }
 function boardToggle(side,key){
   var asset=_boardAssets(side).find(function(a){return a.key===key;});
@@ -6855,7 +6862,7 @@ async function renderPlayersDB(){
   if(Object.keys(allPlayers).length>100){
     pdbAllPlayers=Object.values(allPlayers).filter(function(p){return p.name&&p.pos&&p.pos!=='?';});
   } else {
-    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted);font-size:13px">Loading players...</div>';
+    grid.innerHTML='<div style="grid-column:1/-1"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>';
     try{
       var res=await fetch('/api/sleeper/players/nfl/slim');
       var raw=await res.json();
@@ -6884,7 +6891,7 @@ async function renderPlayersDB(){
   // Without market values everyone sorts to zero and the list leads with retired
   // free agents alphabetically - load values first so the top of the list is real
   if(!Object.keys(ktcFull).length){
-    if(grid)grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted);font-size:13px">Loading market values...</div>';
+    if(grid)grid.innerHTML='<div style="grid-column:1/-1"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>';
     try{await fetchKtcValues(1,1,true);}catch(_){}
   }
 
@@ -10348,7 +10355,7 @@ async function loadForumFeed(reset){
   forumLoading=true;
   if(reset!==false){forumOffset=0;}
   var feed=document.getElementById('forum-feed');
-  if(forumOffset===0&&feed)feed.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted)">Loading...</div>';
+  if(forumOffset===0&&feed)feed.innerHTML='<div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div>';
   try{
     var res=await fetch('/api/community/forum?offset='+forumOffset);
     var posts=res.ok?await res.json():[];
@@ -10502,7 +10509,7 @@ async function loadCommunityFeed(reset){
   communityLoading=true;
   if(reset!==false){communityOffset=0;}
   var feed=document.getElementById('community-feed');
-  if(communityOffset===0&&feed)feed.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted)">Loading...</div>';
+  if(communityOffset===0&&feed)feed.innerHTML='<div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div>';
   try{
     var res=await fetch('/api/community/feed?offset='+communityOffset+'&t='+Date.now());
     var posts=res.ok?await res.json():[];

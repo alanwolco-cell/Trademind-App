@@ -935,6 +935,16 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
    the text transparent and leave it invisible once the gradient fill is gone). */
 .tm-wordmark{font-family:var(--font-head);font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--text)}
 @keyframes shimmer{to{background-position:200% center}}
+/* Shared loading skeleton. Replaces bare grey "Loading..." text, which read as an
+   unfinished screen on phones. A shimmering block with a real min-height holds the
+   layout while data arrives. */
+.tm-skel{background:linear-gradient(100deg,var(--surface2) 28%,var(--surface3) 48%,var(--surface2) 68%);
+  background-size:200% 100%;animation:shimmer 1.4s linear infinite;border-radius:10px}
+@media(prefers-reduced-motion:reduce){.tm-skel{animation:none}}
+.tm-skel-feed{display:flex;flex-direction:column;gap:10px;padding:6px 0;min-height:180px}
+.tm-skel-feed .tm-skel{height:92px}
+.tm-skel-row{display:flex;gap:10px;padding:6px 0;min-height:160px}
+.tm-skel-row .tm-skel{flex:0 0 auto;width:290px;height:150px}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
 .vs-arena{display:flex;align-items:center;justify-content:center;gap:26px;padding:20px 0 26px}
@@ -1373,8 +1383,13 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
    age below, circle checkbox on the right, card outlined in the position color */
 .bb-age{display:none}
 @media(max-width:700px) and (orientation:portrait){
-  .bb-boards{grid-template-columns:1fr 1fr;gap:8px}
+  /* Default: stacked. Beside a tall empty "You receive", a side-by-side split
+     squeezed "You send" names to two lines and left a dead empty column. Once an
+     opponent roster loads (.has-opp), flip to the Sleeper-style side-by-side. */
+  .bb-boards{grid-template-columns:1fr;gap:8px;align-items:start}
+  .bb-boards.has-opp{grid-template-columns:1fr 1fr}
   .bb-grid{grid-template-columns:1fr;gap:7px;padding:7px}
+  .bb-boards:not(.has-opp) .bb-grid{grid-template-columns:repeat(2,1fr)}
   .bb-tile{flex-direction:column;align-items:flex-start;gap:2px;padding:9px 36px 9px 11px;
     text-align:left;border:1.5px solid var(--bbp,var(--border2));border-radius:11px;background:var(--surface)}
   .bb-tile.on{background:var(--accent-dim);border-color:var(--accent-bright)}
@@ -1605,8 +1620,14 @@ body{min-height:100vh;min-height:100dvh}
    both well under a comfortable thumb. The draft context box also clipped its
    own placeholder (63px box, 81px of text). */
 @media(max-width:700px){
-  .inner-tab{min-height:42px;display:inline-flex;align-items:center}
+  /* Tabs grow to fill the segmented bar instead of hugging the left with a dead
+     empty half on 2- and 3-tab bars. min-width:max-content keeps long bars (Learn)
+     at content width so they scroll rather than clip. */
+  .inner-tab{min-height:42px;display:inline-flex;align-items:center;justify-content:center;
+    flex:1 1 auto;min-width:max-content;text-align:center}
   .btn-sm{min-height:40px}
+  /* Modal close was a 28px dot - under thumb size. */
+  .pm-close{width:40px;height:40px;font-size:16px;top:8px;right:8px}
   #md-context{min-height:88px}
   .sage-side-new,.btn-load{min-height:40px}
   .sage-sugg{min-height:42px;display:flex;align-items:center;justify-content:center}
@@ -1901,19 +1922,20 @@ html{scroll-padding-top:76px}
   .hero-chip{font-size:11px;padding:5px 10px}
   /* The fixed bottom bar is ~56px: nothing in the hero may end under it. */
   .hero-inner{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
-  /* Shrunk to phone width the whole panel becomes unreadable grey noise. Show
-     a zoomed crop of its top instead - the verdict headline stays legible,
-     which is the only part that has to survive at this size. */
+  /* Shrunk to phone width the whole panel becomes unreadable grey noise. Show a
+     tight letterbox of just the verdict header instead: the VS matchup avatars and
+     the "HIGHWAY ROBBERY" headline - the two parts that read at a glance and carry
+     the product's promise. It fades out right where the body copy would start, so
+     no sub-6px paragraph noise ever appears. */
   .hero-shot{
-    overflow:hidden;max-height:250px;
+    overflow:hidden;max-height:150px;
     border:1px solid rgba(255,255,255,.09);border-radius:12px;
   }
   .hero-shot img{
-    width:152%;max-width:none;margin-left:-26%;
+    width:152%;max-width:none;margin-left:-7%;
     border:0;border-radius:0;box-shadow:none;
-    /* Stops short of the 250px crop so the panel dissolves instead of ending
-       on the hard edge of its own overflow box. */
-    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 70%);
-            mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 70%);
+    /* Dissolves before the body paragraph so the crop ends on the headline. */
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
+            mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
   }
 }
