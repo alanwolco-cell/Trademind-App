@@ -515,22 +515,28 @@ router.post('/chat', async (req, res) => {
     if (res.flushHeaders) res.flushHeaders();
     const send = (obj) => res.write('data: ' + JSON.stringify(obj) + '\n\n');
 
-    let messages = history;
     let full = '';
     let failed = false;
-    try {
-      // Server-side web search can pause the turn; resume on the same SSE stream
+    let answeredModel = model;
+    const heavy = model === 'claude-opus-4-8';
+
+    // One generation pass. Streams text deltas live and follows a web_search
+    // pause_turn up to 4 times on the same SSE stream. Text accrues into the
+    // shared `full` so the caller can tell a real answer from an empty one.
+    const runPass = async (cfg) => {
+      let messages = history;
+      let mdl = model;
       for (let i = 0; i < 4; i++) {
-        const heavy = model === 'claude-opus-4-8';
-        const stream = client.messages.stream({
+        const req = {
           model,
-          max_tokens: heavy ? 1600 : 1024,
+          max_tokens: cfg.maxTokens,
           thinking: { type: 'adaptive' },
-          output_config: { effort: heavy ? 'high' : 'low' },
+          output_config: { effort: cfg.effort },
           system,
-          tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 1 }],
           messages
-        });
+        };
+        if (cfg.search) req.tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: 1 }];
+        const stream = client.messages.stream(req);
         stream.on('text', (t) => { full += t; send({ t }); });
         stream.on('streamEvent', (ev) => {
           if (ev.type === 'content_block_start' && ev.content_block && ev.content_block.type === 'server_tool_use') {
@@ -538,17 +544,39 @@ router.post('/chat', async (req, res) => {
           }
         });
         const response = await stream.finalMessage();
-        if (response.stop_reason !== 'pause_turn') {
-          send({ done: true, model: response.model });
-          break;
-        }
+        mdl = response.model;
+        if (response.stop_reason !== 'pause_turn') break;
         messages = [...messages, { role: 'assistant', content: response.content }];
       }
-      if (!full.trim()) { failed = true; send({ error: 'no answer generated' }); }
+      return mdl;
+    };
+
+    try {
+      // Primary pass: full effort with live web search. Heavy questions (trades,
+      // cross-roster, whole-league) get a much larger token budget. At effort
+      // high the adaptive thinking for a full-league analysis can otherwise
+      // consume the entire cap before a single word of the answer is emitted -
+      // which surfaced as an empty response ("no answer generated") on exactly
+      // the ambitious questions this feature exists for.
+      answeredModel = await runPass({ maxTokens: heavy ? 8000 : 2000, effort: heavy ? 'high' : 'low', search: true });
+      // Genuine empty output (thinking ran the budget out, a refusal, or a
+      // broken search chain): retry ONCE, grounded-only and low effort so the
+      // model spends its budget on the answer instead of deliberation. Only
+      // when the first pass produced NOTHING - a partial answer is kept and
+      // never duplicated by a second stream.
+      if (!full.trim()) {
+        send({ status: 'Thinking it through...' });
+        answeredModel = await runPass({ maxTokens: 4000, effort: 'low', search: false });
+      }
+      if (full.trim()) send({ done: true, model: answeredModel });
+      else { failed = true; send({ error: 'no answer generated' }); }
     } catch (e) {
-      failed = true;
-      console.error('[sage]', e.message);
-      send({ error: 'Sage hit a snag. Try again in a moment.' });
+      console.error('[sage]', e && e.message, e && e.status);
+      // If a partial answer already streamed before the error, keep it - the
+      // client renders whatever text arrived. Only signal a hard failure when
+      // nothing was produced at all.
+      if (full.trim()) { send({ done: true, model: answeredModel }); }
+      else { failed = true; send({ error: 'Sage hit a snag. Try again in a moment.' }); }
     }
     // Only a genuine failure (an error, or the model producing NO text at all)
     // refunds the question. A real answer - even "I do not have that data" -
