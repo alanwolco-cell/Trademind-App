@@ -138,7 +138,10 @@ let ktcValues={};     // byName: {name: value}
 let ktcById={};       // byId: {sleeperId: value}
 let ktcFull={};       // byId: {sleeperId: {value, overallRank, positionRank, trend30Day, espnId, ...}}
 let leagueFormat={totalTeams:12,ppr:1,hasSuperFlex:false,has2QB:false,flexCount:1,recFlexCount:0,numQBs:1,numRBs:2,numWRs:2,numTEs:1,benchSpots:6,scoringLabel:'PPR',formatLabel:'Standard'};
-let leagueMode='dynasty'; // 'dynasty' or 'redraft' - auto-detected when a league loads
+// 'dynasty' or 'redraft' - auto-detected when a league loads. Without a league
+// the app talks REDRAFT: that is what the mock-first landing sells, and the
+// setup UI already says Redraft - the engine must agree with the label.
+let leagueMode='redraft';
 // Monotonic tokens so a slow background response from a league/format you already
 // switched away from can't clobber the data for the one you're looking at now.
 let _leagueLoadSeq=0;     // bumped every loadLeague/import; identifies the active load
@@ -474,6 +477,7 @@ async function fetchKtcValues(numQbs, pprVal, isDynasty, _retryReq){
     if(data.byName) Object.assign(ktcValues, data.byName);
     if(data.byIdFull) Object.assign(ktcFull, data.byIdFull);
     console.log("[TM] FantasyCalc loaded:",Object.keys(ktcById).length,"players (isDynasty="+dyn+")");
+    window._ktcIsDyn=(dyn==='true'); // which dataset is in memory right now
     updateModeUI();
     try{renderTradeBoards();}catch(_){}   // values arrived: tiles pick them up
   }catch(e){
@@ -757,6 +761,15 @@ var PLAYER_NOTES = {
   "brock purdy": {note:"only 9 games in 2025 (2,167 yds, 20 TD) but graded 4th among QBs by PFF; 49ers won their Wild Card game; efficiency is elite - availability is now the question", curve:"26 - hold; scheme-boosted floor, health variable"},
   "cam ward": {note:"rookie year on a 3-14 Titans team: 3,169 yds, 15 TD behind an NFL-worst 55 sacks; 10 of his 15 TDs came from Week 11 on - the late-season arrow points up; TEN drafted WR Carnell Tate #4 overall to help", curve:"24 - cautious rise; supporting cast was the problem"},
   "shedeur sanders": {note:"took over mid-season in CLE - 7/10 TD-INT in 8 games with one 364-yd, 3-TD spike week; in an open camp battle under new HC Todd Monken; no first-round rookie QB was added", curve:"24 - speculative hold; no guaranteed 2026 job"},
+  // gap-fill batch (July 2026): the top of the superflex/PPR board was going
+  // note-less in round 1, which left Sage's Take and Keep-in-mind empty
+  "drake maye": {note:"year-2 leap in 2025 - among the league leaders in completion percentage and EPA, dragged New England back to relevance; adds steady if unspectacular rushing; the arrow points straight up", curve:"23 - ascending; top-5 dynasty QB trajectory", curveRed:"a top-5 upside pick THIS season; efficiency plus a stable rushing floor"},
+  "justin herbert": {note:"top-10 fantasy production in most of his healthy seasons on pure arm talent; Harbaugh's run-lean shape caps the weekly ceiling more than the player does; high floor, muted spike weeks", curve:"28 - prime; value tracks the offense's pass rate", curveRed:"high-floor QB1 range; ceiling depends on pass volume, not talent"},
+  "jaxon smithnjigba": {note:"led the NFL in receiving yards in 2025 - a target-monopoly season with Sam Darnold; route wins, YAC and volume all elite; the offense runs through him", curve:"24 - cornerstone; top-3 dynasty WR conversation", curveRed:"alpha target share locked in; WR1-overall upside this season"},
+  "jaxson dart": {note:"took the Giants' starting job as a rookie in 2025 and kept it - dual-threat flashes with rushing TDs in bunches; year two comes with a full offseason as the unquestioned QB1", curve:"23 - riser; rushing floor makes the profile", curveRed:"Konami-code upside pick; the rushing production is the fantasy case"},
+  "nico collins": {note:"Houston's alpha X with back-to-back seasons among the league's best in yards per route run; elite target quality whenever he is on the field - availability is the only knock", curve:"27 - prime window; value rides Stroud's arrow", curveRed:"target-quality WR1 when active; price in a couple of missed weeks"},
+  "tee higgins": {note:"paid in Cincinnati and still the most dangerous 1B in football; the whole offense sagged with Burrow hurt in 2025, but his per-target efficiency with Burrow healthy is WR1-adjacent", curve:"27 - prime; tied to Burrow's health", curveRed:"WR2 price with WR1 weeks if Burrow stays upright - a health bet worth making"},
+  "jameson williams": {note:"top of the league in yards per catch again in 2025 and Detroit fed him a career-high target load; boom-bust week to week, but the booms win weeks outright", curve:"25 - ascending deep threat; role still growing", curveRed:"volatile WR2/3 with league-winning spike weeks; start him and live with it"},
   // ── RBs ──
   "christian mccaffrey": {note:"monster 2025: 2,126 scrimmage yds and 17 TDs on a career-high 413 touches, all 17 games; turned 30 in June 2026 and SF says it wants to cut his workload - history is brutal on 400-touch age-30 seasons", curve:"30 - sell-high window is right now"},
   "saquon barkley": {note:"big 2025 disappointment - 1,140 rush yds and 9 TDs, finishing RB14; touches down ~140 from his historic 2024; still the highest-paid RB but the efficiency arrows point down", curve:"29 - falling; sell to a contender while the name value holds"},
@@ -815,6 +828,23 @@ var PLAYER_NOTES = {
   "kc concepcion":     {note:"#24 overall to Cleveland; top-8 dynasty rookie with immediate slot-role projection", curve:"21 - dynasty buy; volume path is open on a rebuilding roster"}
 };
 
+// Mode-aware read of a note: a redraft user is asking about THIS season, so
+// the dynasty curve line steps aside unless a redraft line (curveRed) exists.
+function noteForMode(entry){
+  if(!entry)return null;
+  var isR=(typeof leagueMode!=='undefined'&&leagueMode==='redraft');
+  return {note:entry.note,curve:isR?(entry.curveRed||null):(entry.curve||null)};
+}
+// One trend vocabulary for the whole product: thresholds and words come from
+// here so a card can never say "Falling" in one corner and "Stable" in another.
+function trendLabel(t){
+  var n=Number(t)||0;
+  if(n>250)return {word:'Rising fast',dir:1};
+  if(n>60)return {word:'Rising',dir:1};
+  if(n<-250)return {word:'Falling fast',dir:-1};
+  if(n<-60)return {word:'Falling',dir:-1};
+  return {word:'Steady',dir:0};
+}
 function getPlayerContextNote(name){
   if(!name)return null;
   var key=name.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
@@ -2175,7 +2205,7 @@ async function sageChatSend(){
       Object.keys(PLAYER_NOTES).forEach(function(k){
         if(_noteMatches.length>=8)return;
         if(convoTxt.indexOf(k)>=0||convoTxt.indexOf(k.split(' ').slice(-1)[0])>=0&&k.split(' ').slice(-1)[0].length>=6){
-          var n=PLAYER_NOTES[k];
+          var n=noteForMode(PLAYER_NOTES[k]);
           _noteMatches.push({name:k,note:n.note,curve:n.curve});
         }
       });
@@ -5993,10 +6023,8 @@ function sageMarketRead(pid){
 // strength, so say that instead. Positional ranks stay: RB26 is meaningful on
 // its own, a 120-point swing is not.
 function trendWord(t){
-  var n=Number(t)||0, a=Math.abs(n);
-  if(a<40)  return {txt:'Steady',   dir:0};
-  if(n>0)   return {txt:a>=400?'Surging':a>=150?'Rising':'Ticking up',   dir:1};
-  return    {txt:a>=400?'Sliding':a>=150?'Falling':'Ticking down',       dir:-1};
+  // delegates to the shared vocabulary so every surface says the same thing
+  var l=trendLabel(t);return {txt:l.word,dir:l.dir};
 }
 function openPlayerCard(pid, name){
   var modal=document.getElementById("player-modal");
@@ -6080,12 +6108,15 @@ function openPlayerCard(pid, name){
   document.getElementById("pm-ktc-val").textContent=ktc?playerTierLabel(ktc,pid).label:"-";
   var tierEl=document.getElementById("pm-ktc-tier");
   if(ktc&&fc){
-    var t30=fc.trend30Day||0;
-    var tw=t30>250?"Rising fast":t30>60?"Rising":t30<-250?"Falling fast":t30<-60?"Falling":"Steady";
-    var tc=t30>60?"#22c55e":t30<-60?"#f87171":"var(--muted)";
-    var tbg=t30>60?"rgba(34,197,94,.12)":t30<-60?"rgba(239,68,68,.12)":"var(--surface2)";
-    tierEl.textContent=tw;tierEl.style.color=tc;tierEl.style.background=tbg;tierEl.style.border="1px solid "+tbg;
+    var _tl=trendLabel(fc.trend30Day||0);
+    var tc=_tl.dir>0?"#22c55e":_tl.dir<0?"#f87171":"var(--muted)";
+    var tbg=_tl.dir>0?"rgba(34,197,94,.12)":_tl.dir<0?"rgba(239,68,68,.12)":"var(--surface2)";
+    tierEl.textContent=_tl.word;tierEl.style.color=tc;tierEl.style.background=tbg;tierEl.style.border="1px solid "+tbg;
   } else { tierEl.textContent=""; }
+  // Labels follow the mode: a redraft user must never read "Dynasty Rank"
+  var _isRed=(typeof leagueMode!=='undefined'&&leagueMode==='redraft');
+  var _rankLbl=_isRed?"Redraft Rank":"Dynasty Rank";
+  var _secLbl=_isRed?"Market":"Dynasty";
 
   // ── Dynasty meta stats from FantasyCalc ──
   var trend=fc&&fc.trend30Day?fc.trend30Day:null;
@@ -6101,7 +6132,7 @@ function openPlayerCard(pid, name){
   var depthLabel=depthOrder===1?"Starter":depthOrder===2?"Backup":depthOrder!=null?"Depth #"+depthOrder:"-";
   if(grid){
     grid.innerHTML=
-      stat(overallRank,"Dynasty Rank")+
+      stat(overallRank,_rankLbl)+
       stat(posRank,"Pos Rank")+
       stat("<span style='color:"+trendColor+"'>"+trendStr+"</span>","30-Day Trend")+
       stat(rosterPct,"Roster %")+
@@ -6119,9 +6150,14 @@ function openPlayerCard(pid, name){
   if(takeEl){
     var noteEntry=getPlayerContextNote(displayName);
     if(noteEntry){
-      var curveTxt=noteEntry.curve||'';
-      var takeLine=curveTxt.indexOf(' - ')>=0?curveTxt.split(' - ').slice(1).join(' - '):curveTxt;
-      var whyParts=noteEntry.note.split(';').map(function(s){return s.trim();}).slice(0,2).join('; ');
+      // redraft mode never leads with the dynasty curve: the headline becomes
+      // the first clause of the season note unless a curveRed line exists
+      var _nm4=noteForMode(noteEntry);
+      var curveTxt=(_nm4&&_nm4.curve)||'';
+      var _clauses4=noteEntry.note.split(';').map(function(s){return s.trim();});
+      var takeLine=curveTxt?(curveTxt.indexOf(' - ')>=0?curveTxt.split(' - ').slice(1).join(' - '):curveTxt):_clauses4[0];
+      // when the headline came from the note itself, the why must not repeat it
+      var whyParts=(curveTxt?_clauses4.slice(0,2):_clauses4.slice(1,3)).join('; ')||_clauses4[0];
       takeEl.innerHTML='<div style="margin:14px 0 4px;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.25);border-radius:12px">'
         +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Sage\'s Take</div>'
         +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px">'+takeLine.charAt(0).toUpperCase()+takeLine.slice(1)+'</div>'
@@ -6208,14 +6244,14 @@ function openPlayerCard(pid, name){
         // Build stat grid: dynasty meta + real game stats
         var gameStats=espn.stats.map(function(s){return stat(s.val,s.name);}).join("");
         var dynStats=
-          stat(overallRank,"Dynasty Rank")+
+          stat(overallRank,_rankLbl)+
           stat(posRank,"Pos Rank")+
           stat("<span style='color:"+trendColor+"'>"+trendStr+"</span>","30-Day Trend")+
           stat(rosterPct,"Roster %");
         if(grid){
           grid.innerHTML="<div style='grid-column:1/-1;font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;padding-bottom:2px;border-bottom:1px solid var(--border);margin-bottom:2px'>"+(espn.statsLabel||"Season Stats")+"</div>"
             +gameStats
-            +"<div style='grid-column:1/-1;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:6px 0 2px;border-bottom:1px solid var(--border);margin-bottom:2px'>Dynasty</div>"
+            +"<div style='grid-column:1/-1;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:6px 0 2px;border-bottom:1px solid var(--border);margin-bottom:2px'>"+_secLbl+"</div>"
             +dynStats;
         }
         // Bio info
@@ -7690,20 +7726,29 @@ async function mdAskSageLive(pid,hostId){
   try{
     [p].concat(MD.pool.slice(0,4)).forEach(function(x){
       if(notes.length>=5||!x)return;
-      var n=getPlayerContextNote(x.name);
+      var n=noteForMode(getPlayerContextNote(x.name));
       if(n)notes.push({name:x.name.toLowerCase(),note:n.note,curve:n.curve});
     });
   }catch(_){}
   // One call, several lanes: drafting is strategy preference, so Sage lays
   // out the risk paths and the drafter picks the lane - never one answer.
+  // The prompt DECLARES the format: without it Sage drifts into dynasty
+  // reasoning (age curves, long-term value) on a seasonal board.
+  var _mockDyn=(((document.getElementById('md-mode')||{}).value)||((typeof leagueMode!=='undefined')?leagueMode:'redraft'))==='dynasty';
   var q='MOCK DRAFT, LIVE PICK. Round '+round+', overall pick '+overall+' in a '+MD.teams+'-team '
     +(MD.sf?'superflex':'1QB')+' '+(MD.scoring>=1?'full PPR':MD.scoring===0.5?'half PPR':'standard')
-    +' snake draft ('+MD.rounds+' rounds). My roster so far: '+mine+'. Best available: '+avail
+    +' snake draft ('+MD.rounds+' rounds).'
+    +(_mockDyn
+      ?' This is a DYNASTY STARTUP mock draft - long-term value, age and situation all count.'
+      :' This is a SEASONAL REDRAFT mock draft for the 2026 NFL season - reason ONLY about this season: role, volume, floor and ceiling. No dynasty value, no age curves beyond this year, no future picks.')
+    +' The current year is 2026; player experience comes from the notes provided - never assume anyone is a rookie.'
+    +' My roster so far: '+mine+'. Best available: '+avail
     +'. I was eyeing '+p.name+' ('+p.pos+', '+(p.team||'FA')+').'
     +' Give me my options by risk appetite, each a DIFFERENT player from the best-available list.'
-    +' SAFE: the highest floor, proven volume. UPSIDE: the biggest ceiling swing. VALUE: the best player sliding past his ADP.'
+    +' SAFE: the highest floor, proven volume. UPSIDE: the biggest ceiling swing.'
+    +' VALUE: only if a listed player is genuinely PAST his ADP at this pick (current overall pick is '+overall+'); if nobody has actually slid, omit the VALUE line entirely.'
     +' NEED: only include it if my roster has a real hole it fills.'
-    +' FORMAT STRICTLY, no intro or outro: one line per option, "LABEL: Player Name - one sharp reason tied to his real usage, situation or my roster." 3 or 4 lines total.';
+    +' FORMAT STRICTLY, no intro or outro: one line per option, "LABEL: Player Name - one sharp reason tied to his real usage, situation or my roster." 2 to 4 lines total.';
   var full='';
   try{
     var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -8084,6 +8129,14 @@ function mdAdvance(){
     // and ~1 at the tail, which is what kept burying elite TEs like Bowers. Here
     // nothing can move a player more than a few picks except the faller rescue.
     // Window widened to 24 so a player who drifts still gets seen and rescued.
+    // positional runs: real rooms panic. Two or more of one position inside
+    // the last four picks pulls the next drafters toward it for a beat -
+    // recomputed every pick, so the pull decays on its own.
+    var runPos={};
+    (MD.picks||[]).slice(-4).forEach(function(pk){
+      var _rp=pk.p.pos;if(_rp==='K'||_rp==='DEF')return;
+      runPos[_rp]=(runPos[_rp]||0)+1;
+    });
     var cands=MD.pool.slice(0,24);
     // A round-pinned player who is DUE must be scored even when he sits below
     // the scan window - the named rule is a guarantee, not a suggestion
@@ -8102,7 +8155,10 @@ function mdAdvance(){
     cands.forEach(function(p){
       var have=ros[p.pos]||0;
       var elite=p.adp&&p.adp<=Math.max(MD.teams*2,24); // top ~2 rounds: pure value
-      var ampDv=Math.min(110,45+MD.pickIdx*1.2);
+      // variance grows with the draft: tight in the first two rounds, about
+      // half a round of noise in R3-6, a full round from R7 on. This is the
+      // main defense against the "every mock looks identical" failure.
+      var ampDv=round<=2?70:round<=6?(MD.teams*20):(MD.teams*40);
       var jitDv=((((MD.pickIdx*31+p.name.length*7+(MD.seed||0))%23)/22)-0.5)*2*ampDv;
       var sc=p.dv+jitDv;
       var bot0=MD.bots&&MD.bots[slot];
@@ -8157,6 +8213,9 @@ function mdAdvance(){
         var bAdj=elite?((bot0.eliteAdj&&bot0.eliteAdj[p.pos])||0):((bot0.posAdj&&bot0.posAdj[p.pos])||0);
         // hero-RB flips off RB the moment the hero is on the roster
         if(bot0.hero&&p.pos==='RB')bAdj=ros.RB>=1?-380:(elite?200:120);
+        // outside the elite tier the archetype has to actually SHOW: doubled
+        // and capped, it moves a drafter a visible handful of picks
+        if(!elite){bAdj*=2.2;bAdj=Math.max(-750,Math.min(750,bAdj));}
         // punting QB in a superflex room is a rare breed - soften the fade
         if(MD.sf&&p.pos==='QB'&&bAdj<0)bAdj*=0.4;
         if(userSaid)bAdj*=0.2;
@@ -8173,16 +8232,17 @@ function mdAdvance(){
           else if(round===_fr.r)sc+=5000;  // grab him right on schedule
           else sc+=2000;                   // overdue, take him now
         }else{
-          // deadline rule ("gone by round N"): draftable from round 1, pulled
-          // forward a little, and at the deadline he MUST go - a guarantee
-          // that beats every other signal on the board
+          // deadline rule ("gone by round N"): fully NORMAL until the round
+          // before the deadline (an early flat bonus made "gone before the
+          // 3rd" go 1.01), a real pull at deadline-1, a guarantee at the
+          // deadline itself
           if(round>=_fr.r)sc+=1e5;
           else if(round===_fr.r-1)sc+=600;
-          else sc+=250;
         }
       }
       var _pr=MD.ctxPosRound&&MD.ctxPosRound[p.pos];
       if(_pr&&round===_pr)sc+=2500;        // this position floods this round
+      if(runPos[p.pos]>=2&&!elite)sc+=150; // join the run while it is on
       if(sc>bestScore){bestScore=sc;best=p;}
     });
     // the human moment, tamed: a reach is a guy going up to about a round
@@ -8211,7 +8271,15 @@ function mdAdvance(){
     // window above never reaches that deep in the pool, so fill them here
     var forced=null;
     if(round>=Math.max(MD.rounds,15)-1){
-      var wantPos=(!ros.DEF&&!MD.noD)?'DEF':((!ros.K&&!MD.noK)?'K':'');
+      // half the room grabs its kicker first, half its defense - a wall of
+      // seven straight D/STs is a robot tell no real draft produces
+      var _kFirst=((slot+(MD.seed||0))%2)===0;
+      var _seq=_kFirst?['K','DEF']:['DEF','K'];
+      var wantPos='';
+      for(var qi2=0;qi2<2;qi2++){
+        var ps3=_seq[qi2];
+        if(ps3==='K'?(!ros.K&&!MD.noK):(!ros.DEF&&!MD.noD)){wantPos=ps3;break;}
+      }
       if(wantPos)for(var fi=0;fi<MD.pool.length;fi++){if(MD.pool[fi].pos===wantPos){forced=MD.pool[fi];break;}}
     }
     var pick=forced||best||MD.pool[0];
@@ -8237,16 +8305,19 @@ function mdRecommend(top,round){
   if(round>=Math.max(MD.rounds,15)-1&&(!myPos.K||!myPos.DEF)){
     var special=MD.pool.find(function(p){return !_tk[p.id]&&((!myPos.DEF&&p.pos==='DEF')||(!myPos.K&&p.pos==='K'));});
     if(special)return {rec:special,why:special.pos==='DEF'
-      ?'Best defense left on the board. It gave up the fewest fantasy points in the league last season - lock it in and stop thinking about it.'
-      :'Top kicker still available by real 2025 kicking points. Take the reliable points and finish strong.'};
+      ?'Best defense left on the board - lock it in and stop thinking about it.'
+      :'Top kicker left on the board. Take the reliable points and finish strong.'};
   }
   // Otherwise K/DST never get recommended over skill players
   var skill=top.filter(function(p){return p.pos!=='K'&&p.pos!=='DEF';});
   if(skill.length)top=skill;
   // A second QB in 1QB (or third in superflex) and a second TE are wasted picks
-  // in the early-middle rounds: take them out of the recommendation pool.
+  // in the early-middle rounds - but in the LAST rounds before K/DEF the cap
+  // relaxes: an autopilot roster must not finish a 15-rounder with one QB and
+  // one TE and no warning.
   var isSF=((document.getElementById('md-format')||{}).value)==='sf';
-  var qbCap=isSF?2:1, teCap=1;
+  var relax=round>=MD.rounds-3;
+  var qbCap=(isSF?2:1)+(relax?1:0), teCap=1+(relax?1:0);
   var usable=top.filter(function(p){
     if(p.pos==='QB'&&myPos.QB>=qbCap)return false;
     if(p.pos==='TE'&&myPos.TE>=teCap)return false;
@@ -8254,6 +8325,11 @@ function mdRecommend(top,round){
   });
   if(usable.length)top=usable;
   var best=top[0];var why='';
+  // backup-time framing when the relaxed cap is exactly why he is the pick
+  if(relax&&best){
+    if(best.pos==='QB'&&myPos.QB>=(isSF?2:1))why='Backup quarterback time. One injury from a lost season otherwise, and the streaming pool dries up from here.';
+    else if(best.pos==='TE'&&myPos.TE>=1)why='A second tight end late beats another dart at WR6 - one bye or one injury and you are starting a zero there.';
+  }
   function firstAt(pred){for(var i=0;i<top.length;i++)if(pred(top[i]))return top[i];return null;}
   if(MD.strat==='zerorb'&&round<=4){
     var nonrb=firstAt(function(p){return p.pos!=='RB';});
@@ -8971,14 +9047,20 @@ function mdUserPick(p){
     have[p.pos]--; // count BEFORE this pick
     var note=getPlayerContextNote(p.name);
     var noteBit=note?' '+note.note.split(';')[0].trim()+'.':'';
+    // steal/reach needs at least HALF A ROUND of daylight to mean anything -
+    // a 3-spot delta is noise. And K/DEF never get value-judged: their board
+    // ranks are synthetic, so every kicker read as a giant reach.
+    var thr=Math.max(4,Math.round(MD.teams/2));
     var take;
-    if(MD.lastRec&&MD.lastRec.id===p.id){
-      take='Exactly what I wanted. '+(MD.lastRecWhy||'')+(diff>=6?' And the board even says you got him at a discount.':'');
-    }else if(rk&&diff>=8){
+    if(p.pos==='K'||p.pos==='DEF'){
+      take='Locked in your '+(p.pos==='DEF'?'defense':'kicker')+'. One less thing to think about on Sunday.';
+    }else if(MD.lastRec&&MD.lastRec.id===p.id){
+      take='Exactly what I wanted. '+(MD.lastRecWhy||'')+(diff>=thr?' And the board even says you got him at a discount.':'');
+    }else if(rk&&diff>=thr*2){
       take='Steal. The board had '+p.name+' at #'+rk+' and you got him at pick '+overall+'.'
         +(have[p.pos]===0?' First '+p.pos+' on your roster, so he walks into your lineup.':'')
         +(MD.lastRec?' I liked '+MD.lastRec.name+' here, but value this good overrides my plan.':'');
-    }else if(rk&&diff<=-8){
+    }else if(rk&&diff<=-thr){
       take=MD.lastRec?('A reach - #'+rk+' taken at pick '+overall+'. I wanted '+MD.lastRec.name+' here: '+(MD.lastRecWhy||'better value for the same spot.')+' '+p.name+' likely comes back a round later.')
         :('A reach - #'+rk+' on the board at pick '+overall+'. He probably comes back to you next round.');
     }else{
@@ -9057,15 +9139,20 @@ function mdRenderDraftBar(){
   // ONE quiet meta line under the name: ADP, tier word, direction, VORP word.
   // Everything deeper (full stats, news, trades) lives one click away on the
   // player card - the bar must read at a glance, not compete with the board.
+  // The mock board is ADP - a seasonal object - so its tier ALWAYS comes from
+  // the redraft value, and a dynasty-dataset trend never leaks onto it (the
+  // audit case: dynasty league loaded, mock showing dynasty tiers over a
+  // redraft board).
   var _fc=ktcFull[p.id]||{};
-  var _tier=ktcById[p.id]?playerTierLabel(ktcById[p.id],p.id).short:'';
-  var _t30=_fc.trend30Day||0;
-  var _tw=_t30>250?'rising fast':_t30>60?'rising':_t30<-250?'falling fast':_t30<-60?'falling':'steady';
-  var _twc=_t30>60?'var(--green)':_t30<-60?'var(--red)':'var(--muted)';
+  var _tierVal=_fc.redraftValue>0?_fc.redraftValue:(window._ktcIsDyn===false?(ktcById[p.id]||0):0);
+  var _tier=_tierVal?playerTierLabel(_tierVal,p.id).short:'';
+  var _trendOk=(window._ktcIsDyn===false);
+  var _tl2=trendLabel(_fc.trend30Day||0);
+  var _twc=_tl2.dir>0?'var(--green)':_tl2.dir<0?'var(--red)':'var(--muted)';
   var _meta=[p.pos+' · '+(p.team||'FA')];
   if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
   if(_tier)_meta.push(_tier);
-  if(_tier||p.adp)_meta.push('<span style="color:'+_twc+'">'+_tw+'</span>');
+  if(_trendOk&&(_tier||p.adp))_meta.push('<span style="color:'+_twc+'">'+_tl2.word.toLowerCase()+'</span>');
   var _rpl=MD.replDv&&MD.replDv[p.pos];
   if(_rpl!=null&&p.dv){
     var _gap=p.dv-_rpl;
@@ -9760,6 +9847,16 @@ function mdPrefillFromLeague(){
   // Sleeper connect is the optional shortcut: nudge only while no league is loaded
   var _hint=document.getElementById('md-connect-hint');
   if(_hint)_hint.style.display=leagueId?'none':'block';
+  // Mode select mirrors the real app mode. A connected league DECIDES its
+  // format, so the select locks with a tooltip instead of rejecting silently.
+  var _mdSel=document.getElementById('md-mode');
+  if(_mdSel){
+    _mdSel.value=(typeof leagueMode!=='undefined'&&leagueMode==='dynasty')?'dynasty':'redraft';
+    var _locked=!!(leagueId&&window._detectedMode);
+    _mdSel.disabled=_locked;
+    _mdSel.title=_locked?('League-locked ('+(window._detectedMode==='dynasty'?'Dynasty':'Redraft')+')'):'';
+    _mdSel.style.opacity=_locked?'.55':'';
+  }
   if(!leagueId)return;
   try{
     var t=document.getElementById('md-teams'); if(t&&leagueFormat.totalTeams>=8&&leagueFormat.totalTeams<=16)t.value=String(leagueFormat.totalTeams);
@@ -9950,23 +10047,42 @@ function mdFinish(){
   var sage=document.getElementById('md-sage');
   sage.style.display='block';
   try{sndWin();}catch(_){}
+  // ALL the holes get computed FIRST: "balanced board" is only earned when
+  // there is genuinely nothing to name - it used to coexist with a 1-QB,
+  // 1-TE fifteen-rounder.
+  var gaps=[];
+  if(MD.rounds>=8){
+    if(pos.RB===0)gaps.push('zero running backs - either a masterclass or a disaster, no in between');
+    else if(pos.RB===1)gaps.push('just one running back, so your flex is a weekly coin flip');
+    if(pos.TE===0)gaps.push('no tight end - a weekly zero until you hit the wire');
+    if(!MD.sf&&pos.QB===0)gaps.push('no quarterback at all; you have to start one every week');
+  }
+  if(MD.sf&&pos.QB<2)gaps.push('only '+pos.QB+' QB in superflex - you needed two');
+  if(MD.rounds>=12){
+    if(!MD.sf&&pos.QB===1)gaps.push('a single QB across '+MD.rounds+' rounds; one bye or one injury and you are streaming');
+    if(pos.TE===1)gaps.push('a single TE with no insurance behind him');
+  }
   var takes='';
-  if(pos.RB===0)takes+='Zero running backs - either a masterclass or a disaster, no in between. ';
   if(pos.WR>=MD.rounds*0.6)takes+='WR-heavy build; you will win the ones you win by a lot. ';
-  if(MD.sf&&pos.QB<2)takes+='Only '+pos.QB+' QB in superflex is playing with fire - you needed two. ';
-  if(!MD.sf&&pos.QB>=2)takes+='Two QBs in 1QB is a luxury you can flip for a starter. ';
-  if(!takes)takes='Balanced board with no glaring hole. ';
+  if(!MD.sf&&pos.QB>=2&&MD.rounds<12)takes+='Two QBs in 1QB is a luxury you can flip for a starter. ';
+  // a late first QB is a plan, not a hole - but it gets named
+  try{
+    var _qb1=(MD.myOveralls||[]).find(function(m){return m.p.pos==='QB';});
+    if(!MD.sf&&_qb1){
+      var _qbRd=Math.max(1,Math.ceil(_qb1.overall/MD.teams));
+      if(_qbRd>8)takes+='You waited on QB until Round '+_qbRd+' ('+_qb1.p.name+') - a fine plan only if he hits. ';
+    }
+  }catch(_){}
+  if(gaps.length)takes+='Holes to fix: '+gaps.join('; ')+'. ';
+  else if(!takes)takes='Balanced board with no glaring hole. ';
   // name the foundation of THIS roster: your first two picks
   if(MD.mine.length>=2)takes+='Built around '+MD.mine[0].name+' and '+MD.mine[1].name+'. ';
   else if(MD.mine.length===1)takes+='Anchored by '+MD.mine[0].name+'. ';
-  // glaring holes worth naming out loud (only in a real, full-length draft)
-  if(MD.rounds>=8){
-    if(pos.TE===0)takes+='You left without a tight end - a weekly zero there until you hit the wire. ';
-    if(!MD.sf&&pos.QB===0)takes+='And no quarterback at all; you have to start one every week. ';
-    if(pos.RB===1)takes+='Just one running back means your flex is a weekly coin flip. ';
-  }
-  // Value analysis: compare where you took each player vs his market rank
-  var edges=(MD.myOveralls||[]).map(function(m){
+  // Value analysis vs market rank. K and D/ST sit OUT: their board ranks are
+  // synthetic late-round codes, and counting them turned every finished draft
+  // into a C for "reaching" on a kicker.
+  var thrF=Math.max(4,Math.round(MD.teams/2));
+  var edges=(MD.myOveralls||[]).filter(function(m){return m.p.pos!=='K'&&m.p.pos!=='DEF';}).map(function(m){
     var rank=MD.initialRanks[m.p.id]||m.overall;
     return {p:m.p,overall:m.overall,rank:rank,edge:m.overall-rank}; // positive = value fell to you
   });
@@ -9979,9 +10095,9 @@ function mdFinish(){
     valHtml='<div style="display:flex;gap:14px;align-items:center;margin-top:10px;flex-wrap:wrap">'
       +'<div style="text-align:center"><div style="font-family:var(--font-head);font-size:34px;font-weight:800;color:'+(letter[0]==='A'?'var(--green)':letter[0]==='B'?'var(--accent-bright)':letter[0]==='C'?'var(--yellow)':'var(--red)')+'">'+letter+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Value grade</div></div>'
       +'<div style="flex:1;min-width:200px;font-size:12px;color:var(--muted2);line-height:1.7">'
-      +(steal&&steal.edge>=3?'<div><strong style="color:var(--green)">Steal:</strong> '+steal.p.name+' at pick '+steal.overall+' - the market has him '+steal.edge+' spots earlier.</div>':'')
-      +(reach&&reach.edge<=-3?'<div><strong style="color:var(--red)">Reach:</strong> '+reach.p.name+' at pick '+reach.overall+' - '+Math.abs(reach.edge)+' spots ahead of his market rank.</div>':'')
-      +((!steal||steal.edge<3)&&(!reach||reach.edge>-3)?'<div>You drafted close to market value all the way through - disciplined board.</div>':'')
+      +(steal&&steal.edge>=thrF?'<div><strong style="color:var(--green)">Steal:</strong> '+steal.p.name+' at pick '+steal.overall+' - the market has him '+steal.edge+' spots earlier.</div>':'')
+      +(reach&&reach.edge<=-thrF?'<div><strong style="color:var(--red)">Reach:</strong> '+reach.p.name+' at pick '+reach.overall+' - '+Math.abs(reach.edge)+' spots ahead of his market rank.</div>':'')
+      +((!steal||steal.edge<thrF)&&(!reach||reach.edge>-thrF)?'<div>You drafted close to market value all the way through - disciplined board.</div>':'')
       +'</div></div>';
   }
   // Where you stand in the ROOM, and who beat you to value. Team strength is
@@ -10000,8 +10116,14 @@ function mdFinish(){
     if(myRank&&T>1){
       var rn=(MD.bots&&MD.bots[rival.slot]&&MD.bots[rival.slot].name)||('Team '+rival.slot);
       var rTop=(MD.picks||[]).filter(function(pk){return pk.slot===rival.slot;}).sort(function(a,b){return (b.p.dv||0)-(a.p.dv||0);}).slice(0,2).map(function(pk){return pk.p.name;});
-      var place=myRank===1?'the most talent in the room on paper':myRank<=Math.ceil(T/3)?'top-tier value, right in the mix':myRank>Math.ceil(2*T/3)?'near the bottom on paper - you will need your swings to hit':'squarely mid-pack';
-      standLine='Your board ranks '+ordEnd(myRank)+' of '+T+' by market value - '+place+'. The team to beat is '+rn+(rTop.length?', built around '+rTop.join(' and '):'')+'.';
+      // The human drafts with Sage's help, so "you rank 1st" is nearly always
+      // true and reads as flattery. Top-2 gets a modest line; only a real
+      // spread gets the ordinal.
+      if(myRank<=2)standLine='On paper your board holds up with the best in the room. The team to watch is '+rn+(rTop.length?', built around '+rTop.join(' and '):'')+'.';
+      else{
+        var place=myRank<=Math.ceil(T/3)?'top-tier value, right in the mix':myRank>Math.ceil(2*T/3)?'near the bottom on paper - you will need your swings to hit':'squarely mid-pack';
+        standLine='Your board ranks '+ordEnd(myRank)+' of '+T+' by market value - '+place+'. The team to beat is '+rn+(rTop.length?', built around '+rTop.join(' and '):'')+'.';
+      }
     }
     // the sting: best value a bot grabbed the pick right before you were up
     var snipe=null;
@@ -10044,11 +10166,11 @@ function mdFinish(){
         else role='Your '+_ordN(n)+' '+posN;
         // value in draft terms
         var val;
-        if(e.edge>=6)val='he slid '+e.edge+' spots past his rank and you pounced at '+e.overall;
-        else if(e.edge>=2)val='good value, '+e.edge+' past market at '+e.overall;
-        else if(e.edge<=-6)val='you paid up '+Math.abs(e.edge)+' spots early - a conviction call';
-        else if(e.edge<=-2)val='a touch early at '+e.overall+', nothing painful';
-        else val='right at his market slot ('+e.overall+')';
+        if(e.edge>=thrF*2)val='he slid '+e.edge+' spots past his rank and you pounced at '+e.overall;
+        else if(e.edge>=thrF)val='good value, '+e.edge+' past market at '+e.overall;
+        else if(e.edge<=-thrF*2)val='you paid up '+Math.abs(e.edge)+' spots early - a conviction call';
+        else if(e.edge<=-thrF)val='a touch early at '+e.overall+', nothing painful';
+        else val='right around his market slot ('+e.overall+')';
         // what the pick did for the build
         var ctx='';
         if(posN==='RB'&&n===1)ctx=' Your backfield anchor.';
