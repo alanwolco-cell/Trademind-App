@@ -18,14 +18,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Sage advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026072487">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026072588">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Sage advising every pick.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072487">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072588">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,14 +33,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072487">
+<link rel="stylesheet" href="/styles.css?v=2026072588">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072487" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072588" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026072487">
+<link rel="stylesheet" href="/theme.css?v=2026072588">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -52,7 +52,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072487">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072588">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -975,7 +975,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         
         <!-- One thing on screen at a time: pick what kind of draft you are doing -->
         <div id="md-sections" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-          <button class="btn-sm md-sec-btn" data-sec="solo" onclick="mdShowSection('solo')" style="border-color:var(--accent-bright);color:var(--text)">Solo mock</button>
+          <button class="btn-sm md-sec-btn on" data-sec="solo" onclick="mdShowSection('solo')">Solo mock</button>
           <button class="btn-sm md-sec-btn" data-sec="friends" onclick="mdShowSection('friends')">With friends</button>
           <button class="btn-sm md-sec-btn" data-sec="live" onclick="mdShowSection('live')">Live assist</button>
           <button class="btn-sm md-sec-btn" data-sec="history" onclick="mdShowSection('history')">History</button>
@@ -1001,7 +1001,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <button class="btn-sm" style="margin-top:10px" onclick="ldStop()">Stop following</button>
           </div>
         </div>
-        <div id="mp-card" style="display:none;margin-bottom:16px;padding:22px 22px;background:var(--surface2);border:1px solid var(--border);border-radius:16px">
+        <div id="mp-card" style="display:none;margin-bottom:16px;padding:22px 22px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
           <div id="mp-card-header" style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
             <span class="mp-live-dot"></span>
             <div style="font-size:17px;font-weight:800;letter-spacing:-.02em">Draft with friends <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
@@ -1039,7 +1039,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div id="md-setup">
           <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:3px">Build your mock draft</div>
           <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Describe your room, pick your seat, draft. The bots behave like the league you describe, and Sage advises every pick.</div>
-          <div style="margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid rgba(155,114,232,.35);border-radius:14px">
+          <div style="margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid rgba(155,114,232,.35);border-radius:var(--radius)">
             <div style="font-size:11px;color:var(--accent-bright);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">How does your league draft?</div>
             <textarea id="md-context" class="tm-input" rows="3" style="width:100%;resize:vertical;font-size:14px;line-height:1.55" oninput="mdContextPreview()" placeholder="e.g. RBs fly off the board early, two or three QBs always go in round 2, TE premium, everyone waits on kickers..."></textarea>
             <div id="md-context-read" style="font-size:11px;color:var(--accent-bright);margin-top:4px;min-height:14px"></div>
@@ -1054,7 +1054,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
               <span>Draft like my league - the room follows your league's scoring and lineup settings</span>
             </label>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Mode</div>
             <select id="md-mode" class="opp-select" style="width:100%" onchange="setLeagueModeManual(this.value)"><option value="redraft">Redraft</option><option value="dynasty">Dynasty</option></select></div>
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Teams</div>
@@ -1075,7 +1075,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
                the engine's normal shape. -->
           <details id="md-finetune" style="margin:-6px 0 16px">
             <summary style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;padding:4px 0">Fine-tune: scoring and roster construction</summary>
-            <div style="padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-top:8px">
+            <div style="padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-top:8px">
               <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px">
                 <label style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted2);cursor:pointer">
                   <input type="checkbox" id="md-6pt" style="accent-color:var(--accent-bright);margin:0">6pt passing TDs
@@ -1129,7 +1129,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <button class="btn-sm md-solo-ctl" onclick="mdShowMyRoster()" title="See the players you've drafted so far">My team</button>
           </div>
           <div id="md-draftboard" class="mdb-wrap"></div>
-          <div id="md-queue-wrap" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+          <div id="md-queue-wrap" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
             <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">My queue</span>
             <span id="md-queue" style="display:flex;gap:6px;flex-wrap:wrap"></span>
           </div>
@@ -1624,7 +1624,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072487"></script>
+<script src="/app.js?v=2026072588"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">

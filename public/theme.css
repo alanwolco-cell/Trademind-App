@@ -263,3 +263,208 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   border:1px dashed rgba(155,114,232,.28);border-radius:var(--radius);
   background:rgba(155,114,232,.045);padding:22px 18px;color:var(--muted2);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 3 - the draft system.
+
+   One vocabulary for everything the mock draft renders: a position speaks
+   through ONE hex everywhere (board chip edge, list row edge, player card
+   ring, filter chips), and motion is one gesture - the brand's purple-to-cyan
+   light passing over the thing that just happened - applied to exactly four
+   moments: a pick locking in, a tier revealing itself, the player card
+   blooming open, and the on-the-clock cell breathing. Nothing else moves.
+
+   Loaded last, so these settle over styles.css without !important. The
+   selectors match the classes app.js now emits (mdb-pk / pos-XX /
+   md-ch-row / md-tier-sep).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* the position palette - the same six hexes app.js has always used, now
+     owned by CSS so every surface reads them from one place */
+  --pos-qb:#a78bfa; --pos-rb:#4ade80; --pos-wr:#fbbf24;
+  --pos-te:#f87171; --pos-k:#38bdf8;  --pos-def:#94a3b8;
+  /* the signature: the hero's purple-to-cyan, as a reusable light */
+  --tm-grad:linear-gradient(90deg,#9b72e8 0%,#67e8f9 100%);
+}
+
+/* A chip, row or cell declares its position once; everything inside inherits
+   the edge colour and the tint from these two custom properties. */
+.pos-QB{--pos:var(--pos-qb);--pos-tint:rgba(167,139,250,.10)}
+.pos-RB{--pos:var(--pos-rb);--pos-tint:rgba(74,222,128,.09)}
+.pos-WR{--pos:var(--pos-wr);--pos-tint:rgba(251,191,36,.09)}
+.pos-TE{--pos:var(--pos-te);--pos-tint:rgba(248,113,113,.09)}
+.pos-K{--pos:var(--pos-k);--pos-tint:rgba(56,189,248,.09)}
+.pos-DEF{--pos:var(--pos-def);--pos-tint:rgba(148,163,184,.09)}
+
+/* ── the board ──────────────────────────────────────────────────────────────
+   Teams across the top, rounds down the side, snake order - Stacked's grid.
+   Every pick is a compact chip: position-coloured left edge, a whisper of the
+   same colour washed across the chip, name up to two lines, pos + team below,
+   pick number top-right. */
+.mdb-grid{gap:4px;padding:10px}
+.mdb-head{
+  font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--muted2);padding:9px 6px;border-radius:8px;
+}
+/* your column: marked by the brand, quietly - a tint and a gradient baseline */
+.mdb-head.mdb-me{
+  background:var(--accent-dim);color:var(--accent-bright);
+  box-shadow:inset 0 -2px 0 0 rgba(155,114,232,.75);
+}
+.mdb-round{font-size:10px;letter-spacing:.04em}
+.mdb-cell{border-radius:8px}
+/* a made pick: the chip. Tint fades out left-to-right so the colour reads as
+   an edge treatment, never a filled block - twelve columns of solid fills is
+   exactly the noise Stacked avoids. */
+.mdb-cell.mdb-pk{
+  cursor:pointer;position:relative;overflow:hidden;
+  background:linear-gradient(100deg,var(--pos-tint) 0%,rgba(0,0,0,0) 62%),var(--surface2);
+  border-left:3px solid var(--pos,var(--border));
+  transition:filter .16s var(--ap-ease,ease);
+}
+.mdb-cell.mdb-pk:hover{filter:brightness(1.18)}
+.mdb-cell.mdb-pk .mdb-sub{color:var(--pos,var(--muted))}
+.mdb-pickno{font-variant-numeric:tabular-nums}
+/* your own picks: hairline brand outline on top of the position edge */
+.mdb-cell.mdb-minepick{outline:1px solid rgba(155,114,232,.35);outline-offset:-1px}
+
+/* MOMENT 1 - the lock-in. A new pick settles with a soft spring while the
+   brand's light passes over it once. Replaces the plain scale pop. */
+.mdb-cell.mdb-latest{animation:tmSettle .38s cubic-bezier(.2,1.4,.4,1) both}
+.mdb-cell.mdb-latest::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 32%,rgba(155,114,232,.32) 46%,rgba(103,232,249,.38) 54%,transparent 68%);
+  transform:translateX(-130%);
+  animation:tmSweep .5s ease-out .08s forwards;
+}
+@keyframes tmSettle{0%{transform:scale(.92);opacity:0}62%{transform:scale(1.015)}100%{transform:scale(1);opacity:1}}
+@keyframes tmSweep{to{transform:translateX(130%)}}
+
+/* MOMENT 4 - on the clock. The one cell that matters breathes the accent;
+   everything else on the board holds still. */
+.mdb-cell.mdb-onclock{
+  border:1px solid rgba(155,114,232,.55);
+  animation:tmClock 1.8s ease-in-out infinite;
+}
+@keyframes tmClock{
+  0%,100%{box-shadow:0 0 0 0 rgba(155,114,232,0)}
+  50%{box-shadow:0 0 16px 1px rgba(155,114,232,.32)}
+}
+
+/* ── the available list ─────────────────────────────────────────────────────
+   Rows: headshot, name, meta, queue and draft controls - with the same
+   position edge as the board, so the two surfaces read as one system. */
+.md-ch-row{
+  display:flex;align-items:center;gap:8px;padding:9px 11px 9px 8px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-left:3px solid var(--pos,var(--border));
+  border-radius:10px;cursor:pointer;
+  transition:border-color .16s var(--ap-ease,ease),background .16s var(--ap-ease,ease);
+}
+.md-ch-row:hover{border-color:rgba(155,114,232,.45);border-left-color:var(--pos,var(--border));background:var(--surface3)}
+/* Sage's pick: carries a wash of the brand, not a shout */
+.md-ch-row.md-ch-rec{
+  border-color:rgba(155,114,232,.55);border-left-color:var(--pos,var(--border));
+  background:linear-gradient(100deg,rgba(155,114,232,.10) 0%,rgba(0,0,0,0) 60%),var(--surface2);
+}
+.md-ch-row.md-ch-on{outline:2px solid var(--accent-bright);outline-offset:1px}
+
+/* MOMENT 2 - a tier reveals itself. The separator hairlines shimmer once with
+   the brand light, then go quiet. The cliff count rides the label. */
+.md-tier-sep{
+  grid-column:1/-1;display:flex;align-items:center;gap:10px;
+  font-size:9.5px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.08em;margin:3px 0 -1px;
+}
+.md-tier-sep .sep-line{flex:1;height:1px;background:var(--border);position:relative;overflow:hidden}
+.md-tier-sep .sep-line::after{
+  content:'';position:absolute;inset:0;background:var(--tm-grad);opacity:.6;
+  transform:translateX(-101%);animation:tmSweepLine .9s ease-out .15s forwards;
+}
+@keyframes tmSweepLine{to{transform:translateX(101%)}}
+.md-tier-sep .md-cliff{color:#f87171;letter-spacing:.06em}
+
+/* ── the player card ────────────────────────────────────────────────────────
+   The dossier layout (identity rail + depth column at >=900px) comes from
+   styles.css; this pass gives it the system's finish: a gradient signature
+   hairline along the top, a position-coloured photo ring, one more step of
+   type hierarchy, and the bloom-open. */
+/* radius scoped above the phone breakpoint: styles.css makes the card the
+   whole screen under 701px, and rounding a fullscreen sheet leaks background
+   through the corners */
+@media(min-width:701px){.pm-card{border-radius:var(--radius-lg)}}
+.pm-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--tm-grad);z-index:3;
+}
+/* MOMENT 3 - the bloom. Opens from a soft scale+fade, one spring, 260ms. */
+.pm-overlay.open .pm-card{animation:tmBloom .26s cubic-bezier(.16,1,.3,1) both}
+@keyframes tmBloom{from{transform:translateY(14px) scale(.96);opacity:.35}to{transform:none;opacity:1}}
+/* the photo ring takes the player's position colour (accent stays the fallback) */
+.pm-card:has(.pm-pos-badge.QB) .pm-photo{border-color:var(--pos-qb)}
+.pm-card:has(.pm-pos-badge.RB) .pm-photo{border-color:var(--pos-rb)}
+.pm-card:has(.pm-pos-badge.WR) .pm-photo{border-color:var(--pos-wr)}
+.pm-card:has(.pm-pos-badge.TE) .pm-photo{border-color:var(--pos-te)}
+.pm-card:has(.pm-pos-badge.K) .pm-photo{border-color:var(--pos-k)}
+.pm-card:has(.pm-pos-badge.DEF) .pm-photo{border-color:var(--pos-def)}
+.pm-name{letter-spacing:-.02em}
+.pm-pos-badge{border-radius:6px;letter-spacing:.04em}
+.pm-pos-badge.K{background:rgba(56,189,248,.14);color:var(--pos-k)}
+.pm-pos-badge.DEF{background:rgba(148,163,184,.14);color:var(--pos-def)}
+.pm-ktc-bar{border-radius:var(--radius)}
+.pm-stat{border-radius:10px;padding:.7rem .8rem}
+.pm-stat-val{font-size:16px;font-variant-numeric:tabular-nums}
+/* the depth column earns three stats across once it has the width */
+@media(min-width:560px){.pm-grid{grid-template-columns:repeat(3,1fr);gap:10px}}
+
+/* ── the setup screen and the shell around the board ────────────────────────
+   Same nesting rule as everywhere else: panels inside a card sit at the inner
+   radius (the 14px/16px inline values were edited in index.html). The section
+   chips get a real selected state instead of a bare border swap. */
+.md-sec-btn{transition:border-color .16s var(--ap-ease,ease),color .16s var(--ap-ease,ease),background .16s var(--ap-ease,ease)}
+.md-sec-btn.on{background:var(--accent-dim);border-color:rgba(155,114,232,.5);color:var(--accent-bright)}
+.md-strat-card{border-radius:var(--radius)}
+.md-pos-chip.active{border-color:rgba(155,114,232,.5)}
+/* a position filter chip wears its own position colour while selected */
+.md-pos-chip[data-pos="QB"].active{color:var(--pos-qb);border-color:var(--pos-qb);background:rgba(167,139,250,.12)}
+.md-pos-chip[data-pos="RB"].active{color:var(--pos-rb);border-color:var(--pos-rb);background:rgba(74,222,128,.10)}
+.md-pos-chip[data-pos="WR"].active{color:var(--pos-wr);border-color:var(--pos-wr);background:rgba(251,191,36,.10)}
+.md-pos-chip[data-pos="TE"].active{color:var(--pos-te);border-color:var(--pos-te);background:rgba(248,113,113,.10)}
+.md-pos-chip[data-pos="K"].active{color:var(--pos-k);border-color:var(--pos-k);background:rgba(56,189,248,.10)}
+.md-pos-chip[data-pos="DEF"].active{color:var(--pos-def);border-color:var(--pos-def);background:rgba(148,163,184,.10)}
+
+/* ── light theme parity ─────────────────────────────────────────────────────
+   The tints above are low-alpha colour over the surface tokens, so they hold
+   on white; only the sweep's light needs to dim so it doesn't flash. */
+[data-theme="light"] .mdb-cell.mdb-latest::after{
+  background:linear-gradient(105deg,transparent 32%,rgba(106,63,255,.16) 46%,rgba(8,145,178,.18) 54%,transparent 68%);
+}
+[data-theme="light"] .mdb-cell.mdb-pk:hover{filter:brightness(.97)}
+[data-theme="light"] .md-tier-sep .sep-line::after{opacity:.4}
+
+/* ── the signature, carried across the app ──────────────────────────────────
+   The purple-to-cyan hairline the player card wears along its top also runs
+   over the two other surfaces where Sage puts his name: the trade verdict and
+   his pick recommendation in the draft. One mark, three places - the moments
+   the product speaks all read as the same voice. */
+#md-sage,.verdict-card{position:relative;overflow:hidden}
+#md-sage::before,.verdict-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--tm-grad);opacity:.85;
+}
+
+/* Every empty state in the app takes the one dashed-accent treatment the
+   Community/Research pass established - the mock's included. */
+.empty-state{
+  border:1px dashed rgba(155,114,232,.28);border-radius:var(--radius);
+  background:rgba(155,114,232,.045);color:var(--muted2);
+}
+
+/* ── stillness is a feature ────────────────────────────────────────────────*/
+@media(prefers-reduced-motion:reduce){
+  .mdb-cell.mdb-latest,.mdb-cell.mdb-onclock,.pm-overlay.open .pm-card{animation:none}
+  .mdb-cell.mdb-latest::after,.md-tier-sep .sep-line::after{animation:none;display:none}
+}

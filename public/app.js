@@ -5857,7 +5857,8 @@ function _tradeRowHtml(t,pid,leagueLabel,rosterNames){
     var rid=pk.owner_id;if(!sides[rid])sides[rid]=[];
     sides[rid].push({id:null,name:pk.season+' Round '+pk.round+' pick',team:'',pos:'PK',hot:false});
   });
-  var posC={QB:'#f59e0b',RB:'#4ade80',WR:'#60a5fa',TE:'#a78bfa'};
+  // the one position palette the whole app uses (theme.css --pos-* tokens)
+  var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
   var sideHtml=Object.keys(sides).map(function(rid){
     var who=rosterNames?(rosterNames(parseInt(rid))||'Team '+rid):'Team '+rid;
     return '<div style="flex:1;min-width:150px"><div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">'+who+' got</div>'
@@ -7273,7 +7274,7 @@ function renderMarketTab(){
     var arrow=isUp?'▲':'▼';
     var pctStr=(isUp?'+':'')+m.pct+'%';
     var imgSrc=m.pid?'https://sleepercdn.com/content/nfl/players/thumb/'+m.pid+'.jpg':'';
-    var posC={QB:'#f59e0b',WR:'#60a5fa',RB:'#4ade80',TE:'#a78bfa'};
+    var posC={QB:'#a78bfa',WR:'#fbbf24',RB:'#4ade80',TE:'#f87171'};
     return '<div class="mkt-mover" onclick="showPlayerChart(\''+m.name.toLowerCase().replace(/'/g,"\\'")+'\')" style="cursor:pointer;flex-wrap:wrap">'
       +(imgSrc?'<img class="mkt-mover-img" src="'+imgSrc+'" onerror="this.style.display=\'none\'">':'<div class="mkt-mover-img"></div>')
       +'<div style="flex:1;min-width:0"><div class="mkt-mover-name">'+m.name+'</div>'
@@ -7305,7 +7306,7 @@ function renderTrendingWeek(){
   });
 }
 function _paintTrendingWeek(d){
-  var posC={QB:'#f59e0b',WR:'#60a5fa',RB:'#4ade80',TE:'#a78bfa'};
+  var posC={QB:'#a78bfa',WR:'#fbbf24',RB:'#4ade80',TE:'#f87171'};
   function row(it,isAdd){
     var pid=it.player_id,p=allPlayers[pid];
     var name=p?p.name:null;
@@ -7486,7 +7487,7 @@ function showPlayerChart(nm){
   var slId = findSleeperIdByName(nm);
   var imgHtml = slId ? '<img src="https://sleepercdn.com/content/nfl/players/thumb/'+slId+'.jpg" onerror="this.style.display=\'none\'" style="width:52px;height:52px;border-radius:50%;border:2px solid var(--border2);object-fit:cover">' : '';
 
-  var posC = {QB:'#f59e0b',WR:'#60a5fa',RB:'#4ade80',TE:'#a78bfa'};
+  var posC = {QB:'#a78bfa',WR:'#fbbf24',RB:'#4ade80',TE:'#f87171'};
   var chgColor = isUp ? '#22c55e' : '#ef4444';
   var chgArrow = isUp ? '▲' : '▼';
 
@@ -8849,23 +8850,31 @@ function mdShowChoices(round){
   var _lastTier=null;
   top.forEach(function(p){
     // Tier separators, position view only: "— Tier 3 WR —" between blocks so
-    // the cliffs are visible while you shop a position
+    // the cliffs are visible while you shop a position. When the tier is down
+    // to its last man (or two), the separator says so in red - and the
+    // hairlines shimmer once with the brand gradient (theme.css .md-tier-sep).
     if(pf&&MD.tierOf&&MD.tierOf[p.id]&&MD.tierOf[p.id]!==_lastTier){
+      var _tn2=MD.tierOf[p.id];
+      // count from the full untaken pool at this position, not the searched
+      // slice, so a search box query can never fake a cliff
+      var _tleft=MD.pool.filter(function(x){return !taken[x.id]&&x.pos===pf&&MD.tierOf[x.id]===_tn2;}).length;
       var sep=document.createElement('div');
-      sep.style.cssText='grid-column:1/-1;display:flex;align-items:center;gap:10px;font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:3px 0 -1px';
-      sep.innerHTML='<span style="flex:1;height:1px;background:var(--border)"></span>Tier '+MD.tierOf[p.id]+' '+pf+'<span style="flex:1;height:1px;background:var(--border)"></span>';
+      sep.className='md-tier-sep';
+      sep.innerHTML='<span class="sep-line"></span>Tier '+_tn2+' '+pf
+        +(_tleft===1?'&nbsp;<span class="md-cliff">· last one - cliff behind him</span>':_tleft===2?'&nbsp;<span class="md-cliff">· only 2 left</span>':'')
+        +'<span class="sep-line"></span>';
       box.appendChild(sep);
-      _lastTier=MD.tierOf[p.id];
+      _lastTier=_tn2;
     }
-    var d=document.createElement('div');
-    d.className='md-ch-row';
-    var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'}[p.pos]||'#94a3b8';
-    d.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 11px 9px 8px;background:var(--surface2);border:1px solid '+(p===rec?'rgba(155,114,232,.55)':'var(--border)')+';border-left:3px solid '+posC+';border-radius:10px;cursor:pointer;transition:all .15s;';
     // TAP MODEL: the card body (face, name, anywhere) opens the player card.
     // Drafting happens ONLY through the select circle on the right (and the
     // Draft button), so a stray tap can never draft anyone by accident.
     var isSel=MD.selChoice===p;
     var inQ=(MD.queue||[]).indexOf(p.id)>=0;
+    var d=document.createElement('div');
+    // styling lives in theme.css: the pos-XX class carries the edge colour,
+    // md-ch-rec marks Sage's pick, md-ch-on the selected row
+    d.className='md-ch-row pos-'+p.pos+(p===rec?' md-ch-rec':'')+(isSel?' md-ch-on':'');
     d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
       +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+(p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
@@ -8880,7 +8889,6 @@ function mdShowChoices(round){
       if(p.pos==='DEF')return; // no player card for team units
       openPlayerCard(p.id,p.name);
     });
-    if(isSel){d.style.outline='2px solid var(--accent-bright)';d.style.outlineOffset='1px';}
     box.appendChild(d);
   });
   mdRenderDraftBar();
@@ -8904,9 +8912,10 @@ function mdShowSection(sec){
     if(el)el.style.display=map[id]?'block':'none';
   });
   document.querySelectorAll('.md-sec-btn').forEach(function(b){
-    var on=b.dataset.sec===sec;
-    b.style.borderColor=on?'var(--accent-bright)':'';
-    b.style.color=on?'var(--text)':'';
+    // selected state is the .on class (theme.css); inline colours are cleared
+    // in case the initial markup or an old render left any behind
+    b.classList.toggle('on',b.dataset.sec===sec);
+    b.style.borderColor='';b.style.color='';
   });
   if(sec==='history'){try{mdRenderHistory();}catch(_){}}
   if(sec==='friends'){var mn=document.getElementById('mp-name');if(mn&&!mn.value)mn.value=localStorage.getItem('tm_username')||'';}
@@ -9421,10 +9430,9 @@ function mdRenderBoard(){
     mdRenderQueue();
     return;
   }
-  // Cells stay on the neutral surface; the position speaks through the thin
-  // left border and the pos label only. One accent on the whole board: the
-  // ON THE CLOCK cell. Tinted fills everywhere made the grid read as noise.
-  var posBorder={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+  // Position colour lives in CSS now (theme.css .pos-XX custom properties):
+  // the cell declares its position once and the edge, tint and sub-line all
+  // read from it. One accent on the whole board: the ON THE CLOCK cell.
   var byCell={};
   MD.picks.forEach(function(pk){byCell[pk.round+'-'+pk.slot]=pk;});
   var lastPk=MD.picks[MD.picks.length-1];
@@ -9454,10 +9462,11 @@ function mdRenderBoard(){
         // Landscape cells, Stacked density: pick number top-right, name up to
         // two lines, pos + team below. Faces live in the list view and the
         // player card; here they cost height the proportions cannot afford.
-        html+='<div class="mdb-cell'+(pk.mine?' mdb-minepick':'')+(isLast?' mdb-latest':'')+'" title="Click to change this pick" onclick="mdEditPick('+r+','+s2+')" style="cursor:pointer;background:var(--surface2);border-left:3px solid '+(posBorder[pos]||'var(--border)')+'">'
+        // The newest pick locks in with the brand's gradient sweep (mdb-latest).
+        html+='<div class="mdb-cell mdb-pk pos-'+pos+(pk.mine?' mdb-minepick':'')+(isLast?' mdb-latest':'')+'" title="Click to change this pick" onclick="mdEditPick('+r+','+s2+')">'
           +'<div class="mdb-pickno">'+pk.round+'.'+(pk.pickNo<10?'0':'')+pk.pickNo+'</div>'
           +'<div class="mdb-name">'+pk.p.name+'</div>'
-          +'<div class="mdb-sub" style="color:'+(posBorder[pos]||'var(--muted)')+'">'+pos+' <span style="color:var(--muted)">'+(pk.p.team||'FA')+'</span></div>'
+          +'<div class="mdb-sub">'+pos+' <span style="color:var(--muted)">'+(pk.p.team||'FA')+'</span></div>'
           +'</div>';
       }
     }
@@ -11665,7 +11674,7 @@ function playerChipHtml(asset){
   var pid=asset.sleeper_id||getPlayerIdByName(name)||null;
   var pos='',team='';
   if(pid&&allPlayers[pid]){pos=allPlayers[pid].pos||'';team=allPlayers[pid].team||'';}
-  var posColors={QB:'#f59e0b',RB:'#22c55e',WR:'#3b82f6',TE:'#a78bfa'};
+  var posColors={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
   var posColor=posColors[pos]||'var(--muted)';
   var imgHtml=pid
     ?'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+pid+'.jpg" onerror="this.style.display=\'none\'" style="width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--surface2);border:2px solid '+posColor+'">'
