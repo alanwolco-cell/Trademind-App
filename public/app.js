@@ -262,29 +262,6 @@ function goConnectLeague(){
   window._returnScreen=cur?cur.id:null;
   openConnectModal();
 }
-// Trade Ideas is the product's front door; it lives inside the analyze screen
-// as a tab, so every entry point funnels through this one helper.
-function goTradeIdeas(){
-  switchScreen('analyze');
-  try{showAnalyzeTab('ideas');}catch(_){}
-}
-// Hero form: username in, trade partners out. Also wired to the bottom CTA.
-function heroFindTrades(){
-  // Already connected: no re-login, straight to the partners.
-  if(leagueId&&leagueRosters.length){goTradeIdeas();return;}
-  var inp=document.getElementById('hero-username');
-  var name=((inp&&inp.value)||'').trim()||localStorage.getItem('tm_username')||'';
-  // Landing flag: loadLeague reads it and opens Trade Ideas instead of the
-  // empty analyzer once the league is in.
-  window._landOnIdeas=true;
-  window._returnScreen=null;
-  openConnectModal();
-  var cm=document.getElementById('cm-user');
-  if(cm&&name){
-    cm.value=name;
-    connectModalGo();
-  }
-}
 function openConnectModal(){
   var m=document.getElementById('connect-modal');
   if(!m){
@@ -1325,7 +1302,7 @@ async function loadLeague(lid,name,rosters,season){
   var howEl=document.getElementById('how');if(howEl)howEl.style.display='none';
   var howMini=document.getElementById('how-mini');if(howMini)howMini.style.display='';
   // If the user came from another tab (Buy/Sell, Roster Grade...), send them back there
-  if(window._returnScreen&&window._returnScreen!=='screen-analyze'&&window._returnScreen!=='screen-home'&&!window._landOnIdeas){
+  if(window._returnScreen&&window._returnScreen!=='screen-analyze'){
     var backTo=window._returnScreen.replace('screen-','');
     window._returnScreen=null;
     switchScreen(backTo,true);
@@ -1333,23 +1310,11 @@ async function loadLeague(lid,name,rosters,season){
     if(backTo==='league')renderRosterGrade();
     window.scrollTo({top:0,behavior:'smooth'});
   } else {
-    var fromHome=window._returnScreen==='screen-home';
     window._returnScreen=null;
-    // Landing after a connect is Trade Ideas: the user just handed us their
-    // league, so the first thing they see is what we found in it - not an
-    // empty builder. Only a league switch made while working in the analyzer
-    // tab keeps the analyzer on screen.
-    var onAnalyzerTab=document.getElementById('screen-analyze').classList.contains('active')
-      &&document.getElementById('tab-ideas').style.display!=='block';
-    if(window._landOnIdeas||fromHome||!onAnalyzerTab){
-      window._landOnIdeas=false;
-      goTradeIdeas();
-    }else{
-      setTimeout(function(){
-        var anchor=document.getElementById('analyzer');
-        if(anchor){var top=anchor.getBoundingClientRect().top+window.pageYOffset-76;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});}
-      },100);
-    }
+    setTimeout(function(){
+      var anchor=document.getElementById('analyzer');
+      if(anchor){var top=anchor.getBoundingClientRect().top+window.pageYOffset-76;window.scrollTo({top:Math.max(0,top),behavior:'smooth'});}
+    },100);
   }
 }
 
@@ -4671,8 +4636,6 @@ function mobGo(screen,tab){
   mobMenuToggle();
   try{
     switchScreen(screen);
-    // the analyze screen carries two products; the drawer names them separately
-    if(screen==='analyze'){try{showAnalyzeTab(tab==='ideas'?'ideas':'analyzer');}catch(_){}}
     if(screen==='mock'){try{mdRenderStrats();mdPrefillFromLeague();if(tab)mdShowSection(tab);}catch(_){}}
     if(screen==='news'){try{loadNewsGrid();loadAnalystCorner();}catch(_){}}
     if(screen==='community'){try{loadCommunityFeed();}catch(_){}if(tab){try{switchCommunityTab(tab);}catch(_){}}}
@@ -5371,9 +5334,6 @@ function generateTradeIdeas(){
       ih.style.display='flex';
       var nm=document.getElementById('ideas-league-name'); if(nm)nm.textContent=leagueName||'your league';
     }
-    // The tab headline names the league so the promise reads personal.
-    var tt=document.getElementById('ideas-tab-title');
-    if(tt)tt.textContent=leagueId&&leagueName?('Your best trade partners in '+leagueName):'Your best trade partners';
     // Populate every league switcher on the page (inline ideas + the Trade Ideas
     // tab). Only show it when you actually have more than one league to switch to.
     var _ls=window._myLeagues||[];
@@ -5651,7 +5611,7 @@ function generateTradeIdeas(){
   }
 
   if(!topIdeas.length){
-    el.innerHTML="<div class='ideas-empty'>No strong trade partners in this league right now - market values may still be loading, or the rosters just do not line up. Hit \"New ideas\" for another pass, or build a trade by hand.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:12px' onclick=\"switchScreen('analyze');showAnalyzeTab('analyzer')\">Open the Trade Analyzer</button></div>";
+    el.innerHTML="<div class='ideas-empty'>No ideas found yet - market values may still be loading. Try again in a moment.</div>";
     return;
   }
 
@@ -5705,140 +5665,30 @@ function generateTradeIdeas(){
     el.innerHTML=phaseHtml+"<div class='ideas-empty'>No ideas match your filters. Loosen your \"won't trade\" list or clear the target position.</div>";
     return;
   }
-  // ── Partner-first presentation ──────────────────────────────────────────
-  // The product is "who should I trade with", so ideas group under the real
-  // manager they belong to instead of rendering as a flat list. The matching
-  // engine above is untouched; only the packaging changed.
+  // Rotate through the idea pool on each Refresh so the user sees fresh options
   window._ideaPool=topIdeas;
-  var partners=[],pmap={};
-  topIdeas.forEach(function(idea){
-    var k=idea.oppUserId;
-    if(!pmap[k]){pmap[k]={oppUserId:k,oppName:idea.oppName,ideas:[]};partners.push(pmap[k]);}
-    if(pmap[k].ideas.length<2)pmap[k].ideas.push(idea);
-  });
-  // Rotate through partners on each "New ideas" press
-  var offset=(window._ideaOffset||0)%partners.length;
-  var shownPartners=partners.slice(offset,offset+3);
-  if(shownPartners.length<3)shownPartners=shownPartners.concat(partners.slice(0,3-shownPartners.length));
-  var seenP={};shownPartners=shownPartners.filter(function(p){if(seenP[p.oppUserId])return false;seenP[p.oppUserId]=true;return true;});
-  // Flat index so "Load into analyzer" and the pitch button can find their idea
-  var flat=[];shownPartners.forEach(function(p){p.ideas.forEach(function(i){flat.push(i);});});
-  window._shownIdeas=flat;
-
-  // One line on why this manager is a fit: their thin spot vs your surplus.
-  function partnerWhy(oppUserId){
-    var r=leagueRosters.find(function(x){return x.owner_id===oppUserId;});
-    if(!r)return '';
-    var os=rosterPosSummary(r.players||[]);
-    var on=posNeed(os);
-    var thin=on[0]&&on[0].pos, deep=on[on.length-1]&&on[on.length-1].pos;
-    if(!thin||!deep)return '';
-    var txt='Deep at '+deep+', thin at '+thin;
-    if((mySum[thin]||[]).length>=3)txt+=' - and you have the '+thin+' depth they are missing';
-    return txt+'.';
-  }
-  // Direction of the value, in words. The raw market number stays hidden on
-  // purpose: a tier reads honest, a number invites rules-lawyering.
-  function balanceLabel(gap){
-    if(gap>=250)return {t:'Clear value win for you',c:'win'};
-    if(gap>=60)return {t:'Slight edge to you',c:'win'};
-    if(gap>=-60)return {t:'Even value both ways',c:'fair'};
-    return {t:'You pay a premium for the upside',c:'counter'};
-  }
-  var flatIdx=0;
-  el.innerHTML=phaseHtml+shownPartners.map(function(p){
-    var u=leagueUsers.find(function(x){return x.user_id===p.oppUserId;});
-    var avHtml=(u&&u.avatar)
-      ?"<img class='partner-avatar' src='https://sleepercdn.com/avatars/thumbs/"+u.avatar+"' alt='' onerror='this.style.display=\"none\"'>"
-      :"<div class='partner-avatar partner-avatar-ph'>"+escHtml((p.oppName||'?').charAt(0).toUpperCase())+"</div>";
-    var why=partnerWhy(p.oppUserId);
-    var tradesHtml=p.ideas.map(function(idea){
-      var idx=flatIdx++;
-      var giveHtml=idea.iGive.map(assetHtml).join("");
-      var getHtml=idea.theyGive.map(assetHtml).join("");
-      var bal=balanceLabel(idea.gap||0);
-      return "<div class='partner-trade'>"
-        +"<div style='display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap'>"
-        +"<span class='idea-tag "+bal.c+"'>"+bal.t+"</span>"
-        +"<span class='idea-tag "+idea.tagClass+"'>"+idea.tag+"</span></div>"
-        +"<div class='idea-players'>"
-        +"<div><div style='font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px'>You send</div>"+giveHtml+"</div>"
-        +"<div class='idea-arrow'>→</div>"
-        +"<div><div style='font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px'>You receive</div>"+getHtml+"</div>"
-        +"</div>"
-        +"<div class='idea-reason'>"+idea.reason+"</div>"
-        +"<div class='idea-actions'>"
-        +"<button class='idea-pitch-btn' onclick='ideaPitch("+idx+",this)'>How do I pitch this to "+escHtml(idea.oppName)+"? →</button>"
-        +"<button class='idea-use-btn' onclick='useTradeIdea("+idx+")'>Load into analyzer →</button>"
-        +"</div>"
-        +"<div class='idea-pitch' id='idea-pitch-"+idx+"' style='display:none'></div>"
-        +"</div>";
-    }).join("");
-    return "<div class='partner-card'>"
-      +"<div class='partner-head'>"+avHtml
-      +"<div><div class='partner-name'>"+escHtml(p.oppName)+"</div>"
-      +(why?"<div class='partner-why'>"+escHtml(why)+"</div>":"")
-      +"</div></div>"
-      +tradesHtml
+  var offset=(window._ideaOffset||0)%Math.max(1,topIdeas.length);
+  var shown=topIdeas.slice(offset,offset+4);
+  if(shown.length<4)shown=shown.concat(topIdeas.slice(0,4-shown.length));
+  // Dedupe in case pool is small
+  var seenIdx={};shown=shown.filter(function(x){var k=topIdeas.indexOf(x);if(seenIdx[k])return false;seenIdx[k]=true;return true;});
+  window._shownIdeas=shown;
+  el.innerHTML=phaseHtml+shown.map(function(idea,idx){
+    var giveHtml=idea.iGive.map(assetHtml).join("");
+    var getHtml=idea.theyGive.map(assetHtml).join("");
+    return "<div class='idea-item'>"
+      +"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:6px'>"
+      +"<div class='idea-opp'>vs "+idea.oppName+"</div>"
+      +"<span class='idea-tag "+idea.tagClass+"'>"+idea.tag+"</span></div>"
+      +"<div class='idea-players'>"
+      +"<div><div style='font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px'>You give</div>"+giveHtml+"</div>"
+      +"<div class='idea-arrow'>→</div>"
+      +"<div><div style='font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px'>You get</div>"+getHtml+"</div>"
+      +"</div>"
+      +"<div class='idea-reason'>"+idea.reason+"</div>"
+      +"<button class='idea-use-btn' onclick='useTradeIdea("+idx+")'>Load into analyzer →</button>"
       +"</div>";
   }).join("");
-}
-
-// Sage writes the exact league-chat message for one suggested trade. Called
-// only on demand - every pitch is a model call, so nothing fires on render.
-async function ideaPitch(idx,btn){
-  var idea=window._shownIdeas&&window._shownIdeas[idx];
-  var box=document.getElementById('idea-pitch-'+idx);
-  if(!idea||!box)return;
-  if(box.dataset.done==='1'){box.style.display=box.style.display==='none'?'block':'none';return;}
-  if(box.dataset.busy==='1')return;
-  var label='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Sage\'s pitch to '+escHtml(idea.oppName)+'</div>';
-  box.style.display='block';
-  if(!localStorage.getItem('tm_username')){
-    box.innerHTML=label+'Connect with your Sleeper username so Sage can write this pitch for you.';
-    return;
-  }
-  box.dataset.busy='1';
-  if(btn)btn.disabled=true;
-  box.innerHTML=label+'<span class="sage-status">Sage is writing it...</span>';
-  var partName=function(p){return p.name+(p.pos&&p.pos!=='PK'?' ('+p.pos+')':'');};
-  var giveTxt=idea.iGive.map(partName).join(', ');
-  var getTxt=idea.theyGive.map(partName).join(', ');
-  var reasonPlain=String(idea.reason||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
-  var full='';
-  function paint(){box.innerHTML=label+escHtml(full).replace(/\n/g,'<br>');}
-  try{
-    var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      leagueContext:_sageLeagueCtx(),
-      user:localStorage.getItem('tm_username')||'',
-      device:_deviceId(),
-      messages:[{role:'user',content:'TRADE PITCH MODE. In my league "'+(leagueName||'my league')+'", I want to offer a trade to the manager called "'+idea.oppName+'". I would send: '+giveTxt+'. I would receive: '+getTxt+'. Why the deal makes sense: '+reasonPlain.slice(0,500)+' Write the exact message I should send '+idea.oppName+' in our league chat: casual and confident, no salesman energy, framed around what THEY get out of it, 3 to 6 sentences. Output only the message itself, no preamble.'}]
-    })});
-    var ctype=res.headers.get('content-type')||'';
-    if(ctype.indexOf('text/event-stream')<0){
-      var d=await res.json().catch(function(){return {};});
-      if(d.answer){full=d.answer;paint();}
-      else box.innerHTML=label+escHtml(d.error||'Could not get the pitch right now. Give it another shot in a moment.');
-    }else{
-      var reader=res.body.getReader();var dec=new TextDecoder();var buf='';
-      while(true){
-        var r2=await reader.read();if(r2.done)break;
-        buf+=dec.decode(r2.value,{stream:true});
-        var lines=buf.split('\n\n');buf=lines.pop();
-        for(var li=0;li<lines.length;li++){
-          var ln=lines[li].trim();
-          if(ln.indexOf('data: ')!==0)continue;
-          try{var ev=JSON.parse(ln.slice(6));if(ev.t){full+=ev.t;paint();}}catch(_){}
-        }
-      }
-      if(!full.trim())box.innerHTML=label+'Could not get the pitch right now. Give it another shot in a moment.';
-    }
-    if(full.trim())box.dataset.done='1';
-  }catch(_){
-    box.innerHTML=label+'Could not get the pitch right now. Give it another shot in a moment.';
-  }
-  box.dataset.busy='';
-  if(btn)btn.disabled=false;
 }
 
 // ── Trade Ideas filters: target position (from context) + "won't trade" list ──
@@ -5901,8 +5751,7 @@ function useTradeIdea(idx){
 }
 
 function refreshTradeIdeas(){
-  // advance one full page of partner cards (3 per view)
-  window._ideaOffset=(window._ideaOffset||0)+3;
+  window._ideaOffset=(window._ideaOffset||0)+4;
   generateTradeIdeas();
 }
 
@@ -10145,26 +9994,6 @@ function showAnalyzeTab(tab){
   // work with zero setup - this is the core "drop a trade, get an answer" flow.
   if(tab==='analyzer')_warmAnalyzerData();
   if(tab==='ideas')renderIdeasTab();
-  // Trade Ideas and Analyze are separate nav destinations that share this
-  // screen, so the highlighted tab has to follow the visible product.
-  try{_navSyncSub();tabbarSync('analyze');}catch(_){}
-}
-// Keeps the desktop nav honest about which product is on screen: Trade Ideas
-// vs Analyze (same screen, different tab), and lights "More" for everything
-// filed under it.
-function _navSyncSub(){
-  var sa=document.getElementById('screen-analyze');
-  var onAnalyze=!!(sa&&sa.classList.contains('active'));
-  var ideasVisible=onAnalyze&&document.getElementById('tab-ideas').style.display==='block';
-  var ib=document.getElementById('nav-ideas-btn');
-  if(ib)ib.classList.toggle('active',ideasVisible);
-  var ab=document.querySelector('.nav-item-btn[data-screen="analyze"]');
-  if(ab)ab.classList.toggle('active',onAnalyze&&!ideasVisible);
-  var mb=document.getElementById('nav-more-btn');
-  if(mb){
-    var cur=(document.querySelector('.screen.active')||{}).id||'';
-    mb.classList.toggle('active',['screen-research','screen-mock','screen-community','screen-news','screen-learn'].indexOf(cur)>=0);
-  }
 }
 function _warmAnalyzerData(){
   if(Object.keys(allPlayers).length<100&&!window._acLoading){
@@ -10185,7 +10014,7 @@ function renderIdeasTab(){
       +'<br><button class="btn-load" style="width:auto;padding:11px 24px;margin-top:12px" onclick="goConnectLeague()">Connect your league</button></div>';
     return;
   }
-  if(subEl)subEl.textContent='Who to trade with, what to offer, and why they say yes';
+  if(subEl)subEl.textContent='Based on your roster needs vs the rest of the league';
   generateTradeIdeas();
 }
 
@@ -10274,7 +10103,6 @@ switchScreen=function(name){
   });
   closeAllDropdowns();
   tabbarSync(name);
-  try{_navSyncSub();}catch(_){}
   // the draft sections render lazily, so folding has to happen on arrival
   if(name==='mock'){try{ctxFoldBlurbs();}catch(_){}}
 };
@@ -10283,19 +10111,11 @@ switchScreen=function(name){
 // The four direct tabs cannot cover every screen, so anything they don't own
 // (League, Research, News, Community) lights up "More" instead of leaving the
 // bar with nothing selected, which reads as broken.
-var _TABBAR_DIRECT=['home','analyze','sage'];
+var _TABBAR_DIRECT=['home','analyze','sage','mock'];
 function tabbarSync(name){
   var bar=document.getElementById('tabbar');
   if(!bar)return;
-  var target;
-  if(name==='analyze'){
-    // Ideas has its own thumb slot but shares the analyze screen: light up
-    // whichever tab is actually showing.
-    var ti=document.getElementById('tab-ideas');
-    target=(ti&&ti.style.display==='block')?'ideas':'analyze';
-  }else{
-    target=_TABBAR_DIRECT.indexOf(name)===-1?'more':name;
-  }
+  var target=_TABBAR_DIRECT.indexOf(name)===-1?'more':name;
   bar.querySelectorAll('.tabbar-item').forEach(function(b){
     b.classList.toggle('active',b.dataset.tab===target);
   });
@@ -10341,10 +10161,7 @@ function tabGo(name){
   if(name==='more'){mobMenuToggle();return;}
   if(drawerOpen)mobMenuToggle(); // never leave the drawer covering the screen we just opened
   if(name==='home'){goHome();return;}
-  if(name==='ideas'){goTradeIdeas();return;}
   switchScreen(name);
-  // Ideas and Analyze share the screen; the Analyze slot always means the analyzer.
-  if(name==='analyze'){try{showAnalyzeTab('analyzer');}catch(_){}}
   if(name==='mock'){try{mdRenderStrats();mdPrefillFromLeague();}catch(_){}}
 }
 // Paint the initial state from the DOM: the route restore below may or may not
@@ -10364,9 +10181,6 @@ try{
   initBK(savedUser); // restore community identity so votes/posts work in every tab
   var input=document.getElementById('sleeper-username');
   if(input)input.value=savedUser;
-  // Returning visitors find the hero form already filled: one click to trades.
-  var heroU=document.getElementById('hero-username');
-  if(heroU&&!heroU.value)heroU.value=savedUser;
   // Show a persistent "logged in" indicator with sign-out option
   var loginPanel=document.getElementById('login-panel');
   if(loginPanel){

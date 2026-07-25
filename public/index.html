@@ -12,20 +12,20 @@ posthog.init('phc_pqedJWPdf2S4npvYw8UcZpwhrnYvtH8Vd53yABtvZqmc',{api_host:'https
 window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog.capture(ev,props||{});}catch(_){}}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TradeMind - The Trades You Should Be Making, Found For You</title>
-<meta name="description" content="TradeMind reads every roster in your fantasy football league, finds the managers who need what you have, and hands you the trade to offer - plus the pitch to send. Dynasty and redraft.">
-<meta property="og:title" content="TradeMind - The Trades You Should Be Making, Found For You">
-<meta property="og:description" content="TradeMind reads your whole league and tells you who to trade with, what to offer, and how to pitch it.">
+<title>TradeMind - Fantasy Football Trade Advice</title>
+<meta name="description" content="Fantasy football trade advice built on context, not generic rankings. TradeMind reads live market values + opponent psychology to tell you if a dynasty or redraft trade is worth it, and exactly how to pitch it.">
+<meta property="og:title" content="TradeMind - Fantasy Football Trade Advice">
+<meta property="og:description" content="Trade advice built on context, not generic rankings. Dynasty and redraft analysis using live market values + opponent psychology.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026072480">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026072470">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="TradeMind - The Trades You Should Be Making, Found For You">
-<meta name="twitter:description" content="TradeMind reads your whole league and tells you who to trade with, what to offer, and how to pitch it.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072480">
+<meta name="twitter:title" content="TradeMind - Fantasy Football Trade Advice">
+<meta name="twitter:description" content="Trade advice built on context, not generic rankings. Know the move.">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072470">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,14 +33,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072480">
+<link rel="stylesheet" href="/styles.css?v=2026072470">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072480" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072470" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026072480">
+<link rel="stylesheet" href="/theme.css?v=2026072470">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -52,7 +52,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072480">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072470">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -86,21 +86,31 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
          1200px only - below that the bar scrolls sideways and the groups go
          display:contents, leaving the flat scrolling row untouched. -->
     <div class="nav-side nav-side-l">
-    <!-- Trade Ideas leads the bar: finding the trade for you IS the product,
-         so it gets a direct, slightly louder tab instead of living inside a
-         dropdown. It shares the analyze screen; _navSyncSub keeps the active
-         state on whichever of the two tabs is really on screen. -->
-    <button class="nav-item-btn screen-nav" id="nav-ideas-btn" onclick="goTradeIdeas()">Trade Ideas</button>
-    <!-- Analyze dropdown: the manual analyzer plus the two MY LEAGUE views. -->
+    <!-- Analyze dropdown. It now carries the two ANALYZE tools AND the two
+         MY LEAGUE tools under labelled groups, so "My League" no longer needs
+         its own top-level tab. Every onclick handler is preserved. -->
     <div class="nav-item">
-      <button class="nav-item-btn screen-nav" data-screen="analyze" onclick="switchScreen('analyze');showAnalyzeTab('analyzer')">Analyze <span class="caret">▾</span></button>
+      <button class="nav-item-btn screen-nav active" data-screen="analyze" onclick="switchScreen('analyze')">Analyze <span class="caret">▾</span></button>
       <div class="nav-dropdown">
         <div class="nav-dd-label">Analyze</div>
         <span class="nav-dd-item active" onclick="switchScreen('analyze');showAnalyzeTab('analyzer');closeAllDropdowns()">Trade Analyzer</span>
+        <span class="nav-dd-item" onclick="switchScreen('analyze');showAnalyzeTab('ideas');closeAllDropdowns()">Trade Ideas</span>
         <div class="nav-dd-sep"></div>
         <div class="nav-dd-label">My League</div>
         <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelector('#screen-league .inner-tab'),'tab-roster-grade','screen-league');renderRosterGrade();closeAllDropdowns()">Roster Grade</span>
         <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelectorAll('#screen-league .inner-tab')[1],'tab-league-trades','screen-league');renderLeagueTrades();closeAllDropdowns()">League Trades</span>
+      </div>
+    </div>
+    <!-- Research dropdown -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="research" onclick="switchScreen('research')">Research <span class="caret">▾</span></button>
+      <div class="nav-dropdown">
+        <div class="nav-dd-label">Tools</div>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-buysell')">Buy / Sell</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-compare')">Compare Players</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-startsit')">Start / Sit</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-players-db')">Players</span>
+        <span class="nav-dd-item" onclick="openResearchTab('tab-market')">Market</span>
       </div>
     </div>
     </div><!-- /nav-side-l -->
@@ -110,30 +120,20 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')">Ask Sage</button>
     </div>
     <div class="nav-side nav-side-r">
-    <!-- Everything that is not the trade flow files under one quiet "More"
-         menu. Nothing is removed - Research, Draft, Community and News all
-         stay reachable from here, they just stop competing with the product. -->
+    <!-- Draft dropdown -->
     <div class="nav-item">
-      <button class="nav-item-btn screen-nav" id="nav-more-btn">More <span class="caret">▾</span></button>
+      <button class="nav-item-btn screen-nav" data-screen="mock" onclick="switchScreen('mock');mdRenderStrats();mdPrefillFromLeague()">Draft <span class="caret">▾</span></button>
       <div class="nav-dropdown">
-        <div class="nav-dd-label">Research</div>
-        <span class="nav-dd-item" onclick="openResearchTab('tab-buysell')">Buy / Sell</span>
-        <span class="nav-dd-item" onclick="openResearchTab('tab-compare')">Compare Players</span>
-        <span class="nav-dd-item" onclick="openResearchTab('tab-startsit')">Start / Sit</span>
-        <span class="nav-dd-item" onclick="openResearchTab('tab-players-db')">Players</span>
-        <span class="nav-dd-item" onclick="openResearchTab('tab-market')">Market</span>
-        <div class="nav-dd-sep"></div>
-        <div class="nav-dd-label">Draft</div>
         <span class="nav-dd-item" onclick="switchScreen('mock');mdRenderStrats();mdPrefillFromLeague();mdShowSection('solo');closeAllDropdowns()">Solo Mock Draft</span>
         <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('friends');closeAllDropdowns()">Draft with Friends</span>
         <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('live');closeAllDropdowns()">Live Draft Assist</span>
         <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('history');closeAllDropdowns()">Draft History</span>
-        <div class="nav-dd-sep"></div>
-        <div class="nav-dd-label">Community</div>
-        <span class="nav-dd-item" onclick="switchScreen('community');loadCommunityFeed();closeAllDropdowns()">Trade Feed</span>
-        <span class="nav-dd-item" onclick="switchScreen('community');loadCommunityFeed();switchCommunityTab('news');closeAllDropdowns()">News</span>
-        <span class="nav-dd-item" onclick="goLearn();closeAllDropdowns()">Learn</span>
       </div>
+    </div>
+    <!-- Community: a direct link, not a dropdown. News lives inside it as a tab
+         now that "More" is gone, so nothing is left unreachable. -->
+    <div class="nav-item">
+      <button class="nav-item-btn screen-nav" data-screen="community" onclick="switchScreen('community');loadCommunityFeed()">Community</button>
     </div>
     </div><!-- /nav-side-r -->
   </div>
@@ -210,7 +210,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <span style="font-family:var(--font-head);font-weight:700;font-size:15px">Menu</span>
         <button class="theme-toggle icon" onclick="mobMenuToggle()" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
-      <button class="mob-menu-item" onclick="mobGo('analyze','ideas')">Trade Ideas</button>
       <button class="mob-menu-item" onclick="mobGo('analyze')">Trade Analyzer</button>
       <button class="mob-menu-item" onclick="mobGo('league')">My League</button>
       <div class="mob-group">
@@ -277,15 +276,15 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
     <!-- Headline. Two lines, not three: at this size a third line pushed the
          CTA under the fold on a phone and made the block read as a paragraph. -->
-    <h1>The trades you should be making. <span class="hl">Found for you.</span></h1>
-    <p class="hero-tagline">TradeMind reads every roster in your league, finds the managers who need what you have, and hands you the exact trade to offer - and how to pitch it.</p>
-    <!-- The hero IS the front door of the product: username in, trades out.
-         One field, one button, no detour through a marketing page. -->
+    <h1>Know the right trade<br><span class="hl">before you make it.</span></h1>
+    <p class="hero-tagline">Rankings give everyone the same number. Sage reads YOUR roster, your league, and the manager on the other side, then tells you whether to do the deal, when to send it, and how to word it.</p>
+    <!-- Returning users get a fast path straight into the tool from the top.
+         Shown to everyone. It used to be hidden until a saved username existed,
+         which left a first-time visitor with no action above the fold at all -
+         they had to scroll to find any way in. Analyzing a trade needs no
+         account, so there is nothing to gate. -->
     <div class="hero-cta" id="hero-cta">
-      <div class="hero-connect">
-        <input type="text" id="hero-username" class="tm-input" placeholder="Your Sleeper username" autocomplete="off" onkeydown="if(event.key==='Enter')heroFindTrades()">
-        <button class="btn-primary" id="hero-enter-btn" onclick="heroFindTrades()">Find my trades →</button>
-      </div>
+      <a href="#" id="hero-enter-btn" class="btn-primary" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Analyze a trade →</a>
       <p class="hero-noaccount">No account. No password. Paste your Sleeper username and you are in.</p>
     </div>
    </div>
@@ -704,8 +703,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="ideas-card" id="ideas-panel-tab">
         <div class="ideas-header">
           <div>
-            <div class="ideas-title" id="ideas-tab-title">Your best trade partners</div>
-            <div class="ideas-sub" id="ideas-tab-sub">Connect your league and TradeMind reads every roster to find them</div>
+            <div class="ideas-title">Trade Ideas for You</div>
+            <div class="ideas-sub" id="ideas-tab-sub">Load your league to see personalized ideas</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
             <select class="opp-select" id="ideas-tab-league-switch" style="width:auto;min-width:150px;font-size:12px;display:none" onchange="if(this.value)switchToLeague(this.value)"></select>
@@ -1435,32 +1434,49 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 <!-- StoryBrand narrative (from the brand blueprints): problem -> guide -> plan
      -> transformation -> one final CTA. Lives below the product so returning
      users hit the tool instantly and first-timers scroll into the story. -->
-<!-- How it works: the trade-finder loop in four beats, right under the hero.
-     The old "second guessing" problem block is gone - the hero already states
-     the promise, so the next thing a reader needs is how the machine works. -->
-<div class="wrap" id="home-how" style="padding-top:var(--sp-section);padding-bottom:var(--sp-section)">
+<!-- Problem narrative: the second-guessing spiral, resolved by Sage. Sits between
+     the hero (hook) and the Meet-Sage cards (guide). -->
+<!-- Centred vertically on purpose: the block used to sit against the top of a
+     full-height section, which left 32px above it and 222px below. Now the
+     breathing room is split evenly above and below. -->
+<div class="wrap" id="home-problem" style="padding-top:var(--sp-section);padding-bottom:var(--sp-section);text-align:center">
+  <h2 style="font-family:var(--font-head);font-size:clamp(30px,4.6vw,50px);font-weight:800;letter-spacing:-.03em;line-height:1.06;color:var(--text);margin:0 auto 28px;max-width:15ch;text-wrap:balance">Stop second guessing <span class="hl">every trade.</span></h2>
+  <div style="max-width:520px;margin:0 auto;font-size:clamp(16px,2.2vw,19px);line-height:2.05;color:var(--muted)">
+    <div>You've watched three YouTube videos.</div>
+    <div>You've checked Reddit.</div>
+    <div>You've compared rankings.</div>
+    <div>You've asked your friends.</div>
+    <div style="color:var(--text);font-weight:700;margin-top:8px">And you're still not sure.</div>
+    <div style="color:var(--accent-bright);font-weight:700;margin-top:22px;font-size:clamp(17px,2.5vw,22px)">That's exactly why Sage exists.</div>
+  </div>
+</div>
+
+<!-- How it works. Moved up to sit right after the problem statement: the reader
+     just admitted they are stuck, so the next thing they see is the four-step
+     path out - before we introduce who Sage is. -->
+<div class="wrap" id="home-how" style="padding-top:0;padding-bottom:var(--sp-section)">
   <div style="max-width:920px;margin:0 auto">
     <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.16em;text-align:center;margin-bottom:26px">How it works</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:30px 34px">
       <div>
         <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">1</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Connect your league</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Sleeper username. Ten seconds.</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Drop your trade</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Tap the players and picks.</div>
       </div>
       <div>
         <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">2</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">TradeMind reads every roster</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Who is deep, who is thin, who needs what you have.</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Answer 3 questions</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Your situation, not just names.</div>
       </div>
       <div>
         <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">3</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">See your best partners</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Real managers, fair offers, named for you.</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Sage analyzes it all</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Roster, league, values, timing.</div>
       </div>
       <div>
         <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">4</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Send Sage's pitch</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">He writes the message that gets it accepted.</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Know what to do</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">One clear answer.</div>
       </div>
     </div>
   </div>
@@ -1489,17 +1505,17 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <h2 style="font-family:var(--font-head);font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.02em;text-align:center;margin:2px 0 22px">trust <span class="hl">Sage</span></h2>
 
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
-        <svg class="tm-icon tm-trust-icon" aria-hidden="true"><use href="/assets/trademind-icons.svg#roster"></use></svg>
+        <span class="trust-index" aria-hidden="true">01</span>
         <div><div style="font-size:16px;font-weight:700;color:var(--text)">Knows your team.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Reads your entire roster, not just the players in the trade.</div></div>
       </div>
 
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
-        <svg class="tm-icon tm-trust-icon" aria-hidden="true"><use href="/assets/trademind-icons.svg#league"></use></svg>
+        <span class="trust-index" aria-hidden="true">02</span>
         <div><div style="font-size:16px;font-weight:700;color:var(--text)">Understands your league.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Scoring, settings, roster size, dynasty or redraft.</div></div>
       </div>
 
       <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">
-        <svg class="tm-icon tm-trust-icon" aria-hidden="true"><use href="/assets/trademind-icons.svg#analysis"></use></svg>
+        <span class="trust-index" aria-hidden="true">03</span>
         <div><div style="font-size:16px;font-weight:700;color:var(--text)">Never gets emotional.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">No hype. No bias. Just logic.</div></div>
       </div>
     </div>
@@ -1524,9 +1540,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </ul>
   </div>
 
-  <!-- The one action, at the persuasion peak: same verb as the hero -->
+  <!-- The one action, at the persuasion peak -->
   <div style="text-align:center;margin:var(--sp-block) auto 0">
-    <a href="#" class="btn-primary" style="display:inline-block" onclick="event.preventDefault();heroFindTrades()">Find my trades &rarr;</a>
+    <a href="#" class="btn-primary" style="display:inline-block" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer');setTimeout(function(){scrollToEl(document.getElementById('analyzer'))},80)">Analyze My Trade &rarr;</a>
   </div>
 </div>
 
@@ -1587,12 +1603,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.4 12 3.2l9 7.2"/><path d="M5.4 9.2V20.4h13.2V9.2"/></svg>
     <span>Home</span>
   </button>
-  <!-- Trade Ideas earns a thumb slot: it is the product now. Draft moved into
-       the More drawer - still reachable, no longer prime real estate. -->
-  <button type="button" class="tabbar-item" data-tab="ideas" onclick="tabGo('ideas')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
-    <span>Ideas</span>
-  </button>
   <button type="button" class="tabbar-item" data-tab="analyze" onclick="tabGo('analyze')">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 13l-4 4 4 4"/><path d="M4 17h16"/></svg>
     <span>Analyze</span>
@@ -1602,6 +1612,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
          glyph read as the generic AI-assistant sparkle we are removing. -->
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 20l1.4-4.2A8.4 8.4 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg>
     <span>Sage</span>
+  </button>
+  <button type="button" class="tabbar-item" data-tab="mock" onclick="tabGo('mock')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.4h5v2.8h-5z"/><path d="M14.5 4.8h2.6A1.4 1.4 0 0 1 18.5 6.2v13A1.4 1.4 0 0 1 17.1 20.6H6.9A1.4 1.4 0 0 1 5.5 19.2v-13A1.4 1.4 0 0 1 6.9 4.8h2.6"/><path d="M9 11.4h6"/><path d="M9 15.2h4"/></svg>
+    <span>Draft</span>
   </button>
   <button type="button" class="tabbar-item" data-tab="more" onclick="tabGo('more')" aria-label="More">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
@@ -1619,7 +1633,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072480"></script>
+<script src="/app.js?v=2026072470"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">
