@@ -6133,6 +6133,59 @@ function openPlayerCard(pid, name){
     }
   }
 
+  // ── Identity rail extras: ADP + market direction under the bio ──
+  try{
+    var _info=modal.querySelector('.pm-info');
+    var _dm=document.getElementById('pm-draftmeta');
+    if(!_dm&&_info){_dm=document.createElement('div');_dm.id='pm-draftmeta';_dm.style.cssText='font-size:12px;color:var(--muted2);margin-top:8px;font-weight:600';_info.appendChild(_dm);}
+    if(_dm){
+      var _bits=[];
+      var _adp=(pid&&window._adpById)?window._adpById[pid]:null;
+      if(_adp!=null)_bits.push('ADP '+(+_adp).toFixed(1));
+      if(fc){
+        var _t3=fc.trend30Day||0;
+        _bits.push(_t3>250?'rising fast':_t3>60?'rising':_t3<-250?'falling fast':_t3<-60?'falling':'steady market');
+      }
+      _dm.textContent=_bits.join(' · ');
+    }
+  }catch(_){}
+  // ── Keep in mind: the curated draft narratives that apply to THIS player ──
+  try{
+    var _host=takeEl&&takeEl.parentNode;
+    var _km=document.getElementById('pm-keepmind');
+    if(!_km&&_host){_km=document.createElement('div');_km.id='pm-keepmind';_host.insertBefore(_km,takeEl.nextSibling);}
+    if(_km){
+      var _narr=(typeof mdNarratives==='function')?mdNarratives({id:pid,name:displayName,pos:pos,team:team}):[];
+      _km.innerHTML=_narr.length
+        ?'<div style="margin:0 0 12px;padding:12px 14px;background:var(--surface2);border-left:2px solid var(--border2);border-radius:10px">'
+          +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Keep in mind</div>'
+          +_narr.map(function(n){return '<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-top:4px">'+n+'</div>';}).join('')
+          +'</div>'
+        :'';
+    }
+  }catch(_){}
+  // ── Draft day: if a mock is LIVE and he is still on the board, Sage's risk
+  // lanes are one click away right here in the card ──
+  try{
+    var _sw=document.getElementById('pm-sage-wrap');
+    if(!_sw&&takeEl&&takeEl.parentNode){
+      _sw=document.createElement('div');_sw.id='pm-sage-wrap';
+      var _kmEl=document.getElementById('pm-keepmind');
+      takeEl.parentNode.insertBefore(_sw,_kmEl?_kmEl.nextSibling:takeEl.nextSibling);
+    }
+    if(_sw){
+      var _bd=document.getElementById('md-board');
+      var _inPool=!!(_bd&&_bd.dataset.live==='1'&&!MP.active&&MD.pool&&MD.pool.some(function(x){return x.id===pid;}));
+      _sw.innerHTML=_inPool
+        ?'<div style="margin:0 0 12px;padding:12px 14px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:10px">'
+          +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Draft day</div>'
+          +'<div style="font-size:12px;color:var(--muted2);line-height:1.55;margin-bottom:8px">Still on the board in your mock. One call gets Sage\'s risk lanes for this exact pick.</div>'
+          +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+pid+'\',\'pm-sage-live\')">Ask Sage: my options here</button>'
+          +'<div id="pm-sage-live" style="display:none"></div></div>'
+        :'';
+    }
+  }catch(_){}
+
   // ── Season outlook ──
   renderOutlook(null, []); // clear while loading
 
@@ -7616,8 +7669,10 @@ function _mdAutoPick(){
 // Sage's REAL read on a pick: one on-demand API call (never per hover, never
 // automatic) carrying the full draft context - your roster, the round, the
 // board - so the answer is about THIS pick in THIS room.
-async function mdAskSageLive(pid){
-  var host=document.getElementById('md-sage-live');
+async function mdAskSageLive(pid,hostId){
+  // hostId lets the big player card host the lanes in place; the war room's
+  // Sage box stays the default
+  var host=document.getElementById(hostId||'md-sage-live');
   if(!host||MD._sageLiveBusy)return;
   var p=pid?(_mdById(pid)||MD.lastRec):(MD.selChoice||MD.lastRec);
   if(!p)return;
@@ -8007,7 +8062,7 @@ function mdAdvance(){
   var pickNo=(MD.pickIdx%MD.teams)+1;
   if(slot===MD.mySlot){
     MD.onClock=true;MD.curRound=round;
-    document.getElementById('md-status').innerHTML='<span style="color:var(--accent-bright)">Round '+round+', Pick '+pickNo+'</span> - you are on the clock<span id="md-clk"></span>';
+    document.getElementById('md-status').innerHTML='<span style="color:var(--muted)">R'+round+'.'+pickNo+'</span><span style="color:var(--accent-bright);font-weight:700">You are on the clock</span><span id="md-clk"></span>';
     mdShowChoices(round);
     mdStartClock();
     if(MD.autoPilot)_mdAutoPick();
@@ -8017,8 +8072,8 @@ function mdAdvance(){
     for(var qi=MD.pickIdx;qi<MD.order.length;qi++){if(MD.order[qi]===MD.mySlot){untilMe=qi-MD.pickIdx;break;}}
     var botName=(MD.bots&&MD.bots[slot]&&MD.bots[slot].name)||('Team '+slot);
     var stEl=document.getElementById('md-status');
-    if(stEl)stEl.innerHTML='Round '+round+', Pick '+pickNo+' - '+botName+' is picking'
-      +(untilMe>0?' · <span style="color:var(--accent-bright)">your turn in '+untilMe+' pick'+(untilMe>1?'s':'')+'</span>':'');
+    if(stEl)stEl.innerHTML='<span style="color:var(--muted)">R'+round+'.'+pickNo+'</span>Current drafter: <b style="color:var(--text)">'+botName+'</b>'
+      +(untilMe>0?'<span style="color:var(--accent-bright)">you in '+untilMe+'</span>':'');
     // AI drafts by need-weighted value
     MD.aiRosters[slot]=MD.aiRosters[slot]||{QB:0,RB:0,WR:0,TE:0,K:0,DEF:0,list:[]};
     var ros=MD.aiRosters[slot];
@@ -9223,12 +9278,15 @@ function mdRenderBoard(){
   var byCell={};
   MD.picks.forEach(function(pk){byCell[pk.round+'-'+pk.slot]=pk;});
   var lastPk=MD.picks[MD.picks.length-1];
-  var html='<div class="mdb-grid" style="grid-template-columns:34px repeat('+MD.teams+',minmax(0,1fr))">';
+  // Columns get a real minimum width (Stacked proportions): on narrow screens
+  // the wrap scrolls sideways instead of crushing every cell
+  var html='<div class="mdb-grid" style="grid-template-columns:34px repeat('+MD.teams+',minmax(96px,1fr))">';
   html+='<div class="mdb-corner"></div>';
   for(var t=1;t<=MD.teams;t++){
     var me=t===MD.mySlot;
     var hb=(MD.bots&&MD.bots[t]&&MD.bots[t].name)||('Team '+t);
-    html+='<div class="mdb-head'+(me?' mdb-me':'')+'" title="'+hb+'">'+(me?'YOU':hb)+'</div>';
+    var ini=me?'Y':hb.charAt(0).toUpperCase();
+    html+='<div class="mdb-head'+(me?' mdb-me':'')+'" title="'+hb+'"><span class="mdb-avatar">'+ini+'</span><span class="mdb-teamname">'+(me?'You':hb)+'</span></div>';
   }
   var roundsDone=Math.max(1,Math.ceil(Math.max(1,MD.picks.length+1)/MD.teams));
   var showRounds=Math.min(MD.rounds,roundsDone);
@@ -9243,19 +9301,14 @@ function mdRenderBoard(){
       } else {
         var pos=pk.p.pos;
         var isLast=lastPk&&pk===lastPk;
-        var nm=pk.p.name.split(' ');
-        // K/DEF names are already short codes - never initial-ize "LAC D/ST"
-        var short=pk.p.name; // full names always - the cell wraps to two lines
-        var _nmEsc=pk.p.name.replace(/'/g,"\\'");
-        var face=pk.p.id&&String(pk.p.id).indexOf('fb_')!==0
-          ?'<img class="mdb-face" src="'+mdFaceUrl(pk.p)+'" alt="" loading="lazy" title="View player card"'+(pk.p.pos==='DEF'?' style="object-fit:contain"':'')+' onclick="event.stopPropagation();openPlayerCard(\''+pk.p.id+'\',\''+_nmEsc+'\')" onerror="this.style.display=\'none\'">'
-          :'';
+        // Landscape cells, Stacked density: pick number top-right, name up to
+        // two lines, pos + team below. Faces live in the list view and the
+        // player card; here they cost height the proportions cannot afford.
         html+='<div class="mdb-cell'+(pk.mine?' mdb-minepick':'')+(isLast?' mdb-latest':'')+'" title="Click to change this pick" onclick="mdEditPick('+r+','+s2+')" style="cursor:pointer;background:var(--surface2);border-left:3px solid '+(posBorder[pos]||'var(--border)')+'">'
           +'<div class="mdb-pickno">'+pk.round+'.'+(pk.pickNo<10?'0':'')+pk.pickNo+'</div>'
-          +'<div class="mdb-row">'+face
-          +'<div class="mdb-txt"><div class="mdb-name">'+short+'</div>'
-          +'<div class="mdb-sub" style="color:'+(posBorder[pos]||'var(--muted)')+'">'+pos+' <span style="color:var(--muted)">'+teamLogo(pk.p.team,12)+(pk.p.team||'FA')+'</span></div></div>'
-          +'</div></div>';
+          +'<div class="mdb-name">'+pk.p.name+'</div>'
+          +'<div class="mdb-sub" style="color:'+(posBorder[pos]||'var(--muted)')+'">'+pos+' <span style="color:var(--muted)">'+(pk.p.team||'FA')+'</span></div>'
+          +'</div>';
       }
     }
   }

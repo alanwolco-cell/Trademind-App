@@ -1120,23 +1120,27 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 @keyframes rankPick{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}100%{box-shadow:0 0 0 16px rgba(34,197,94,0)}}
 
 /* Sleeper-style mock draft board */
+/* Stacked-calibrated board: landscape cells (wider than tall), hairline gaps,
+   pick number pinned top-right, flat surfaces. Team columns carry a small
+   avatar + name. Density and proportion match the reference; the palette and
+   the single-accent rule stay ours. */
 .mdb-wrap{overflow:auto;max-height:560px;margin:0 -8px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
-.mdb-grid{display:grid;gap:6px;padding:10px;min-width:0}
-.mdb-row{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;text-align:center;padding-top:2px}
-.mdb-face{width:38px;height:38px;cursor:pointer;border-radius:50%;object-fit:cover;object-position:top center;flex:none;background:var(--surface3)}
-.mdb-txt{min-width:0;flex:1}
+.mdb-grid{display:grid;gap:3px;padding:8px;min-width:0}
 .mdb-corner{position:sticky;top:0;z-index:2;background:var(--surface)}
-.mdb-head{position:sticky;top:0;z-index:2;background:var(--surface2);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;text-align:center;padding:7px 4px;border-radius:6px}
+.mdb-head{position:sticky;top:0;z-index:2;background:var(--surface2);font-size:11px;font-weight:700;color:var(--muted2);padding:8px 6px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0}
+.mdb-head .mdb-teamname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mdb-avatar{flex:none;width:18px;height:18px;border-radius:50%;background:var(--surface3);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--muted)}
 .mdb-head.mdb-me{background:var(--accent-dim);color:var(--accent-bright)}
+.mdb-head.mdb-me .mdb-avatar{background:rgba(155,114,232,.25);color:var(--accent-bright)}
 .mdb-round{font-size:10px;font-weight:800;color:var(--muted);display:flex;align-items:center;justify-content:center;font-family:var(--font-head)}
-.mdb-cell{border-radius:9px;padding:7px 6px 8px;min-height:104px;font-size:11px;position:relative;min-width:0}
+.mdb-cell{border-radius:6px;padding:7px 9px 8px;min-height:64px;font-size:11px;position:relative;min-width:0;text-align:left}
 .mdb-cell.mdb-empty{background:var(--surface2);opacity:.45;border-left:3px solid transparent}
 .mdb-cell.mdb-empty.mdb-mecol{opacity:.7;background:var(--accent-dim)}
 .mdb-cell.mdb-onclock{opacity:1;background:var(--accent-dim);border:1px dashed rgba(155,114,232,.6);display:flex;align-items:center;justify-content:center}
 .mdb-cell.mdb-onclock span{font-size:8px;font-weight:800;color:var(--accent-bright);letter-spacing:.06em;animation:pulse 1.2s ease-in-out infinite}
-.mdb-pickno{font-size:9px;font-weight:700;color:var(--muted);margin-bottom:3px}
-.mdb-name{font-weight:700;color:var(--text);font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mdb-sub{font-size:9.5px;font-weight:700;margin-top:1px;display:flex;align-items:center;gap:3px;justify-content:center}
+.mdb-pickno{position:absolute;top:6px;right:8px;font-size:9px;font-weight:700;color:var(--muted)}
+.mdb-name{font-weight:700;color:var(--text);font-size:11.5px;line-height:1.25;white-space:normal;overflow:hidden;max-height:2.5em;padding-right:22px}
+.mdb-sub{font-size:9px;font-weight:700;margin-top:3px;display:flex;align-items:center;gap:4px;justify-content:flex-start}
 /* Your picks: a quiet outline, not a second accent - the YOU header and the
    on-clock cell already mark the column, and purple stays on the active pick */
 .mdb-cell.mdb-minepick{outline:1px solid rgba(155,114,232,.3)}
@@ -1955,3 +1959,25 @@ html{scroll-padding-top:76px}
    bar: it holds every tool beyond the mock and Sage. The generic icon-hiding
    rule at 768px must not take it down. */
 @media(min-width:701px){#nav-burger{display:inline-flex!important}}
+
+/* ── War room status pill + the BIG player card ───────────────────────────── */
+/* Stacked-style board bar: the drafter status reads as one quiet pill */
+#md-status{font-size:12px;font-weight:600;color:var(--muted2);padding:7px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+#md-status:empty{display:none}
+
+/* The player card opens BIG on desktop: a dossier, not a popover. Identity
+   rail on the left (photo, name, meta), depth on the right (stats, take,
+   narratives, news, Sage) with its own scroll. */
+@media(min-width:900px){
+  .pm-card{max-width:min(1060px,94vw);display:grid;grid-template-columns:320px minmax(0,1fr);max-height:90vh;overflow:hidden}
+  .pm-header{grid-column:1;flex-direction:column;align-items:flex-start;justify-content:flex-start;border-bottom:0;border-right:1px solid var(--border);padding:1.75rem 1.5rem;overflow-y:auto}
+  .pm-photo{width:150px;height:150px}
+  .pm-team-logo{width:34px;height:34px}
+  .pm-name{font-size:26px;margin-top:12px}
+  .pm-body{grid-column:2;padding:1.5rem;overflow-y:auto;max-height:90vh}
+}
+/* On phones the card is the whole screen, stacked, scrolling */
+@media(max-width:700px){
+  .pm-overlay{padding:0}
+  .pm-card{max-width:100vw;width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+}

@@ -18,14 +18,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Sage advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026072484">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026072485">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Sage advising every pick.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072484">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072485">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,14 +33,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072484">
+<link rel="stylesheet" href="/styles.css?v=2026072485">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072484" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072485" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026072484">
+<link rel="stylesheet" href="/theme.css?v=2026072485">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -52,7 +52,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072484">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072485">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -256,7 +256,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         meaning, so alt stays empty for screen readers. (hero-product.png is
         the same shot, kept for older cached HTML that still requests it.) -->
    <div class="hero-shot" aria-hidden="true">
-     <img src="/hero-product.jpg?v=2" width="1520" height="1040" alt="" decoding="async" fetchpriority="high">
+     <img src="/hero-product.jpg?v=3" width="1520" height="1040" alt="" decoding="async" fetchpriority="high">
    </div>
   </div>
 </div>
@@ -1107,17 +1107,15 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         </div>
         <div id="md-history-wrap" style="display:none"><div id="md-history"></div></div>
         <div id="md-board" style="display:none">
-          <div id="md-status" style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px"></div>
-          <div id="md-lg-note" style="display:none;font-size:11px;color:var(--accent-bright);margin:-4px 0 10px;line-height:1.5"></div>
-          <!-- One calm control row: label left, five controls right. Restart
-               and Settings live at the foot of the board; the position color
-               legend went away (every cell already names its position). -->
+          <div id="md-lg-note" style="display:none;font-size:11px;color:var(--accent-bright);margin:0 0 10px;line-height:1.5"></div>
+          <!-- Stacked-style board bar: title left; the drafter-status pill and
+               the Auto-draft toggle carry the row, the quieter controls trail.
+               Restart and Settings live at the foot of the board. -->
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
             <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:auto">Draft board</div>
             <span id="md-needs" style="display:flex;gap:6px;font-size:10px;font-weight:700"></span>
-            <button class="btn-sm" id="md-undo-btn" onclick="mdUndo()" title="Take back your last pick (AI picks after it come back too)">Undo</button>
-            <button class="btn-sm md-solo-ctl" onclick="mdShowMyRoster()" title="See the players you've drafted so far">My team</button>
-            <label class="md-solo-ctl" title="Sage drafts your picks for you until you turn it off" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2);cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:100px">
+            <div id="md-status"></div>
+            <label class="md-solo-ctl" title="Sage drafts your picks for you until you turn it off" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2);cursor:pointer;padding:6px 11px;border:1px solid var(--border);border-radius:10px">
               <input type="checkbox" id="md-auto" onchange="mdAutoToggle(this.checked)" style="accent-color:var(--accent-bright);margin:0">Auto-draft
             </label>
             <span style="display:inline-flex;border:1px solid var(--border);border-radius:100px;overflow:hidden;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
@@ -1127,6 +1125,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <select id="md-clock-live" class="opp-select" style="width:auto;font-size:11px;padding:5px 9px" onchange="mdSetClockLive(this.value)" title="Pick timer">
               <option value="0">Timer off</option><option value="30">30s</option><option value="60">60s</option><option value="90">90s</option><option value="120">2 min</option>
             </select>
+            <button class="btn-sm" id="md-undo-btn" onclick="mdUndo()" title="Take back your last pick (AI picks after it come back too)">Undo</button>
+            <button class="btn-sm md-solo-ctl" onclick="mdShowMyRoster()" title="See the players you've drafted so far">My team</button>
           </div>
           <div id="md-draftboard" class="mdb-wrap"></div>
           <div id="md-queue-wrap" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
@@ -1624,7 +1624,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072484"></script>
+<script src="/app.js?v=2026072485"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">
