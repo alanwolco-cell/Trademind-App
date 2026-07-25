@@ -1137,7 +1137,9 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 .mdb-pickno{font-size:9px;font-weight:700;color:var(--muted);margin-bottom:3px}
 .mdb-name{font-weight:700;color:var(--text);font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mdb-sub{font-size:9.5px;font-weight:700;margin-top:1px;display:flex;align-items:center;gap:3px;justify-content:center}
-.mdb-cell.mdb-minepick{outline:1.5px solid rgba(155,114,232,.55)}
+/* Your picks: a quiet outline, not a second accent - the YOU header and the
+   on-clock cell already mark the column, and purple stays on the active pick */
+.mdb-cell.mdb-minepick{outline:1px solid rgba(155,114,232,.3)}
 .mdb-cell.mdb-latest{animation:mdbPop .45s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes mdbPop{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
 .md-cols{display:block}
@@ -1931,11 +1933,11 @@ html{scroll-padding-top:76px}
   .hero-chip{font-size:11px;padding:5px 10px}
   /* The fixed bottom bar is ~56px: nothing in the hero may end under it. */
   .hero-inner{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
-  /* Shrunk to phone width the whole panel becomes unreadable grey noise. Show a
-     tight letterbox of just the verdict header instead: the VS matchup avatars and
-     the "HIGHWAY ROBBERY" headline - the two parts that read at a glance and carry
-     the product's promise. It fades out right where the body copy would start, so
-     no sub-6px paragraph noise ever appears. */
+  /* Shrunk to phone width the whole board becomes unreadable grey noise. Show a
+     tight letterbox of the top of the shot instead: the "you are on the clock"
+     headline and the first row of the draft board - the parts that read at a
+     glance and carry the product's promise. It fades out before the cells turn
+     into sub-6px noise. */
   .hero-shot{
     overflow:hidden;max-height:150px;
     border:1px solid rgba(255,255,255,.09);border-radius:12px;

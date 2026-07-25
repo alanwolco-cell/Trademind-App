@@ -8505,11 +8505,13 @@ function _pcCols(pros,cons){
     +'<div>'+pros.map(function(x){return '<div style="color:var(--muted2);margin-bottom:3px"><span style="color:var(--green);font-weight:800">+</span> '+x+'</div>';}).join('')+'</div>'
     +'<div>'+cons.map(function(x){return '<div style="color:var(--muted2);margin-bottom:3px"><span style="color:var(--red);font-weight:800">&minus;</span> '+x+'</div>';}).join('')+'</div></div>';
 }
-function mdProsConsHtml(p){
+function mdProsConsHtml(p,lim){
   var pc=mdProsCons(p);
   if(!pc.pros.length&&!pc.cons.length)return '';
   mdScoutQueue(p); // web scouting arrives async and upgrades the columns in place
-  return '<div class="pcwrap" data-pcid="'+p.id+'">'+_pcCols(pc.pros,pc.cons)+'</div>';
+  var pros=lim?pc.pros.slice(0,lim):pc.pros;
+  var cons=lim?pc.cons.slice(0,lim):pc.cons;
+  return '<div class="pcwrap" data-pcid="'+p.id+'"'+(lim?' data-pclim="'+lim+'"':'')+'>'+_pcCols(pros,cons)+'</div>';
 }
 // Live web scouting: the server researches each player across the internet
 // (7-day shared cache) and the fresh takes merge into the columns on arrival.
@@ -8533,9 +8535,12 @@ function mdScoutQueue(p){
     var pros=mix(doc.pros,local.pros);seen={};
     var cons=mix(doc.cons||[],local.cons);
     els.forEach(function(w){
-      w.innerHTML=_pcCols(pros,cons)
-        +(doc.college?'<div style="font-size:11px;color:var(--muted2);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><strong style="color:var(--accent-bright)">College:</strong> '+doc.college+'</div>':'')
-        +'<div style="font-size:9.5px;color:var(--muted);margin-top:4px">Includes this week\'s scouting from around the web.</div>';
+      // a limited wrap (the pick bar) keeps its cap and skips the extras -
+      // the full columns still land on unlimited wraps and the player card
+      var lim=parseInt(w.dataset.pclim||'0',10)||0;
+      w.innerHTML=_pcCols(lim?pros.slice(0,lim):pros,lim?cons.slice(0,lim):cons)
+        +(lim?'':(doc.college?'<div style="font-size:11px;color:var(--muted2);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><strong style="color:var(--accent-bright)">College:</strong> '+doc.college+'</div>':'')
+        +'<div style="font-size:9.5px;color:var(--muted);margin-top:4px">Includes this week\'s scouting from around the web.</div>');
       // Fade the fresh scouting in so it never hard-jumps the columns
       w.style.animation='none';void w.offsetWidth;w.style.animation='tmPcFade .35s ease';
     });
@@ -8579,13 +8584,14 @@ function mdShowChoices(round){
     var openers=['I am taking','My pick is','Lock in','Give me','No hesitation:'];
     var sage=document.getElementById('md-sage');
     sage.style.display='block';
-    var pcHtml=mdProsConsHtml(rec);
+    // Rec box stays SHORT: face, the call, one why line, the ask button. The
+    // pros/cons live in the pick bar when you actually weigh a player - both
+    // at once made the screen shout.
     sage.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start">'
       +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+rec.id+'.jpg" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-bright)" onerror="this.style.display=\'none\'">'
       +'<div style="min-width:0;flex:1"><div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Sage · '+MD_STRATS[MD.strat].name+'</div>'
       +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)">'+openers[(MD.pickIdx*7)%openers.length]+' '+rec.name+'</div>'
       +'<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-top:4px">'+r.why+'</div>'
-      +pcHtml
       // The full Sage call is user-initiated only: one API request per click,
       // never one per hover or per render. His answer survives re-renders of
       // this box for the same pick via the MD.sageLive cache.
@@ -8602,7 +8608,7 @@ function mdShowChoices(round){
     var d=document.createElement('div');
     d.className='md-ch-row';
     var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'}[p.pos]||'#94a3b8';
-    d.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 11px 9px 8px;background:var(--surface2);border:1px solid '+(p===rec?'rgba(155,114,232,.55)':'var(--border)')+';border-left:4px solid '+posC+';border-radius:10px;cursor:pointer;transition:all .15s;'+(p===rec?'box-shadow:0 0 16px rgba(155,114,232,.18);':'');
+    d.style.cssText='display:flex;align-items:center;gap:8px;padding:9px 11px 9px 8px;background:var(--surface2);border:1px solid '+(p===rec?'rgba(155,114,232,.55)':'var(--border)')+';border-left:3px solid '+posC+';border-radius:10px;cursor:pointer;transition:all .15s;';
     // TAP MODEL: the card body (face, name, anywhere) opens the player card.
     // Drafting happens ONLY through the select circle on the right (and the
     // Draft button), so a stray tap can never draft anyone by accident.
@@ -8773,10 +8779,11 @@ function mdRenderQueue(){
   var bd=document.getElementById('md-board');
   var boardOn=bd&&bd.style.display!=='none';
   if(!MD.queue.length){
-    if(boardOn){
+    // an empty queue earns no screen space: the + on every row is the
+    // affordance, and the snipe callout is the only reason to show the bar
+    if(boardOn&&MD.lastSnipe){
       wrap.style.display='flex';
-      box.innerHTML=(MD.lastSnipe?'<div style="font-size:11.5px;color:var(--red);font-weight:600;margin-bottom:4px">'+MD.lastSnipe+'</div>':'')
-        +'<span style="font-size:11.5px;color:var(--muted)">Empty. Tap the <strong style="color:var(--muted2)">+</strong> on any player to line him up. Your queue drafts first if the clock hits zero.</span>';
+      box.innerHTML='<div style="font-size:11.5px;color:var(--red);font-weight:600">'+MD.lastSnipe+'</div>';
     }else wrap.style.display='none';
     return;
   }
@@ -8927,46 +8934,47 @@ function mdRenderDraftBar(){
   if(!MD.selChoice||!MD.onClock){bar.style.display='none';return;}
   var p=MD.selChoice;
   var _nmE=p.name.replace(/'/g,"\\'");
-  // market meta for the decision line: ADP, value tier (words, never the raw
-  // number) and the 30-day direction
+  // ONE quiet meta line under the name: ADP, tier word, direction, VORP word.
+  // Everything deeper (full stats, news, trades) lives one click away on the
+  // player card - the bar must read at a glance, not compete with the board.
   var _fc=ktcFull[p.id]||{};
-  var _tier=ktcById[p.id]?playerTierLabel(ktcById[p.id],p.id).label:'';
+  var _tier=ktcById[p.id]?playerTierLabel(ktcById[p.id],p.id).short:'';
   var _t30=_fc.trend30Day||0;
   var _tw=_t30>250?'rising fast':_t30>60?'rising':_t30<-250?'falling fast':_t30<-60?'falling':'steady';
-  var _twc=_t30>60?'var(--green)':_t30<-60?'var(--red)':'var(--muted2)';
-  var _meta=[];
+  var _twc=_t30>60?'var(--green)':_t30<-60?'var(--red)':'var(--muted)';
+  var _meta=[p.pos+' · '+(p.team||'FA')];
   if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
   if(_tier)_meta.push(_tier);
   if(_tier||p.adp)_meta.push('<span style="color:'+_twc+'">'+_tw+'</span>');
-  // VORP in words: the gap between him and the replacement-level player still
-  // on the board at his position (never a raw number, per the house rule)
   var _rpl=MD.replDv&&MD.replDv[p.pos];
   if(_rpl!=null&&p.dv){
     var _gap=p.dv-_rpl;
-    _meta.push(_gap>=2400?'massive edge over a replacement '+p.pos
-      :_gap>=1200?'big edge over a replacement '+p.pos
-      :_gap>=400?'moderate edge over a replacement '+p.pos
-      :_gap>=0?'thin edge over a replacement '+p.pos
-      :'below replacement level at '+p.pos);
+    _meta.push(_gap>=2400?'massive edge vs replacement'
+      :_gap>=1200?'big edge vs replacement'
+      :_gap>=400?'moderate edge vs replacement'
+      :_gap>=0?'thin edge vs replacement'
+      :'below replacement level');
   }
-  // curated draft narratives: the historical flags that apply to THIS player
-  var _nar=mdNarratives(p);
+  // curated draft narratives: max two, quiet frame - the label is the only
+  // accent so the block informs without shouting
+  var _nar=mdNarratives(p).slice(0,2);
   var _narHtml=_nar.length
-    ?'<div style="margin-top:8px;padding:9px 12px;background:var(--surface2);border-left:3px solid var(--accent-bright);border-radius:8px">'
+    ?'<div style="margin-top:9px;padding:8px 11px;background:var(--surface2);border-left:2px solid var(--border2);border-radius:8px">'
       +'<div style="font-size:9.5px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Keep in mind</div>'
       +_nar.map(function(n){return '<div style="font-size:11.5px;color:var(--muted2);line-height:1.55;margin-top:3px">'+n+'</div>';}).join('')
       +'</div>'
     :'';
   bar.style.display='block';
   bar.innerHTML='<div style="display:flex;align-items:center;gap:10px">'
-    +'<img src="'+mdFaceUrl(p)+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;cursor:pointer'+(p.pos==='DEF'?';object-fit:contain':'')+'" title="View player card" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')" onerror="this.style.display=\'none\'">'
-    +'<div style="flex:1;font-size:13px;font-weight:700"><span style="cursor:pointer" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">'+p.name+'</span> <span style="font-size:10px;color:var(--muted)">'+p.pos+' · '+(p.team||'FA')+'</span></div>'
+    +'<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover;cursor:pointer;flex:none'+(p.pos==='DEF'?';object-fit:contain':'')+'" title="View player card" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')" onerror="this.style.display=\'none\'">'
+    +'<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="cursor:pointer" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">'+p.name+'</span></div>'
+    +'<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_meta.join(' · ')+'</div></div>'
     +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+p.id+'\')" title="Sage weighs this exact pick against your roster">Ask Sage</button>'
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
     +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">Draft '+p.name.split(' ').slice(-1)[0]+'</button></div>'
-    +(_meta.length?'<div style="font-size:11px;color:var(--muted2);margin-top:6px">'+_meta.join(' · ')+'</div>':'')
     +_narHtml
-    +mdProsConsHtml(p); // one click on any player = his pros and cons, right here
+    +mdProsConsHtml(p,2) // the two strongest each way; the card has the rest
+    +'<div style="margin-top:7px;font-size:11px"><span style="color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">Full player card &rarr;</span></div>';
 }
 function mdConfirmDraft(){
   var p=MD.selChoice;
@@ -9143,7 +9151,9 @@ function mdRenderBoard(){
     mdRenderQueue();
     return;
   }
-  var posBg={QB:'rgba(167,139,250,.16)',RB:'rgba(74,222,128,.14)',WR:'rgba(251,191,36,.14)',TE:'rgba(248,113,113,.14)',K:'rgba(56,189,248,.13)',DEF:'rgba(148,163,184,.13)'};
+  // Cells stay on the neutral surface; the position speaks through the thin
+  // left border and the pos label only. One accent on the whole board: the
+  // ON THE CLOCK cell. Tinted fills everywhere made the grid read as noise.
   var posBorder={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
   var byCell={};
   MD.picks.forEach(function(pk){byCell[pk.round+'-'+pk.slot]=pk;});
@@ -9175,7 +9185,7 @@ function mdRenderBoard(){
         var face=pk.p.id&&String(pk.p.id).indexOf('fb_')!==0
           ?'<img class="mdb-face" src="'+mdFaceUrl(pk.p)+'" alt="" loading="lazy" title="View player card"'+(pk.p.pos==='DEF'?' style="object-fit:contain"':'')+' onclick="event.stopPropagation();openPlayerCard(\''+pk.p.id+'\',\''+_nmEsc+'\')" onerror="this.style.display=\'none\'">'
           :'';
-        html+='<div class="mdb-cell'+(pk.mine?' mdb-minepick':'')+(isLast?' mdb-latest':'')+'" title="Click to change this pick" onclick="mdEditPick('+r+','+s2+')" style="cursor:pointer;background:'+(posBg[pos]||'var(--surface2)')+';border-left:3px solid '+(posBorder[pos]||'var(--border)')+'">'
+        html+='<div class="mdb-cell'+(pk.mine?' mdb-minepick':'')+(isLast?' mdb-latest':'')+'" title="Click to change this pick" onclick="mdEditPick('+r+','+s2+')" style="cursor:pointer;background:var(--surface2);border-left:3px solid '+(posBorder[pos]||'var(--border)')+'">'
           +'<div class="mdb-pickno">'+pk.round+'.'+(pk.pickNo<10?'0':'')+pk.pickNo+'</div>'
           +'<div class="mdb-row">'+face
           +'<div class="mdb-txt"><div class="mdb-name">'+short+'</div>'
