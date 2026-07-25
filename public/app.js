@@ -7561,6 +7561,108 @@ function mdShowMyRoster(){
   }
   box.style.display='block';box.dataset.roster='1';
 }
+// The mock draft is the front door: one entry point shared by the nav, the
+// hero and the home CTA. Lands on the solo setup with league prefill applied.
+function goMock(sec){
+  switchScreen('mock');
+  try{mdRenderStrats();mdPrefillFromLeague();}catch(_){}
+  try{mdShowSection(sec||'solo');}catch(_){}
+}
+// Hero starter: carry the typed league description straight into the setup so
+// the star field arrives already filled.
+function heroStartMock(){
+  var v=((document.getElementById('hero-mock-ctx')||{}).value||'').trim();
+  goMock('solo');
+  if(v){
+    var box=document.getElementById('md-context');
+    if(box){box.value=v;try{localStorage.setItem('tm_md_context',v);}catch(_){}try{mdContextPreview();}catch(_){}}
+  }
+}
+// Auto-draft: Sage runs your picks - queue first, then his recommendation,
+// then best available - until you flip it back off. Solo rooms only.
+function mdAutoToggle(on){
+  MD.autoPilot=!!on;
+  var cb=document.getElementById('md-auto');
+  if(cb&&cb.checked!==MD.autoPilot)cb.checked=MD.autoPilot;
+  if(MD.autoPilot&&MD.onClock&&!MP.active)_mdAutoPick();
+}
+function _mdAutoPick(){
+  if(MD._autoT)clearTimeout(MD._autoT);
+  // short beat so the board visibly lands on you before the pick fires
+  MD._autoT=setTimeout(function(){
+    if(!MD.autoPilot||!MD.onClock||MP.active)return;
+    var p=null;
+    (MD.queue||[]).some(function(pid){var f=MD.pool.find(function(x){return x.id===pid;});if(f){p=f;return true;}return false;});
+    if(!p&&MD.lastRec&&MD.pool.indexOf(MD.lastRec)>=0)p=MD.lastRec;
+    if(!p)p=MD.pool.filter(function(x){return x.pos!=='K'&&x.pos!=='DEF';})[0]||MD.pool[0];
+    if(p)mdUserPick(p);
+  },900);
+}
+// Sage's REAL read on a pick: one on-demand API call (never per hover, never
+// automatic) carrying the full draft context - your roster, the round, the
+// board - so the answer is about THIS pick in THIS room.
+async function mdAskSageLive(pid){
+  var host=document.getElementById('md-sage-live');
+  if(!host||MD._sageLiveBusy)return;
+  var p=pid?(_mdById(pid)||MD.lastRec):(MD.selChoice||MD.lastRec);
+  if(!p)return;
+  MD._sageLiveBusy=true;
+  document.querySelectorAll('.md-sage-ask').forEach(function(b){b.style.opacity='.5';b.style.pointerEvents='none';});
+  host.style.display='block';
+  host.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Sage is reading the board...</div>';
+  try{host.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(_){}
+  var round=MD.curRound||Math.floor(MD.pickIdx/MD.teams)+1;
+  var overall=MD.pickIdx+1;
+  var mine=MD.mine.map(function(x){return x.pos+' '+x.name;}).join(', ')||'no one yet';
+  var avail=MD.pool.filter(function(x){return x.pos!=='K'&&x.pos!=='DEF';}).slice(0,10)
+    .map(function(x){return x.name+' ('+x.pos+(x.adp?', ADP '+(+x.adp).toFixed(0):'')+')';}).join('; ');
+  var notes=[];
+  try{
+    [p].concat(MD.pool.slice(0,4)).forEach(function(x){
+      if(notes.length>=5||!x)return;
+      var n=getPlayerContextNote(x.name);
+      if(n)notes.push({name:x.name.toLowerCase(),note:n.note,curve:n.curve});
+    });
+  }catch(_){}
+  var q='MOCK DRAFT, LIVE PICK. Round '+round+', overall pick '+overall+' in a '+MD.teams+'-team '
+    +(MD.sf?'superflex':'1QB')+' '+(MD.scoring>=1?'full PPR':MD.scoring===0.5?'half PPR':'standard')
+    +' snake draft ('+MD.rounds+' rounds). My roster so far: '+mine+'. Best available: '+avail
+    +'. Should I take '+p.name+' ('+p.pos+', '+(p.team||'FA')+') right here? Open with a clear "take him" or "pass", then the two reasons that matter most for MY roster, and if pass, who to take instead. Under 120 words.';
+  var full='';
+  try{
+    var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[{role:'user',content:q}],playerNotes:notes,leagueContext:_sageLeagueCtx(),user:localStorage.getItem('tm_username')||'',device:_deviceId()})});
+    var ctype=res.headers.get('content-type')||'';
+    if(ctype.indexOf('text/event-stream')<0){
+      var d=await res.json().catch(function(){return {};});
+      full=(res.ok&&d.answer)?d.answer:((d&&d.error)||'');
+    }else{
+      var reader=res.body.getReader(),dec=new TextDecoder(),buf='';
+      while(true){
+        var ch=await reader.read();if(ch.done)break;
+        buf+=dec.decode(ch.value,{stream:true});
+        var lines=buf.split('\n\n');buf=lines.pop();
+        for(var i=0;i<lines.length;i++){
+          var ln=lines[i].trim();if(ln.indexOf('data: ')!==0)continue;
+          try{var ev=JSON.parse(ln.slice(6));if(ev.t){full+=ev.t;host.innerHTML=_mdSageLiveHtml(full);}}catch(_){}
+        }
+      }
+    }
+  }catch(_){}
+  if(full.trim()){
+    MD.sageLive={pick:MD.pickIdx,text:full};
+    host.innerHTML=_mdSageLiveHtml(full);
+  }else{
+    host.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Sage could not be reached for this one. The inline read above still stands.</div>';
+  }
+  MD._sageLiveBusy=false;
+  document.querySelectorAll('.md-sage-ask').forEach(function(b){b.style.opacity='';b.style.pointerEvents='';});
+}
+function _mdSageLiveHtml(txt){
+  return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage\'s full read</div>'
+    +'<div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+escHtml(txt)+'</div></div>';
+}
 async function startMockDraft(){
   await ensurePlayersLoaded();
   if(!Object.keys(ktcById).length)await fetchKtcValues(1,1,false);
@@ -7751,6 +7853,7 @@ function mdAdvance(){
     document.getElementById('md-status').innerHTML='<span style="color:var(--accent-bright)">Round '+round+', Pick '+pickNo+'</span> - you are on the clock<span id="md-clk"></span>';
     mdShowChoices(round);
     mdStartClock();
+    if(MD.autoPilot)_mdAutoPick();
   } else {
     // Yahoo-style: always show how far away your next pick is
     var untilMe=-1;
@@ -8288,7 +8391,16 @@ function mdShowChoices(round){
       +'<div style="min-width:0;flex:1"><div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Sage · '+MD_STRATS[MD.strat].name+'</div>'
       +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)">'+openers[(MD.pickIdx*7)%openers.length]+' '+rec.name+'</div>'
       +'<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-top:4px">'+r.why+'</div>'
-      +pcHtml+'</div></div>';
+      +pcHtml
+      // The full Sage call is user-initiated only: one API request per click,
+      // never one per hover or per render. His answer survives re-renders of
+      // this box for the same pick via the MD.sageLive cache.
+      +(!MP.active?'<div style="margin-top:9px"><button class="btn-sm md-sage-ask" onclick="mdAskSageLive()">Ask Sage for the full read</button></div><div id="md-sage-live" style="display:none"></div>':'')
+      +'</div></div>';
+    if(!MP.active&&MD.sageLive&&MD.sageLive.pick===MD.pickIdx){
+      var _slh=document.getElementById('md-sage-live');
+      if(_slh){_slh.style.display='block';_slh.innerHTML=_mdSageLiveHtml(MD.sageLive.text);}
+    }
   }
   var box=document.getElementById('md-choices');
   box.innerHTML='';
@@ -8613,12 +8725,25 @@ function mdRenderDraftBar(){
   if(!MD.selChoice||!MD.onClock){bar.style.display='none';return;}
   var p=MD.selChoice;
   var _nmE=p.name.replace(/'/g,"\\'");
+  // market meta for the decision line: ADP, value tier (words, never the raw
+  // number) and the 30-day direction
+  var _fc=ktcFull[p.id]||{};
+  var _tier=ktcById[p.id]?playerTierLabel(ktcById[p.id],p.id).label:'';
+  var _t30=_fc.trend30Day||0;
+  var _tw=_t30>250?'rising fast':_t30>60?'rising':_t30<-250?'falling fast':_t30<-60?'falling':'steady';
+  var _twc=_t30>60?'var(--green)':_t30<-60?'var(--red)':'var(--muted2)';
+  var _meta=[];
+  if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
+  if(_tier)_meta.push(_tier);
+  if(_tier||p.adp)_meta.push('<span style="color:'+_twc+'">'+_tw+'</span>');
   bar.style.display='block';
   bar.innerHTML='<div style="display:flex;align-items:center;gap:10px">'
     +'<img src="'+mdFaceUrl(p)+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;cursor:pointer'+(p.pos==='DEF'?';object-fit:contain':'')+'" title="View player card" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')" onerror="this.style.display=\'none\'">'
     +'<div style="flex:1;font-size:13px;font-weight:700"><span style="cursor:pointer" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">'+p.name+'</span> <span style="font-size:10px;color:var(--muted)">'+p.pos+' · '+(p.team||'FA')+'</span></div>'
+    +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+p.id+'\')" title="Sage weighs this exact pick against your roster">Ask Sage</button>'
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
     +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">Draft '+p.name.split(' ').slice(-1)[0]+'</button></div>'
+    +(_meta.length?'<div style="font-size:11px;color:var(--muted2);margin-top:6px">'+_meta.join(' · ')+'</div>':'')
     +mdProsConsHtml(p); // one click on any player = his pros and cons, right here
 }
 function mdConfirmDraft(){
@@ -8750,7 +8875,9 @@ function mdRenderBoard(){
   var el=document.getElementById('md-draftboard');
   if(!el)return;
   if(!MD.teams){el.innerHTML='';return;}
-  if(!MD.viewMode){MD.viewMode=localStorage.getItem('tm_md_view')||'list';}
+  // Desktop opens on the snake BOARD - the war-room view - while phones keep
+  // the list, where a 12-column grid is unreadable. A saved choice always wins.
+  if(!MD.viewMode){MD.viewMode=localStorage.getItem('tm_md_view')||(window.innerWidth>=900?'board':'list');}
   _mdPaintViewBtns(MD.viewMode);
   var bdEl=document.getElementById('md-board');
   if(bdEl)bdEl.classList.toggle('listmode',MD.viewMode==='list');
@@ -9274,6 +9401,9 @@ function mdPrefillFromLeague(){
     var cbox=document.getElementById('md-context');
     if(cbox&&!cbox.value){var saved=localStorage.getItem('tm_md_context');if(saved){cbox.value=saved;mdContextPreview();}}
   }catch(_){}
+  // Sleeper connect is the optional shortcut: nudge only while no league is loaded
+  var _hint=document.getElementById('md-connect-hint');
+  if(_hint)_hint.style.display=leagueId?'none':'block';
   if(!leagueId)return;
   try{
     var t=document.getElementById('md-teams'); if(t&&[8,10,12,14].indexOf(leagueFormat.totalTeams)>=0)t.value=String(leagueFormat.totalTeams);
@@ -9896,6 +10026,11 @@ function loadHomeAnalysts(){
 
 loadHomeNews();
 try{mdRenderStrats();}catch(_){}
+// Returning visitors find the hero box already holding their league description
+try{
+  var _hmc=document.getElementById('hero-mock-ctx');
+  if(_hmc&&!_hmc.value){var _hs=localStorage.getItem('tm_md_context');if(_hs)_hmc.value=_hs;}
+}catch(_){}
 renderHistory();
 renderArchetypeGuide();
 checkShareParam();
