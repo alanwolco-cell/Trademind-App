@@ -8029,7 +8029,22 @@ function mdAdvance(){
     // and ~1 at the tail, which is what kept burying elite TEs like Bowers. Here
     // nothing can move a player more than a few picks except the faller rescue.
     // Window widened to 24 so a player who drifts still gets seen and rescued.
-    MD.pool.slice(0,24).forEach(function(p){
+    var cands=MD.pool.slice(0,24);
+    // A round-pinned player who is DUE must be scored even when he sits below
+    // the scan window - the named rule is a guarantee, not a suggestion
+    try{
+      if(MD.ctxForce)Object.keys(MD.ctxForce).forEach(function(nm){
+        var fr=MD.ctxForce[nm];
+        if(!fr||round<fr.r)return;
+        for(var pi=0;pi<MD.pool.length;pi++){
+          if(_mdNormName(MD.pool[pi].name)===nm){
+            if(cands.indexOf(MD.pool[pi])<0)cands.push(MD.pool[pi]);
+            break;
+          }
+        }
+      });
+    }catch(_){}
+    cands.forEach(function(p){
       var have=ros[p.pos]||0;
       var elite=p.adp&&p.adp<=Math.max(MD.teams*2,24); // top ~2 rounds: pure value
       var ampDv=Math.min(110,45+MD.pickIdx*1.2);
@@ -8061,14 +8076,16 @@ function mdAdvance(){
         if(have>=_tgt[p.pos]+1)sc-=1e6;
         else if(have>=_tgt[p.pos])sc-=900;
       }
-      // context box: a named player pinned to a round ("Bowers goes 4th") and a
-      // position pinned to a round ("everyone drafts RBs round 1"). These beat
-      // the elite gate and the rescue below so the room drafts how HE described.
-      var _fr=MD.ctxForce&&MD.ctxForce[p.name.toLowerCase()];
+      // context box: a named player pinned to a round ("Bowers goes 4th") or
+      // given a deadline ("Smith gone before the 4th"), and a position pinned
+      // to a round ("everyone drafts RBs round 1"). These beat the elite gate
+      // and the rescue below so the room drafts how HE described.
+      var _fr=MD.ctxForce&&MD.ctxForce[_mdNormName(p.name)];
+      var _frHold=!!(_fr&&_fr.mode==='at'&&round<_fr.r);
       // faller rescue: a strong additive pull that caps ANY slide near adp+8 -
       // a real room never lets a top player free-fall round after round. Skip it
       // for a player we are deliberately holding for a later round.
-      if(p.adp&&!(_fr&&round<_fr)){var late=(MD.pickIdx+1)-p.adp; if(late>8)sc+=6000; else if(late>3)sc+=(late-3)*70;}
+      if(p.adp&&!_frHold){var late=(MD.pickIdx+1)-p.adp; if(late>8)sc+=6000; else if(late>3)sc+=(late-3)*70;}
       // K and D/ST: unpickable until the final rounds (the forced-fill above
       // seats them; this just keeps them out of the value board till then)
       if(p.pos==='K'||p.pos==='DEF')sc=(have>=1||round<Math.max(MD.rounds,15)-1)?-1e9:600;
@@ -8096,9 +8113,18 @@ function mdAdvance(){
       }
       // Round-pinned rules apply to EVERY tier - that is the whole point of them.
       if(_fr){
-        if(round<_fr)sc-=1e7;              // hold until his round
-        else if(round===_fr)sc+=5000;      // grab him right on schedule
-        else sc+=2000;                     // overdue, take him now
+        if(_fr.mode==='at'){
+          if(round<_fr.r)sc-=1e7;          // hold until his round
+          else if(round===_fr.r)sc+=5000;  // grab him right on schedule
+          else sc+=2000;                   // overdue, take him now
+        }else{
+          // deadline rule ("gone by round N"): draftable from round 1, pulled
+          // forward a little, and at the deadline he MUST go - a guarantee
+          // that beats every other signal on the board
+          if(round>=_fr.r)sc+=1e5;
+          else if(round===_fr.r-1)sc+=600;
+          else sc+=250;
+        }
       }
       var _pr=MD.ctxPosRound&&MD.ctxPosRound[p.pos];
       if(_pr&&round===_pr)sc+=2500;        // this position floods this round
@@ -8110,7 +8136,13 @@ function mdAdvance(){
     var bot=MD.bots&&MD.bots[slot];
     if(bot&&bot.reachP&&round>=3&&round<=MD.rounds-2&&Math.random()<bot.reachP){
       var _ov=MD.pickIdx+1;
-      var sleepers=MD.pool.filter(function(x){return x.adp&&x.adp>_ov+4&&x.adp<=_ov+16&&x.pos!=='K'&&x.pos!=='DEF';}).slice(0,12);
+      var sleepers=MD.pool.filter(function(x){
+        if(!x.adp||x.adp<=_ov+4||x.adp>_ov+16||x.pos==='K'||x.pos==='DEF')return false;
+        // never let a random reach break a named round rule
+        var fx=MD.ctxForce&&MD.ctxForce[_mdNormName(x.name)];
+        if(fx&&fx.mode==='at'&&round<fx.r)return false;
+        return true;
+      }).slice(0,12);
       // the hype drafter reaches for YOUTH specifically: rookies and
       // second-year risers, the guys every group chat talks itself into
       if(bot.young){
@@ -8256,28 +8288,57 @@ function mdParseContext(txt){
   // "brock bowers goes in the 4th round" (a named player) and "everybody drafts
   // rbs in the first round" (a whole position pinned to a round). These beat the
   // elite-value gate so the room actually behaves the way HE described.
-  var force={};      // "brock bowers" -> 4
+  var force={};      // normalized name -> {r:round, mode:'at'|'by'}
   var posRound={};   // RB -> 1
   var WORDR={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,
              first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10};
+  // Spanish ordinals too - league chats here are bilingual
+  var WORDR_ES={primera:1,segunda:2,tercera:3,cuarta:4,quinta:5,sexta:6,septima:7,octava:8,novena:9,decima:10};
   var clauseRound=function(c){
-    var m=c.match(/round\s*(\d{1,2})/)||c.match(/(\d{1,2})(?:st|nd|rd|th)\s*round/)||c.match(/(?:in|by|at)\s*(?:the\s*)?(\d{1,2})(?:st|nd|rd|th)\b/);
+    var m=c.match(/round\s*(\d{1,2})\b/)
+        ||c.match(/(\d{1,2})(?:st|nd|rd|th)\s*round/)
+        ||c.match(/ronda\s*(\d{1,2})\b/)
+        // "before the 4th", "in the 2nd", "by 3" - suffix optional so a bare
+        // digit after the preposition still reads as a round
+        ||c.match(/(?:in|by|at|before|during|en|antes de|para)\s+(?:the\s+|la\s+|el\s+)?(\d{1,2})(?:st|nd|rd|th)?\b/);
     if(m)return +m[1];
     var w=c.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s*round\b/)
-         ||c.match(/\bround\s*(one|two|three|four|five|six|seven|eight|nine|ten)\b/);
-    if(w)return WORDR[w[1]]||0;
+         ||c.match(/\bround\s*(one|two|three|four|five|six|seven|eight|nine|ten)\b/)
+         // "in the second", "before the fourth" - the word ordinal with no
+         // "round" after it, the phrasing real people actually type
+         ||c.match(/(?:in|by|at|before|during)\s+(?:the\s+)?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/)
+         ||c.match(/(?:en|antes de|para)\s+la\s+(primera|segunda|tercera|cuarta|quinta|sexta|septima|séptima|octava|novena|decima|décima)\b/);
+    if(w){var wk=w[1].replace(/é/g,'e');return WORDR[wk]||WORDR_ES[wk]||0;}
     return 0;
   };
+  // "before round N" is a DEADLINE (gone by N-1), "by round N" a deadline at N,
+  // anything else pins the exact round
+  var clauseMode=function(c){
+    if(/\bbefore\b|\bantes\b/.test(c))return 'before';
+    if(/\bby\b|\bpara\b/.test(c))return 'by';
+    return 'at';
+  };
   var _names=[];
-  try{Object.keys(allPlayers).forEach(function(id){var nm=allPlayers[id]&&allPlayers[id].name;if(nm&&nm.indexOf(' ')>0)_names.push(nm.toLowerCase());});
+  try{Object.keys(allPlayers).forEach(function(id){var nm=allPlayers[id]&&allPlayers[id].name;if(nm&&nm.indexOf(' ')>0)_names.push(_mdNormName(nm));});
       _names.sort(function(a,b){return b.length-a.length;});}catch(_){}
   var titleCase=function(s){return s.replace(/\b\w/g,function(ch){return ch.toUpperCase();});};
   clauses.forEach(function(c){
     var rn=clauseRound(c);
     if(!rn)return;
+    var md0=clauseMode(c);
+    var dl=md0==='before'?Math.max(1,rn-1):rn;
+    // normalized text so "Ja'Marr", "D.K." and plain typing all line up, with
+    // word boundaries so a name can never match inside a longer word
+    var cn=' '+_mdNormName(c)+' ';
     var hit=null;
-    for(var ni=0;ni<_names.length;ni++){if(c.indexOf(_names[ni])>=0){hit=_names[ni];break;}}
-    if(hit){force[hit]=rn;notes.push(titleCase(hit)+' in round '+rn);return;}
+    for(var ni=0;ni<_names.length;ni++){
+      if(cn.indexOf(' '+_names[ni]+' ')>=0){hit=_names[ni];break;}
+    }
+    if(hit){
+      force[hit]={r:dl,mode:md0==='at'?'at':'by'};
+      notes.push(md0==='at'?(titleCase(hit)+' in round '+dl):(titleCase(hit)+' gone by round '+dl));
+      return;
+    }
     Object.keys(POS).forEach(function(pos){if(POS[pos].test(c)){posRound[pos]=rn;notes.push(pos+'s in round '+rn);}});
   });
   var summary=notes.length?('Got it: '+notes.join(', ')+'. The room will draft that way.'):'';
@@ -8883,6 +8944,10 @@ function mdUserPick(p){
   mdAdvance();
 }
 function _mdById(pid){return MD.pool.find(function(x){return x.id===pid;})||null;}
+// One canonical spelling for player-name matching: lowercase, punctuation
+// stripped, spaces collapsed - "Ja'Marr Chase" and "jamarr chase" both land on
+// "jamarr chase". Used by the context rules and their engine lookups.
+function _mdNormName(s){return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();}
 function mdSelectChoice(p,el){
   if(!p)return;
   if(MP.active&&!MD.onClock)return; // live room, not your turn: look, don't touch
