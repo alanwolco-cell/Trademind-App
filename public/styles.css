@@ -1948,3 +1948,8 @@ html{scroll-padding-top:76px}
             mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
   }
 }
+
+/* The menu button is primary navigation on every width above the phone tab
+   bar: it holds every tool beyond the mock and Sage. The generic icon-hiding
+   rule at 768px must not take it down. */
+@media(min-width:701px){#nav-burger{display:inline-flex!important}}

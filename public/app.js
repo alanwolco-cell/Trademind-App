@@ -7659,6 +7659,8 @@ async function mdAskSageLive(pid){
   document.querySelectorAll('.md-sage-ask').forEach(function(b){b.style.opacity='';b.style.pointerEvents='';});
 }
 function _mdSageLiveHtml(txt){
+  // same nav-token stripping as the main chat, so [[go:...]] never shows raw
+  try{txt=_sageStripNav(txt);}catch(_){txt=String(txt).replace(/\[\[go:[^\]]*\]\]/g,'').trim();}
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
     +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage\'s full read</div>'
     +'<div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+escHtml(txt)+'</div></div>';
