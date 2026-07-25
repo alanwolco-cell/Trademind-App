@@ -18,14 +18,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Trade advice built on context, not generic rankings. Dynasty and redraft analysis using live market values + opponent psychology.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026072455">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026072470">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="TradeMind">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TradeMind - Fantasy Football Trade Advice">
 <meta name="twitter:description" content="Trade advice built on context, not generic rankings. Know the move.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072455">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072470">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,14 +33,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072455">
+<link rel="stylesheet" href="/styles.css?v=2026072470">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072455" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072470" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026072455">
+<link rel="stylesheet" href="/theme.css?v=2026072470">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -52,7 +52,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072455">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072470">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -86,24 +86,19 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
          1200px only - below that the bar scrolls sideways and the groups go
          display:contents, leaving the flat scrolling row untouched. -->
     <div class="nav-side nav-side-l">
-    <!-- Analyze dropdown -->
+    <!-- Analyze dropdown. It now carries the two ANALYZE tools AND the two
+         MY LEAGUE tools under labelled groups, so "My League" no longer needs
+         its own top-level tab. Every onclick handler is preserved. -->
     <div class="nav-item">
       <button class="nav-item-btn screen-nav active" data-screen="analyze" onclick="switchScreen('analyze')">Analyze <span class="caret">▾</span></button>
       <div class="nav-dropdown">
-        <div class="nav-dd-label">Analyzer</div>
+        <div class="nav-dd-label">Analyze</div>
         <span class="nav-dd-item active" onclick="switchScreen('analyze');showAnalyzeTab('analyzer');closeAllDropdowns()">Trade Analyzer</span>
         <span class="nav-dd-item" onclick="switchScreen('analyze');showAnalyzeTab('ideas');closeAllDropdowns()">Trade Ideas</span>
-      </div>
-    </div>
-    <!-- My League dropdown -->
-    <div class="nav-item">
-      <button class="nav-item-btn screen-nav" data-screen="league" onclick="switchScreen('league')">My League <span class="caret">▾</span></button>
-      <div class="nav-dropdown">
-        <div class="nav-dd-label">League Tools</div>
+        <div class="nav-dd-sep"></div>
+        <div class="nav-dd-label">My League</div>
         <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelector('#screen-league .inner-tab'),'tab-roster-grade','screen-league');renderRosterGrade();closeAllDropdowns()">Roster Grade</span>
         <span class="nav-dd-item" onclick="switchScreen('league');switchInnerTab(document.querySelectorAll('#screen-league .inner-tab')[1],'tab-league-trades','screen-league');renderLeagueTrades();closeAllDropdowns()">League Trades</span>
-        <div class="nav-dd-sep"></div>
-        <span class="nav-dd-item" onclick="switchScreen('analyze');showAnalyzeTab('ideas');closeAllDropdowns()">Trade Ideas</span>
       </div>
     </div>
     <!-- Research dropdown -->
@@ -119,12 +114,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       </div>
     </div>
     </div><!-- /nav-side-l -->
-    <!-- Ask Sage: the centre zone -->
+    <!-- Ask Sage: the centre zone. Carries a permanent subtle purple highlight
+         (not just when active) so the hero product always has a signpost. -->
     <div class="nav-item">
       <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')">Ask Sage</button>
     </div>
     <div class="nav-side nav-side-r">
-    <!-- Mock Draft (direct) -->
+    <!-- Draft dropdown -->
     <div class="nav-item">
       <button class="nav-item-btn screen-nav" data-screen="mock" onclick="switchScreen('mock');mdRenderStrats();mdPrefillFromLeague()">Draft <span class="caret">▾</span></button>
       <div class="nav-dropdown">
@@ -134,16 +130,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <span class="nav-dd-item" onclick="switchScreen('mock');mdShowSection('history');closeAllDropdowns()">Draft History</span>
       </div>
     </div>
-    <!-- News and Community are the two secondary content feeds. Folded into one
-         "More" dropdown so the top bar carries fewer items; both screens keep
-         their original onclick handlers and stay reachable, and the phone drawer
-         still lists them directly. -->
+    <!-- Community: a direct link, not a dropdown. News lives inside it as a tab
+         now that "More" is gone, so nothing is left unreachable. -->
     <div class="nav-item">
-      <button class="nav-item-btn" onclick="void 0">More <span class="caret">▾</span></button>
-      <div class="nav-dropdown">
-        <span class="nav-dd-item" onclick="switchScreen('news');loadNewsGrid();loadAnalystCorner();closeAllDropdowns()">News</span>
-        <span class="nav-dd-item" onclick="switchScreen('community');loadCommunityFeed();closeAllDropdowns()">Community</span>
-      </div>
+      <button class="nav-item-btn screen-nav" data-screen="community" onclick="switchScreen('community');loadCommunityFeed()">Community</button>
     </div>
     </div><!-- /nav-side-r -->
   </div>
@@ -242,11 +232,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <button class="mob-menu-item mob-sub" onclick="mobGo('mock','history')">Draft History</button>
         </div>
       </div>
-      <button class="mob-menu-item" onclick="mobGo('news')">News</button>
       <div class="mob-group">
         <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)">Community<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="mob-subs">
           <button class="mob-menu-item mob-sub" onclick="mobGo('community')">Trade Feed</button>
+          <button class="mob-menu-item mob-sub" onclick="mobGo('community','news')">News</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn()">Learn</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn();switchLearnTab(document.querySelectorAll('#community-tab-learn .inner-tab')[3],'tab-about')">About TradeMind</button>
         </div>
@@ -286,8 +276,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
     <!-- Headline. Two lines, not three: at this size a third line pushed the
          CTA under the fold on a phone and made the block read as a paragraph. -->
-    <h1>Know the trade<br><span class="hl">before you send it.</span></h1>
-    <p class="hero-tagline">Sage reads your roster, your league and the manager on the other side, then tells you what the offer is actually worth.</p>
+    <h1>Know the right trade<br><span class="hl">before you make it.</span></h1>
+    <p class="hero-tagline">Rankings give everyone the same number. Sage reads YOUR roster, your league, and the manager on the other side, then tells you whether to do the deal, when to send it, and how to word it.</p>
     <!-- Returning users get a fast path straight into the tool from the top.
          Shown to everyone. It used to be hidden until a saved username existed,
          which left a first-time visitor with no action above the fold at all -
@@ -1388,6 +1378,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="inner-tab active" id="ctab-trades" onclick="switchCommunityTab('trades')">Trade Feed</div>
           <div class="inner-tab" id="ctab-mine" onclick="switchCommunityTab('mine')">My Trades</div>
           <div class="inner-tab" id="ctab-forum" onclick="switchCommunityTab('forum')">Hot Takes</div>
+          <div class="inner-tab" id="ctab-news" onclick="switchCommunityTab('news')">News</div>
           <div class="inner-tab" id="ctab-learn" onclick="switchCommunityTab('learn')">Learn</div>
           <div class="inner-tab" id="ctab-feedback" onclick="switchCommunityTab('feedback')">Feedback</div>
 
@@ -1418,6 +1409,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div id="forum-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading hot takes...</div></div>
           <div style="text-align:center;margin-top:8px"><button id="forum-load-more-btn" class="btn-sm" onclick="loadMoreForumFeed()" style="display:none">Load more</button></div>
         </div>
+        <!-- News panel: the Fantasy Wire (analyst corner + headlines) is relocated
+             here from the old standalone News screen on first open. -->
+        <div id="community-tab-news" style="display:none"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>
         <!-- Learn panel: the Dynasty 101 / Nerd Stats / Archetypes / About content
              is relocated here from the old standalone Learn screen on first open. -->
         <div id="community-tab-learn" style="display:none"><div style="padding:32px;text-align:center;color:var(--muted)">Loading...</div></div>
@@ -1454,6 +1448,37 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div>You've asked your friends.</div>
     <div style="color:var(--text);font-weight:700;margin-top:8px">And you're still not sure.</div>
     <div style="color:var(--accent-bright);font-weight:700;margin-top:22px;font-size:clamp(17px,2.5vw,22px)">That's exactly why Sage exists.</div>
+  </div>
+</div>
+
+<!-- How it works. Moved up to sit right after the problem statement: the reader
+     just admitted they are stuck, so the next thing they see is the four-step
+     path out - before we introduce who Sage is. -->
+<div class="wrap" id="home-how" style="padding-top:0;padding-bottom:var(--sp-section)">
+  <div style="max-width:920px;margin:0 auto">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.16em;text-align:center;margin-bottom:26px">How it works</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:30px 34px">
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">1</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Drop your trade</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Tap the players and picks.</div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">2</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Answer 3 questions</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Your situation, not just names.</div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">3</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Sage analyzes it all</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Roster, league, values, timing.</div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">4</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Know what to do</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">One clear answer.</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1503,38 +1528,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </a>
   </div>
 
-  <!-- How it works: four steps, read at a glance. Stripped of the boxed cards
-       and the accent-filled number circles; the number is now a flat accent
-       digit and each step is just number, short title, one line. Airy grid so
-       it reads clean instead of busy. -->
-  <div style="max-width:920px;margin:var(--sp-block) auto 0">
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.16em;text-align:center;margin-bottom:26px">How it works</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:30px 34px">
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">1</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Drop your trade</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Tap the players and picks.</div>
-      </div>
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">2</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Answer 3 questions</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Your situation, not just names.</div>
-      </div>
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">3</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Sage analyzes it all</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Roster, league, values, timing.</div>
-      </div>
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">4</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Know what to do</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">One clear answer.</div>
-      </div>
-    </div>
-  </div>
-
   <!-- The cost of getting it wrong, immediately before the ask. The reader has
-       just seen how it works; this is where they feel why it matters. -->
+       just seen who Sage is; this is where they feel why it matters. -->
   <div class="cost-block" style="margin:var(--sp-block) auto 0;max-width:760px">
     <div class="cost-title">What happens when you trade without context</div>
     <ul class="cost-list">
@@ -1548,13 +1543,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <!-- The one action, at the persuasion peak -->
   <div style="text-align:center;margin:var(--sp-block) auto 0">
     <a href="#" class="btn-primary" style="display:inline-block" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer');setTimeout(function(){scrollToEl(document.getElementById('analyzer'))},80)">Analyze My Trade &rarr;</a>
-    <div style="font-size:12px;color:var(--muted);margin-top:14px">Life is good when you know the move.</div>
   </div>
 </div>
 
 <!-- Founder note. The page closes on a person, not a feature: it is the one
      block a competitor cannot copy, and the reason someone trusts the advice. -->
-<div class="wrap founder-block">
+<div class="wrap founder-block" id="home-founder">
   <div class="founder-label">Why TradeMind exists</div>
   <p class="founder-lead">Every trade used to start the same way. A tab open on a value chart, another on injury news, a group chat where three people tell me three different things. Twenty minutes later I still decided on gut feeling, and half the time I was wrong.</p>
   <p>The problem was never a lack of information. There is more of it every year. The problem is that none of it knows anything about me.</p>
@@ -1639,7 +1633,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072455"></script>
+<script src="/app.js?v=2026072470"></script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">

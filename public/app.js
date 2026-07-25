@@ -282,6 +282,9 @@ function openConnectModal(){
     document.body.appendChild(m);
   }
   m.style.display='flex';
+  // Modal is now the active connection flow: retire any inline Sage sign-in so
+  // the user never faces two prompts at once.
+  var inl=document.getElementById('sage-inline-signin');if(inl)inl.remove();
   var inp=document.getElementById('cm-user');
   inp.value=localStorage.getItem('tm_username')||'';
   document.getElementById('cm-status').textContent='';
@@ -398,22 +401,14 @@ function setSageState(state){
   }
 }
 
-/* Sage is a product character, not a generic emoji. Swap the legacy inline
-   blobs for the reusable football-avatar kit so every screen shares the same
-   visual language and the verdict can express its actual recommendation. */
-function upgradeSageAssets(){
-  document.querySelectorAll('.sage-svg,.sage-hero-svg,svg[viewBox="0 0 120 106"]').forEach(function(old){
-    if(old.dataset.sageUpgraded)return;
-    var img=document.createElement('span');
-    img.className=(old.classList.contains('sage-hero-svg')?'sage-hero-svg ':'')+'sage-asset sage-mark';
-    img.textContent='S';
-    img.setAttribute('role','img');
-    img.setAttribute('aria-label','Sage, TradeMind’s fantasy football analyst');
-    if(old.getAttribute('style'))img.setAttribute('style',old.getAttribute('style'));
-    old.dataset.sageUpgraded='true';
-    old.replaceWith(img);
-  });
-}
+/* Sage is a product character. The real mascot is the purple three-lobe face
+   that already ships inline as SVG on the hero, the "Meet Sage" card, the Ask
+   Sage greeting and every verdict. An earlier pass swapped all of those for a
+   flat "S" letter-mark placeholder - that "S in a circle" was the tell in Ask
+   Sage. We keep the real SVG mascot everywhere instead; it already expresses
+   the verdict (win/reject/gaze mouths via .sage-wrap state classes), so there
+   is nothing to upgrade. Left as a no-op so any cached caller stays safe. */
+function upgradeSageAssets(){ /* intentionally left blank: keep the real SVG mascot */ }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',upgradeSageAssets);
 else upgradeSageAssets();
 
@@ -855,6 +850,15 @@ function buildScoutBlock(inputEls,borderColor){
   return lines.join('');
 }
 
+// Deterministic per-string variant picker: same name -> same phrasing every
+// time, but different names spread across the list. Keeps templated prose from
+// reading verbatim when two similar players land in one verdict.
+function _fmtPick(str,arr){
+  var s=String(str||''),h=0;
+  for(var i=0;i<s.length;i++){h=((h<<5)-h+s.charCodeAt(i))|0;}
+  return arr[Math.abs(h)%arr.length];
+}
+
 function describePlayer(name, pid, pos, ktcVal){
   var isR=leagueMode==='redraft';
   // Draft picks are NOT players - never run tier/position logic on them (that
@@ -896,9 +900,23 @@ function describePlayer(name, pid, pos, ktcVal){
     if(posRank&&posRank<=8) formatNote=isR?' - elite QB in SuperFlex, hard to replace':' - in SuperFlex leagues top QBs are the most expensive players in the game. Your format amplifies this.';
     else formatNote=' - still worth more in your SuperFlex format than a standard 1QB league';
   } else if(leagueFormat.ppr>=1&&pos==='WR'&&posRank&&posRank<=10){
-    formatNote=', and full PPR makes that weekly production even more valuable';
+    // Rotate the PPR note off a stable per-player index so two top-10 WRs in the
+    // same verdict never read the exact same sentence (the "verbatim template"
+    // tell). Deterministic: the same player always gets the same phrasing.
+    formatNote=_fmtPick(name,[
+      ', and full PPR turns his target volume into a weekly points floor',
+      ', and in full PPR his reception share is worth a tier more than the raw ranking shows',
+      ', and your PPR scoring rewards exactly the catches he lives on'
+    ]);
   } else if(leagueFormat.ppr>=1&&pos==='RB'&&posRank&&posRank<=10){
-    formatNote=', with your full PPR scoring adding extra value on catches out of the backfield';
+    // Same idea for pass-catching backs - vary the phrasing per player so Gibbs
+    // and McCaffrey don't get the identical "catches out of the backfield" line.
+    formatNote=_fmtPick(name,[
+      ', and in full PPR the work he sees in the passing game adds a floor most backs never have',
+      ', and your PPR scoring cashes in every checkdown and screen he turns into a reception',
+      ', and full PPR rewards his receiving role on top of the carries',
+      ', and those catches out of the backfield are worth real points in your PPR format'
+    ]);
   }
   // Parenthetical so it slots into any sentence: "Handing over X (a top-3 WR)..."
   return '<strong>'+name+'</strong> ('+rankDesc+formatNote+')';
@@ -949,6 +967,10 @@ function buildTradeBodyText(giveInputEls, getInputEls, valueTier, ktcGap, oppPro
     scoutBlock+='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">Scout\'s Take</div>';
     if(giveScout)scoutBlock+='<div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:2px">You give</div>'+giveScout;
     if(getScout)scoutBlock+=(giveScout?'<div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-top:8px;margin-bottom:2px">You get</div>':'')+''+getScout;
+    // Show the methodology right where the read is made, not just in the footer -
+    // naming the source is what turns "an opinion" into "a sourced call". No raw
+    // numbers: the owner's rule is tier/direction only, never the vendor index.
+    scoutBlock+='<div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">Player values from FantasyCalc live market data</div>';
     scoutBlock+='</div>';
   }
   if(valueTier==='getting_fleeced'){
@@ -2033,6 +2055,13 @@ async function sageContextRead(give,get,valueTier){
 function sageShowSignin(){
   var log=document.getElementById('sage-chat-log');
   if(!log)return;
+  // One connection flow at a time. If the modal is already open, it owns the
+  // sign-in - don't stack an inline prompt behind it.
+  var cm=document.getElementById('connect-modal');
+  if(cm&&cm.style.display==='flex'){return;}
+  // The greeting's "connect your league" nudge is a second entry point; fold it
+  // away while the inline sign-in is up so the two never sit on screen together.
+  var hint=document.getElementById('sage-connect-hint');if(hint)hint.style.display='none';
   if(document.getElementById('sage-inline-signin')){
     var si=document.getElementById('sage-si-input');if(si)si.focus();
     return;
@@ -4609,7 +4638,7 @@ function mobGo(screen,tab){
     switchScreen(screen);
     if(screen==='mock'){try{mdRenderStrats();mdPrefillFromLeague();if(tab)mdShowSection(tab);}catch(_){}}
     if(screen==='news'){try{loadNewsGrid();loadAnalystCorner();}catch(_){}}
-    if(screen==='community'){try{loadCommunityFeed();}catch(_){}}
+    if(screen==='community'){try{loadCommunityFeed();}catch(_){}if(tab){try{switchCommunityTab(tab);}catch(_){}}}
     if(tab&&screen==='research')openResearchTab(tab);
   }catch(_){}
 }
@@ -5045,25 +5074,25 @@ async function checkShareParam(){
 var _VALID_SCREENS=['home','analyze','league','research','learn','community','news','mock','sage'];
 var _heroDismissed=false; // once hidden (league connected), stays hidden
 function switchScreen(name,_noPush){
-  // Learn was relocated into Community > Learn; reroute any stray navigation.
+  // Learn and News were relocated into Community tabs; reroute any stray
+  // navigation (old deep links, cached handlers) to their new home.
   if(name==='learn'){goLearn();return;}
-  // Keep the News wire live: poll for fresh drops while it's open, stop on leave.
-  try{
-    if(name==='news'){
-      if(!window._newsPoll)window._newsPoll=setInterval(function(){
-        if(document.hidden)return; // don't poll a backgrounded tab
-        try{loadNewsGrid(true);loadAnalystCorner(true);}catch(_){}
-      },90000);
-    }else if(window._newsPoll){clearInterval(window._newsPoll);window._newsPoll=null;}
-  }catch(_){}
+  if(name==='news'){goNews();return;}
+  // News polling now lives with the Community News tab (_newsPollControl); if we
+  // are navigating away from Community entirely, make sure it is stopped.
+  if(name!=='community'){try{_newsPollControl(false);}catch(_){}}
   document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
   document.querySelectorAll(".screen-nav").forEach(function(n){n.classList.remove("active");});
   var screen=document.getElementById("screen-"+name);
   if(screen)screen.classList.add("active");
   var nav=document.querySelector("[data-screen='"+name+"']");
   if(nav)nav.classList.add("active");
-  // Sage chat: nudge to connect when he cannot see a roster yet
-  if(name==='sage'){var sch=document.getElementById('sage-connect-hint');if(sch)sch.style.display=leagueId?'none':'inline-flex';try{sageSyncUser();}catch(_){}try{sageUpdateQuota();}catch(_){}}
+  // Sage chat: the "connect your league" nudge is about roster context, so it
+  // only makes sense for a manager who is already signed in but has no league
+  // loaded yet. For a signed-out visitor it would be a second, competing entry
+  // point next to the inline sign-in - which is exactly the double prompt we are
+  // killing - so we keep it hidden and let the inline sign-in own onboarding.
+  if(name==='sage'){var sch=document.getElementById('sage-connect-hint');if(sch)sch.style.display=(localStorage.getItem('tm_username')&&!leagueId)?'inline-flex':'none';try{sageSyncUser();}catch(_){}try{sageUpdateQuota();}catch(_){}}
   // HOME is the landing page (hero + story + news rail); every other screen is
   // a tool page. The hero and marketing live ONLY on home now - the Analyze
   // page shows just the tool.
@@ -5074,6 +5103,13 @@ function switchScreen(name,_noPush){
   if(hn)hn.style.display=(isHome&&hn.dataset.loaded==='1')?'block':'none';
   var hs=document.getElementById('home-story');
   if(hs)hs.style.display=isHome?'block':'none';
+  // The founder manifesto is landing copy. It had no id and no toggle, so it
+  // rendered under every tool page (Community, Research...) - the #1 "made fast"
+  // tell. It is home-only, same as the rest of the story.
+  var hf=document.getElementById('home-founder');
+  if(hf)hf.style.display=isHome?'':'none';
+  var hhow=document.getElementById('home-how');
+  if(hhow)hhow.style.display=isHome?'':'none';
   var hp=document.getElementById('home-problem');
   // Back to the default block flow. This used to be forced to flex so the
   // section could centre its content inside a full-viewport box; it is now
@@ -10234,7 +10270,8 @@ var activeCommunityTab='trades';
 function switchCommunityTab(tab){
   activeCommunityTab=tab;
   if(tab==='learn')_fillLearnPanel();
-  ['trades','mine','forum','learn','feedback'].forEach(function(t){
+  if(tab==='news')_fillNewsPanel();
+  ['trades','mine','forum','news','learn','feedback'].forEach(function(t){
     var pane=document.getElementById('community-tab-'+t);
     if(pane)pane.style.display=t===tab?'block':'none';
     var tb=document.getElementById('ctab-'+t);
@@ -10243,7 +10280,36 @@ function switchCommunityTab(tab){
   if(tab==='mine')loadMyTrades(true);
   if(tab==='forum'){try{renderForumCompose();}catch(_){}if(!forumLoaded)loadForumFeed();}
   if(tab==='feedback')loadFeedbackTab();
+  // The News wire polls for fresh drops while it is open and stops when you
+  // leave the tab, so a backgrounded Community tab never keeps fetching.
+  _newsPollControl(tab==='news');
 }
+// News used to be its own top-level screen reached from the "More" menu. With
+// "More" gone, it lives as a tab inside Community. Its markup still ships in the
+// hidden #screen-news container; the first time the News tab opens we move that
+// content into the Community panel (same relocation pattern as Learn).
+function _fillNewsPanel(){
+  var dst=document.getElementById('community-tab-news');
+  var src=document.getElementById('screen-news');
+  if(dst&&!dst._filled){
+    dst.innerHTML='';
+    if(src){while(src.firstChild)dst.appendChild(src.firstChild);}
+    dst._filled=true;
+  }
+  try{loadNewsGrid();loadAnalystCorner();}catch(_){}
+}
+function _newsPollControl(on){
+  try{
+    if(on){
+      if(!window._newsPoll)window._newsPoll=setInterval(function(){
+        if(document.hidden)return;
+        try{loadNewsGrid(true);loadAnalystCorner(true);}catch(_){}
+      },90000);
+    }else if(window._newsPoll){clearInterval(window._newsPoll);window._newsPoll=null;}
+  }catch(_){}
+}
+// Open the News content wherever it lives now (Community > News tab).
+function goNews(){switchScreen('community');switchCommunityTab('news');}
 
 // Learn (Dynasty 101 / Nerd Stats / Archetypes / About) now lives as a tab inside
 // Community. Its markup still ships inside the hidden #screen-learn container; the

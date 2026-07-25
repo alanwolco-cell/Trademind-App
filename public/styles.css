@@ -141,9 +141,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .nav-item-btn:not(.sage-hot):hover{background:rgba(167,139,250,.1);color:var(--text);opacity:1}
 .nav-item-btn.active:not(.sage-hot),.nav-item-btn.screen-nav.active:not(.sage-hot){background:rgba(155,114,232,.15);color:var(--accent-bright);opacity:1;font-weight:600}
 .nav-item-btn:hover,.nav-item-btn.active{color:var(--text);background:var(--surface2)}
-/* Ask Sage: the primary tab - flat accent fill so it pulls the eye. No sparkle. */
-.nav-item-btn.sage-hot{color:#fff;font-weight:700;background:#9b72e8;border-radius:100px;box-shadow:0 3px 14px -4px rgba(124,92,191,.75);transition:filter .18s,box-shadow .18s,transform .18s}
-.nav-item-btn.sage-hot:hover,.nav-item-btn.sage-hot.active{color:#fff;filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 6px 20px -5px rgba(124,92,191,.9)}
+/* Ask Sage: the centre tab carries a permanent-but-subtle purple signpost - a
+   faint tint plus a 1px accent border - so it reads as "special" without the
+   loud solid pill shouting over the rest of the flat nav. Active/hover deepen
+   the tint. */
+.nav-item-btn.sage-hot{color:var(--accent-bright);font-weight:700;background:rgba(155,114,232,.09);border:1px solid rgba(155,114,232,.42);border-radius:100px;padding:5px 15px;transition:background .18s,border-color .18s,color .18s}
+.nav-item-btn.sage-hot:hover,.nav-item-btn.sage-hot.active{color:var(--accent-bright);background:rgba(155,114,232,.18);border-color:rgba(155,114,232,.7)}
 .nav-item-btn .caret{font-size:9px;opacity:.5;transition:transform .15s}
 .nav-item:hover .caret,.nav-item.open .caret{transform:rotate(180deg)}
 .nav-dropdown{display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;min-width:180px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,.4);padding-top:12px;margin-top:0}
@@ -281,8 +284,11 @@ h1 .hl{color:var(--accent-bright)}
 .testi-name{font-size:12px;font-weight:700;color:var(--text)}
 .testi-handle{font-size:10px;color:var(--muted)}
 
-/* SECTION */
-.section{padding:60px 0}
+/* SECTION. This is the single container every tool screen lives in. On a tool
+   page the hero is hidden, so the 60px top padding was pure dead space under the
+   nav (the ~120px gap above "Ask me anything" and every other tool title). Trim
+   the top; keep generous bottom room before the footer. */
+.section{padding:30px 0 60px}
 .wrap{max-width:1100px;margin:0 auto;padding:0 1.5rem}
 #analyzer{scroll-margin-top:16px}
 .section-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:.5rem}
@@ -839,6 +845,10 @@ html.sage-idle .hero .sage-hero-eye{
 .screen-nav{cursor:pointer;padding:6px 14px;border-radius:20px;transition:all .15s}
 .screen-nav.active{background:var(--accent-dim);color:var(--accent-bright)}
 .inner-tab-bar{display:flex;gap:4px;padding:12px 0 4px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+/* Desktop: the tab bar hugs its tabs and sits left, instead of a segmented pill
+   stretched across the whole column with dead space on the right. Mobile keeps
+   the full-width scrolling row (handled elsewhere), so this only kicks in wide. */
+@media(min-width:768px){.inner-tab-bar{width:-moz-fit-content;width:fit-content;max-width:100%;overflow-x:visible}}
 .inner-tab{font-size:13px;font-weight:600;padding:7px 16px;border-radius:100px;cursor:pointer;color:var(--muted2);white-space:nowrap;transition:all .2s;border:1px solid var(--border);background:var(--surface2)}
 .inner-tab:hover{color:var(--text);background:rgba(255,255,255,.04)}
 .inner-tab.active{background:rgba(155,114,232,.15);color:var(--accent-bright);border-color:rgba(155,114,232,.25);box-shadow:0 0 12px rgba(155,114,232,.1)}
