@@ -7578,6 +7578,21 @@ function heroStartMock(){
     if(box){box.value=v;try{localStorage.setItem('tm_md_context',v);}catch(_){}try{mdContextPreview();}catch(_){}}
   }
 }
+// The slot dropdown always matches the room size: change teams and the seat
+// list rebuilds, keeping the current seat when it still exists.
+function mdSyncSlots(){
+  var t=parseInt((document.getElementById('md-teams')||{}).value)||12;
+  var sl=document.getElementById('md-slot');
+  if(!sl)return;
+  var cur=parseInt(sl.value)||5;
+  if(sl.options.length===t&&parseInt(sl.options[sl.options.length-1].value)===t)return;
+  sl.innerHTML='';
+  for(var i=1;i<=t;i++){
+    var o=document.createElement('option');o.value=String(i);o.textContent=String(i);
+    if(i===Math.min(cur,t))o.selected=true;
+    sl.appendChild(o);
+  }
+}
 // Auto-draft: Sage runs your picks - queue first, then his recommendation,
 // then best available - until you flip it back off. Solo rooms only.
 function mdAutoToggle(on){
@@ -7624,10 +7639,16 @@ async function mdAskSageLive(pid){
       if(n)notes.push({name:x.name.toLowerCase(),note:n.note,curve:n.curve});
     });
   }catch(_){}
+  // One call, several lanes: drafting is strategy preference, so Sage lays
+  // out the risk paths and the drafter picks the lane - never one answer.
   var q='MOCK DRAFT, LIVE PICK. Round '+round+', overall pick '+overall+' in a '+MD.teams+'-team '
     +(MD.sf?'superflex':'1QB')+' '+(MD.scoring>=1?'full PPR':MD.scoring===0.5?'half PPR':'standard')
     +' snake draft ('+MD.rounds+' rounds). My roster so far: '+mine+'. Best available: '+avail
-    +'. Should I take '+p.name+' ('+p.pos+', '+(p.team||'FA')+') right here? Open with a clear "take him" or "pass", then the two reasons that matter most for MY roster, and if pass, who to take instead. Under 120 words.';
+    +'. I was eyeing '+p.name+' ('+p.pos+', '+(p.team||'FA')+').'
+    +' Give me my options by risk appetite, each a DIFFERENT player from the best-available list.'
+    +' SAFE: the highest floor, proven volume. UPSIDE: the biggest ceiling swing. VALUE: the best player sliding past his ADP.'
+    +' NEED: only include it if my roster has a real hole it fills.'
+    +' FORMAT STRICTLY, no intro or outro: one line per option, "LABEL: Player Name - one sharp reason tied to his real usage, situation or my roster." 3 or 4 lines total.';
   var full='';
   try{
     var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -7651,6 +7672,17 @@ async function mdAskSageLive(pid){
   }catch(_){}
   if(full.trim()){
     MD.sageLive={pick:MD.pickIdx,text:full};
+    // remember which player Sage placed in which lane: if the drafter takes
+    // one of them, the pick records the lane - fuel for the tendency coaching
+    // layer that reads the history later
+    try{
+      var laneMap={};
+      _mdParseLanes(full).forEach(function(r){
+        var nm=(r.body.split(/\s+-\s+|\s+–\s+/)[0]||'').toLowerCase().replace(/[^a-z ]/g,'').trim();
+        if(nm)laneMap[nm]=r.lane;
+      });
+      MD.sageLanes={pick:MD.pickIdx,map:laneMap};
+    }catch(_){}
     host.innerHTML=_mdSageLiveHtml(full);
   }else{
     host.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Sage could not be reached for this one. The inline read above still stands.</div>';
@@ -7661,9 +7693,70 @@ async function mdAskSageLive(pid){
 function _mdSageLiveHtml(txt){
   // same nav-token stripping as the main chat, so [[go:...]] never shows raw
   try{txt=_sageStripNav(txt);}catch(_){txt=String(txt).replace(/\[\[go:[^\]]*\]\]/g,'').trim();}
+  // Lane format: Sage answers in risk lanes (SAFE / UPSIDE / VALUE / NEED),
+  // one per line. Render them as clean rows; fall back to prose if the model
+  // ignored the format.
+  var rows=_mdParseLanes(txt);
+  if(rows.length>=2){
+    return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Sage: pick your lane</div>'
+      +rows.map(function(r){
+        var parts=r.body.split(/\s+-\s+|\s+–\s+/);
+        var who=parts.length>1?parts[0]:'';
+        var why=parts.length>1?parts.slice(1).join(' - '):r.body;
+        return '<div style="display:flex;gap:9px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border)">'
+          +'<span style="flex:none;width:58px;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--accent-bright)">'+r.lane+'</span>'
+          +'<span style="font-size:12.5px;line-height:1.55;color:var(--muted2)">'+(who?'<strong style="color:var(--text)">'+escHtml(who)+'</strong> · ':'')+escHtml(why)+'</span></div>';
+      }).join('')+'</div>';
+  }
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
     +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage\'s full read</div>'
     +'<div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+escHtml(txt)+'</div></div>';
+}
+function _mdParseLanes(txt){
+  var rows=[];var re=/^\s*\**(SAFE|UPSIDE|VALUE|NEED)\**\s*[:\-]\s*(.+)$/gim;var m;
+  while((m=re.exec(txt||'')))rows.push({lane:m[1].toUpperCase(),body:m[2].replace(/\*+/g,'').trim()});
+  return rows;
+}
+// ── Curated draft narratives ────────────────────────────────────────────────
+// The contrarian, historically grounded patterns a sharp drafter carries into
+// the room. Each one fires ONLY when the player on the panel matches its
+// condition - no filler ever - and is phrased as a tendency, never as a fake
+// absolute. Triggers come from data already on hand: /api/stats/adv (usage),
+// Sleeper bio (age, experience) and the market trend.
+function mdNarratives(p){
+  var out=[];
+  if(!p||p.pos==='K'||p.pos==='DEF')return out;
+  var ap=allPlayers[p.id]||{};
+  var a=null;try{a=advByName(p.name);if(a&&a.pos!==p.pos)a=null;}catch(_){}
+  var age=ap.age||0;
+  var exp=(ap.exp!=null?ap.exp:null);
+  var fc=ktcFull[p.id]||{};
+  var touches=a?((a.ruAtt||0)+(a.rec||0)):0;
+  if(p.pos==='RB'){
+    if(touches>=370)out.push('He handled '+touches+' touches last season. Historically, backs coming off that kind of workload see reduced usage or missed time the next year far more often than not.');
+    else if(touches>=330)out.push(touches+' touches last season is a heavy load. History says elite repeat seasons off that volume are the exception, not the rule.');
+    if(age>=30)out.push('He is '+age+'. Elite RB seasons at 30 or older are rare enough that the exceptions become legends - the age cliff at the position is the most reliable pattern in fantasy.');
+    else if(age>=28)out.push('RBs decline earlier than every other position, and the fall-offs start clustering at 28. Price the risk in.');
+    if(a&&a.rec>=55)out.push('With '+a.rec+' catches, his receiving role gives him a weekly floor that survives bad game scripts - reception volume is the stickiest RB skill year to year.');
+  }
+  if(p.pos==='WR'){
+    if(exp===2)out.push('This is his third season - historically the classic WR breakout window, when target earners make the leap.');
+    if(exp===0)out.push('Rookie WRs usually need a year: only a handful ever have finished top-12 as rookies. Draft the talent, but expect the ramp.');
+    if(a&&a.tgt>=140)out.push('He earned '+a.tgt+' targets last season, and elite target volume is one of the most stable stats in fantasy - it rarely vanishes overnight.');
+  }
+  if(p.pos==='TE'){
+    if(exp!=null&&exp<=1)out.push('Tight ends develop slowly - few produce fantasy-relevant seasons before year three. Treat him as a dart, not a starter you count on.');
+  }
+  if(p.pos==='QB'){
+    if(a&&a.ruY>=550)out.push('He ran for '+Math.round(a.ruY)+' yards last season. Rushing QBs own the highest weekly ceilings in fantasy - and historically carry more hit and injury risk than pocket passers.');
+    if(age>=36)out.push('He is '+age+'. QBs age better than anyone, but past the mid-30s the drop tends to arrive suddenly, not gradually.');
+  }
+  var t30=fc.trend30Day||0;
+  if(t30>250)out.push('His price has been climbing fast this draft season. Steep risers carry a hype premium - you are paying closer to the best case.');
+  else if(t30<-250)out.push('His price has been falling fast. Sometimes the market knows something; sometimes that is exactly where the value hides. Check the news before deciding which.');
+  if(a&&a.g&&a.g<=11&&out.length<3)out.push('He played only '+a.g+' games last season. Injury-year discounts are how sharp drafters buy talent - just do not stack too many of them on one roster.');
+  return out.slice(0,3);
 }
 async function startMockDraft(){
   await ensurePlayersLoaded();
@@ -7677,19 +7770,43 @@ async function startMockDraft(){
   MD.queue=[];
   // fresh seed every draft: restarting must produce a DIFFERENT room, not a replay
   MD.seed=Math.floor(Math.random()*100000);
-  // the room is PEOPLE now: every bot gets a name and a drafting personality.
-  // reachP = how often they jump early on a sleeper they love, lean = the
-  // position they always overdraft a touch, like every league has.
+  // the room is PEOPLE now: every bot gets a name and a real drafting
+  // ARCHETYPE - a strategy that genuinely diverges, not a small lean. The #1
+  // complaint about mock tools is that every room drafts identically; a fresh
+  // random mix of archetypes each draft is what makes two mocks with the same
+  // settings produce visibly different boards.
+  // posAdj = dv nudge in the mid rounds; eliteAdj = a smaller nudge that IS
+  // allowed to reorder the top two rounds (a real zero-RB drafter passes on
+  // elite RBs too - the faller rescue keeps it from going absurd);
+  // reachP = odds of jumping early on a sleeper.
   var BOT_NAMES=['Mike','Tony','Dre','Sarah','Marcus','Jess','Rob','Vinny','Trey','Zoe','Pablo','Kev','Nate','Carlos','Benny','Rico','Grace','Deion','Sam','Tank','Lena','Moose','Jorge','Duke','Cam','Ravi','Nico','Gus'];
   var shuffled=BOT_NAMES.slice().sort(function(){return Math.random()-0.5;});
+  var MD_ARCHS=[
+    {k:'zerorb',   posAdj:{RB:-420,WR:200,TE:60}, eliteAdj:{RB:-260,WR:120}, reachP:0.06},
+    {k:'herorb',   posAdj:{WR:160},               eliteAdj:{RB:160},         reachP:0.05, hero:1},
+    {k:'robustrb', posAdj:{RB:340,WR:-80},        eliteAdj:{RB:200},         reachP:0.03},
+    {k:'earlyqb',  posAdj:{QB:380},               eliteAdj:{QB:240},         reachP:0.05},
+    {k:'lateqb',   posAdj:{QB:-500},              eliteAdj:{QB:-220},        reachP:0.05},
+    {k:'tehunter', posAdj:{TE:360},               eliteAdj:{TE:220},         reachP:0.04, teCap:2},
+    {k:'bpa',      posAdj:{},                     eliteAdj:{},               reachP:0.01},
+    {k:'hype',     posAdj:{},                     eliteAdj:{},               reachP:0.22, young:1},
+    {k:'homer',    posAdj:{},                     eliteAdj:{},               reachP:0.06, homer:1},
+    {k:'valuestrict',posAdj:{},                   eliteAdj:{},               reachP:0,    rescue:1}
+  ];
+  var HOMER_TEAMS=['KC','PHI','DAL','SF','BUF','DET','GB','MIA','BAL','CIN','NYJ','MIN','LAC','SEA','PIT','DEN'];
+  var archDeck=[];
+  while(archDeck.length<MD.teams)archDeck=archDeck.concat(MD_ARCHS.slice().sort(function(){return Math.random()-0.5;}));
   MD.bots={};
-  var leanPool=['RB','WR','WR','TE','QB',null,null,null];
   for(var bs=1;bs<=MD.teams;bs++){
     if(bs===MD.mySlot)continue;
+    var _arch=archDeck.pop();
     MD.bots[bs]={
       name:shuffled[(bs-1)%shuffled.length],
-      reachP:[0,0,0.05,0.05,0.08,0.12][Math.floor(Math.random()*6)],
-      lean:leanPool[Math.floor(Math.random()*leanPool.length)]
+      arch:_arch.k,
+      posAdj:_arch.posAdj,eliteAdj:_arch.eliteAdj,
+      reachP:_arch.reachP,hero:_arch.hero,young:_arch.young,rescue:_arch.rescue,
+      teCap:_arch.teCap||1,
+      homeTeam:_arch.homer?HOMER_TEAMS[Math.floor(Math.random()*HOMER_TEAMS.length)]:null
     };
   }
   var _ctxTxt=((document.getElementById('md-context')||{}).value||'').trim();
@@ -7717,11 +7834,37 @@ async function startMockDraft(){
       MD.lgNotes=_la.notes;
     }catch(_){}
   }
-  // 6pt pass TD factor: full strength from the context box, scaled from the
-  // connected league (5pt = half effect)
+  // 6pt pass TD factor: the dedicated toggle first, then full strength from
+  // the context box, scaled from the connected league (5pt = half effect)
   MD.sixPt=0;
-  if(/6\s*(pt|pts|point|points)?\s*(per\s*)?pass(ing)?\s*tds?|pass(ing)?\s*tds?\s*(are|is|=|worth)\s*6/.test(_ctxTxt.toLowerCase()))MD.sixPt=1;
+  if((document.getElementById('md-6pt')||{}).checked)MD.sixPt=1;
+  else if(/6\s*(pt|pts|point|points)?\s*(per\s*)?pass(ing)?\s*tds?|pass(ing)?\s*tds?\s*(are|is|=|worth)\s*6/.test(_ctxTxt.toLowerCase()))MD.sixPt=1;
   else if(_useLg&&window.leagueFormat&&window.leagueFormat.passTd>=5)MD.sixPt=(window.leagueFormat.passTd-4)/2;
+  // TE premium toggle: same effect as typing it in the context box
+  MD.tep=!!(document.getElementById('md-tep')||{}).checked;
+  if(MD.tep)MD.bias.TE=Math.max(MD.bias.TE||1,1.25);
+  // roster construction: how many of each position a team drafts. "Auto" means
+  // the engine's normal shape; a number becomes a target every bot respects.
+  MD.rosterTarget={};
+  ['QB','RB','WR','TE','K','DEF'].forEach(function(ps){
+    var _rc=document.getElementById('md-rc-'+ps.toLowerCase());
+    if(_rc&&_rc.value!=='auto')MD.rosterTarget[ps]=parseInt(_rc.value);
+  });
+  if(MD.rosterTarget.K===0)MD.noK=true;
+  if(MD.rosterTarget.DEF===0)MD.noD=true;
+  // THE RULE: user data outranks the random personas. Any position the user's
+  // context, toggles or league settings explicitly touched is owned by that
+  // data - the archetypes step almost fully aside there (see mdAdvance).
+  MD.userPos={};
+  Object.keys(MD.bias||{}).forEach(function(ps){if(MD.bias[ps]!==1)MD.userPos[ps]=1;});
+  Object.keys(MD.ctxPosRound||{}).forEach(function(ps){MD.userPos[ps]=1;});
+  if(MD.tep)MD.userPos.TE=1;
+  // the described room is per-league knowledge: remember it for THIS league so
+  // the next mock of the same league starts with the same real managers
+  try{
+    localStorage.setItem('tm_md_context',_ctxTxt);
+    if(typeof leagueId!=='undefined'&&leagueId)localStorage.setItem('tm_md_ctx_'+leagueId,_ctxTxt);
+  }catch(_){}
   if(MD.mySlot>MD.teams)MD.mySlot=MD.teams;
   var cl=document.getElementById('md-clock-live');if(cl)cl.value=String(MD.clockSecs);
   mdStopClock();
@@ -7809,6 +7952,18 @@ async function startMockDraft(){
     if(!k||p.pos==='DEF')return true;
     if(seen[k])return false;seen[k]=1;return true;
   });})();
+  // Replacement level per position for THIS room: the player still on the
+  // board after every starter slot in the league is filled. The pick bar
+  // turns the gap to this line into a VORP read - in words, never a number.
+  MD.replDv={};
+  (function(){
+    var starters={QB:MD.sf?2:1,RB:2,WR:MD.scoring>=1?3:2,TE:1};
+    Object.keys(starters).forEach(function(ps){
+      var rk=MD.pool.filter(function(x){return x.pos===ps;});
+      var idx=Math.min(rk.length-1,starters[ps]*MD.teams);
+      MD.replDv[ps]=(idx>=0&&rk[idx])?rk[idx].dv:0;
+    });
+  })();
   MD.order=[];
   for(var r=0;r<MD.rounds;r++){for(var s=1;s<=MD.teams;s++)MD.order.push(r%2===0?s:MD.teams+1-s);}
   MD.pickIdx=0;MD.mine=[];MD.log=[];MD.aiRosters={};MD.picks=[];MD.onClock=false;MD.posFilter='';MD.myOveralls=[];MD.lastSnipe='';
@@ -7880,13 +8035,32 @@ function mdAdvance(){
       var ampDv=Math.min(110,45+MD.pickIdx*1.2);
       var jitDv=((((MD.pickIdx*31+p.name.length*7+(MD.seed||0))%23)/22)-0.5)*2*ampDv;
       var sc=p.dv+jitDv;
+      var bot0=MD.bots&&MD.bots[slot];
       // roster construction (mid-round only; elites are taken on value)
       if(have>=3)sc-=350;
       else if(!elite){
         if((p.pos==='RB'||p.pos==='WR')&&have<2)sc+=30;
-        if(p.pos==='TE'&&ros.TE>=1)sc-=130;
       }
-      if(p.pos==='QB'&&ros.QB>=(MD.sf?2:1))sc-=700;
+      // positional sanity caps: no room hoards QBs or TEs (the old engine
+      // could draft a third TE). Hard stops that only widen for a TE-hunter
+      // archetype or an explicit roster-construction setting, with soft
+      // pressure before the stop.
+      var _tgt=MD.rosterTarget||{};
+      var _qbMax=_tgt.QB!=null?_tgt.QB:(MD.sf?3:2);
+      var _teMax=_tgt.TE!=null?_tgt.TE:((bot0&&bot0.teCap)||1);
+      if(p.pos==='QB'){
+        if(ros.QB>=_qbMax)sc-=1e6;
+        else if(ros.QB>=(MD.sf?2:1))sc-=700;
+      }
+      if(p.pos==='TE'){
+        if(ros.TE>=Math.max(2,_teMax))sc-=1e6;
+        else if(ros.TE>=_teMax)sc-=450;
+      }
+      // user-set roster targets bind every position
+      if(_tgt[p.pos]!=null&&p.pos!=='K'&&p.pos!=='DEF'){
+        if(have>=_tgt[p.pos]+1)sc-=1e6;
+        else if(have>=_tgt[p.pos])sc-=900;
+      }
       // context box: a named player pinned to a round ("Bowers goes 4th") and a
       // position pinned to a round ("everyone drafts RBs round 1"). These beat
       // the elite gate and the rescue below so the room drafts how HE described.
@@ -7898,15 +8072,27 @@ function mdAdvance(){
       // K and D/ST: unpickable until the final rounds (the forced-fill above
       // seats them; this just keeps them out of the value board till then)
       if(p.pos==='K'||p.pos==='DEF')sc=(have>=1||round<Math.max(MD.rounds,15)-1)?-1e9:600;
-      // league/context tendencies + personal lean shape the MID rounds only -
-      // the elite tier goes by pure Sleeper ADP so a "WRs early" league can
-      // never push Bowers or Jeremiyah Love out of their real draft range.
-      // Bounded to +/-160 dv (~4 picks) so a biased mid-rounder can't leapfrog
-      // an elite player at the tier boundary either.
-      var bot0=MD.bots&&MD.bots[slot];
-      if(!elite){
-        if(MD.bias&&MD.bias[p.pos])sc+=Math.max(-160,Math.min(160,(MD.bias[p.pos]-1)*1800));
-        if(bot0&&bot0.lean===p.pos&&round>=3)sc+=150;
+      // league/context tendencies + the bot's archetype. THE RULE: the user's
+      // described room always outranks the random personas - on any position
+      // the user (or their league settings) spoke about, the archetype nudge
+      // shrinks to a whisper and the user's bias carries real weight, in the
+      // elite tier too, because "RBs fly early" has to be visible in round 1.
+      // The faller rescue below still caps any slide near adp+8.
+      var userSaid=MD.userPos&&MD.userPos[p.pos];
+      var uBias=(MD.bias&&MD.bias[p.pos])?(MD.bias[p.pos]-1)*1800:0;
+      sc+=elite?Math.max(-200,Math.min(200,uBias*0.5)):Math.max(-320,Math.min(320,uBias));
+      if(bot0){
+        var bAdj=elite?((bot0.eliteAdj&&bot0.eliteAdj[p.pos])||0):((bot0.posAdj&&bot0.posAdj[p.pos])||0);
+        // hero-RB flips off RB the moment the hero is on the roster
+        if(bot0.hero&&p.pos==='RB')bAdj=ros.RB>=1?-380:(elite?200:120);
+        // punting QB in a superflex room is a rare breed - soften the fade
+        if(MD.sf&&p.pos==='QB'&&bAdj<0)bAdj*=0.4;
+        if(userSaid)bAdj*=0.2;
+        sc+=bAdj;
+        // the homer overpays for his NFL team in the middle rounds
+        if(bot0.homeTeam&&p.team===bot0.homeTeam&&!elite)sc+=180;
+        // the value-strict drafter pounces on anyone sliding at all
+        if(bot0.rescue&&p.adp){var lateV=(MD.pickIdx+1)-p.adp;if(lateV>2)sc+=Math.min(500,(lateV-2)*90);}
       }
       // Round-pinned rules apply to EVERY tier - that is the whole point of them.
       if(_fr){
@@ -7925,6 +8111,12 @@ function mdAdvance(){
     if(bot&&bot.reachP&&round>=3&&round<=MD.rounds-2&&Math.random()<bot.reachP){
       var _ov=MD.pickIdx+1;
       var sleepers=MD.pool.filter(function(x){return x.adp&&x.adp>_ov+4&&x.adp<=_ov+16&&x.pos!=='K'&&x.pos!=='DEF';}).slice(0,12);
+      // the hype drafter reaches for YOUTH specifically: rookies and
+      // second-year risers, the guys every group chat talks itself into
+      if(bot.young){
+        var yg=sleepers.filter(function(x){var ap2=allPlayers[x.id]||{};return (ap2.exp||0)<=2;});
+        if(yg.length>=3)sleepers=yg;
+      }
       var grab=sleepers[Math.floor(Math.random()*sleepers.length)];
       if(grab)best=grab;
     }
@@ -8635,7 +8827,15 @@ function mdUserPick(p){
   MD.onClock=false;
   var round=Math.floor(MD.pickIdx/MD.teams)+1;
   var pickNo=(MD.pickIdx%MD.teams)+1;
-  MD.picks.push({slot:MD.mySlot,round:round,pickNo:pickNo,p:p,mine:true});
+  // if this player sat in one of Sage's risk lanes for THIS pick, record which
+  // lane the drafter chose - the tendency analysis reads it from history later
+  var _lane=null;
+  try{
+    if(MD.sageLanes&&MD.sageLanes.pick===MD.pickIdx){
+      _lane=MD.sageLanes.map[(p.name||'').toLowerCase().replace(/[^a-z ]/g,'').trim()]||null;
+    }
+  }catch(_){}
+  MD.picks.push({slot:MD.mySlot,round:round,pickNo:pickNo,p:p,mine:true,lane:_lane});
   MD.myOveralls.push({p:p,overall:MD.pickIdx+1});
   try{sndImpact();}catch(_){}
   // Sage's take on EVERY pick. Rule one: never call his own recommendation a
@@ -8738,6 +8938,25 @@ function mdRenderDraftBar(){
   if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
   if(_tier)_meta.push(_tier);
   if(_tier||p.adp)_meta.push('<span style="color:'+_twc+'">'+_tw+'</span>');
+  // VORP in words: the gap between him and the replacement-level player still
+  // on the board at his position (never a raw number, per the house rule)
+  var _rpl=MD.replDv&&MD.replDv[p.pos];
+  if(_rpl!=null&&p.dv){
+    var _gap=p.dv-_rpl;
+    _meta.push(_gap>=2400?'massive edge over a replacement '+p.pos
+      :_gap>=1200?'big edge over a replacement '+p.pos
+      :_gap>=400?'moderate edge over a replacement '+p.pos
+      :_gap>=0?'thin edge over a replacement '+p.pos
+      :'below replacement level at '+p.pos);
+  }
+  // curated draft narratives: the historical flags that apply to THIS player
+  var _nar=mdNarratives(p);
+  var _narHtml=_nar.length
+    ?'<div style="margin-top:8px;padding:9px 12px;background:var(--surface2);border-left:3px solid var(--accent-bright);border-radius:8px">'
+      +'<div style="font-size:9.5px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Keep in mind</div>'
+      +_nar.map(function(n){return '<div style="font-size:11.5px;color:var(--muted2);line-height:1.55;margin-top:3px">'+n+'</div>';}).join('')
+      +'</div>'
+    :'';
   bar.style.display='block';
   bar.innerHTML='<div style="display:flex;align-items:center;gap:10px">'
     +'<img src="'+mdFaceUrl(p)+'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;cursor:pointer'+(p.pos==='DEF'?';object-fit:contain':'')+'" title="View player card" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')" onerror="this.style.display=\'none\'">'
@@ -8746,6 +8965,7 @@ function mdRenderDraftBar(){
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
     +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">Draft '+p.name.split(' ').slice(-1)[0]+'</button></div>'
     +(_meta.length?'<div style="font-size:11px;color:var(--muted2);margin-top:6px">'+_meta.join(' · ')+'</div>':'')
+    +_narHtml
     +mdProsConsHtml(p); // one click on any player = his pros and cons, right here
 }
 function mdConfirmDraft(){
@@ -9401,27 +9621,47 @@ function mdPrefillFromLeague(){
   // saved league-tendency context comes back every visit
   try{
     var cbox=document.getElementById('md-context');
-    if(cbox&&!cbox.value){var saved=localStorage.getItem('tm_md_context');if(saved){cbox.value=saved;mdContextPreview();}}
+    if(cbox&&!cbox.value){
+      // per-league memory first: the room described for THIS league returns
+      // whenever this league drafts again; the global save is the fallback
+      var saved=(typeof leagueId!=='undefined'&&leagueId&&localStorage.getItem('tm_md_ctx_'+leagueId))||localStorage.getItem('tm_md_context');
+      if(saved){cbox.value=saved;mdContextPreview();}
+    }
   }catch(_){}
+  try{mdSyncSlots();}catch(_){}
   // Sleeper connect is the optional shortcut: nudge only while no league is loaded
   var _hint=document.getElementById('md-connect-hint');
   if(_hint)_hint.style.display=leagueId?'none':'block';
   if(!leagueId)return;
   try{
-    var t=document.getElementById('md-teams'); if(t&&[8,10,12,14].indexOf(leagueFormat.totalTeams)>=0)t.value=String(leagueFormat.totalTeams);
+    var t=document.getElementById('md-teams'); if(t&&leagueFormat.totalTeams>=8&&leagueFormat.totalTeams<=16)t.value=String(leagueFormat.totalTeams);
     var sc=document.getElementById('md-scoring'); if(sc)sc.value=String(leagueFormat.ppr);
     var f=document.getElementById('md-format'); if(f)f.value=(leagueFormat.hasSuperFlex||leagueFormat.has2QB)?'sf':'1qb';
+    mdSyncSlots();
   }catch(_){}
 }
 function mdSaveHistory(mode){
   try{
     var hist=JSON.parse(localStorage.getItem('tm_mock_history')||'[]');
     var stratLabel=mode==='friends'?'Live draft with friends':((MD_STRATS[MD.strat]||{}).name||MD.strat);
+    // Every pick keeps its decision context - ADP and tier AT THE TIME, the
+    // overall number, the reach/value delta, and Sage's lane if one was
+    // chosen. This detail is what the tendency-coaching layer (how do YOU
+    // draft: where you reach, where you find value) will read later.
     hist.unshift({ts:Date.now(),mode:mode||'solo',teams:MD.teams,slot:MD.mySlot,strat:stratLabel,
+      set:{rounds:MD.rounds,scoring:MD.scoring,sf:!!MD.sf,sixPt:MD.sixPt||0,tep:!!MD.tep,
+        ctx:((document.getElementById('md-context')||{}).value||'').slice(0,300)},
       roster:MD.mine.map(function(p){return p.pos+' '+p.name;}),
       rosterX:(MD.picks||[]).filter(function(pk){return pk.mine;}).map(function(pk){
         return {id:pk.p.id,name:pk.p.name,pos:pk.p.pos,team:pk.p.team,round:pk.round,pickNo:pk.pickNo};}),
-      picksAll:(MD.picks||[]).map(function(pk){return {r:pk.round,n:pk.pickNo,s:pk.slot,pos:pk.p.pos,nm:pk.p.name,me:!!pk.mine};}),
+      picksAll:(MD.picks||[]).map(function(pk){
+        var ov=(pk.round-1)*MD.teams+pk.pickNo;
+        return {r:pk.round,n:pk.pickNo,s:pk.slot,pos:pk.p.pos,nm:pk.p.name,me:!!pk.mine,
+          ov:ov,
+          adp:pk.p.adp!=null?+(+pk.p.adp).toFixed(1):null,
+          delta:pk.p.adp!=null?Math.round(ov-pk.p.adp):null,
+          tier:(ktcById[pk.p.id]?playerTierLabel(ktcById[pk.p.id],pk.p.id).short:null),
+          lane:pk.lane||null};}),
       rating:0});
     localStorage.setItem('tm_mock_history',JSON.stringify(hist.slice(0,15)));
     mdRenderHistory();
