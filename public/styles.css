@@ -556,7 +556,8 @@ body.ticker-on{padding-top:94px}
 .sage-mark[data-state="win"]{color:var(--green);border-color:rgba(74,222,128,.42)}
 .sage-mark[data-state="no"]{color:var(--red);border-color:rgba(248,113,113,.42)}
 .sage-mark[data-state="even"]{color:var(--yellow);border-color:rgba(251,191,36,.42)}
-.trust-index{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;margin-top:1px;border-top:1px solid var(--accent-bright);color:var(--accent-bright);font-size:10px;font-weight:800;letter-spacing:.08em}
+.tm-icon{display:block;fill:none;stroke:currentColor}
+.tm-trust-icon{flex:none;width:32px;height:32px;margin-top:2px;color:var(--accent-bright)}
 .sage-wrap .sage-asset{animation:sageBobRich 4s ease-in-out infinite;transform-origin:center bottom}
 .sage-tag{font-size:10px;font-weight:800;color:var(--accent-bright);letter-spacing:.1em;text-transform:uppercase;opacity:.8}
 .sage-mouth{display:none}
@@ -1948,4 +1949,44 @@ html{scroll-padding-top:76px}
     -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
             mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
   }
+}
+
+/* ── Trade-finder pivot ─────────────────────────────────────────────────────
+   The hero connect form, the manager-first partner cards on Trade Ideas, and
+   the leading "Trade Ideas" nav tab. Flat purple, no gradients, per brand. */
+
+/* Hero form: one field, one button - the front door of the product. */
+.hero-connect{display:flex;gap:10px;width:100%;max-width:470px}
+.hero-connect .tm-input{flex:1;min-width:0;font-size:15px;padding:13px 18px;border-radius:100px;background:var(--surface2);border:1px solid var(--border2)}
+.hero-connect .tm-input:focus{border-color:var(--accent-bright)}
+.hero-connect .btn-primary{white-space:nowrap;padding:13px 26px;font-size:14px}
+@media(max-width:640px){
+  .hero-connect{flex-direction:column;max-width:100%}
+  .hero-connect .btn-primary{width:100%}
+}
+
+/* Trade Ideas leads the nav: a touch louder than its neighbours by default. */
+#nav-ideas-btn{font-weight:700;color:var(--text)}
+
+/* Partner cards: each card is a real manager from the league, with the why
+   and the suggested deal(s) under them. */
+.partner-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:14px;transition:border-color .18s,box-shadow .18s}
+.partner-card:hover{border-color:rgba(155,114,232,.42);box-shadow:0 14px 34px -22px rgba(124,92,191,.6)}
+.partner-head{display:flex;align-items:center;gap:12px;padding-bottom:12px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+.partner-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid rgba(155,114,232,.4);background:var(--surface3);flex-shrink:0}
+.partner-avatar-ph{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:var(--accent-bright);font-family:var(--font-head)}
+.partner-name{font-family:var(--font-head);font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--text)}
+.partner-why{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+.partner-trade{padding:12px 0 4px}
+.partner-trade+.partner-trade{border-top:1px dashed var(--border2);margin-top:10px}
+.idea-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.idea-actions .idea-use-btn{margin-top:0}
+.idea-pitch-btn{font-size:12px;font-weight:700;color:var(--accent-bright);background:rgba(155,114,232,.12);border:1px solid rgba(167,139,250,.42);padding:9px 18px;border-radius:100px;cursor:pointer;letter-spacing:.01em;transition:background .18s,transform .18s;font-family:var(--font-body)}
+.idea-pitch-btn:hover{background:rgba(155,114,232,.2);transform:translateY(-1px)}
+.idea-pitch-btn:disabled{opacity:.55;cursor:default;transform:none}
+.idea-pitch{margin-top:10px;padding:12px 14px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:11px;font-size:12.5px;color:var(--muted2);line-height:1.65}
+@media(max-width:700px){
+  .partner-card{padding:14px 14px}
+  .idea-actions{flex-direction:column;align-items:stretch}
+  .idea-actions button{width:100%}
 }
