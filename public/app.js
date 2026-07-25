@@ -6178,10 +6178,11 @@ function openPlayerCard(pid, name){
       var _bits=[];
       var _adp=(pid&&window._adpById)?window._adpById[pid]:null;
       if(_adp!=null)_bits.push('ADP '+(+_adp).toFixed(1));
-      if(fc){
-        var _t3=fc.trend30Day||0;
-        _bits.push(_t3>250?'rising fast':_t3>60?'rising':_t3<-250?'falling fast':_t3<-60?'falling':'steady market');
-      }
+      try{
+        var _pj2=(MD&&MD._posRank)?mdProjPts({id:pid,pos:pos}):null;
+        if(_pj2)_bits.push('~'+_pj2+' pts proj');
+      }catch(_){}
+      if(fc)_bits.push(trendLabel(fc.trend30Day||0).word.toLowerCase()+' market');
       _dm.textContent=_bits.join(' · ');
     }
   }catch(_){}
@@ -7620,6 +7621,31 @@ function mdRenderStrats(){
   }).join('');
 }
 
+// ── Rough seasonal projections ──────────────────────────────────────────────
+// Anchor table of full-PPR season totals by positional rank, linearly
+// interpolated. Deliberately simple: the drafter needs scale ("~280 vs ~180"),
+// not decimal precision, and every surface labels it with the ~.
+var MD_PROJ={
+  QB:[[1,420],[6,360],[12,310],[18,275],[24,245],[36,190]],
+  RB:[[1,340],[6,280],[12,230],[24,175],[36,135],[60,90]],
+  WR:[[1,350],[6,290],[12,250],[24,205],[36,165],[60,115]],
+  TE:[[1,250],[3,205],[6,170],[12,130],[24,95]],
+  K:[[1,155],[12,125],[24,105]],
+  DEF:[[1,140],[12,105],[24,85]]
+};
+function mdProjPts(p){
+  var A=p&&MD_PROJ[p.pos];if(!A)return null;
+  var rk=(MD._posRank||{})[p.id];if(!rk)return null;
+  if(rk<=A[0][0])return A[0][1];
+  for(var i=1;i<A.length;i++){
+    if(rk<=A[i][0]){
+      var a=A[i-1],b=A[i];
+      return Math.round(a[1]+(b[1]-a[1])*(rk-a[0])/(b[0]-a[0]));
+    }
+  }
+  var last=A[A.length-1];
+  return Math.max(40,Math.round(last[1]-(rk-last[0])*2));
+}
 // Draft value: adjust market value by scoring + format so the board matches the settings
 function mdValue(p){
   var fc=ktcFull[p.id]||{};
@@ -8064,6 +8090,19 @@ async function startMockDraft(){
       MD.replDv[ps]=(idx>=0&&rk[idx])?rk[idx].dv:0;
     });
   })();
+  // Positional ranks + tiers: the rank feeds the rough projection, the tiers
+  // drive the list separators and the cliff warnings. A new tier starts where
+  // the drop from the player above is worth roughly nine picks of value.
+  MD._posRank={};MD.tierOf={};
+  ['QB','RB','WR','TE','K','DEF'].forEach(function(ps){
+    var t=1,prev=null,n=0;
+    MD.pool.forEach(function(p){
+      if(p.pos!==ps)return;
+      n++;MD._posRank[p.id]=n;
+      if(prev!=null&&(prev-p.dv)>=350&&t<8)t++;
+      MD.tierOf[p.id]=t;prev=p.dv;
+    });
+  });
   MD.order=[];
   for(var r=0;r<MD.rounds;r++){for(var s=1;s<=MD.teams;s++)MD.order.push(r%2===0?s:MD.teams+1-s);}
   MD.pickIdx=0;MD.mine=[];MD.log=[];MD.aiRosters={};MD.picks=[];MD.onClock=false;MD.posFilter='';MD.myOveralls=[];MD.lastSnipe='';
@@ -8772,7 +8811,18 @@ function mdShowChoices(round){
     MD.lastRec=null; // cleared first: a throw below must not leave a stale rec
     // Recommend only from players who are genuinely still available.
     var recPool=MD.pool.filter(function(p){return !taken[p.id];}).slice(0,10);
-    var r=mdRecommend(recPool,round);rec=r.rec;MD.lastRec=rec;MD.lastRecWhy=r.why;
+    var r=mdRecommend(recPool,round);
+    // tier cliff: when the recommended player's tier is about to die, say so -
+    // that urgency is the whole reason tiers exist
+    try{
+      if(r.rec&&MD.tierOf&&MD.tierOf[r.rec.id]&&r.rec.pos!=='K'&&r.rec.pos!=='DEF'){
+        var _tn=MD.tierOf[r.rec.id];
+        var _left=MD.pool.filter(function(x){return !taken[x.id]&&x.pos===r.rec.pos&&MD.tierOf[x.id]===_tn;}).length;
+        if(_left===1)r.why+=' And he is the last man in this '+r.rec.pos+' tier - the cliff is right behind him.';
+        else if(_left===2)r.why+=' Only one more '+r.rec.pos+' left in this tier after him.';
+      }
+    }catch(_){}
+    rec=r.rec;MD.lastRec=rec;MD.lastRecWhy=r.why;
     var openers=['I am taking','My pick is','Lock in','Give me','No hesitation:'];
     var sage=document.getElementById('md-sage');
     sage.style.display='block';
@@ -8796,7 +8846,17 @@ function mdShowChoices(round){
   }
   var box=document.getElementById('md-choices');
   box.innerHTML='';
+  var _lastTier=null;
   top.forEach(function(p){
+    // Tier separators, position view only: "— Tier 3 WR —" between blocks so
+    // the cliffs are visible while you shop a position
+    if(pf&&MD.tierOf&&MD.tierOf[p.id]&&MD.tierOf[p.id]!==_lastTier){
+      var sep=document.createElement('div');
+      sep.style.cssText='grid-column:1/-1;display:flex;align-items:center;gap:10px;font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:3px 0 -1px';
+      sep.innerHTML='<span style="flex:1;height:1px;background:var(--border)"></span>Tier '+MD.tierOf[p.id]+' '+pf+'<span style="flex:1;height:1px;background:var(--border)"></span>';
+      box.appendChild(sep);
+      _lastTier=MD.tierOf[p.id];
+    }
     var d=document.createElement('div');
     d.className='md-ch-row';
     var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'}[p.pos]||'#94a3b8';
@@ -8810,6 +8870,7 @@ function mdShowChoices(round){
       +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+(p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
       +(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':''))
+      +(function(){var pj=mdProjPts(p);return pj?' · <span title="Rough seasonal projection by positional rank" style="white-space:nowrap">~'+pj+' pts</span>':'';})()
       +'</div></div>'
       +''
       +'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
@@ -9151,6 +9212,8 @@ function mdRenderDraftBar(){
   var _twc=_tl2.dir>0?'var(--green)':_tl2.dir<0?'var(--red)':'var(--muted)';
   var _meta=[p.pos+' · '+(p.team||'FA')];
   if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
+  var _pj=mdProjPts(p);
+  if(_pj)_meta.push('~'+_pj+' pts');
   if(_tier)_meta.push(_tier);
   if(_trendOk&&(_tier||p.adp))_meta.push('<span style="color:'+_twc+'">'+_tl2.word.toLowerCase()+'</span>');
   var _rpl=MD.replDv&&MD.replDv[p.pos];
