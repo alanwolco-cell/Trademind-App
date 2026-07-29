@@ -188,11 +188,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 /* Mobile: the full-screen "peek" sections are a desktop effect. On phones, size
    sections to their content so there's no giant empty gap between them. */
 @media(max-width:640px){
-  /* This block used to claim a whole phone screen for ~300px of copy, which is
-     where most of the empty black on the way down came from. It now sizes to
-     its content and takes the same section step as every other section, so the
-     rhythm is one value on both phone and desktop. */
-  #home-problem{padding-top:var(--sp-section)!important;padding-bottom:var(--sp-section)!important}
+  /* The old #home-problem padding override lived here; the marketing home now
+     carries one section step for every block (home.css --mk-sec-pad), so the
+     special case is gone. */
   html.v12 .hero,html.v12 .ticker-visible .hero,html.v12 body.ticker-on .hero{min-height:auto!important}
   html.v12 .hero-inner{padding-top:22px!important;padding-bottom:48px!important}
 }

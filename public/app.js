@@ -1712,7 +1712,7 @@ function _proBenefit(t,d){
 }
 function _proBenefitsHtml(){
   return '<div style="text-align:center;margin-bottom:20px">'
-      +'<div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-bright)">TradeMind</div>'
+      +'<div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-bright)">Mac Draft</div>'
       +'<div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:2px">Go <span class="hl">Pro</span></div>'
       +'<div style="font-size:13px;color:var(--muted2);margin-top:5px">Unlimited Sage. For managers who mean it.</div>'
     +'</div>'
@@ -1770,7 +1770,7 @@ async function sageCheckout(btn){
     var d=await r.json().catch(function(){return {};});
     if(!d.clientSecret){alert(d.error||'Could not start checkout. Try again in a moment.');if(btn){btn.disabled=false;btn.innerHTML='Continue &nbsp;&middot;&nbsp; $6.99/mo';}return;}
     var body=document.getElementById('pro-modal-body');
-    if(body)body.innerHTML='<div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-bright);text-align:center;margin-bottom:14px">TradeMind Pro &middot; $6.99/mo</div><div id="embedded-checkout"></div>';
+    if(body)body.innerHTML='<div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-bright);text-align:center;margin-bottom:14px">Mac Draft Pro &middot; $6.99/mo</div><div id="embedded-checkout"></div>';
     var stripe=Stripe(cfg.publishableKey);
     window._embeddedCheckout=await stripe.initEmbeddedCheckout({clientSecret:d.clientSecret});
     window._embeddedCheckout.mount('#embedded-checkout');
@@ -1879,7 +1879,7 @@ function _renderManageModal(d){
   var canceling=d.cancelAtPeriodEnd;
   host.innerHTML='<div style="'+card+'">'
     +'<button onclick="_manageClose()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&times;</button>'
-    +'<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:8px">TradeMind Pro</div>'
+    +'<div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:8px">Mac Draft Pro</div>'
     +'<div style="font-family:var(--font-head);font-size:30px;font-weight:800;color:var(--text)">'+price+'</div>'
     +'<div style="font-size:13px;color:'+(canceling?'var(--yellow)':'var(--muted2)')+';margin:10px 0 22px;line-height:1.5">'
       +(canceling?('Your plan ends on <strong>'+when+'</strong>. You keep Pro until then.'):('Renews on <strong style="color:var(--text)">'+when+'</strong>.'))
@@ -1889,11 +1889,11 @@ function _renderManageModal(d){
     // would just fail, or worse an upgrade offer to someone already paying, is
     // how a subscriber ends up thinking they were charged for nothing.
     +(d.manageable===false
-        ?'<div style="font-size:12.5px;color:var(--muted2);line-height:1.55;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">Your plan is active here. To change or cancel it, open TradeMind on the device you subscribed from.</div>'
+        ?'<div style="font-size:12.5px;color:var(--muted2);line-height:1.55;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">Your plan is active here. To change or cancel it, open Mac Draft on the device you subscribed from.</div>'
         :(canceling
           ?'<button class="btn-primary" style="padding:11px 24px;font-size:14px" onclick="_manageResume()">Resume subscription</button>'
           :'<button onclick="_manageCancel()" style="padding:11px 24px;font-size:14px;background:none;border:1px solid var(--border2);color:var(--muted2);border-radius:100px;cursor:pointer;font-weight:600">Cancel subscription</button>'))
-    +'<div style="margin-top:16px"><span onclick="_manageClose()" style="font-size:12px;color:var(--muted);cursor:pointer">Keep browsing TradeMind</span></div></div>';
+    +'<div style="margin-top:16px"><span onclick="_manageClose()" style="font-size:12px;color:var(--muted);cursor:pointer">Keep browsing Mac Draft</span></div></div>';
 }
 async function _manageRefresh(){
   var user=localStorage.getItem('tm_username')||'';
@@ -1901,7 +1901,7 @@ async function _manageRefresh(){
 }
 async function _manageCancel(){
   var user=localStorage.getItem('tm_username')||'';if(!user)return;
-  if(!confirm('Cancel TradeMind Pro? You keep Pro until the end of your current billing period.'))return;
+  if(!confirm('Cancel Mac Draft Pro? You keep Pro until the end of your current billing period.'))return;
   try{var d=await (await fetch('/api/billing/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:user})})).json();
     if(d.ok)_manageRefresh();else alert(d.error||'Could not cancel right now.');
   }catch(_){alert('Could not cancel right now.');}
@@ -2375,14 +2375,14 @@ async function loadTradeBlock(){
   }catch(_){el.innerHTML='<div class="empty-state">The block is unavailable right now.</div>';}
 }
 
-// ── 2. MARKET INDEX: most traded on TradeMind ───────────────────────────────
+// ── 2. MARKET INDEX: most traded on Mac Draft ───────────────────────────────
 function renderTmTradeIndex(){
   var el=document.getElementById('mkt-tm-index');
   if(!el||window._tmIndexLoaded)return;
   window._tmIndexLoaded=true;
   fetch('/api/community/trade-index').then(function(r){return r.json();}).then(function(d){
     var list=d.players||[];
-    if(!list.length){el.innerHTML='<div class="mkt-empty">Not enough TradeMind trades in the last 30 days yet. Every trade shared to the Community feed builds this index.</div>';return;}
+    if(!list.length){el.innerHTML='<div class="mkt-empty">Not enough Mac Draft trades in the last 30 days yet. Every trade shared to the Community feed builds this index.</div>';return;}
     el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px">'+list.map(function(p,i){
       var pid=p.sleeper_id||getPlayerIdByName(p.name);
       return '<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;cursor:pointer" onclick="openPlayerCard(\''+(pid||'')+'\',\''+p.name.replace(/'/g,"\\'")+'\')">'
@@ -2391,7 +2391,7 @@ function renderTmTradeIndex(){
         +'<span style="flex:1;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</span>'
         +'<span style="font-size:11px;font-weight:700;color:var(--accent-bright)">'+p.count+'x</span></div>';
     }).join('')+'</div>'
-    +'<div style="font-size:10px;color:var(--muted);margin-top:8px">From '+(d.total_trades||0)+' trades analyzed and shared on TradeMind in the last 30 days.</div>';
+    +'<div style="font-size:10px;color:var(--muted);margin-top:8px">From '+(d.total_trades||0)+' trades analyzed and shared on Mac Draft in the last 30 days.</div>';
   }).catch(function(){el.innerHTML='<div class="mkt-empty">Index unavailable right now.</div>';});
 }
 
@@ -5900,12 +5900,12 @@ function renderPlayerTrades(pid,displayName){
   }
   html+='<button class="btn-sm" style="font-size:10px" id="pm-copy-link" onclick="copyPlayerLink(\''+displayName.replace(/'/g,"\\'")+'\')">Copy link</button><div id="pm-trades-all"></div><div id="pm-comps"></div>';
   box.innerHTML=html;
-  // Community comps: what this player has fetched in TradeMind deals
+  // Community comps: what this player has fetched in Mac Draft deals
   fetch('/api/community/player-trades?name='+encodeURIComponent(displayName)).then(function(r){return r.json();}).then(function(d){
     var comps=d.deals||[];
     var cbox=document.getElementById('pm-comps');
     if(!cbox||!comps.length)return;
-    cbox.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 8px">TradeMind market comps</div>'
+    cbox.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 8px">Mac Draft market comps</div>'
       +comps.map(function(dl){
         var give=(dl.give_side||[]).map(function(a){return a&&(a.name||a);}).join(' + ');
         var get=(dl.get_side||[]).map(function(a){return a&&(a.name||a);}).join(' + ');
@@ -6431,7 +6431,7 @@ async function downloadRosterCard(){
   ctx.beginPath();ctx.arc(W-120,90,220,0,7);ctx.fill();
   // Brand
   ctx.fillStyle='#9b72e8';ctx.font='700 26px Unbounded, sans-serif';
-  ctx.fillText('TRADEMIND',48,70);
+  ctx.fillText('MAC DRAFT',48,70);
   ctx.fillStyle='#7c8aaa';ctx.font='500 15px Outfit, sans-serif';
   ctx.fillText('ROSTER GRADE · '+(leagueName||'My League'),48,98);
   // Big letter
@@ -9994,7 +9994,7 @@ async function mdDownloadRoster(i){
     // gradient fill - flat light text at the left margin, like the live logo.
     x.font='700 19px Unbounded, Outfit, Arial';
     try{x.letterSpacing='0.5px';}catch(_){}
-    x.fillStyle='#f5eff0';x.fillText('TRADEMIND',28,51);
+    x.fillStyle='#f5eff0';x.fillText('MAC DRAFT',28,51);
     try{x.letterSpacing='0px';}catch(_){}
     x.fillStyle='#8f88b4';x.font='500 12.5px -apple-system, Arial';
     x.fillText('Mock draft · '+h.teams+' teams · pick '+h.slot+' · '+h.strat+' · '+new Date(h.ts).toLocaleDateString(),28,72);
@@ -10616,7 +10616,7 @@ checkShareParam();
         if(window._isPro||tries>=10){
           setTimeout(function(){
             alert(window._isPro
-              ? "You're Pro. Unlimited Sage is unlocked - thank you for backing TradeMind."
+              ? "You're Pro. Unlimited Sage is unlocked - thank you for backing Mac Draft."
               : "Payment received. Pro unlocks in a few seconds - no need to do anything.");
           },250);
           return;

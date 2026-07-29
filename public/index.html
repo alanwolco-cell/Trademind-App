@@ -12,20 +12,20 @@ posthog.init('phc_pqedJWPdf2S4npvYw8UcZpwhrnYvtH8Vd53yABtvZqmc',{api_host:'https
 window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog.capture(ev,props||{});}catch(_){}}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TradeMind - The Mock Draft That Drafts Like Your League</title>
+<title>Mac Draft - The Mock Draft That Drafts Like Your League</title>
 <meta name="description" content="Fantasy football mock drafts personalized to your league. Describe how your room drafts, or connect Sleeper, and practice against bots that reach, wait and snipe like the real thing. Sage advises every pick.">
-<meta property="og:title" content="TradeMind - The Mock Draft That Drafts Like Your League">
+<meta property="og:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Sage advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026072588">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026072990">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:site_name" content="TradeMind">
+<meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="TradeMind - The Mock Draft That Drafts Like Your League">
+<meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Sage advising every pick.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072588">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026072990">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,14 +33,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026072588">
+<link rel="stylesheet" href="/styles.css?v=2026072990">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026072588" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026072990" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026072588">
+<link rel="stylesheet" href="/theme.css?v=2026072990">
+<!-- The marketing home (Apple-style light shell). Loads after theme.css so it
+     settles the cascade for the .mk-* home sections and the global chrome
+     (wordmark, footer) without touching the dark tool screens. -->
+<link rel="stylesheet" href="/home.css?v=2026072990">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -52,7 +56,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072588">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026072990">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -76,8 +80,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 <nav class="nav">
   <div class="nav-logo" onclick="goHome()" title="Home">
     <!-- Plain text wordmark: no star glyph, no gradient. The owner will add a
-         real logo later; until then TRADEMIND reads as a sober product name. -->
-    <span class="tm-wordmark">TRADEMIND</span>
+         real logo later; until then "Mac Draft" reads as a sober product name
+         set in the system face, the Apple way. -->
+    <span class="tm-wordmark">Mac Draft</span>
   </div>
   <div class="nav-links">
     <!-- The bar carries the two products only: the mock draft (the front door)
@@ -193,7 +198,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <button class="mob-menu-item mob-sub" onclick="mobGo('community')">Trade Feed</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('community','news')">News</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn()">Learn</button>
-          <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn();switchLearnTab(document.querySelectorAll('#community-tab-learn .inner-tab')[3],'tab-about')">About TradeMind</button>
+          <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn();switchLearnTab(document.querySelectorAll('#community-tab-learn .inner-tab')[3],'tab-about')">About Mac Draft</button>
         </div>
       </div>
     </div>
@@ -202,62 +207,31 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 </nav>
 <div id="ticker-bar"><div class="ticker" id="live-ticker"></div></div>
 
-<!-- HERO -->
+<!-- HERO - the marketing home opens Apple-style: white page, one huge centred
+     claim, one sub-line, the league-description field (the product's real
+     front door, kept fully functional), two quiet CTAs, then the war room
+     itself large in a soft frame. All styling lives in home.css. -->
 <div class="hero">
-  <div class="hero-particles">
-    <div class="hpart" style="left:7%;top:22%;width:5px;height:5px;background:rgba(167,139,250,.5);box-shadow:0 0 8px rgba(167,139,250,.6);--d:13s;--del:-2s;--dx:22px;--dy:-38px;--sc:1.4;--lo:.15;--hi:.55"></div>
-    <div class="hpart" style="left:87%;top:58%;width:7px;height:7px;background:rgba(103,232,249,.4);box-shadow:0 0 10px rgba(103,232,249,.5);--d:17s;--del:-6s;--dx:-18px;--dy:-48px;--sc:1.2;--lo:.1;--hi:.45"></div>
-    <div class="hpart" style="left:52%;top:7%;width:4px;height:4px;background:rgba(167,139,250,.65);box-shadow:0 0 6px rgba(167,139,250,.7);--d:11s;--del:-9s;--dx:14px;--dy:32px;--sc:1.6;--lo:.2;--hi:.7"></div>
-    <div class="hpart" style="left:74%;top:14%;width:6px;height:6px;background:rgba(124,92,191,.45);box-shadow:0 0 9px rgba(124,92,191,.5);--d:19s;--del:-4s;--dx:-28px;--dy:22px;--sc:1.1;--lo:.1;--hi:.42"></div>
-    <div class="hpart" style="left:18%;top:72%;width:8px;height:8px;background:rgba(103,232,249,.3);box-shadow:0 0 12px rgba(103,232,249,.4);--d:15s;--del:-11s;--dx:38px;--dy:-22px;--sc:1.3;--lo:.12;--hi:.5"></div>
-    <div class="hpart" style="left:42%;top:85%;width:3px;height:3px;background:rgba(167,139,250,.7);box-shadow:0 0 6px rgba(167,139,250,.8);--d:9s;--del:-1s;--dx:10px;--dy:-20px;--sc:1.5;--lo:.2;--hi:.65"></div>
-  </div>
-  <div class="hero-inner">
-   <!-- LEFT: the claim. Left-aligned and two lines so the eye lands on one
-        edge instead of hunting the centre of three ragged centred lines. -->
-   <div class="hero-copy">
-    <!-- Sage's portrait used to open the hero at 150px with three animated
-         rings around it. The product shot on the right now carries the visual
-         weight, and Sage is already inside it (he signs every verdict), so the
-         stage is hidden by CSS on the home hero: it bought ~115px of vertical
-         space, which is what put the headline and the CTA above the fold on a
-         390x844 phone. Markup kept because the boot/idle eye animation and any
-         cached stylesheet still reference it. -->
-    <div class="hero-sage-stage">
-      <div class="hero-ring hero-ring-1"></div>
-      <div class="hero-ring hero-ring-2"></div>
-      <div class="hero-ring hero-ring-3"></div>
-      <svg class="sage-hero-svg" viewBox="0 0 120 106" width="150" height="150" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="shBG" x1="0" y1="0" x2="120" y2="106" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#1e0757"/></linearGradient><linearGradient id="shEG" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#a78bfa"/><stop offset="50%" stop-color="#67e8f9"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient><filter id="shEGlow" x="-60%" y="-150%" width="220%" height="400%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="shBGlow" x="-8%" y="-8%" width="116%" height="116%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><radialGradient id="shAura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#8b6bff" stop-opacity="0.6"/><stop offset="52%" stop-color="#67e8f9" stop-opacity="0.16"/><stop offset="100%" stop-color="#67e8f9" stop-opacity="0"/></radialGradient></defs><ellipse class="sage-aura" cx="60" cy="56" rx="78" ry="68" fill="url(#shAura)"/><ellipse cx="60" cy="56" rx="56" ry="49" fill="rgba(91,33,182,0.30)" filter="url(#shBGlow)"/><ellipse cx="28" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="url(#shBG)"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="url(#shBG)"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="url(#shBG)"/><rect x="4" y="43" width="112" height="27" fill="url(#shBG)"/><path d="M 38 20 L 38 44 L 28 52 L 28 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><path d="M 82 20 L 82 44 L 92 52 L 92 66" stroke="rgba(167,139,250,0.28)" stroke-width="1.5" stroke-linecap="square" fill="none"/><line x1="28" y1="52" x2="92" y2="52" stroke="rgba(167,139,250,0.15)" stroke-width="1"/><line x1="60" y1="10" x2="60" y2="54" stroke="rgba(103,232,249,0.2)" stroke-width="1.5"/><ellipse cx="38" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.18)" transform="rotate(-20,38,19)"/><ellipse cx="82" cy="19" rx="9" ry="5" fill="rgba(196,181,253,0.12)" transform="rotate(20,82,19)"/><path d="M 27 58 L 40 54 L 52 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M 93 58 L 80 54 L 68 57" stroke="rgba(167,139,250,0.5)" stroke-width="2" stroke-linecap="round" fill="none"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="29" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="69" y="65" width="22" height="6" rx="3" fill="url(#shEG)" filter="url(#shEGlow)"/><path d="M 50 85 L 70 85" stroke="rgba(167,139,250,0.55)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-    </div>
-    <!-- Headline. Two lines, not three: at this size a third line pushed the
-         CTA under the fold on a phone and made the block read as a paragraph. -->
-    <h1>The mock draft that<br><span class="hl">drafts like your league.</span></h1>
-    <p class="hero-tagline">Every mock site runs you against the same twelve polite robots. Tell this one how your room actually drafts, in plain words, and it reaches, waits and snipes like the people you know. Sage sits next to you on every pick.</p>
-    <!-- The context box IS the product, so it opens the page: type how your
-         league drafts and go. Works with any platform - Sleeper connect is the
-         optional shortcut, never the gate. -->
-    <div class="hero-cta" id="hero-cta">
-      <div class="hero-mock-start">
-        <label for="hero-mock-ctx">How does your league draft?</label>
-        <textarea id="hero-mock-ctx" rows="2" placeholder="RBs fly off the board early, two QBs always go in round 2, everyone waits on TE..."></textarea>
-        <div class="hero-mock-row">
-          <a href="#" id="hero-enter-btn" class="btn-primary" onclick="event.preventDefault();heroStartMock()">Build my mock draft →</a>
-          <span class="hero-mock-alt">or <a href="#" onclick="event.preventDefault();goConnectLeague()">connect Sleeper</a> to autofill your settings</span>
-        </div>
+  <div class="mk-hero-inner">
+    <!-- app.js swaps this line for "Welcome back, <user>" on a return visit -->
+    <div class="mk-eyebrow" id="hero-badge-text">Mac Draft</div>
+    <h1>The mock draft that <br>drafts like your league.</h1>
+    <p class="mk-sub">Tell it how your room actually drafts, in plain words. The bots reach, wait and snipe like the people you know - and Sage advises every pick.</p>
+    <div class="mk-hero-cta hero-cta" id="hero-cta">
+      <label class="mk-field-label" for="hero-mock-ctx">How does your league draft?</label>
+      <textarea id="hero-mock-ctx" class="mk-hero-field" rows="2" placeholder="RBs fly off the board early, two QBs always go in round 2, everyone waits on TE..."></textarea>
+      <div class="mk-cta-row">
+        <a href="#" id="hero-enter-btn" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Build my mock draft</a>
+        <a href="#" class="mk-btnlink" onclick="event.preventDefault();document.getElementById('home-how').scrollIntoView({behavior:'smooth'})">See how it works</a>
       </div>
-      <p class="hero-noaccount">No account, no signup, just draft. Sleeper, Yahoo, ESPN, home leagues.</p>
+      <p class="mk-fine">No account, no signup, just draft. Or <a href="#" onclick="event.preventDefault();goConnectLeague()">connect Sleeper</a> to autofill your settings. Works with Sleeper, Yahoo, ESPN and home leagues.</p>
     </div>
-   </div>
-
-   <!-- RIGHT: the product itself. A real war room mid-draft - the snake board
-        with picks, "you are on the clock", and Sage's call - so the image
-        tells the same story as the headline. Tilted and faded into the
-        background by CSS. Decorative: the headline already carries the
-        meaning, so alt stays empty for screen readers. (hero-product.png is
-        the same shot, kept for older cached HTML that still requests it.) -->
-   <div class="hero-shot" aria-hidden="true">
-     <img src="/hero-product.jpg?v=3" width="1520" height="1040" alt="" decoding="async" fetchpriority="high">
-   </div>
+  </div>
+  <!-- The product itself: a real war room mid-draft - the snake board,
+       "you are on the clock", and Sage's call. Decorative for screen readers:
+       the headline already carries the meaning. -->
+  <div class="mk-hero-shot mk-reveal" aria-hidden="true">
+    <img src="/hero-product.jpg?v=3" width="1520" height="1040" alt="" decoding="async" fetchpriority="high">
   </div>
 </div>
 
@@ -909,8 +883,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         </div>
       </div>
       <div class="mkt-panel" style="margin-top:14px">
-        <div class="mkt-panel-title">Most Traded on TradeMind (last 30 days)</div>
-        <div id="mkt-tm-index"><div class="mkt-empty">Loading TradeMind trade data...</div></div>
+        <div class="mkt-panel-title">Most Traded on Mac Draft (last 30 days)</div>
+        <div id="mkt-tm-index"><div class="mkt-empty">Loading Mac Draft trade data...</div></div>
       </div>
       <div class="mkt-panels" style="margin-top:14px">
         <div class="mkt-panel">
@@ -984,7 +958,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
             <div>
               <div style="font-size:14px;font-weight:700">Live Draft Assist <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
-              <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Drafting for real on Sleeper? TradeMind follows your draft live and tells you who to take, and why.</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Drafting for real on Sleeper? Mac Draft follows your draft live and tells you who to take, and why.</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               <select id="ld-league-sel" class="opp-select" style="width:auto;min-width:150px;font-size:12px" onfocus="ldRenderLeaguePick()" onchange="ldSwitchLeague(this.value)"><option>Pick a league</option></select>
@@ -1326,14 +1300,14 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
     <div id="tab-about" class="tab-content">
       <div class="card" style="max-width:680px">
-        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px">Why TradeMind exists</div>
+        <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px">Why Mac Draft exists</div>
         <div style="font-size:14px;color:var(--muted2);line-height:1.85">
           <p style="margin-bottom:14px">I've played fantasy football for years, in dynasty leagues and redraft leagues, with friends who take it as seriously as I do. And every time a trade came up, I did the same dance you probably do: open one site for values, another for news, a group chat for opinions, and then still make the call half on gut feeling.</p>
           <p style="margin-bottom:14px">The tools out there show you a number. That's it. Two players, two values, a green check or a red X. But nobody trades in a vacuum. The number doesn't know that their RB1 just went down, that your league starts three receivers, that the manager you're dealing with panics after two losses, or that you needed to make this move two weeks ago. The number doesn't help you actually get the deal done either.</p>
-          <p style="margin-bottom:14px">That gap is why I built TradeMind. Sage doesn't just weigh values. He reads the situation: who left, who arrived, whose window is open, who you're negotiating with and what makes them say yes. He tells you if the trade is right, when to send it, and how to pitch it. The stuff a sharp friend would tell you, if your sharp friend never slept and watched every depth chart in the league.</p>
+          <p style="margin-bottom:14px">That gap is why I built Mac Draft. Sage doesn't just weigh values. He reads the situation: who left, who arrived, whose window is open, who you're negotiating with and what makes them say yes. He tells you if the trade is right, when to send it, and how to pitch it. The stuff a sharp friend would tell you, if your sharp friend never slept and watched every depth chart in the league.</p>
           <p style="margin-bottom:14px">One promise matters more to me than any feature: accuracy. I would rather show you nothing than show you something wrong, because I know real people make real decisions with this. If you ever catch a mistake, tell me. It gets fixed.</p>
           <p style="margin-bottom:4px">Make the move you know is right. Life is good.</p>
-          <p style="color:var(--muted);font-size:12.5px;margin-top:18px">Alan, founder of TradeMind</p>
+          <p style="color:var(--muted);font-size:12.5px;margin-top:18px">Alan, founder of Mac Draft</p>
         </div>
       </div>
     </div>
@@ -1409,7 +1383,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <!-- Feedback: anyone can send it; only the founder sees what comes in -->
         <div id="community-tab-feedback" style="display:none">
           <div style="font-size:12.5px;color:var(--muted2);margin-bottom:14px;line-height:1.5">Tell us what to fix, add, or change. This goes straight to the founder and stays private - other users never see it.</div>
-          <textarea id="feedback-input" maxlength="1200" rows="4" placeholder="What's working, what's not, what you wish TradeMind did..." style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--text);font-family:var(--font-body);resize:vertical;outline:none"></textarea>
+          <textarea id="feedback-input" maxlength="1200" rows="4" placeholder="What's working, what's not, what you wish Mac Draft did..." style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--text);font-family:var(--font-body);resize:vertical;outline:none"></textarea>
           <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
             <button class="ideas-refresh" onclick="submitFeedback()">Send feedback</button>
             <span id="feedback-status" style="font-size:12px;color:var(--muted)"></span>
@@ -1421,132 +1395,196 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
 </section>
 
-<!-- HOW IT WORKS -->
-<!-- StoryBrand narrative (from the brand blueprints): problem -> guide -> plan
-     -> transformation -> one final CTA. Lives below the product so returning
-     users hit the tool instantly and first-timers scroll into the story. -->
-<!-- Problem narrative: the second-guessing spiral, resolved by Sage. Sits between
-     the hero (hook) and the Meet-Sage cards (guide). -->
-<!-- Centred vertically on purpose: the block used to sit against the top of a
-     full-height section, which left 32px above it and 222px below. Now the
-     breathing room is split evenly above and below. -->
-<div class="wrap" id="home-problem" style="padding-top:var(--sp-section);padding-bottom:var(--sp-section);text-align:center">
-  <h2 style="font-family:var(--font-head);font-size:clamp(30px,4.6vw,50px);font-weight:800;letter-spacing:-.03em;line-height:1.06;color:var(--text);margin:0 auto 28px;max-width:16ch;text-wrap:balance">Stop practicing against <span class="hl">a league that doesn't exist.</span></h2>
-  <div style="max-width:520px;margin:0 auto;font-size:clamp(16px,2.2vw,19px);line-height:2.05;color:var(--muted)">
-    <div>Every mock site gives you the same twelve tidy bots.</div>
-    <div>Your league is not tidy.</div>
-    <div>Your league takes two QBs in round 2.</div>
-    <div>Your league has a guy who always reaches for rookies.</div>
-    <div style="color:var(--text);font-weight:700;margin-top:8px">Draft day never looks like your practice.</div>
-    <div style="color:var(--accent-bright);font-weight:700;margin-top:22px;font-size:clamp(17px,2.5vw,22px)">This mock drafts like YOUR room.</div>
-  </div>
-</div>
+<!-- THE MARKETING STORY - Apple's alternation: white hero above, then this
+     near-black statement, light how-it-works, black Sage, light war room and
+     league connect, black founder note. One message per full-bleed section.
+     The section IDs are load-bearing: switchScreen() in app.js toggles them
+     so the story lives ONLY on home. -->
 
-<!-- How it works. Moved up to sit right after the problem statement: the reader
-     just admitted they are stuck, so the next thing they see is the four-step
-     path out - before we introduce who Sage is. -->
-<div class="wrap" id="home-how" style="padding-top:0;padding-bottom:var(--sp-section)">
-  <div style="max-width:920px;margin:0 auto">
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.16em;text-align:center;margin-bottom:26px">How it works</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:30px 34px">
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">1</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Describe your league</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Plain words. RBs early, TE premium, whatever your room does.</div>
-      </div>
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">2</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Or connect Sleeper</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Scoring, size and format fill themselves. Manual works too.</div>
-      </div>
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">3</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Draft in the war room</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Snake board, pick clock, queue, live scouting on every player.</div>
-      </div>
-      <div>
-        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;color:var(--accent-bright)">4</div>
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-top:9px">Sage on every pick</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:5px">Notes, stats, news, and a straight answer: take him or pass.</div>
-      </div>
+<!-- Problem statement: the second-guessing spiral. Dark full-bleed, short
+     lines, big air - and the first taste of the dark product world. -->
+<div class="mk-sec mk-dark" id="home-problem">
+  <div class="mk-wrap mk-center">
+    <h2 class="mk-h2 mk-reveal">Stop practicing against<br>a league that doesn't exist.</h2>
+    <div class="mk-lines mk-reveal">
+      <p>Every mock site gives you the same twelve tidy bots. Your league is not tidy.</p>
+      <p>Your league takes two QBs in round 2. Your league has a guy who always reaches for rookies.</p>
+      <p class="mk-lines-strong">Draft day never looks like your practice. <span class="hl2">This mock drafts like your room.</span></p>
     </div>
   </div>
 </div>
 
-<div class="wrap" id="home-story" style="padding-top:0;padding-bottom:var(--sp-section)">
-  <!-- Compact two-card pitch: everything the old villain/guide/plan/CTA stack
-       said, in one screen. Left = who Sage is; right = why to trust him. -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;max-width:920px;margin:0 auto">
-
-    <!-- MEET SAGE -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:34px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">
-        <div style="position:absolute;inset:14px;border-radius:50%;border:1px solid rgba(167,139,250,.22)"></div>
-        <svg width="80" height="72" viewBox="0 0 120 106" fill="none" style="position:relative"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
-      </div>
-      <h2 style="font-family:var(--font-head);font-size:clamp(30px,4vw,42px);font-weight:800;letter-spacing:-.02em;margin:0">Meet <span class="hl">Sage.</span></h2>
-      <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.14em;margin-top:12px;line-height:1.7">Your trusted fantasy<br>football advisor</div>
-      <div style="margin:20px 0"><span style="display:block;height:1px;width:116px;background:rgba(255,255,255,.14)"></span></div>
-      <div style="font-size:15px;color:var(--muted2);line-height:1.7">Always in your corner<br>before every trade.</div>
+<!-- How it works: four numbered columns over hairline rules, back on white.
+     The reader just admitted they are stuck; this is the path out. -->
+<div class="mk-sec" id="home-how">
+  <div class="mk-wrap">
+    <div class="mk-center mk-reveal">
+      <div class="mk-eyebrow-acc">How it works</div>
+      <h2 class="mk-h2">From your league's habits<br>to a live board. Four steps.</h2>
     </div>
-
-    <!-- WHY MANAGERS TRUST SAGE -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 26px">
-      <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.16em;text-align:center">Why managers</div>
-      <h2 style="font-family:var(--font-head);font-size:clamp(26px,3.4vw,38px);font-weight:800;letter-spacing:-.02em;text-align:center;margin:2px 0 22px">trust <span class="hl">Sage</span></h2>
-
-      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
-        <span class="trust-index" aria-hidden="true">01</span>
-        <div><div style="font-size:16px;font-weight:700;color:var(--text)">Knows your team.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Reads your whole roster and your picks so far, not just the name on the clock.</div></div>
+    <div class="mk-steps">
+      <div class="mk-step mk-reveal">
+        <div class="mk-step-num">01</div>
+        <h3>Describe your league</h3>
+        <p>Plain words. RBs early, TE premium, whatever your room does.</p>
       </div>
-
-      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;margin-bottom:12px">
-        <span class="trust-index" aria-hidden="true">02</span>
-        <div><div style="font-size:16px;font-weight:700;color:var(--text)">Understands your league.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">Scoring, settings, roster size, dynasty or redraft.</div></div>
+      <div class="mk-step mk-reveal">
+        <div class="mk-step-num">02</div>
+        <h3>Or connect Sleeper</h3>
+        <p>Scoring, size and format fill themselves. Manual works too.</p>
       </div>
-
-      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px">
-        <span class="trust-index" aria-hidden="true">03</span>
-        <div><div style="font-size:16px;font-weight:700;color:var(--text)">Never gets emotional.</div><div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:5px">No hype. No bias. Just logic.</div></div>
+      <div class="mk-step mk-reveal">
+        <div class="mk-step-num">03</div>
+        <h3>Draft in the war room</h3>
+        <p>Snake board, pick clock, queue, live scouting on every player.</p>
+      </div>
+      <div class="mk-step mk-reveal">
+        <div class="mk-step-num">04</div>
+        <h3>Sage on every pick</h3>
+        <p>Notes, stats, news, and a straight answer: take him or pass.</p>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Beginner reassurance: lowers the barrier for anyone who feels lost. Routes to Ask Sage. -->
-  <div style="max-width:920px;margin:var(--sp-block) auto 0;text-align:center">
-    <a href="#" onclick="event.preventDefault();switchScreen('sage')" style="display:inline-flex;align-items:center;gap:9px;font-size:14px;color:var(--muted2);background:rgba(155,114,232,.08);border:1px solid rgba(155,114,232,.28);border-radius:100px;padding:11px 22px;text-decoration:none;transition:border-color .18s,color .18s" onmouseover="this.style.borderColor='rgba(155,114,232,.55)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='rgba(155,114,232,.28)';this.style.color='var(--muted2)'">
-      Don't know anything about fantasy football? <strong style="color:var(--accent-bright)">Just ask Sage &rarr;</strong>
-    </a>
+<div id="home-story">
+
+  <!-- ASK SAGE - near-black full-bleed. Face, one real exchange, and the
+       three reasons managers trust him. The eye rects keep the .sage-hero-eye
+       class so the idle blink in app.js carries onto the marketing page. -->
+  <div class="mk-sec mk-dark">
+    <div class="mk-wrap mk-center">
+      <div class="mk-sage-face mk-reveal">
+        <svg width="96" height="85" viewBox="0 0 120 106" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><ellipse cx="28" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="33" rx="23" ry="23" fill="#5b21b6"/><ellipse cx="92" cy="43" rx="26" ry="26" fill="#5b21b6"/><ellipse cx="60" cy="70" rx="54" ry="34" fill="#4c1d95"/><ellipse cx="40" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="29" y="65" width="22" height="6" rx="3" fill="#67e8f9"/><ellipse cx="80" cy="68" rx="13" ry="9" fill="#0d0520"/><rect class="sage-hero-eye" x="69" y="65" width="22" height="6" rx="3" fill="#67e8f9"/></svg>
+      </div>
+      <h2 class="mk-h2 mk-reveal">Meet Sage.<br><span class="mk-h2-dim">Your advisor on every pick.</span></h2>
+      <p class="mk-sub mk-reveal">Always in your corner. Notes, stats, news, and a straight answer: take him or pass.</p>
+
+      <div class="mk-chat mk-reveal" aria-hidden="true">
+        <div class="mk-chat-q">I'm on the clock at 5.05 and already strong at WR. Who's the pick?</div>
+        <div class="mk-chat-a"><span class="mk-chat-tag">Sage</span>No hesitation: Jameson Williams. 6.8 yards after catch per grab means he manufactures points on his own. You are already strong at WR, so this is a stack-the-deck pick that doubles as trade bait.</div>
+      </div>
+
+      <div class="mk-trio">
+        <div class="mk-reveal">
+          <h3>Knows your team.</h3>
+          <p>Reads your whole roster and your picks so far, not just the name on the clock.</p>
+        </div>
+        <div class="mk-reveal">
+          <h3>Understands your league.</h3>
+          <p>Scoring, settings, roster size, dynasty or redraft.</p>
+        </div>
+        <div class="mk-reveal">
+          <h3>Never gets emotional.</h3>
+          <p>No hype. No bias. Just logic.</p>
+        </div>
+      </div>
+
+      <div class="mk-cta-row mk-center-row mk-reveal">
+        <a href="#" class="mk-btn" onclick="event.preventDefault();switchScreen('sage')">Ask Sage</a>
+        <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('sage')">New to fantasy football? Just ask</a>
+      </div>
+    </div>
   </div>
 
-  <!-- The cost of getting it wrong, immediately before the ask. The reader has
-       just seen who Sage is; this is where they feel why it matters. -->
-  <div class="cost-block" style="margin:var(--sp-block) auto 0;max-width:760px">
-    <div class="cost-title">What happens when you draft unprepared</div>
-    <ul class="cost-list">
-      <li>You panic at the clock and take the safe name.</li>
-      <li>You miss the positional cliff by exactly one pick.</li>
-      <li>The sleeper you sat on for two rounds gets sniped.</li>
-      <li>You spend the whole season starting the roster you settled for.</li>
-    </ul>
+  <!-- THE WAR ROOM - back to light. Three feature cards, each with a small
+       CSS excerpt of the real dark UI (position edges, the clock, the tier
+       cliff) so the product peeks through without repeating the hero shot. -->
+  <div class="mk-sec mk-band">
+    <div class="mk-wrap">
+      <div class="mk-center mk-reveal">
+        <div class="mk-eyebrow-acc">The war room</div>
+        <h2 class="mk-h2">A draft room,<br>not a spreadsheet.</h2>
+        <p class="mk-sub">Board or list view, timer on or off, undo, auto-draft, and live scouting on every player.</p>
+      </div>
+      <div class="mk-cards">
+        <div class="mk-card mk-reveal">
+          <h3>A real snake board.</h3>
+          <p>Every pick lands on the grid as it happens, position-coloured, your column marked.</p>
+          <div class="mk-mock" aria-hidden="true">
+            <div class="mk-mock-row2">
+              <div class="mk-chip" style="--pos:#4ade80"><b>Bijan Robinson</b><span>RB · ATL</span></div>
+              <div class="mk-chip" style="--pos:#fbbf24"><b>Ja'Marr Chase</b><span>WR · CIN</span></div>
+            </div>
+            <div class="mk-mock-row2">
+              <div class="mk-chip mk-chip-you" style="--pos:#fbbf24"><b>Puka Nacua</b><span>WR · LAR</span></div>
+              <div class="mk-chip" style="--pos:#a78bfa"><b>Josh Allen</b><span>QB · BUF</span></div>
+            </div>
+            <div class="mk-mock-row2">
+              <div class="mk-chip" style="--pos:#f87171"><b>Brock Bowers</b><span>TE · LV</span></div>
+              <div class="mk-chip" style="--pos:#4ade80"><b>Saquon Barkley</b><span>RB · PHI</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="mk-card mk-reveal">
+          <h3>The clock is yours.</h3>
+          <p>Timer on or off. Undo a pick. Flip on auto-draft when life happens.</p>
+          <div class="mk-mock" aria-hidden="true">
+            <div class="mk-clockhead"><span>Round 5 · Pick 5</span><b>0:42</b></div>
+            <div class="mk-clockcell">You are on the clock</div>
+            <div class="mk-mock-row2">
+              <div class="mk-chip" style="--pos:#fbbf24"><b>Jameson Williams</b><span>WR · ADP 51.6</span></div>
+              <div class="mk-chip" style="--pos:#4ade80"><b>David Montgomery</b><span>RB · ADP 56.3</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="mk-card mk-reveal">
+          <h3>Queue and tier cliffs.</h3>
+          <p>Line up your targets, and see the positional cliff before it takes them.</p>
+          <div class="mk-mock" aria-hidden="true">
+            <div class="mk-chip" style="--pos:#a78bfa"><b>Joe Burrow</b><span>QB · ADP 57.1</span></div>
+            <div class="mk-tierline">Tier 3 ends in 2 picks</div>
+            <div class="mk-chip" style="--pos:#f87171"><b>Harold Fannin</b><span>TE · ADP 62.6</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- The one action, at the persuasion peak -->
-  <div style="text-align:center;margin:var(--sp-block) auto 0">
-    <a href="#" class="btn-primary" style="display:inline-block" onclick="event.preventDefault();goMock()">Start a mock draft &rarr;</a>
+  <!-- LEAGUE CONNECT - white. The platforms, plainly. -->
+  <div class="mk-sec">
+    <div class="mk-wrap mk-center">
+      <div class="mk-reveal">
+        <h2 class="mk-h2">Bring your league with you.</h2>
+        <p class="mk-sub">Connect Sleeper and your scoring, size and format fill themselves. ESPN and Yahoo import too - or describe a home league in plain words.</p>
+      </div>
+      <div class="mk-plats mk-reveal">
+        <span class="mk-plat"><img src="/sleeper-logo.png" alt="" width="20" height="20">Sleeper</span>
+        <span class="mk-plat"><span class="mk-plat-mark" style="background:#d50a0a">ESPN</span>ESPN</span>
+        <span class="mk-plat"><span class="mk-plat-mark" style="background:#6001d2">Y!</span>Yahoo</span>
+        <span class="mk-plat"><span class="mk-plat-mark" style="background:#1d1d1f">H</span>Home leagues</span>
+      </div>
+      <div class="mk-reveal">
+        <a href="#" class="mk-btnlink" onclick="event.preventDefault();goConnectLeague()">Connect a league</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINAL CTA - the one action, at the persuasion peak. -->
+  <div class="mk-sec mk-band">
+    <div class="mk-wrap mk-center mk-reveal">
+      <h2 class="mk-h2">Draft day is coming.</h2>
+      <p class="mk-sub">Practice against your league, not somebody else's.</p>
+      <div class="mk-cta-row mk-center-row">
+        <a href="#" class="mk-btn" onclick="event.preventDefault();goMock()">Start a mock draft</a>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- Founder note. The page closes on a person, not a feature: it is the one
-     block a competitor cannot copy, and the reason someone trusts the advice. -->
-<div class="wrap founder-block" id="home-founder">
-  <div class="founder-label">Why TradeMind exists</div>
-  <p class="founder-lead">Every trade used to start the same way. A tab open on a value chart, another on injury news, a group chat where three people tell me three different things. Twenty minutes later I still decided on gut feeling, and half the time I was wrong.</p>
-  <p>The problem was never a lack of information. There is more of it every year. The problem is that none of it knows anything about me.</p>
-  <p>A value chart does not know I am one running back from contending. It does not know the manager I am negotiating with just lost his tight end, or that my window closes this season because my core turns thirty. It gives everyone the same number and leaves the hard part, the part that actually decides the trade, entirely to you.</p>
-  <p>That is what Sage does instead. It reads your roster, your league, your opponent and your timing, and then it tells you whether to make the trade, when to send it, and how to word it. Not a number. A decision you can act on.</p>
-  <p class="founder-close">Life is good when you know the move.</p>
-  <div class="founder-sign">Alan Wolcovinsky, founder</div>
+     block a competitor cannot copy, and the reason someone trusts the advice.
+     Near-black, editorial - it hands the reader off to the dark product. -->
+<div class="mk-sec mk-dark mk-founder" id="home-founder">
+  <div class="mk-wrap-narrow">
+    <div class="mk-eyebrow-acc mk-reveal">Why Mac Draft exists</div>
+    <p class="mk-founder-lead mk-reveal">Every trade used to start the same way. A tab open on a value chart, another on injury news, a group chat where three people tell me three different things. Twenty minutes later I still decided on gut feeling, and half the time I was wrong.</p>
+    <p class="mk-reveal">The problem was never a lack of information. There is more of it every year. The problem is that none of it knows anything about me.</p>
+    <p class="mk-reveal">A value chart does not know I am one running back from contending. It does not know the manager I am negotiating with just lost his tight end, or that my window closes this season because my core turns thirty. It gives everyone the same number and leaves the hard part, the part that actually decides the trade, entirely to you.</p>
+    <p class="mk-reveal">That is what Sage does instead. It reads your roster, your league, your opponent and your timing, and then it tells you whether to make the trade, when to send it, and how to word it. Not a number. A decision you can act on.</p>
+    <p class="mk-founder-close mk-reveal">Life is good when you know the move.</p>
+    <div class="mk-founder-sign mk-reveal">Alan Wolcovinsky, founder</div>
+  </div>
 </div>
 
 <!-- Home news rail: secondary content, lives below the product -->
@@ -1564,7 +1602,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
 <footer>
   <div id="how-mini" style="display:none;margin-bottom:28px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);max-width:560px;margin-left:auto;margin-right:auto;margin-bottom:28px">
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;text-align:center">How TradeMind works</div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;text-align:center">How Mac Draft works</div>
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:5px">Connect Sleeper</span>
       <span style="color:var(--border2);font-size:14px">→</span>
@@ -1574,7 +1612,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
   </div>
   <div onclick="goHome()" style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;cursor:pointer" title="Back to home">
-    <span class="tm-wordmark" style="font-size:19px">TRADEMIND</span>
+    <span class="tm-wordmark" style="font-size:15px">Mac Draft</span>
   </div>
   <div class="footer-sub">Trade advice built on context, not generic rankings. Know the move before you make it.</div>
   <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
@@ -1583,7 +1621,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <a href="/privacy" class="nav-link" style="pointer-events:auto">Privacy Policy</a>
     <a href="/terms" class="nav-link" style="pointer-events:auto">Terms of Use</a>
   </div>
-  <div class="footer-legal">© 2026 TradeMind · Not affiliated with Sleeper, FantasyCalc, or the NFL · Values from FantasyCalc, ADP from Fantasy Football Calculator · Fantasy data for entertainment purposes</div>
+  <div class="footer-legal">© 2026 Mac Draft · Not affiliated with Sleeper, FantasyCalc, or the NFL · Values from FantasyCalc, ADP from Fantasy Football Calculator · Fantasy data for entertainment purposes</div>
 </footer>
 
 <!-- Phone tab bar. Primary destinations belong under the thumb, not behind a
@@ -1624,7 +1662,29 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026072588"></script>
+<script src="/app.js?v=2026072990"></script>
+
+<script>
+// Marketing-home scroll reveal: sections fade + rise 16px as they enter the
+// viewport. One-shot per element (unobserve after firing), ~600ms via the CSS
+// in home.css. Under prefers-reduced-motion, or without IntersectionObserver,
+// everything is simply visible - motion is an enhancement, never a gate.
+(function(){
+  var els=document.querySelectorAll('.mk-reveal');
+  if(!els.length)return;
+  var show=function(el){el.classList.add('mk-in');};
+  if(!('IntersectionObserver' in window)||
+     (window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)){
+    els.forEach(show);return;
+  }
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){show(en.target);io.unobserve(en.target);}
+    });
+  },{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+  els.forEach(function(el){io.observe(el);});
+})();
+</script>
 
 <!-- PLAYER CARD MODAL -->
 <div id="player-modal" class="pm-overlay" onclick="if(event.target===this)closePlayerCard()">
