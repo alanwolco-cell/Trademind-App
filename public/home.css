@@ -543,6 +543,256 @@ footer .nav-link{font-size:12px}
   .mk-reveal{opacity:1;transform:none;transition:none}
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 2 - THE MENUS. Every dropdown, drawer and control strip goes Apple:
+   thin frosted panels, SF type, hairline separators, quiet hover, one small
+   accent mark for "selected" instead of filled purple blocks, and a single
+   entry gesture (fade + 6px rise, 240ms, the same ease as the home).
+
+   The chrome sits over BOTH worlds - the light marketing home and the dark
+   tools - so every panel is declared twice: dark by default, light under
+   [data-theme="light"]. Frosted backgrounds keep >=.88 alpha so legibility
+   never depends on backdrop-filter support.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --mk-panel:rgba(24,24,27,.92);          /* dark frosted menu surface */
+  --mk-panel-hair:rgba(255,255,255,.1);
+  --mk-panel-hover:rgba(255,255,255,.06);
+  --mk-panel-shadow:0 18px 50px -12px rgba(0,0,0,.55),0 4px 14px rgba(0,0,0,.3);
+}
+[data-theme="light"]{
+  --mk-panel:rgba(255,255,255,.93);
+  --mk-panel-hair:rgba(0,0,0,.08);
+  --mk-panel-hover:rgba(0,0,0,.05);
+  --mk-panel-shadow:0 18px 50px -12px rgba(0,0,0,.22),0 4px 14px rgba(0,0,0,.08);
+}
+
+/* one entry gesture for every panel. The centred nav dropdown keeps its
+   translateX in both frames so the animation never uncenters it. */
+@keyframes mkMenuIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes mkMenuInC{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%)}}
+@keyframes mkSheetIn{from{transform:translateX(100%)}to{transform:none}}
+@keyframes mkFadeIn{from{opacity:0}to{opacity:1}}
+
+/* ── 1. the nav bar: Apple's thin frosted strip ─────────────────────────────
+   v11 already gives it the blur; this quiets the links to SF at body weight
+   and swaps the purple hover/active fills for a plain text-emphasis change -
+   Apple's nav marks state with opacity, not chips. */
+html.v11 .nav, html.v12 .nav{
+  background:rgba(10,10,12,.8);
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+html.v11[data-theme="light"] .nav, html.v12[data-theme="light"] .nav{
+  background:rgba(251,251,253,.82);
+  border-bottom:1px solid rgba(0,0,0,.08);
+}
+html.v11 .nav-item-btn, html.v12 .nav-item-btn{
+  font-family:var(--mk-font);
+  font-size:13px;
+  font-weight:400;
+  letter-spacing:-.008em;
+  color:var(--muted2);
+  opacity:.92;
+}
+html.v11 .nav-item-btn:not(.sage-hot):hover, html.v12 .nav-item-btn:not(.sage-hot):hover{
+  background:transparent;
+  color:var(--text);
+  opacity:1;
+}
+html.v11 .nav-item-btn.active:not(.sage-hot), html.v12 .nav-item-btn.active:not(.sage-hot),
+html.v11 .nav-item-btn.screen-nav.active:not(.sage-hot), html.v12 .nav-item-btn.screen-nav.active:not(.sage-hot){
+  background:transparent;
+  color:var(--text);
+  font-weight:500;
+}
+/* Ask Sage: from a filled purple chip to a quiet hairline pill - the accent
+   lives in the type, not the block */
+html.v11 .nav-item-btn.sage-hot, html.v12 .nav-item-btn.sage-hot{
+  background:transparent;
+  border:1px solid var(--border2);
+  color:var(--accent-bright);
+  font-weight:500;
+}
+html.v11 .nav-item-btn.sage-hot:hover, html.v12 .nav-item-btn.sage-hot:hover,
+html.v11 .nav-item-btn.sage-hot.active, html.v12 .nav-item-btn.sage-hot.active{
+  background:var(--accent-dim);
+  border-color:rgba(155,114,232,.5);
+  color:var(--accent-bright);
+}
+/* Connect: the bar's one filled CTA, Apple-small */
+html.v11 #nav-signin, html.v12 #nav-signin{
+  background:var(--accent-bright);
+  border:none;
+  color:#fff;
+  font-family:var(--mk-font);
+  font-weight:500;
+  padding:7px 16px;
+}
+html.v11 #nav-signin:hover, html.v12 #nav-signin:hover{
+  background:var(--accent-bright);
+  color:#fff;
+  filter:brightness(1.08);
+  transform:none;
+}
+/* utility icons: shed the outlined-chip look, hairline only on hover */
+html.v11 .theme-toggle.icon, html.v12 .theme-toggle.icon{
+  border-color:transparent;
+  color:var(--muted2);
+}
+html.v11 .theme-toggle.icon:hover, html.v12 .theme-toggle.icon:hover{
+  border-color:var(--border2);
+  color:var(--text);
+  transform:none;
+  box-shadow:none;
+}
+
+/* ── 2+4. dropdown panels: nav, user account, alerts, search, autocomplete ──
+   One panel language. #alerts-wrap needs restating because styles.css targets
+   it by id, which outranks the class selectors. */
+html.v11 .nav-dropdown, html.v12 .nav-dropdown,
+html.v11 .user-dropdown, html.v12 .user-dropdown,
+html.v11 .ac-dropdown, html.v12 .ac-dropdown,
+#alerts-wrap .ac-dropdown{
+  background:var(--mk-panel);
+  -webkit-backdrop-filter:saturate(180%) blur(24px);
+  backdrop-filter:saturate(180%) blur(24px);
+  border:1px solid var(--mk-panel-hair);
+  border-radius:14px;
+  box-shadow:var(--mk-panel-shadow);
+  padding:5px;
+}
+/* the entry gesture: display flips from none, so the animation replays on
+   every open. The nav dropdown is centred by translateX and takes the
+   centre-preserving variant. */
+.nav-item:hover .nav-dropdown,.nav-item.open .nav-dropdown{animation:mkMenuInC .24s var(--mk-ease)}
+.user-pill.open .user-dropdown,
+.ac-dropdown.open,
+#alerts-wrap.open .ac-dropdown{animation:mkMenuIn .24s var(--mk-ease)}
+
+/* rows: SF, quiet hover, the accent reserved for the active mark */
+html.v11 .nav-dd-item, html.v12 .nav-dd-item,
+html.v11 .user-dd-item, html.v12 .user-dd-item{
+  font-family:var(--mk-font);
+  font-size:13px;
+  font-weight:400;
+  letter-spacing:-.008em;
+  padding:9px 12px;
+  border-radius:9px;
+  color:var(--text);
+}
+html.v11 .nav-dd-item:hover, html.v12 .nav-dd-item:hover,
+html.v11 .user-dd-item:hover, html.v12 .user-dd-item:hover{
+  background:var(--mk-panel-hover);
+  color:var(--text);
+}
+html.v11 .nav-dd-item.active, html.v12 .nav-dd-item.active{color:var(--accent-bright)}
+html.v11 .user-dd-item.danger, html.v12 .user-dd-item.danger{color:var(--red)}
+html.v11 .nav-dd-sep, html.v12 .nav-dd-sep{background:var(--mk-panel-hair);margin:5px 10px}
+html.v11 .user-dd-header, html.v12 .user-dd-header{border-bottom:1px solid var(--mk-panel-hair);padding:9px 12px 8px}
+html.v11 .user-dd-name, html.v12 .user-dd-name{font-family:var(--mk-font);font-weight:600;letter-spacing:-.01em}
+/* the account pill itself: hairline, not a chip */
+html.v11 .user-pill, html.v12 .user-pill{
+  background:transparent;
+  border:1px solid var(--border2);
+  font-family:var(--mk-font);
+}
+html.v11 .user-pill:hover, html.v12 .user-pill:hover{border-color:var(--border2);color:var(--text);background:var(--mk-panel-hover)}
+
+/* ── 3. search results: Spotlight rows ──────────────────────────────────────
+   The list loses its purple outline and its row rules; separation comes from
+   spacing and the hover wash, like a menu. Position badges keep their data
+   colours - that is information, not decoration. */
+html.v11 .ac-item, html.v12 .ac-item{
+  font-family:var(--mk-font);
+  border-bottom:none;
+  border-radius:9px;
+  padding:9px 11px;
+}
+html.v11 .ac-item:hover, html.v12 .ac-item:hover{background:var(--mk-panel-hover)}
+html.v11 .ac-ktc, html.v12 .ac-ktc{color:var(--muted2)}
+
+/* ── 5. the phone drawer: an Apple sheet ────────────────────────────────────
+   Strong frost, big tap targets, hairline dividers between top-level rows,
+   400ms slide with the house ease. The chevron rotation on expand already
+   exists; the open group marks itself with accent text only. */
+#mob-menu{
+  background:rgba(0,0,0,.42);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+}
+#mob-menu.open{animation:mkFadeIn .24s var(--mk-ease)}
+.mob-menu-panel{
+  width:min(320px,86vw);
+  background:var(--mk-panel);
+  -webkit-backdrop-filter:saturate(180%) blur(30px);
+  backdrop-filter:saturate(180%) blur(30px);
+  border-left:1px solid var(--mk-panel-hair);
+  padding:16px 16px 26px;
+  gap:0;
+}
+#mob-menu.open .mob-menu-panel{animation:mkSheetIn .32s var(--mk-ease)}
+.mob-menu-head{margin-bottom:10px}
+.mob-menu-head span{font-family:var(--mk-font)!important;font-weight:600!important;letter-spacing:-.01em}
+.mob-menu-item{
+  font-family:var(--mk-font);
+  font-size:16px;
+  font-weight:500;
+  letter-spacing:-.014em;
+  padding:14px 10px;
+  min-height:48px;
+  border-radius:0;
+}
+.mob-menu-item:active{background:var(--mk-panel-hover)}
+.mob-menu-item.mob-sub{
+  font-size:15px;
+  font-weight:400;
+  padding:11px 10px 11px 26px;
+  min-height:42px;
+  color:var(--muted2);
+}
+/* hairlines between top-level rows - the Apple settings list */
+.mob-menu-panel > button.mob-menu-item:not(:first-of-type),
+.mob-menu-panel > .mob-group{border-top:1px solid var(--mk-panel-hair)}
+.mob-group.open .mob-menu-item.mob-parent{color:var(--accent-bright)}
+.mob-chev{opacity:.4}
+
+/* ── 6. mock section chips: an Apple segmented control ──────────────────────
+   Quiet hairline pills; the selected one is a raised neutral chip carrying
+   the accent in its label - no purple flood. theme.css sets .md-sec-btn.on
+   with a compound selector, so these restate at skin specificity. */
+html.v11 .md-sec-btn, html.v12 .md-sec-btn{
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--muted2);
+  font-family:var(--mk-font);
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:-.01em;
+  padding:8px 16px;
+}
+html.v11 .md-sec-btn:hover, html.v12 .md-sec-btn:hover{
+  border-color:var(--border2);
+  color:var(--text);
+  background:transparent;
+  transform:none;
+}
+html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
+  background:var(--surface3);
+  border-color:transparent;
+  color:var(--accent-bright);
+  font-weight:600;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+}
+[data-theme="light"] .md-sec-btn.on{box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+
+/* stillness is a feature */
+@media (prefers-reduced-motion:reduce){
+  .nav-item:hover .nav-dropdown,.nav-item.open .nav-dropdown,
+  .user-pill.open .user-dropdown,.ac-dropdown.open,#alerts-wrap.open .ac-dropdown,
+  #mob-menu.open,#mob-menu.open .mob-menu-panel{animation:none}
+}
+
 /* ═══ PHONE ══════════════════════════════════════════════════════════════════
    Stack, scale down, keep taps big. The type clamps already do most of it. */
 @media (max-width:700px){
