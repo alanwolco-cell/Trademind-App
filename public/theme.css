@@ -435,6 +435,36 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .md-pos-chip[data-pos="TE"].active{color:var(--pos-te);border-color:var(--pos-te);background:rgba(248,113,113,.10)}
 .md-pos-chip[data-pos="K"].active{color:var(--pos-k);border-color:var(--pos-k);background:rgba(56,189,248,.10)}
 .md-pos-chip[data-pos="DEF"].active{color:var(--pos-def);border-color:var(--pos-def);background:rgba(148,163,184,.10)}
+/* the flag chips (Rookies / Drafted) wear the pos-chip body with the brand's
+   selected state - they toggle a view, they don't pick a position */
+.md-flag-chip{background:var(--surface2);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-size:10px;font-weight:700;padding:5px 11px;cursor:pointer;transition:all .15s;font-family:var(--font-body)}
+.md-flag-chip.active{color:var(--accent-bright);border-color:rgba(155,114,232,.5);background:var(--accent-dim)}
+
+/* ── the projection columns (Stacked parity) ────────────────────────────────
+   With a position filter on and projections loaded, the available list drops
+   to single-column rows and every row carries PROJ plus that position's stat
+   splits, right-aligned and tabular so the column scans like a table. The
+   numbers stay quiet - the name and the position edge keep the hierarchy. */
+.md-ch-stats{display:flex;gap:2px;flex:none;font-variant-numeric:tabular-nums}
+.md-ch-stat{width:42px;text-align:right;font-size:10.5px;color:var(--muted2);white-space:nowrap}
+.md-ch-stat.md-ch-proj{color:var(--text);font-weight:700}
+/* the sortable header row above the table - click a column to reorder */
+.md-tbl-head{
+  grid-column:1/-1;display:flex;align-items:center;gap:8px;
+  padding:2px 11px 0 8px;font-size:9px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;
+}
+.md-tbl-head .md-ch-stat{font-size:9px;color:var(--muted);cursor:pointer;font-weight:700}
+.md-tbl-head .md-ch-stat:hover,.md-tbl-head .md-ch-stat.on{color:var(--accent-bright)}
+/* a drafted player shown in place: attenuated, controls gone */
+.md-ch-row.md-ch-taken{opacity:.45}
+/* phones: the splits fold away, PROJ stays; the flag chips grow to the same
+   touch target the position chips get from styles.css */
+@media(max-width:640px){
+  .md-ch-stat{display:none}
+  .md-ch-stat.md-ch-proj{display:block}
+  #screen-mock .md-flag-chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+}
 
 /* ── light theme parity ─────────────────────────────────────────────────────
    The tints above are low-alpha colour over the surface tokens, so they hold

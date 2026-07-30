@@ -7991,6 +7991,11 @@ async function _startMockDraftRun(){
   var _adpFmt=MD.sf?'2qb':(MD.scoring===0?'standard':MD.scoring===0.5?'half-ppr':'ppr');
   try{await loadAdp(_adpFmt);}catch(_){}
   MD.adpSource=window._adpSource||'sleeper';
+  // Real season projections + bye weeks ride alongside the draft: fired here,
+  // never awaited - the data columns appear when the feeds land, and the room
+  // opens on time even if they never do.
+  try{mdLoadProjections();}catch(_){}
+  try{mdLoadByes();}catch(_){}
   // Pool sized to the DRAFT, not to a value floor - the old (value>800) filter
   // left fewer players than a 12x15 draft needs and the board died mid-draft.
   var poolSize=Math.max(260,MD.teams*MD.rounds+80);
@@ -8020,7 +8025,7 @@ async function _startMockDraftRun(){
         // can never outrank a player real drafters actually take
         dv=Math.min(mdValue(p),2100);
       }
-      return {id:p.id,name:p.name,pos:p.pos,team:p.team,dv:dv,adp:adp};
+      return {id:p.id,name:p.name,pos:p.pos,team:p.team,dv:dv,adp:adp,exp:(p.exp!=null?p.exp:null)};
     })
     .sort(function(a,b){return b.dv-a.dv;}).slice(0,poolSize);
   // Room size, tier-aware: in shallow rooms the ELITE QBs/TEs keep their
@@ -8050,7 +8055,7 @@ async function _startMockDraftRun(){
       .map(function(p){var a=advByName(p.name);return {p:p,fpts:(a&&a.pos==='K'&&a.fpts)||0};})
       .filter(function(x){return x.fpts>0;})
       .sort(function(a,b){return b.fpts-a.fpts;}).slice(0,20);
-    ks.forEach(function(x,i){MD.pool.push({id:x.p.id,name:x.p.name,pos:'K',team:x.p.team,dv:190-i*6});});
+    ks.forEach(function(x,i){MD.pool.push({id:x.p.id,name:x.p.name,pos:'K',team:x.p.team,dv:190-i*6,exp:(x.p.exp!=null?x.p.exp:null)});});
     if(MD.noD)throw 0;
     var dstAvg=window._advDst||{};
     var ds=Object.values(allPlayers).filter(function(p){return p.pos==='DEF';})
@@ -8096,8 +8101,10 @@ async function _startMockDraftRun(){
   MD.order=[];
   for(var r=0;r<MD.rounds;r++){for(var s=1;s<=MD.teams;s++)MD.order.push(r%2===0?s:MD.teams+1-s);}
   MD.pickIdx=0;MD.mine=[];MD.log=[];MD.aiRosters={};MD.picks=[];MD.onClock=false;MD.posFilter='';MD.myOveralls=[];MD.lastSnipe='';
+  MD.rookiesOnly=false;MD.showTaken=false;MD.availSort=null;
   MD.initialRanks={};MD.pool.forEach(function(p,i){MD.initialRanks[p.id]=i+1;});
   document.querySelectorAll('.md-pos-chip').forEach(function(c){c.classList.toggle('active',!c.dataset.pos);});
+  document.querySelectorAll('.md-flag-chip').forEach(function(c){c.classList.remove('active');});
   var sb=document.getElementById('md-avail-search');if(sb)sb.value='';
   // Player/value feeds can still be in flight on a cold first click - bail loudly
   // instead of opening an empty board (this is what made Start "need 3 clicks").
@@ -8773,8 +8780,99 @@ function mdScoutQueue(p){
     });
   });
 }
+// ── Stacked-parity data: real projections, byes, stat columns ────────────────
+// Season-long projections from Sleeper's public projections API - the same
+// numbers Stacked shows. One fetch per season, cached on window; every row
+// reads its total (by the room's scoring) plus per-position splits from it.
+async function mdLoadProjections(){
+  if(window._mdProj&&window._mdProj.season===ACTIVE_SEASON)return;
+  try{
+    var u='https://api.sleeper.com/projections/nfl/'+ACTIVE_SEASON
+      +'?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF&order_by=pts_ppr';
+    var r=await fetch(u);
+    if(!r.ok)return;
+    var rows=await r.json();
+    var byId={};
+    (rows||[]).forEach(function(e){if(e&&e.player_id&&e.stats)byId[e.player_id]=e.stats;});
+    if(!Object.keys(byId).length)return;
+    window._mdProj={season:ACTIVE_SEASON,byId:byId};
+    if(MD.onClock)mdShowChoices(MD.curRound||1);  // the columns appear in place
+  }catch(_){}
+}
+// Bye weeks derived from the real schedule: a bye is simply a week where a
+// team has no game - no hand-kept table to go stale. Partial or missing
+// schedule means NO byes shown, never guessed ones.
+async function mdLoadByes(){
+  if(window._mdByes&&window._mdByes._season===ACTIVE_SEASON)return;
+  try{
+    var r=await fetch('https://api.sleeper.app/schedule/nfl/regular/'+ACTIVE_SEASON);
+    if(!r.ok)return;
+    var games=await r.json();
+    if(!games||!games.length)return;
+    var teams={},weeks={};
+    games.forEach(function(g){
+      if(!g||!g.week||!g.home||!g.away)return;
+      teams[g.home]=1;teams[g.away]=1;
+      (weeks[g.week]=weeks[g.week]||{})[g.home]=1;weeks[g.week][g.away]=1;
+    });
+    var all=Object.keys(teams);
+    if(all.length<28)return; // partial schedule: better no byes than wrong ones
+    var byes={_season:ACTIVE_SEASON};
+    Object.keys(weeks).forEach(function(w){
+      var off=all.filter(function(t){return !weeks[w][t];});
+      if(off.length&&off.length<=8)off.forEach(function(t){byes[t]=parseInt(w,10);});
+    });
+    window._mdByes=byes;
+    if(MD.onClock)mdShowChoices(MD.curRound||1);
+    try{mdRenderMine();}catch(_){}
+  }catch(_){}
+}
+// Points column keyed to the room's scoring
+function mdProjPts(pid){
+  var pr=window._mdProj&&window._mdProj.byId[pid];
+  if(!pr)return null;
+  var v=MD.scoring>=1?pr.pts_ppr:MD.scoring===0.5?pr.pts_half_ppr:pr.pts_std;
+  return v!=null?v:(pr.pts_ppr!=null?pr.pts_ppr:null);
+}
+// The splits that matter per position - what Stacked shows, nothing more.
+// (Sleeper's season feed carries no target projections, so WR/TE lead with
+// receptions.)
+function mdSplitCols(pos){
+  if(pos==='QB')return[{k:'pass_yd',l:'PaYd'},{k:'pass_td',l:'PaTD'},{k:'rush_yd',l:'RuYd'},{k:'rush_td',l:'RuTD'}];
+  if(pos==='RB')return[{k:'rush_att',l:'Att'},{k:'rush_yd',l:'RuYd'},{k:'rush_td',l:'TD'},{k:'rec',l:'Rec'}];
+  if(pos==='WR'||pos==='TE')return[{k:'rec',l:'Rec'},{k:'rec_yd',l:'Yds'},{k:'rec_td',l:'TD'}];
+  return[];
+}
+function _mdStat(p,k){
+  if(k==='proj')return mdProjPts(p.id);
+  var pr=window._mdProj&&window._mdProj.byId[p.id];
+  return pr&&pr[k]!=null?pr[k]:null;
+}
+// big numbers whole, small ones keep a decimal - 7.4 projected TDs is a real read
+function _mdFmtStat(v){
+  if(v==null)return '&ndash;';
+  return v>=100?String(Math.round(v)):String(Math.round(v*10)/10);
+}
+// Column-header sort: first click best-first, second flips it. Players the
+// feed has no line for always sink to the bottom.
+function mdSortCols(k){
+  if(MD.availSort&&MD.availSort.k===k)MD.availSort.d*=-1;
+  else MD.availSort={k:k,d:-1};
+  mdFilterChoices();
+}
+function mdToggleRookies(btn){
+  MD.rookiesOnly=!MD.rookiesOnly;
+  btn.classList.toggle('active',MD.rookiesOnly);
+  mdFilterChoices();
+}
+function mdToggleTaken(btn){
+  MD.showTaken=!MD.showTaken;
+  btn.classList.toggle('active',MD.showTaken);
+  mdFilterChoices();
+}
 function mdSetPosFilter(btn){
   MD.posFilter=btn.dataset.pos||'';
+  MD.availSort=null; // a column sort belongs to the view it was clicked in
   document.querySelectorAll('.md-pos-chip').forEach(function(c){c.classList.toggle('active',c===btn);});
   mdFilterChoices();
 }
@@ -8786,7 +8884,8 @@ function mdShowChoices(round){
   // the picks list, not just the pool, so a laggy server pool can't resurrect a
   // drafted player in the list or in Sage's rec.
   var taken={};(MD.picks||[]).forEach(function(pk){if(pk&&pk.p&&pk.p.id)taken[pk.p.id]=1;});
-  var pool=MD.pool.filter(function(p){return !taken[p.id]&&(!pf||p.pos===pf)&&(!q||p.name.toLowerCase().indexOf(q)>=0);});
+  var pool=MD.pool.filter(function(p){return !taken[p.id]&&(!pf||p.pos===pf)&&(!MD.rookiesOnly||p.exp===0)&&(!q||p.name.toLowerCase().indexOf(q)>=0);});
+  var _proj=window._mdProj&&window._mdProj.byId;
   // sort mode: pure best-available (board rank) or roster fit (filled positions sink)
   var srt=((document.getElementById('md-sort')||{}).value)||'bpa';
   if(srt==='fit'){
@@ -8798,8 +8897,35 @@ function mdShowChoices(round){
       return pa-pb||(b.dv||0)-(a.dv||0);
     });
   }
-  var top=pool.slice(0,18);
-  if(!top.length){document.getElementById('md-choices').innerHTML='<div class="empty-state" style="grid-column:1/-1">No available player matches that search.</div>';return;}
+  // column-header sort (projection columns) outranks the dropdown modes
+  var _sortCmp=null;
+  if(MD.availSort&&_proj){
+    var _sk=MD.availSort.k,_sd=MD.availSort.d;
+    _sortCmp=function(a,b){
+      var va=_mdStat(a,_sk),vb=_mdStat(b,_sk);
+      if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;
+      return _sd*(va-vb);
+    };
+    pool=pool.slice().sort(_sortCmp);
+  }
+  var entries=pool.slice(0,18).map(function(p){return {p:p};});
+  // Show drafted: taken players rejoin the list in place, attenuated and
+  // tagged with who took them - so the run that just happened stays visible.
+  if(MD.showTaken&&(MD.picks||[]).length){
+    (MD.picks||[]).forEach(function(pk){
+      if(!pk||!pk.p)return;var tp=pk.p;
+      if(pf&&tp.pos!==pf)return;
+      if(MD.rookiesOnly&&tp.exp!==0)return;
+      if(q&&tp.name.toLowerCase().indexOf(q)<0)return;
+      var by=pk.mine?'You':((MD.bots&&MD.bots[pk.slot]&&MD.bots[pk.slot].name)||('Team '+pk.slot));
+      entries.push({p:tp,by:by,round:pk.round,pickNo:pk.pickNo});
+    });
+    entries.sort(_sortCmp
+      ?function(a,b){return _sortCmp(a.p,b.p);}
+      :function(a,b){return (b.p.dv||0)-(a.p.dv||0);});
+    entries=entries.slice(0,30);
+  }
+  if(!entries.length){document.getElementById('md-choices').innerHTML='<div class="empty-state" style="grid-column:1/-1">No available player matches that search.</div>';return;}
   // Sage only speaks when it is actually YOUR pick - in a live room he stays
   // quiet while someone else is on the clock (his last take stays visible).
   var rec=null;
@@ -8842,13 +8968,32 @@ function mdShowChoices(round){
   }
   var box=document.getElementById('md-choices');
   box.innerHTML='';
+  // Table mode: a position filter + loaded projections turns the card grid
+  // into single-column rows so PROJ and the splits line up like Stacked's
+  // table. The "All" grid keeps its cards and shows PROJ inline.
+  var tbl=!!(_proj&&pf);
+  box.style.gridTemplateColumns=tbl?'1fr':'repeat(auto-fill,minmax(170px,1fr))';
+  var _cols=tbl?[{k:'proj',l:'Proj'}].concat(mdSplitCols(pf)):[];
+  if(tbl){
+    var hd=document.createElement('div');
+    hd.className='md-tbl-head';
+    hd.innerHTML='<span style="flex:1">Player</span>'
+      +'<span class="md-ch-stats">'+_cols.map(function(c){
+        var on=MD.availSort&&MD.availSort.k===c.k;
+        return '<span class="md-ch-stat'+(on?' on':'')+'" onclick="mdSortCols(\''+c.k+'\')" title="Sort by projected '+c.l+'">'+c.l+(on?(MD.availSort.d<0?' &#9662;':' &#9652;'):'')+'</span>';
+      }).join('')+'</span>'
+      +'<span style="width:20px;flex:none"></span><span style="width:26px;flex:none"></span>';
+    box.appendChild(hd);
+  }
   var _lastTier=null;
-  top.forEach(function(p){
+  entries.forEach(function(en){
+    var p=en.p,isTaken=!!en.by;
     // Tier separators, position view only: "— Tier 3 WR —" between blocks so
     // the cliffs are visible while you shop a position. When the tier is down
     // to its last man (or two), the separator says so in red - and the
     // hairlines shimmer once with the brand gradient (theme.css .md-tier-sep).
-    if(pf&&MD.tierOf&&MD.tierOf[p.id]&&MD.tierOf[p.id]!==_lastTier){
+    // A column sort breaks tier order, so the separators sit that view out.
+    if(pf&&!MD.availSort&&MD.tierOf&&MD.tierOf[p.id]&&MD.tierOf[p.id]!==_lastTier){
       var _tn2=MD.tierOf[p.id];
       var sep=document.createElement('div');
       sep.className='md-tier-sep';
@@ -8860,21 +9005,37 @@ function mdShowChoices(round){
     // TAP MODEL: the card body (face, name, anywhere) opens the player card.
     // Drafting happens ONLY through the select circle on the right (and the
     // Draft button), so a stray tap can never draft anyone by accident.
-    var isSel=MD.selChoice===p;
-    var inQ=(MD.queue||[]).indexOf(p.id)>=0;
+    var isSel=!isTaken&&MD.selChoice===p;
+    var inQ=!isTaken&&(MD.queue||[]).indexOf(p.id)>=0;
+    var _pv=mdProjPts(p.id);
+    var _bw=window._mdByes&&p.team?window._mdByes[p.team]:null;
     var d=document.createElement('div');
     // styling lives in theme.css: the pos-XX class carries the edge colour,
-    // md-ch-rec marks Sage's pick, md-ch-on the selected row
-    d.className='md-ch-row pos-'+p.pos+(p===rec?' md-ch-rec':'')+(isSel?' md-ch-on':'');
-    d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
-      +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+(p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
-      +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
-      +(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':''))
-      +'</div></div>'
-      +''
-      +'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
+    // md-ch-rec marks Sage's pick, md-ch-on the selected row, md-ch-taken a
+    // drafted player shown in place
+    d.className='md-ch-row pos-'+p.pos+(!isTaken&&p===rec?' md-ch-rec':'')+(isSel?' md-ch-on':'')+(isTaken?' md-ch-taken':'');
+    // in table mode every row carries the stat columns; the "All" grid keeps
+    // its cards and rides PROJ on the meta line instead
+    var statsHtml=tbl
+      ?'<span class="md-ch-stats">'+_cols.map(function(c){
+          return '<span class="md-ch-stat'+(c.k==='proj'?' md-ch-proj':'')+'">'+_mdFmtStat(_mdStat(p,c.k))+'</span>';
+        }).join('')+'</span>'
+      :'';
+    var ctrlHtml=isTaken
+      ?'<span style="flex-shrink:0;width:20px"></span><span style="flex-shrink:0;width:26px"></span>'
+      :'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
       +'<span class="md-ch-sel" title="Draft '+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+    d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
+      +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
+      +(isTaken?' · <span style="white-space:nowrap">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' · '+en.by+'</span>'
+        :(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':'')))
+      +(_bw?' · <span title="Bye week" style="white-space:nowrap">BYE&nbsp;'+_bw+'</span>':'')
+      +(!tbl&&_pv!=null?' · <span title="Projected season points" style="color:var(--muted2);font-weight:700;white-space:nowrap">PROJ&nbsp;'+_mdFmtStat(_pv)+'</span>':'')
+      +'</div></div>'
+      +statsHtml
+      +ctrlHtml;
     d.addEventListener('click',function(){
       if(p.pos==='DEF')return; // no player card for team units
       openPlayerCard(p.id,p.name);
@@ -9211,6 +9372,10 @@ function mdRenderDraftBar(){
   var _twc=_tl2.dir>0?'var(--green)':_tl2.dir<0?'var(--red)':'var(--muted)';
   var _meta=[p.pos+' · '+(p.team||'FA')];
   if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
+  var _bw=window._mdByes&&p.team?window._mdByes[p.team]:null;
+  if(_bw)_meta.push('BYE '+_bw);
+  var _pj=mdProjPts(p.id);
+  if(_pj!=null)_meta.push(_mdFmtStat(_pj)+' proj pts');
   if(_tier)_meta.push(_tier);
   if(_trendOk&&(_tier||p.adp))_meta.push('<span style="color:'+_twc+'">'+_tl2.word.toLowerCase()+'</span>');
   var _rpl=MD.replDv&&MD.replDv[p.pos];
@@ -9221,6 +9386,20 @@ function mdRenderDraftBar(){
       :_gap>=400?'moderate edge vs replacement'
       :_gap>=0?'thin edge vs replacement'
       :'below replacement level');
+  }
+  // Stacked's availability read, in words: where the market drafts him vs
+  // where your next turn comes up. ~6 picks of ADP drift is the coin-flip zone.
+  var _av='';
+  if(p.adp){
+    var _po=Math.round(+p.adp),_pr2=Math.max(1,Math.ceil(_po/MD.teams));
+    _av='Projected pick: Round '+_pr2+', overall #'+_po;
+    var _nx=0;
+    for(var _qi=MD.pickIdx+1;_qi<MD.order.length;_qi++){if(MD.order[_qi]===MD.mySlot){_nx=_qi+1;break;}}
+    if(_nx){
+      if(_po>=_nx)_av+=' · likely still there at your next pick (#'+_nx+')';
+      else if(_po+6>=_nx)_av+=' · could make it back to your next pick (#'+_nx+') - coin flip';
+      else _av+=' · won\'t make it back to you';
+    }
   }
   // curated draft narratives: max two, quiet frame - the label is the only
   // accent so the block informs without shouting
@@ -9239,6 +9418,7 @@ function mdRenderDraftBar(){
     +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+p.id+'\')" title="Sage weighs this exact pick against your roster">Ask Sage</button>'
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
     +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">Draft '+p.name.split(' ').slice(-1)[0]+'</button></div>'
+    +(_av?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)">'+_av+'</div>':'')
     +_narHtml
     +mdProsConsHtml(p,2) // the two strongest each way; the card has the rest
     +'<div style="margin-top:7px;font-size:11px"><span style="color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">Full player card &rarr;</span></div>';
@@ -9334,16 +9514,42 @@ function mdApplyEdit(pk,cand){
 function mdRenderMine(){
   var byPos={QB:[],RB:[],WR:[],TE:[]};
   MD.mine.forEach(function(p){(byPos[p.pos]||(byPos[p.pos]=[])).push(p);});
-  // roster needs chips: filled slots vs a standard starting lineup
+  // Stacked-style slot counters: the connected league's lineup shape when it
+  // drives the room, the standard lineup otherwise. RB/WR/TE overflow spills
+  // into FLEX before it counts as bench.
   try{
     var needsEl=document.getElementById('md-needs');
     if(needsEl){
-      var target={QB:MD.sf?2:1,RB:2,WR:3,TE:1};
-      var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
-      needsEl.innerHTML=['QB','RB','WR','TE'].map(function(pos){
-        var have=byPos[pos].length,need=target[pos],full=have>=need;
-        return '<span style="padding:2px 7px;border-radius:100px;border:1px solid '+(full?posC[pos]:'var(--border)')+';color:'+(full?posC[pos]:'var(--muted)')+'">'+pos+' '+have+'/'+need+'</span>';
-      }).join('');
+      var lf=(localStorage.getItem('tm_mock_uselg')!=='0'&&window.leagueFormat)?window.leagueFormat:null;
+      var slots={
+        QB:lf?((lf.numQBs||1)+(lf.hasSuperFlex?1:0)):(MD.sf?2:1),
+        RB:lf?(lf.numRBs||2):2,WR:lf?(lf.numWRs||2):2,TE:lf?(lf.numTEs||1):1,
+        FLEX:lf?((lf.flexCount||0)+(lf.recFlexCount||0)):1,
+        K:MD.noK?0:1,DEF:MD.noD?0:1
+      };
+      var have={QB:0,RB:0,WR:0,TE:0,K:0,DEF:0};
+      MD.mine.forEach(function(p){if(have[p.pos]!=null)have[p.pos]++;});
+      var flexFill=0;
+      ['RB','WR','TE'].forEach(function(ps){
+        var ov=have[ps]-slots[ps];
+        if(ov>0)flexFill=Math.min(slots.FLEX,flexFill+ov);
+      });
+      var posC={QB:'var(--pos-qb)',RB:'var(--pos-rb)',WR:'var(--pos-wr)',TE:'var(--pos-te)',K:'var(--pos-k)',DEF:'var(--pos-def)',FLEX:'var(--accent-bright)'};
+      var chips=['QB','RB','WR','TE','FLEX','K','DEF'].filter(function(ps){return slots[ps]>0;}).map(function(ps){
+        var h=ps==='FLEX'?flexFill:Math.min(have[ps],slots[ps]);
+        var full=h>=slots[ps];
+        return '<span style="padding:2px 7px;border-radius:100px;border:1px solid '+(full?posC[ps]:'var(--border)')+';color:'+(full?posC[ps]:'var(--muted)')+'">'+ps+' '+h+'/'+slots[ps]+'</span>';
+      });
+      // three or more of your picks sharing one bye week is a real Sunday
+      // problem - say it while there is still time to draft around it
+      var bys=window._mdByes;
+      if(bys){
+        var bc={};MD.mine.forEach(function(p){var w=p.team?bys[p.team]:null;if(w)bc[w]=(bc[w]||0)+1;});
+        Object.keys(bc).forEach(function(w){
+          if(bc[w]>=3)chips.push('<span title="'+bc[w]+' of your picks share the week '+w+' bye" style="padding:2px 7px;border-radius:100px;border:1px solid #f87171;color:#f87171">BYE '+w+' &times;'+bc[w]+'</span>');
+        });
+      }
+      needsEl.innerHTML=chips.join('');
     }
   }catch(_){}
   var _mdMine=document.getElementById('md-mine');if(_mdMine)_mdMine.innerHTML=['QB','RB','WR','TE','K','DEF'].filter(function(pos){return byPos[pos]&&byPos[pos].length;}).map(function(pos){
