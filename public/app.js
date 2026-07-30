@@ -498,14 +498,8 @@ function styleModeButtons(m){
 }
 function setLeagueModeManual(m){
   if(m!=='dynasty'&&m!=='redraft')return;
-  // a connected league DECIDES its own format - no flipping a dynasty league
-  // to redraft values by hand
-  if(leagueId&&window._detectedMode&&m!==window._detectedMode){
-    document.querySelectorAll('[data-modebtn="'+m+'"]').forEach(function(b){
-      var t=b.textContent;b.textContent='League-locked';setTimeout(function(){b.textContent=t;},1200);
-    });
-    return;
-  }
+  // Auto-detection sets the default, but the user owns the final call - a
+  // mislabeled or keeper league should never trap them on the wrong values.
   leagueMode=m;
   try{sndPickSoft();}catch(_){}
   styleModeButtons(m);
@@ -1269,7 +1263,12 @@ async function loadLeague(lid,name,rosters,season){
     window._isKeeper=leagueInfo.settings.type===1;
     window._detectedMode=isDynastyLeague?'dynasty':'redraft';
   }else{
+    // No settings.type on this league object - fall back to the name. CRITICAL:
+    // still refresh _detectedMode here, or a previous dynasty league leaves it
+    // stale and the next (redraft) league inherits a phantom "dynasty" lock.
     isDynastyLeague=(leagueInfo&&(leagueInfo.name||"").toLowerCase().indexOf("dynasty")>=0);
+    window._detectedMode=isDynastyLeague?'dynasty':'redraft';
+    window._isKeeper=false;
   }
   leagueMode=isDynastyLeague?'dynasty':'redraft';
   try{updateModeUI();}catch(_){}  // refresh the Dynasty/Redraft badge on every league load or switch
@@ -6179,10 +6178,6 @@ function openPlayerCard(pid, name){
       var _bits=[];
       var _adp=(pid&&window._adpById)?window._adpById[pid]:null;
       if(_adp!=null)_bits.push('ADP '+(+_adp).toFixed(1));
-      try{
-        var _pj2=(MD&&MD._posRank)?mdProjPts({id:pid,pos:pos}):null;
-        if(_pj2)_bits.push('~'+_pj2+' pts proj');
-      }catch(_){}
       if(fc)_bits.push(trendLabel(fc.trend30Day||0).word.toLowerCase()+' market');
       _dm.textContent=_bits.join(' · ');
     }
@@ -7885,7 +7880,28 @@ function mdNarratives(p){
   if(a&&a.g&&a.g<=11&&out.length<3)out.push('He played only '+a.g+' games last season. Injury-year discounts are how sharp drafters buy talent - just do not stack too many of them on one roster.');
   return out.slice(0,3);
 }
+// Wrapper: one draft can start at a time, and the button shows it is working so
+// a cold first click can't turn into three impatient ones. All the heavy lifting
+// (and its awaits) lives in _startMockDraftRun; any failure restores the button.
 async function startMockDraft(){
+  if(MD._starting)return;
+  MD._starting=true;
+  var _btn=document.getElementById('md-start-btn');
+  var _bt=_btn?_btn.textContent:'';
+  if(_btn){_btn.disabled=true;_btn.textContent='Loading…';_btn.style.opacity='.65';_btn.style.cursor='wait';}
+  try{
+    await _startMockDraftRun();
+  }catch(e){
+    try{console.error('[TM] startMockDraft failed',e);}catch(_){}
+    var s=document.getElementById('md-setup');if(s)s.style.display='block';
+    var b=document.getElementById('md-board');if(b){b.style.display='none';b.dataset.live='0';}
+    alert('Could not start the draft - the player data was still loading. Give it a second and hit Start again.');
+  }finally{
+    MD._starting=false;
+    if(_btn){_btn.disabled=false;_btn.textContent=_bt||'Start mock draft';_btn.style.opacity='';_btn.style.cursor='';}
+  }
+}
+async function _startMockDraftRun(){
   await ensurePlayersLoaded();
   if(!Object.keys(ktcById).length)await fetchKtcValues(1,1,false);
   MD.mySlot=parseInt(document.getElementById('md-slot').value)||5;
@@ -7894,6 +7910,7 @@ async function startMockDraft(){
   MD.scoring=parseFloat(document.getElementById('md-scoring').value);
   MD.sf=document.getElementById('md-format').value==='sf';
   MD.clockSecs=parseInt((document.getElementById('md-clock')||{}).value)||0;
+  try{mdSaveSettings();}catch(_){}  // remember this room on the device
   MD.queue=[];
   // fresh seed every draft: restarting must produce a DIFFERENT room, not a replay
   MD.seed=Math.floor(Math.random()*100000);
@@ -8110,12 +8127,15 @@ async function startMockDraft(){
   MD.initialRanks={};MD.pool.forEach(function(p,i){MD.initialRanks[p.id]=i+1;});
   document.querySelectorAll('.md-pos-chip').forEach(function(c){c.classList.toggle('active',!c.dataset.pos);});
   var sb=document.getElementById('md-avail-search');if(sb)sb.value='';
+  // Player/value feeds can still be in flight on a cold first click - bail loudly
+  // instead of opening an empty board (this is what made Start "need 3 clicks").
+  if(!MD.pool.length)throw new Error('draft data not ready');
   mdRenderBoard();
   document.getElementById('md-setup').style.display='none';
   var _bd=document.getElementById('md-board');_bd.style.display='block';_bd.dataset.live='1';
-  // Open on the AVAILABLE PLAYERS so you see who you can draft first (the board of
-  // made picks is right above if you scroll up).
-  setTimeout(function(){var av=document.getElementById('md-available');if(av)av.scrollIntoView({behavior:'smooth',block:'start'});},200);
+  // Land at the TOP of the draft board so the room and your picks are the first
+  // thing you see - not scrolled past into the player list.
+  setTimeout(function(){var bd=document.getElementById('md-board');if(bd){var y=bd.getBoundingClientRect().top+window.pageYOffset-72;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}},200);
   var _ln=document.getElementById('md-lg-note');
   if(_ln){
     // always name the market: half of all "why did he go there" confusion is
@@ -8838,7 +8858,7 @@ function mdShowChoices(round){
       // The full Sage call is user-initiated only: one API request per click,
       // never one per hover or per render. His answer survives re-renders of
       // this box for the same pick via the MD.sageLive cache.
-      +(!MP.active?'<div style="margin-top:9px"><button class="btn-sm md-sage-ask" onclick="mdAskSageLive()">Ask Sage for the full read</button></div><div id="md-sage-live" style="display:none"></div>':'')
+      +'<div id="md-sage-live" style="display:none"></div>'
       +'</div></div>';
     if(!MP.active&&MD.sageLive&&MD.sageLive.pick===MD.pickIdx){
       var _slh=document.getElementById('md-sage-live');
@@ -8855,13 +8875,9 @@ function mdShowChoices(round){
     // hairlines shimmer once with the brand gradient (theme.css .md-tier-sep).
     if(pf&&MD.tierOf&&MD.tierOf[p.id]&&MD.tierOf[p.id]!==_lastTier){
       var _tn2=MD.tierOf[p.id];
-      // count from the full untaken pool at this position, not the searched
-      // slice, so a search box query can never fake a cliff
-      var _tleft=MD.pool.filter(function(x){return !taken[x.id]&&x.pos===pf&&MD.tierOf[x.id]===_tn2;}).length;
       var sep=document.createElement('div');
       sep.className='md-tier-sep';
       sep.innerHTML='<span class="sep-line"></span>Tier '+_tn2+' '+pf
-        +(_tleft===1?'&nbsp;<span class="md-cliff">· last one - cliff behind him</span>':_tleft===2?'&nbsp;<span class="md-cliff">· only 2 left</span>':'')
         +'<span class="sep-line"></span>';
       box.appendChild(sep);
       _lastTier=_tn2;
@@ -8879,7 +8895,6 @@ function mdShowChoices(round){
       +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+(p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
       +(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':''))
-      +(function(){var pj=mdProjPts(p);return pj?' · <span title="Rough seasonal projection by positional rank" style="white-space:nowrap">~'+pj+' pts</span>':'';})()
       +'</div></div>'
       +''
       +'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
@@ -9221,8 +9236,6 @@ function mdRenderDraftBar(){
   var _twc=_tl2.dir>0?'var(--green)':_tl2.dir<0?'var(--red)':'var(--muted)';
   var _meta=[p.pos+' · '+(p.team||'FA')];
   if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
-  var _pj=mdProjPts(p);
-  if(_pj)_meta.push('~'+_pj+' pts');
   if(_tier)_meta.push(_tier);
   if(_trendOk&&(_tier||p.adp))_meta.push('<span style="color:'+_twc+'">'+_tl2.word.toLowerCase()+'</span>');
   var _rpl=MD.replDv&&MD.replDv[p.pos];
@@ -9904,7 +9917,46 @@ async function ldPoll(){
     }).join('')||'<div>No picks yet.</div>';
   }catch(_){}
 }
+// Per-DEVICE memory of the mock setup, no account needed. Whatever you last
+// picked (teams, seat, scoring, format, rounds, clock, mode, the fine-tune
+// toggles) comes back on this device next visit. A connected league still wins
+// for the settings it actually decides (its size, scoring, format, mode).
+var MD_SETTING_KEYS=['md-mode','md-teams','md-slot','md-scoring','md-format','md-rounds','md-clock'];
+var MD_TOGGLE_KEYS=['md-6pt','md-tep'];
+function mdSaveSettings(){
+  try{
+    var o={};
+    MD_SETTING_KEYS.forEach(function(id){var e=document.getElementById(id);if(e&&e.value!=null)o[id]=e.value;});
+    MD_TOGGLE_KEYS.forEach(function(id){var e=document.getElementById(id);if(e)o[id]=!!e.checked;});
+    localStorage.setItem('tm_mock_settings',JSON.stringify(o));
+  }catch(_){}
+}
+function mdRestoreSettings(){
+  try{
+    var o=JSON.parse(localStorage.getItem('tm_mock_settings')||'null');
+    if(!o)return;
+    // teams first so the seat dropdown is rebuilt to the right size before we
+    // restore which slot you were in
+    var t=document.getElementById('md-teams');
+    if(t&&o['md-teams']!=null){t.value=o['md-teams'];try{mdSyncSlots();}catch(_){}}
+    MD_SETTING_KEYS.forEach(function(id){
+      if(id==='md-teams')return;
+      // a connected league owns the mode default - don't let device memory fight it
+      if(id==='md-mode'&&leagueId&&window._detectedMode)return;
+      var e=document.getElementById(id);
+      if(e&&o[id]!=null)e.value=o[id];
+    });
+    MD_TOGGLE_KEYS.forEach(function(id){var e=document.getElementById(id);if(e&&o[id]!=null)e.checked=!!o[id];});
+  }catch(_){}
+}
 function mdPrefillFromLeague(){
+  // one-time: persist every setup change to this device automatically
+  if(!window._mdSettingsWired){
+    window._mdSettingsWired=1;
+    MD_SETTING_KEYS.concat(MD_TOGGLE_KEYS).forEach(function(id){
+      var e=document.getElementById(id);if(e)e.addEventListener('change',mdSaveSettings);
+    });
+  }
   // saved league-tendency context comes back every visit
   try{
     var cbox=document.getElementById('md-context');
@@ -9919,16 +9971,20 @@ function mdPrefillFromLeague(){
   // Sleeper connect is the optional shortcut: nudge only while no league is loaded
   var _hint=document.getElementById('md-connect-hint');
   if(_hint)_hint.style.display=leagueId?'none':'block';
-  // Mode select mirrors the real app mode. A connected league DECIDES its
-  // format, so the select locks with a tooltip instead of rejecting silently.
+  // Mode select mirrors the real app mode. A connected league picks the smart
+  // DEFAULT (auto-detected), but you can always override it - detection is a
+  // guess (keeper leagues, odd names, missing settings) and the user knows
+  // their own league. No hard lock.
   var _mdSel=document.getElementById('md-mode');
   if(_mdSel){
     _mdSel.value=(typeof leagueMode!=='undefined'&&leagueMode==='dynasty')?'dynasty':'redraft';
-    var _locked=!!(leagueId&&window._detectedMode);
-    _mdSel.disabled=_locked;
-    _mdSel.title=_locked?('League-locked ('+(window._detectedMode==='dynasty'?'Dynasty':'Redraft')+')'):'';
-    _mdSel.style.opacity=_locked?'.55':'';
+    _mdSel.disabled=false;
+    _mdSel.title=(leagueId&&window._detectedMode)?('Auto-detected '+(window._detectedMode==='dynasty'?'Dynasty':'Redraft')+' - change it if that is wrong'):'';
+    _mdSel.style.opacity='';
   }
+  // device memory fills the setup (works with no account); a connected league
+  // then overrides the settings it owns just below
+  try{mdRestoreSettings();}catch(_){}
   if(!leagueId)return;
   try{
     var t=document.getElementById('md-teams'); if(t&&leagueFormat.totalTeams>=8&&leagueFormat.totalTeams<=16)t.value=String(leagueFormat.totalTeams);
