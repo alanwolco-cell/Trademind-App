@@ -793,6 +793,198 @@ html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
   #mob-menu.open,#mob-menu.open .mob-menu-panel{animation:none}
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 3 - THE MOCK SETUP GOES LIGHT.
+
+   The owner picked the white/hairline panel treatment for the mock menu, and
+   the same light-into-dark bridge as the home: the SETUP is a light Apple
+   sheet (white card, grey wells, clean selects, a real segmented control);
+   the moment the draft starts, the same card returns to the dark Stacked
+   board, which is not touched.
+
+   Mechanism: setup and board share one .card, and mdShowSection() always
+   writes #md-board's inline display. A :has() state selector flips the
+   card's DESIGN TOKENS while the board is hidden, so every inline var() in
+   the setup markup re-resolves to the light palette with no JS and no
+   markup rewiring. Both attribute spellings are matched because the
+   authored attribute has no space and the serialized one does.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* segmented control track/thumb - dark defaults for the board-on state */
+  --mk-seg-track:rgba(255,255,255,.08);
+  --mk-seg-on:#3a3a40;
+  --mk-focus:rgba(155,114,232,.28);
+}
+[data-theme="light"]{
+  --mk-seg-track:rgba(0,0,0,.06);
+  --mk-seg-on:#ffffff;
+  --mk-focus:rgba(106,63,255,.16);
+}
+
+/* ── the light region: token flip while the board is hidden ───────────────── */
+#screen-mock .card:has(> #md-board[style*="display:none"]),
+#screen-mock .card:has(> #md-board[style*="display: none"]){
+  background:#ffffff;
+  border-color:rgba(0,0,0,.09);
+  color:#1d1d1f;
+  --text:#1d1d1f;
+  --muted:#6e6e73;
+  --muted2:#494950;
+  --surface:#ffffff;
+  --surface2:#f5f5f7;      /* the wells: context box, config grid, fine-tune */
+  --surface3:#e8e8ed;
+  --border:rgba(0,0,0,.09);
+  --border2:rgba(0,0,0,.16);
+  --accent:#6a3fff;
+  --accent-bright:#6a3fff;
+  --accent-dim:rgba(106,63,255,.08);
+  --green:#0a8f52;
+  --red:#d92d3f;
+  /* the inline headings reference --font-head; the setup speaks SF */
+  --font-head:var(--mk-font);
+  --mk-seg-track:rgba(0,0,0,.06);
+  --mk-seg-on:#ffffff;
+  --mk-focus:rgba(106,63,255,.16);
+  font-family:var(--mk-font);
+}
+
+/* ── 1. the section chips: a real segmented control ─────────────────────────
+   One recessed track, borderless segments, the selected one raised on a
+   soft shadow - unmistakably Apple, in both the light setup and over the
+   dark board (the chips row stays visible in both states). !important is
+   needed only against the row's own inline display/gap. */
+#screen-mock #md-sections{
+  display:inline-flex!important;
+  flex-wrap:wrap;
+  gap:2px!important;
+  padding:3px;
+  background:var(--mk-seg-track);
+  border-radius:11px;
+  align-self:flex-start;
+}
+#screen-mock .md-sec-btn{
+  background:transparent;
+  border:none;
+  border-radius:8px;
+  padding:7px 16px;
+  font-family:var(--mk-font);
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:-.01em;
+  color:var(--muted2);
+  box-shadow:none;
+  transition:color .16s var(--mk-ease),background .16s var(--mk-ease);
+}
+#screen-mock .md-sec-btn:hover{
+  background:transparent;
+  border:none;
+  color:var(--text);
+  transform:none;
+}
+#screen-mock .md-sec-btn.on{
+  background:var(--mk-seg-on);
+  border:none;
+  color:var(--text);
+  font-weight:600;
+  box-shadow:0 1px 4px rgba(0,0,0,.16),0 0 0 .5px rgba(0,0,0,.04);
+}
+
+/* ── 3. the selects: proper Apple popup buttons ─────────────────────────────
+   Scoped to the setup containers only - the board bar keeps its own controls
+   untouched. White field, hairline, custom chevron, accent focus ring. */
+#md-setup .opp-select, #ld-card .opp-select{
+  -webkit-appearance:none;
+  appearance:none;
+  background-color:var(--surface);
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:12px;
+  border:1px solid var(--border2);
+  border-radius:10px;
+  font-family:var(--mk-font);
+  font-size:13.5px;
+  letter-spacing:-.01em;
+  color:var(--text);
+  padding:9px 30px 9px 12px;
+  cursor:pointer;
+  transition:border-color .18s var(--mk-ease),box-shadow .18s var(--mk-ease);
+}
+#md-setup .opp-select:focus, #ld-card .opp-select:focus{
+  outline:none;
+  border-color:var(--accent-bright);
+  box-shadow:0 0 0 4px var(--mk-focus);
+}
+
+/* ── 2. the setup panel: white sheet, grey wells, restrained accent ─────────
+   The wells themselves come from the token flip (--surface2). Inputs sit
+   white on the grey wells, iOS-form style, with the accent reserved for the
+   small label (inline) and the focus ring. */
+#md-setup .tm-input, #mp-card .tm-input{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  color:var(--text);
+  font-family:var(--mk-font);
+}
+#md-setup .tm-input:focus, #mp-card .tm-input:focus{
+  border-color:var(--accent-bright);
+  box-shadow:0 0 0 4px var(--mk-focus);
+}
+/* the one filled action: Start / Connect, in the light region's accent */
+#md-setup .btn-load, #ld-card .btn-load{
+  background:var(--accent-bright);
+  font-family:var(--mk-font);
+  font-weight:600;
+  letter-spacing:-.01em;
+  box-shadow:none;
+}
+#md-setup .btn-load:hover, #ld-card .btn-load:hover{box-shadow:0 6px 18px var(--mk-focus)}
+/* quiet buttons inside the setup lose the purple tint */
+#ld-card .btn-sm, #md-history-wrap .btn-sm{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  color:var(--muted2);
+}
+#ld-card .btn-sm:hover, #md-history-wrap .btn-sm:hover{border-color:var(--border2);color:var(--text)}
+
+/* ── 4. Draft with friends: white cards on the sheet ────────────────────────
+   Same hairline card language; the create icon keeps the accent, the join
+   icon stays neutral. The BETA chips and the live dot keep their accents. */
+#mp-card .mpx-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+#mp-card .mpx-card:hover{
+  border-color:var(--accent-bright);
+  box-shadow:0 8px 22px -10px var(--mk-focus);
+}
+#mp-card .mpx-card:first-child .mpx-ic svg{stroke:var(--accent-bright)}
+#mp-card .mpx-t{font-family:var(--mk-font);font-weight:600;letter-spacing:-.014em}
+
+/* strategy cards: grey wells with the accent as a selection ring only */
+#md-setup .md-strat-card{background:var(--surface2);border-color:var(--border)}
+#md-setup .md-strat-card:hover{border-color:var(--border2);box-shadow:none;transform:none}
+#md-setup .md-strat-card.on{
+  background:var(--accent-dim);
+  border-color:var(--accent-bright);
+  box-shadow:none;
+}
+
+/* phone: a segmented control never wraps - keep one track, shrink the
+   segments, and let it scroll quietly if a locale ever overflows */
+@media (max-width:700px){
+  #screen-mock #md-sections{
+    flex-wrap:nowrap!important;
+    max-width:100%;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  #screen-mock #md-sections::-webkit-scrollbar{display:none}
+  #screen-mock .md-sec-btn{padding:7px 10px;font-size:12px;white-space:nowrap;flex:none}
+}
+
 /* ═══ PHONE ══════════════════════════════════════════════════════════════════
    Stack, scale down, keep taps big. The type clamps already do most of it. */
 @media (max-width:700px){

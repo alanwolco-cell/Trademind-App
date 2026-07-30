@@ -18,14 +18,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Sage advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026073192">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026073293">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Sage advising every pick.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026073192">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026073293">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,18 +33,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026073192">
+<link rel="stylesheet" href="/styles.css?v=2026073293">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026073192" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026073293" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026073192">
+<link rel="stylesheet" href="/theme.css?v=2026073293">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026073192">
+<link rel="stylesheet" href="/home.css?v=2026073293">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -56,7 +56,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026073192">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026073293">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -954,7 +954,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <button class="btn-sm md-sec-btn" data-sec="live" onclick="mdShowSection('live')">Live assist</button>
           <button class="btn-sm md-sec-btn" data-sec="history" onclick="mdShowSection('history')">History</button>
         </div>
-        <div id="ld-card" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:12px">
+        <div id="ld-card" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
             <div>
               <div style="font-size:14px;font-weight:700">Live Draft Assist <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);vertical-align:2px">BETA</span></div>
@@ -967,7 +967,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           </div>
           <div id="ld-body" style="display:none;margin-top:12px">
             <div id="ld-status" style="font-size:12px;color:var(--muted2);margin-bottom:10px"></div>
-            <div id="ld-rec" style="display:none;margin-bottom:10px;padding:12px 14px;background:var(--surface);border:1px solid rgba(155,114,232,.35);border-radius:10px"></div>
+            <div id="ld-rec" style="display:none;margin-bottom:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:10px"></div>
             <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px">
               <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Best available</div><div id="ld-best"></div></div>
               <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Latest picks</div><div id="ld-feed" style="font-size:11.5px;color:var(--muted2);line-height:1.9"></div></div>
@@ -995,7 +995,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
                 <div class="mpx-s">Get a 4-letter code to share with your league</div>
               </div>
               <div class="mpx-card" onclick="mpShowJoin()">
-                <div class="mpx-ic" style="background:rgba(255,255,255,.06)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--muted2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M4 12h11M11 8l4 4-4 4"/></svg></div>
+                <div class="mpx-ic" style="background:var(--surface3)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--muted2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M4 12h11M11 8l4 4-4 4"/></svg></div>
                 <div class="mpx-t">Join a room</div>
                 <div class="mpx-s">Got a code from a friend? Jump into their draft</div>
               </div>
@@ -1013,7 +1013,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div id="md-setup">
           <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:3px">Build your mock draft</div>
           <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Describe your room, pick your seat, draft. The bots behave like the league you describe, and Sage advises every pick.</div>
-          <div style="margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid rgba(155,114,232,.35);border-radius:var(--radius)">
+          <div style="margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
             <div style="font-size:11px;color:var(--accent-bright);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">How does your league draft?</div>
             <textarea id="md-context" class="tm-input" rows="3" style="width:100%;resize:vertical;font-size:14px;line-height:1.55" oninput="mdContextPreview()" placeholder="e.g. RBs fly off the board early, two or three QBs always go in round 2, TE premium, everyone waits on kickers..."></textarea>
             <div id="md-context-read" style="font-size:11px;color:var(--accent-bright);margin-top:4px;min-height:14px"></div>
@@ -1662,7 +1662,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026073192"></script>
+<script src="/app.js?v=2026073293"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
