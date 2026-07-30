@@ -931,22 +931,25 @@ html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
   border-color:var(--accent-bright);
   box-shadow:0 0 0 4px var(--mk-focus);
 }
-/* the one filled action: Start / Connect, in the light region's accent */
-#md-setup .btn-load, #ld-card .btn-load{
+/* the one filled action: Start / Connect / Join / Copy invite link, in the
+   light region's accent. Scoped to #mp-choose/#mp-lobby - never bare #mp-card,
+   because #mp-bar lives there too and renders over the dark live board. */
+#md-setup .btn-load, #ld-card .btn-load, #mp-choose .btn-load, #mp-lobby .btn-load{
   background:var(--accent-bright);
   font-family:var(--mk-font);
   font-weight:600;
   letter-spacing:-.01em;
   box-shadow:none;
 }
-#md-setup .btn-load:hover, #ld-card .btn-load:hover{box-shadow:0 6px 18px var(--mk-focus)}
+#md-setup .btn-load:hover, #ld-card .btn-load:hover,
+#mp-choose .btn-load:hover, #mp-lobby .btn-load:hover{box-shadow:0 6px 18px var(--mk-focus)}
 /* quiet buttons inside the setup lose the purple tint */
-#ld-card .btn-sm, #md-history-wrap .btn-sm{
+#ld-card .btn-sm, #md-history-wrap .btn-sm, #mp-lobby .btn-sm{
   background:var(--surface);
   border:1px solid var(--border2);
   color:var(--muted2);
 }
-#ld-card .btn-sm:hover, #md-history-wrap .btn-sm:hover{border-color:var(--border2);color:var(--text)}
+#ld-card .btn-sm:hover, #md-history-wrap .btn-sm:hover, #mp-lobby .btn-sm:hover{border-color:var(--border2);color:var(--text)}
 
 /* ── 4. Draft with friends: white cards on the sheet ────────────────────────
    Same hairline card language; the create icon keeps the accent, the join
@@ -1007,4 +1010,170 @@ html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
   .mk-trio{gap:26px;text-align:center}
   .mk-cards{grid-template-columns:1fr}
   .mk-plat{padding:10px 16px;font-size:14px}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 4 - THE APP CONTROLS JOIN THE SYSTEM.
+
+   The tools screens (Analyze, My League, Research, Community, Learn, Sage)
+   still follow data-theme - dark by default, light with the toggle - so every
+   rule here speaks in the --mk-seg-* / system tokens, which already resolve
+   both ways. This retires the old purple-tint tab bars and pills and replaces
+   them with the same Apple segmented control the mock setup got in PART 3.
+   Selectors carry the skin prefix so, loading last at equal specificity, they
+   win over theme.css / v11.css / v12.css without !important.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. the five inner tab bars: one recessed track, raised active thumb ──── */
+html.v11 .inner-tab-bar, html.v12 .inner-tab-bar{
+  display:inline-flex;
+  gap:2px;
+  padding:3px;
+  background:var(--mk-seg-track);
+  border:none;
+  border-bottom:none;
+  border-radius:11px;
+  margin-bottom:16px;
+}
+html.v11 .inner-tab, html.v12 .inner-tab{
+  background:transparent;
+  border:none;
+  border-radius:8px;
+  padding:7px 16px;
+  font-family:var(--mk-font);
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:-.01em;
+  color:var(--muted2);
+  box-shadow:none;
+  transition:color .16s var(--mk-ease),background .16s var(--mk-ease);
+}
+html.v11 .inner-tab:hover:not(.active), html.v12 .inner-tab:hover:not(.active){
+  color:var(--text);
+  background:transparent;
+}
+html.v11 .inner-tab.active, html.v12 .inner-tab.active{
+  background:var(--mk-seg-on);
+  color:var(--text);
+  font-weight:600;
+  border:none;
+  box-shadow:0 1px 4px rgba(0,0,0,.16),0 0 0 .5px rgba(0,0,0,.04);
+}
+/* phone: a segmented control never wraps - one track, quiet scroll.
+   Community carries six tabs, so this matters. min-height 42px tap targets
+   come from styles.css and are left alone. */
+@media (max-width:700px){
+  html.v11 .inner-tab-bar, html.v12 .inner-tab-bar{
+    display:flex;
+    flex-wrap:nowrap;
+    max-width:100%;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  html.v11 .inner-tab-bar::-webkit-scrollbar, html.v12 .inner-tab-bar::-webkit-scrollbar{display:none}
+  html.v11 .inner-tab, html.v12 .inner-tab{padding:7px 12px;font-size:12px;white-space:nowrap;flex:none}
+}
+
+/* ── 2. the share-context + buy/sell segmented rows (.ctx-seg) ──────────────
+   Same control, same answer. Equal-width segments (flex:1 1 0 from styles.css)
+   are correct iOS and stay. */
+html.v11 .ctx-seg, html.v12 .ctx-seg{
+  gap:2px;
+  padding:3px;
+  background:var(--mk-seg-track);
+  border-radius:11px;
+}
+html.v11 .ctx-seg-btn, html.v12 .ctx-seg-btn{
+  background:transparent;
+  border:none;
+  border-radius:8px;
+  color:var(--muted2);
+  font-family:var(--mk-font);
+  font-weight:500;
+  letter-spacing:-.01em;
+  transition:color .16s var(--mk-ease),background .16s var(--mk-ease);
+}
+html.v11 .ctx-seg-btn:hover:not(.active), html.v12 .ctx-seg-btn:hover:not(.active){color:var(--text)}
+html.v11 .ctx-seg-btn.active, html.v12 .ctx-seg-btn.active{
+  background:var(--mk-seg-on);
+  color:var(--text);
+  font-weight:600;
+  box-shadow:0 1px 4px rgba(0,0,0,.16),0 0 0 .5px rgba(0,0,0,.04);
+}
+
+/* ── 3. Players quick-filter chips: quiet hairline, accent on the pick ──────
+   Single-select view switchers - same recipe as the mock section chips
+   before they went segmented. State is .on, written by togglePdbChip. */
+html.v11 .pdb-chip, html.v12 .pdb-chip{
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:100px;
+  color:var(--muted2);
+  font-family:var(--mk-font);
+  font-weight:500;
+  letter-spacing:-.01em;
+}
+html.v11 .pdb-chip:hover, html.v12 .pdb-chip:hover{
+  background:transparent;
+  border-color:var(--border2);
+  color:var(--text);
+  transform:none;
+}
+html.v11 .pdb-chip.on, html.v12 .pdb-chip.on{
+  background:var(--mk-seg-on);
+  border-color:transparent;
+  color:var(--accent-bright);
+  font-weight:600;
+  box-shadow:0 1px 4px rgba(0,0,0,.16);
+}
+
+/* ── 4. the Dynasty/Redraft mini-toggle (Compare + Players) ─────────────────
+   The wrapper span carries the recessed track inline; the buttons take their
+   colors here so the .on state (written by styleModeButtons) works per theme. */
+html.v11 [data-modebtn], html.v12 [data-modebtn]{
+  background:transparent;
+  color:var(--muted2);
+  font-family:var(--mk-font);
+  font-size:10px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  transition:color .16s var(--mk-ease),background .16s var(--mk-ease);
+}
+html.v11 [data-modebtn]:hover, html.v12 [data-modebtn]:hover{color:var(--text)}
+html.v11 [data-modebtn].on, html.v12 [data-modebtn].on{
+  background:var(--mk-seg-on);
+  color:var(--text);
+  font-weight:700;
+  box-shadow:0 1px 4px rgba(0,0,0,.16),0 0 0 .5px rgba(0,0,0,.04);
+}
+
+/* ── 5. Community's Refresh: the quiet button, not a purple pill ──────────── */
+html.v11 .comm-head .btn-sm, html.v12 .comm-head .btn-sm{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  color:var(--muted2);
+}
+html.v11 .comm-head .btn-sm:hover, html.v12 .comm-head .btn-sm:hover{
+  background:var(--surface);
+  border-color:var(--border2);
+  color:var(--text);
+  transform:none;
+}
+
+/* ── 6. Ask Sage suggestion pills: hairline chips, no lift, no glow ───────── */
+html.v11 .sage-sugg, html.v12 .sage-sugg{
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--muted2);
+  font-family:var(--mk-font);
+  font-weight:500;
+  letter-spacing:-.01em;
+  box-shadow:none;
+}
+html.v11 .sage-sugg:hover, html.v12 .sage-sugg:hover{
+  border-color:var(--border2);
+  color:var(--text);
+  transform:none;
+  box-shadow:none;
 }

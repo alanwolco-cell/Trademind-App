@@ -489,11 +489,9 @@ async function fetchKtcValues(numQbs, pprVal, isDynasty, _retryReq){
 }
 
 function styleModeButtons(m){
+  // State lives in a class so home.css can style the segmented control per theme
   document.querySelectorAll('[data-modebtn]').forEach(function(b){
-    var on=b.dataset.modebtn===m;
-    b.style.background=on?'var(--accent-bright)':'none';
-    b.style.color=on?'#0d0817':'var(--muted2)';
-    b.style.fontWeight=on?'800':'';
+    b.classList.toggle('on',b.dataset.modebtn===m);
   });
 }
 function setLeagueModeManual(m){
@@ -6477,12 +6475,12 @@ async function downloadRosterCard(){
   // Footer
   ctx.fillStyle='#7c8aaa';ctx.font='500 13px Outfit, sans-serif';
   ctx.textAlign='right';
-  ctx.fillText('trademind-starter.vercel.app',W-40,H-24);
+  ctx.fillText('Mac Draft',W-40,H-24);
   ctx.textAlign='left';
   cv.toBlob(function(blob){
     var a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    a.download='trademind-roster-grade.png';
+    a.download='macdraft-roster-grade.png';
     a.click();
     setTimeout(function(){URL.revokeObjectURL(a.href);},4000);
   },'image/png');
@@ -6946,14 +6944,13 @@ var CHIP_INFO={
 function togglePdbChip(btn){
   var key=btn.dataset.chip;
   var wasOn=!!pdbActiveChips[key];
-  // Single-select: picking a chip clears the others so you can flip between views
+  // Single-select: picking a chip clears the others so you can flip between views.
+  // State is a class - home.css owns the look per theme.
   pdbActiveChips={};
-  document.querySelectorAll('.pdb-chip').forEach(function(b){b.style.background='';b.style.borderColor='';b.style.color='';});
+  document.querySelectorAll('.pdb-chip').forEach(function(b){b.classList.remove('on');});
   if(!wasOn){
     pdbActiveChips[key]=true;
-    btn.style.background='var(--accent-dim)';
-    btn.style.borderColor='rgba(155,114,232,.4)';
-    btn.style.color='var(--accent-bright)';
+    btn.classList.add('on');
   }
   try{
     var info=document.getElementById('pdb-stat-info');
@@ -6971,7 +6968,7 @@ function clearPdbFilters(){
     var s=document.getElementById(id); if(s)s.selectedIndex=0;
   });
   pdbActiveChips={};
-  document.querySelectorAll('.pdb-chip').forEach(function(b){b.style.background='';b.style.borderColor='';b.style.color='';});
+  document.querySelectorAll('.pdb-chip').forEach(function(b){b.classList.remove('on');});
   _runFilterPlayersDB();
 }
 
@@ -7617,31 +7614,6 @@ function mdRenderStrats(){
   }).join('');
 }
 
-// ── Rough seasonal projections ──────────────────────────────────────────────
-// Anchor table of full-PPR season totals by positional rank, linearly
-// interpolated. Deliberately simple: the drafter needs scale ("~280 vs ~180"),
-// not decimal precision, and every surface labels it with the ~.
-var MD_PROJ={
-  QB:[[1,420],[6,360],[12,310],[18,275],[24,245],[36,190]],
-  RB:[[1,340],[6,280],[12,230],[24,175],[36,135],[60,90]],
-  WR:[[1,350],[6,290],[12,250],[24,205],[36,165],[60,115]],
-  TE:[[1,250],[3,205],[6,170],[12,130],[24,95]],
-  K:[[1,155],[12,125],[24,105]],
-  DEF:[[1,140],[12,105],[24,85]]
-};
-function mdProjPts(p){
-  var A=p&&MD_PROJ[p.pos];if(!A)return null;
-  var rk=(MD._posRank||{})[p.id];if(!rk)return null;
-  if(rk<=A[0][0])return A[0][1];
-  for(var i=1;i<A.length;i++){
-    if(rk<=A[i][0]){
-      var a=A[i-1],b=A[i];
-      return Math.round(a[1]+(b[1]-a[1])*(rk-a[0])/(b[0]-a[0]));
-    }
-  }
-  var last=A[A.length-1];
-  return Math.max(40,Math.round(last[1]-(rk-last[0])*2));
-}
 // Draft value: adjust market value by scoring + format so the board matches the settings
 function mdValue(p){
   var fc=ktcFull[p.id]||{};
@@ -8135,7 +8107,10 @@ async function _startMockDraftRun(){
   var _bd=document.getElementById('md-board');_bd.style.display='block';_bd.dataset.live='1';
   // Land at the TOP of the draft board so the room and your picks are the first
   // thing you see - not scrolled past into the player list.
-  setTimeout(function(){var bd=document.getElementById('md-board');if(bd){var y=bd.getBoundingClientRect().top+window.pageYOffset-72;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}},200);
+  // Offset for the real fixed chrome: 60px nav (+12 breathing room), plus the
+  // ticker's extra 34px when a league is connected - otherwise the league note
+  // lands hidden under the ticker.
+  setTimeout(function(){var bd=document.getElementById('md-board');if(bd){var off=72+(document.body.classList.contains('ticker-on')?34:0);var y=bd.getBoundingClientRect().top+window.pageYOffset-off;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}},200);
   var _ln=document.getElementById('md-lg-note');
   if(_ln){
     // always name the market: half of all "why did he go there" confusion is
@@ -9947,6 +9922,11 @@ function mdRestoreSettings(){
       if(e&&o[id]!=null)e.value=o[id];
     });
     MD_TOGGLE_KEYS.forEach(function(id){var e=document.getElementById(id);if(e&&o[id]!=null)e.checked=!!o[id];});
+    // Mode select mirrors the real app mode - but a programmatic .value never
+    // fires the inline onchange, so without a league the restored value and
+    // leagueMode can drift apart. Fire the real sync so badge/boards/KTC agree.
+    var md=document.getElementById('md-mode');
+    if(!leagueId&&md&&md.value&&md.value!==leagueMode){try{setLeagueModeManual(md.value);}catch(_){}}
   }catch(_){}
 }
 function mdPrefillFromLeague(){
@@ -10105,8 +10085,8 @@ async function mdDownloadRoster(i){
           x.fillText(r.round+'.'+(r.pickNo<10?'0':'')+r.pickNo,W-44,fy+4);x.textAlign='left';}
       });
       x.fillStyle='#5e5786';x.font='500 11px Arial';
-      x.fillText('trademind-starter.vercel.app · Life is good.',28,H-22);
-      var a=document.createElement('a');a.download='trademind-roster.png';a.href=cv.toDataURL('image/png');a.click();
+      x.fillText('Mac Draft · Life is good.',28,H-22);
+      var a=document.createElement('a');a.download='macdraft-roster.png';a.href=cv.toDataURL('image/png');a.click();
     }
     // wait for images (max 2.5s), then draw whatever arrived
     var pending=imgs.concat(logos).filter(Boolean);
@@ -10126,7 +10106,8 @@ function mdViewHistory(i){
   m=document.createElement('div');
   m.id='md-hist-modal';
   m.style.cssText='position:fixed;inset:0;z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:8vh 16px;background:rgba(5,4,12,.65);backdrop-filter:blur(6px)';
-  var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+  // One color per position, owned by CSS - the modal follows the app theme
+  var pc={QB:'var(--pos-qb)',RB:'var(--pos-rb)',WR:'var(--pos-wr)',TE:'var(--pos-te)',K:'var(--pos-k)',DEF:'var(--pos-def)'};
   var rows='';var lastR=0;
   h.picksAll.forEach(function(pk){
     if(pk.r!==lastR){lastR=pk.r;rows+='<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 4px">Round '+pk.r+'</div>';}
@@ -10146,7 +10127,7 @@ function mdViewHistory(i){
 function mdRenderHistory(){
   var box=document.getElementById('md-history'); if(!box)return;
   var hist=[]; try{hist=JSON.parse(localStorage.getItem('tm_mock_history')||'[]');}catch(_){}
-  if(!hist.length){box.innerHTML='';return;}
+  if(!hist.length){box.innerHTML='<div style="font-size:12.5px;color:var(--muted)">No mock drafts yet - finish a mock and it lands here.</div>';return;}
   var idx=hist.map(function(h,i){return {h:h,i:i};});
   idx.sort(function(a,b){return (b.h.rating||0)-(a.h.rating||0)||b.h.ts-a.h.ts;});
   box.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px">Past mock drafts</div>'
