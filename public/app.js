@@ -8823,9 +8823,78 @@ async function mdLoadByes(){
       if(off.length&&off.length<=8)off.forEach(function(t){byes[t]=parseInt(w,10);});
     });
     window._mdByes=byes;
+    // the same download also gives us every team's opponent by week - cached
+    // for the playoff-run read (weeks 15-17), one build per season
+    var sched={_season:ACTIVE_SEASON};
+    games.forEach(function(g){
+      if(!g||!g.week||!g.home||!g.away)return;
+      (sched[g.home]=sched[g.home]||{})[g.week]=g.away;
+      (sched[g.away]=sched[g.away]||{})[g.week]=g.home;
+    });
+    window._mdSched=sched;
     if(MD.onClock)mdShowChoices(MD.curRound||1);
     try{mdRenderMine();}catch(_){}
   }catch(_){}
+}
+// Playoff-run read (fantasy playoffs, weeks 15-17): average what each of the
+// three opponents' defenses allowed per game last season (_advDst - lower =
+// tougher defense). Only the extremes speak: the ~6 softest slates get SOFT
+// PLAYOFFS, the ~6 hardest get TOUGH PLAYOFFS, the middle stays quiet.
+function _mdPlayoffRuns(){
+  if(window._mdPlayoff&&window._mdPlayoff._season===ACTIVE_SEASON)return window._mdPlayoff;
+  var sched=window._mdSched,dst=window._advDst;
+  if(!sched||sched._season!==ACTIVE_SEASON||!dst)return null;
+  var scores={};
+  Object.keys(sched).forEach(function(t){
+    if(t==='_season')return;
+    var s=0,n=0;
+    [15,16,17].forEach(function(w){
+      var opp=sched[t][w];
+      if(opp&&dst[opp]!=null){s+=dst[opp];n++;}
+    });
+    if(n===3)scores[t]=s/n;
+  });
+  var ranked=Object.keys(scores).sort(function(a,b){return scores[b]-scores[a];}); // softest first
+  if(ranked.length<20)return null; // thin data: no read beats a wrong read
+  var out={_season:ACTIVE_SEASON};
+  ranked.slice(0,6).forEach(function(t){out[t]='soft';});
+  ranked.slice(-6).forEach(function(t){out[t]='tough';});
+  window._mdPlayoff=out;
+  return out;
+}
+// Per-player overlay tags, Stacked style: quiet coloured words on the meta
+// line, max two. Roster reads outrank the calendar read: HANDCUFF > STACK >
+// PLAYOFFS. Compact mode (the narrow "All" cards) keeps only the strongest
+// roster tag and skips the playoff read entirely - the row must not grow.
+function mdRowTags(p,compact){
+  var tags=[],mine=MD.mine||[];
+  if(p.pos==='RB'){
+    var rb=mine.find(function(x){return x.pos==='RB'&&x.team&&x.team===p.team&&x.id!==p.id;});
+    if(rb)tags.push({t:'HANDCUFF',c:'var(--pos-rb)',tip:'Backs up / pairs with '+rb.name});
+  }
+  // QB-to-pass-catcher stack with YOUR roster, both directions
+  var st=null;
+  if(p.pos==='QB')st=mine.find(function(x){return (x.pos==='WR'||x.pos==='TE')&&x.team&&x.team===p.team;});
+  else if(p.pos==='WR'||p.pos==='TE')st=mine.find(function(x){return x.pos==='QB'&&x.team&&x.team===p.team;});
+  if(st)tags.push({t:'STACK',c:'var(--accent-bright)',tip:'Stacks with '+st.name});
+  if(!compact&&tags.length<2&&p.pos!=='K'&&p.pos!=='DEF'){
+    var pr=_mdPlayoffRuns();
+    var pt=pr&&p.team?pr[p.team]:null;
+    if(pt==='soft')tags.push({t:'SOFT PLAYOFFS',c:'var(--green)',tip:'Easy defensive slate in weeks 15-17'});
+    else if(pt==='tough')tags.push({t:'TOUGH PLAYOFFS',c:'var(--red)',tip:'Hard defensive slate in weeks 15-17'});
+  }
+  return tags.slice(0,compact?1:2);
+}
+function mdRowTagsHtml(p,compact){
+  return mdRowTags(p,compact).map(function(tg){
+    return ' <span title="'+tg.tip.replace(/"/g,'&quot;')+'" style="font-size:9px;font-weight:800;letter-spacing:.05em;color:'+tg.c+';white-space:nowrap">'+tg.t+'</span>';
+  }).join('');
+}
+// Click a roster counter to shop that position: drives the same filter the
+// position chips use, so their active state stays in sync.
+function mdNeedsFilter(pos){
+  var btn=document.querySelector('#md-pos-filter .md-pos-chip[data-pos="'+pos+'"]');
+  if(btn)mdSetPosFilter(btn);
 }
 // Points column keyed to the room's scoring
 function mdProjPts(pid){
@@ -9009,6 +9078,20 @@ function mdShowChoices(round){
     var inQ=!isTaken&&(MD.queue||[]).indexOf(p.id)>=0;
     var _pv=mdProjPts(p.id);
     var _bw=window._mdByes&&p.team?window._mdByes[p.team]:null;
+    // bye conflict: 2+ of YOUR picks already sit on this week - the BYE turns
+    // red before you make it three
+    var _bwN=0;
+    if(_bw&&!isTaken)(MD.mine||[]).forEach(function(x){if(x.team&&window._mdByes[x.team]===_bw)_bwN++;});
+    var _bwHot=!isTaken&&_bw&&_bwN>=2;
+    // overlay tags + market mover arrow (30-day trend, redraft dataset only,
+    // extremes only - same |250| line trendLabel calls "fast")
+    var _tagsHtml=isTaken?'':mdRowTagsHtml(p,!tbl);
+    var _mvHtml='';
+    if(tbl&&!isTaken&&window._ktcIsDyn===false){
+      var _t30=(ktcFull[p.id]||{}).trend30Day||0;
+      if(_t30>250)_mvHtml=' <span title="Rising fast in market" style="color:var(--green);font-weight:800">&#8593;</span>';
+      else if(_t30<-250)_mvHtml=' <span title="Falling fast in market" style="color:var(--red);font-weight:800">&#8595;</span>';
+    }
     var d=document.createElement('div');
     // styling lives in theme.css: the pos-XX class carries the edge colour,
     // md-ch-rec marks Sage's pick, md-ch-on the selected row, md-ch-taken a
@@ -9027,12 +9110,13 @@ function mdShowChoices(round){
       +'<span class="md-ch-sel" title="Draft '+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
     d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
-      +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
+      +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
       +(isTaken?' · <span style="white-space:nowrap">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' · '+en.by+'</span>'
         :(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':'')))
-      +(_bw?' · <span title="Bye week" style="white-space:nowrap">BYE&nbsp;'+_bw+'</span>':'')
+      +(_bw?' · <span title="'+(_bwHot?'You already have '+_bwN+' players on this bye':'Bye week')+'" style="white-space:nowrap'+(_bwHot?';color:var(--red);font-weight:700':'')+'">BYE&nbsp;'+_bw+'</span>':'')
       +(!tbl&&_pv!=null?' · <span title="Projected season points" style="color:var(--muted2);font-weight:700;white-space:nowrap">PROJ&nbsp;'+_mdFmtStat(_pv)+'</span>':'')
+      +_tagsHtml
       +'</div></div>'
       +statsHtml
       +ctrlHtml;
@@ -9373,7 +9457,12 @@ function mdRenderDraftBar(){
   var _meta=[p.pos+' · '+(p.team||'FA')];
   if(p.adp)_meta.push('ADP '+(+p.adp).toFixed(1));
   var _bw=window._mdByes&&p.team?window._mdByes[p.team]:null;
-  if(_bw)_meta.push('BYE '+_bw);
+  // bye conflict carries into the bar: red once 2+ of your picks share the week
+  var _bwN=0;
+  if(_bw)(MD.mine||[]).forEach(function(x){if(x.team&&window._mdByes[x.team]===_bw)_bwN++;});
+  if(_bw)_meta.push(_bwN>=2
+    ?'<span title="You already have '+_bwN+' players on this bye" style="color:var(--red);font-weight:700">BYE '+_bw+'</span>'
+    :'BYE '+_bw);
   var _pj=mdProjPts(p.id);
   if(_pj!=null)_meta.push(_mdFmtStat(_pj)+' proj pts');
   if(_tier)_meta.push(_tier);
@@ -9413,7 +9502,7 @@ function mdRenderDraftBar(){
   bar.style.display='block';
   bar.innerHTML='<div style="display:flex;align-items:center;gap:10px">'
     +'<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover;cursor:pointer;flex:none'+(p.pos==='DEF'?';object-fit:contain':'')+'" title="View player card" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')" onerror="this.style.display=\'none\'">'
-    +'<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="cursor:pointer" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">'+p.name+'</span></div>'
+    +'<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="cursor:pointer" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">'+p.name+'</span>'+mdRowTagsHtml(p)+'</div>'
     +'<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_meta.join(' · ')+'</div></div>'
     +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+p.id+'\')" title="Sage weighs this exact pick against your roster">Ask Sage</button>'
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
@@ -9538,7 +9627,10 @@ function mdRenderMine(){
       var chips=['QB','RB','WR','TE','FLEX','K','DEF'].filter(function(ps){return slots[ps]>0;}).map(function(ps){
         var h=ps==='FLEX'?flexFill:Math.min(have[ps],slots[ps]);
         var full=h>=slots[ps];
-        return '<span style="padding:2px 7px;border-radius:100px;border:1px solid '+(full?posC[ps]:'var(--border)')+';color:'+(full?posC[ps]:'var(--muted)')+'">'+ps+' '+h+'/'+slots[ps]+'</span>';
+        // every real position counter is a shortcut into the list's filter;
+        // FLEX spans three positions, so it stays display-only
+        var click=ps==='FLEX'?'':' title="Show available '+ps+'s" onclick="mdNeedsFilter(\''+ps+'\')"';
+        return '<span'+click+' style="padding:2px 7px;border-radius:100px;border:1px solid '+(full?posC[ps]:'var(--border)')+';color:'+(full?posC[ps]:'var(--muted)')+(click?';cursor:pointer':'')+'">'+ps+' '+h+'/'+slots[ps]+'</span>';
       });
       // three or more of your picks sharing one bye week is a real Sunday
       // problem - say it while there is still time to draft around it
