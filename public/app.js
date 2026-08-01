@@ -8248,6 +8248,11 @@ function mdAdvance(){
     }catch(_){}
     cands.forEach(function(p){
       var have=ros[p.pos]||0;
+      // Rounds 1-2 sanity clamp: no bot takes a player 10+ picks ahead of his
+      // OWN board's ADP this early - no real room does, and no stack of
+      // archetype/6pt/bias nudges should be able to compose into it. A player
+      // the user's context named (ctxForce) is exempt: described rooms win.
+      if(round<=2&&p.adp&&p.adp>(MD.pickIdx+1)+10&&!(MD.ctxForce&&MD.ctxForce[_mdNormName(p.name)]))return;
       var elite=p.adp&&p.adp<=Math.max(MD.teams*2,24); // top ~2 rounds: pure value
       // variance grows with the draft: tight in the first two rounds, about
       // half a round of noise in R3-6, a full round from R7 on. This is the
@@ -10366,6 +10371,12 @@ function mdRestoreSettings(){
       if(e&&o[id]!=null)e.value=o[id];
     });
     MD_TOGGLE_KEYS.forEach(function(id){var e=document.getElementById(id);if(e&&o[id]!=null)e.checked=!!o[id];});
+    // NEVER restore state invisibly: a remembered 6pt/TEP toggle lives inside
+    // the COLLAPSED fine-tune panel, so a restored knob silently reshapes the
+    // whole room ("I had normal settings" - the audit case: 6pt standard put
+    // Josh Allen at 1.04). If anything non-default came back, open the panel.
+    var _cust=MD_TOGGLE_KEYS.some(function(id){var e=document.getElementById(id);return e&&e.checked;});
+    if(_cust){var ft=document.getElementById('md-finetune');if(ft)ft.open=true;}
     // Mode select mirrors the real app mode - but a programmatic .value never
     // fires the inline onchange, so without a league the restored value and
     // leagueMode can drift apart. Fire the real sync so badge/boards/KTC agree.
