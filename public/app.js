@@ -401,6 +401,11 @@ function setSageState(state){
     var name=state==='win'?'win':state==='reject'?'no':state==='even'?'even':'thinking';
     asset.dataset.state=name;
     asset.setAttribute('aria-label',state==='win'?'Sage approves the trade':state==='reject'?'Sage advises against the trade':'Sage is reviewing the trade');
+    // The owl mascot expresses the verdict with a real face per state
+    if(asset.tagName==='IMG'){
+      var expr=state==='win'?'excited':state==='reject'?'skeptical':state==='even'?'deadpan':state==='thinking'?'thinking':'';
+      asset.src='/sage/'+(expr?'sage-'+expr:'sage')+'-256.png';
+    }
   }
 }
 
@@ -2178,7 +2183,7 @@ async function sageChatSend(){
   // Status line while Sage gets going, replaced by live text the moment he writes
   var typing=document.createElement('div');
   typing.className='sage-msg sage';
-  typing.innerHTML='<span class="sage-msg-tag">Sage</span><span class="sage-status">Reading the market...</span>';
+  typing.innerHTML='<span class="sage-msg-tag"><img src="/sage/sage-thinking-64.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-6px;margin-right:4px" onerror="this.style.display=\'none\'">Sage</span><span class="sage-status">Reading the market...</span>';
   log.appendChild(typing);log.scrollTop=log.scrollHeight;
   var statusEl=typing.querySelector('.sage-status');
   var liveText=null;var full='';
@@ -7819,7 +7824,7 @@ function _mdSageLiveHtml(txt){
   var rows=_mdParseLanes(txt);
   if(rows.length>=2){
     return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Sage: pick your lane</div>'
+      +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px"><img src="/sage/sage-excited-64.png" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-8px;margin-right:6px" onerror="this.style.display=\'none\'">Sage: pick your lane</div>'
       +rows.map(function(r){
         var parts=r.body.split(/\s+-\s+|\s+–\s+/);
         var who=parts.length>1?parts[0]:'';
@@ -7830,7 +7835,7 @@ function _mdSageLiveHtml(txt){
       }).join('')+'</div>';
   }
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage\'s full read</div>'
+    +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px"><img src="/sage/sage-thinking-64.png" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-8px;margin-right:6px" onerror="this.style.display=\'none\'">Sage\'s full read</div>'
     +'<div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+escHtml(txt)+'</div></div>';
 }
 function _mdParseLanes(txt){
