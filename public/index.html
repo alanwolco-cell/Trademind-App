@@ -12,20 +12,24 @@ posthog.init('phc_pqedJWPdf2S4npvYw8UcZpwhrnYvtH8Vd53yABtvZqmc',{api_host:'https
 window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog.capture(ev,props||{});}catch(_){}}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Mac Draft - The Mock Draft That Drafts Like Your League</title>
 <meta name="description" content="Fantasy football mock drafts personalized to your league. Describe how your room drafts, or connect Sleeper, and practice against bots that reach, wait and snipe like the real thing. Sage advises every pick.">
 <meta property="og:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Sage advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026073900">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026074001">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Sage advising every pick.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026073900">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026074001">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,18 +37,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026073900">
+<link rel="stylesheet" href="/styles.css?v=2026074001">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026073900" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026074001" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026073900">
+<link rel="stylesheet" href="/theme.css?v=2026074001">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026073900">
+<link rel="stylesheet" href="/home.css?v=2026074001">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -56,7 +60,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026073900">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026074001">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -82,7 +86,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- Plain text wordmark: no star glyph, no gradient. The owner will add a
          real logo later; until then "Mac Draft" reads as a sober product name
          set in the system face, the Apple way. -->
-    <span class="tm-wordmark">Mac Draft</span>
+    <img src="/sage/sage-64.png" alt="" class="tm-logo-owl" style="width:26px;height:26px;object-fit:contain;vertical-align:-7px;margin-right:8px"><span class="tm-wordmark">Mac Draft</span>
   </div>
   <div class="nav-links">
     <!-- The bar carries the two products only: the mock draft (the front door)
@@ -921,7 +925,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <aside class="sage-side" id="sage-side" aria-label="Past chats"></aside>
       <div class="card sage-centered" id="sage-chat-card" style="margin-bottom:14px">
         <div id="sage-greeting" style="text-align:center;margin:8px 0 30px">
-          <img src="/sage/sage-128.png" alt="Sage" style="width:64px;height:64px;object-fit:contain;margin-bottom:12px">
+          <img src="/sage/sage-128.png" alt="Sage" id="sage-greet-owl" class="sage-greet-owl" style="width:76px;height:76px;object-fit:contain;margin-bottom:12px">
           <div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--text)">Ask me anything.</div>
           <div style="font-size:13px;color:var(--muted);margin-top:7px">The friend everyone texts before hitting Accept.</div>
           <div class="sage-caps">
@@ -1670,7 +1674,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026073900"></script>
+<script src="/app.js?v=2026074001"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

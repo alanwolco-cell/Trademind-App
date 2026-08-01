@@ -420,6 +420,24 @@ function upgradeSageAssets(){ /* intentionally left blank: keep the real SVG mas
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',upgradeSageAssets);
 else upgradeSageAssets();
 
+// The Ask Sage greeting owl peeks: every few seconds it flashes a quick
+// expression (mostly a thoughtful glance, rarely a shocked double-take) and
+// settles back into its perch pose. Skipped under prefers-reduced-motion.
+(function sageGreetPeek(){
+  try{if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(_){}
+  var HOME='/sage/sage-128.png';
+  function peek(){
+    var el=document.getElementById('sage-greet-owl');
+    if(el&&el.offsetParent){ // only while Ask Sage is actually on screen
+      var r=Math.random();
+      var expr=r<0.45?'thinking':r<0.75?'scrutiny':r<0.92?'excited':'shocked';
+      el.src='/sage/sage-'+expr+'-128.png';
+      setTimeout(function(){el.src=HOME;},900);
+    }
+    setTimeout(peek,5200+Math.random()*4200);
+  }
+  setTimeout(peek,3500);
+})();
 // Sage idle behaviors: gaze + blink
 (function sageIdleInit(){
   function sageLook(){

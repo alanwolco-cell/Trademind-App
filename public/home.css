@@ -1177,3 +1177,28 @@ html.v11 .sage-sugg:hover, html.v12 .sage-sugg:hover{
   transform:none;
   box-shadow:none;
 }
+
+/* ── PART 5 — SAGE THE OWL COMES ALIVE ─────────────────────────────────────
+   The Ask Sage greeting owl idles like a real mascot: a slow float with a
+   tiny tilt, and (via JS) an occasional expression peek. The nav owl gets a
+   gentle nod on hover. Both sit out entirely under prefers-reduced-motion. */
+@keyframes sage-float{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  30%{transform:translateY(-5px) rotate(-2deg)}
+  60%{transform:translateY(-2px) rotate(1.5deg)}
+}
+html.v11 .sage-greet-owl, html.v12 .sage-greet-owl{
+  animation:sage-float 4.5s ease-in-out infinite;
+  transform-origin:center bottom;
+  will-change:transform;
+}
+html.v11 .tm-logo-owl, html.v12 .tm-logo-owl{
+  transition:transform .3s cubic-bezier(.16,1,.3,1);
+}
+html.v11 .nav-logo:hover .tm-logo-owl, html.v12 .nav-logo:hover .tm-logo-owl{
+  transform:rotate(-8deg) scale(1.12);
+}
+@media (prefers-reduced-motion: reduce){
+  html.v11 .sage-greet-owl, html.v12 .sage-greet-owl{animation:none}
+  html.v11 .nav-logo:hover .tm-logo-owl, html.v12 .nav-logo:hover .tm-logo-owl{transform:none}
+}
