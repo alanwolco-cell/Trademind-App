@@ -8069,9 +8069,11 @@ async function _startMockDraftRun(){
         // whose rushing TDs were already worth 6 - move least
         if(MD.sixPt&&p.pos==='QB'){
           var _q6=(window._adpQ6||{})[p.id];
-          // capped at ~8 picks: real 6pt rooms move elite QBs up a round or
-          // so, never into the top of round 1 (that is a Superflex behavior)
-          if(_q6)dv+=Math.min(8,_q6*50)*40*MD.sixPt;
+          // _q6 is NET points gained vs the replacement QB (server: 2 pts per
+          // passing TD above ~QB12; negative for rushing QBs whose TDs were
+          // always worth 6). ~5 season points buy one draft pick. Result:
+          // Burrow +~3 picks, Allen +~0.4, Hurts -~2 - what 6pt actually does.
+          if(_q6)dv+=Math.max(-2,Math.min(4,_q6/5))*40*MD.sixPt;
         }
       }else{
         // beyond the ADP horizon: market value orders the tail, capped so it

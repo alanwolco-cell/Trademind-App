@@ -252,7 +252,7 @@ router.get('/adp', async (req, res) => {
       res.set('Cache-Control', 'public, max-age=21600');
       return res.json(adpMem[fmt].doc);
     }
-    const players = {}; const byId = {}; const q6 = {}; let source = 'sleeper';
+    const players = {}; const byId = {}; const q6 = {}; const qbTds = []; let source = 'sleeper';
     // Sleeper is the base. A single transient hiccup used to silently swap in
     // FantasyFootballCalculator - whose board ranks elite TEs a full round-plus
     // later - and 12h-cache that wrong board. Retry Sleeper hard before ever
@@ -263,7 +263,7 @@ router.get('/adp', async (req, res) => {
         const sr = await fetch('https://api.sleeper.com/projections/nfl/2026?season_type=regular&position%5B%5D=QB&position%5B%5D=RB&position%5B%5D=WR&position%5B%5D=TE&order_by=' + SL_ADP_FIELD[fmt]);
         if (!sr.ok) throw new Error('sleeper ' + sr.status);
         const rows = await sr.json();
-        Object.keys(players).forEach(k => delete players[k]); // clear a partial prior attempt
+        Object.keys(players).forEach(k => delete players[k]); qbTds.length = 0; // clear a partial prior attempt
         (rows || []).forEach(row => {
           const stt = row.stats || {}; const pl = row.player || {};
           const adp = Number(stt[SL_ADP_FIELD[fmt]]);
@@ -273,10 +273,24 @@ router.get('/adp', async (req, res) => {
           players[norm(name)] = { adp, pos: pl.position || '', team: pl.team || '', name };
           byId[String(row.player_id)] = adp;
           if ((pl.position || '') === 'QB') {
-            const ptd = Number(stt.pass_td) || 0, pts = Number(stt.pts_ppr || stt.pts_half_ppr || stt.pts_std) || 0;
-            if (ptd && pts) { const p6 = +((2 * ptd / pts).toFixed(3)); q6[String(row.player_id)] = p6; players[norm(name)].p6 = p6; }
+            const ptd = Number(stt.pass_td) || 0;
+            if (ptd) qbTds.push({ id: String(row.player_id), key: norm(name), ptd, adp });
           }
         });
+        // 6pt repricing done RIGHT: the whole position gains points, so a QB's
+        // real edge is his passing TDs OVER THE REPLACEMENT QB's (the ~QB12 by
+        // ADP). Pocket passers with TD volume gain, rushing QBs gain ~nothing
+        // (their rushing TDs were always worth 6). p6 = NET POINTS vs
+        // replacement (2 pts per TD above/below), can be negative.
+        if (qbTds.length >= 12) {
+          const byAdp = qbTds.slice().sort((a, b) => a.adp - b.adp);
+          const replTd = byAdp[11].ptd;
+          qbTds.forEach(q => {
+            const net = +(2 * (q.ptd - replTd)).toFixed(1);
+            q6[q.id] = net;
+            if (players[q.key]) players[q.key].p6 = net;
+          });
+        }
         if (Object.keys(players).length < 100) throw new Error('sleeper thin');
         ok = true;
       } catch (se) { /* retry */ }
