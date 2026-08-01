@@ -7996,6 +7996,7 @@ async function _startMockDraftRun(){
   // opens on time even if they never do.
   try{mdLoadProjections();}catch(_){}
   try{mdLoadByes();}catch(_){}
+  try{mdLoadRiserRates();}catch(_){}
   // Pool sized to the DRAFT, not to a value floor - the old (value>800) filter
   // left fewer players than a 12x15 draft needs and the board died mid-draft.
   var poolSize=Math.max(260,MD.teams*MD.rounds+80);
@@ -8862,10 +8863,57 @@ function _mdPlayoffRuns(){
   window._mdPlayoff=out;
   return out;
 }
+// ADP riser data: base rates from our offline study (riser-rates.json - built
+// from Sleeper's own final preseason ADP 2020-2025 plus real PPR outcomes)
+// and every player's final ADP from last season, keyed by Sleeper id.
+async function mdLoadRiserRates(){
+  if(window._mdRisers)return;
+  try{
+    var r=await fetch('/riser-rates.json');
+    if(!r.ok)return;
+    var d=await r.json();
+    if(!d||!d.prev||!d.buckets)return;
+    window._mdRisers=d;
+    if(MD.onClock)mdShowChoices(MD.curRound||1);
+  }catch(_){}
+}
+// A riser is a player whose current board ADP sits 3+ rounds ahead of his
+// final ADP last season - the same line the study drew.
+function mdRiserInfo(p){
+  var d=window._mdRisers;
+  if(!d||!p.adp)return null;
+  // 2QB boards price every QB rounds ahead of the PPR history the study was
+  // built on - comparing the two would tag the whole position as risers
+  if(MD.sf&&p.pos==='QB')return null;
+  var prev=d.prev[p.id];
+  if(prev==null)return null;
+  var rise=prev-p.adp;
+  return rise>=MD.teams*3?{rise:Math.round(rise),prev:prev}:null;
+}
+// The most specific study bucket this riser belongs to. Buckets under n=15
+// never made it into the JSON, so whatever we find here is safe to show.
+function mdRiserBucket(p){
+  var d=window._mdRisers;
+  if(!d||!p.adp||p.adp>192)return null;
+  var dest=p.adp<=72?'early':p.adp<=120?'mid':'late';
+  var expc=p.exp===1?'soph':p.exp===2?'third':p.exp>=3?'vet':null;
+  var ap=allPlayers[p.id]||{};
+  var agec=ap.age?(ap.age<=25?'le25':'ge26'):null;
+  var keys=[];
+  if(expc)keys.push(p.pos+'|'+expc+'|'+dest,expc+'|'+dest);
+  keys.push(p.pos+'|'+dest);
+  if(agec)keys.push(p.pos+'|'+agec);
+  if(expc)keys.push('exp:'+expc);
+  if(agec)keys.push('age:'+agec);
+  keys.push('pos:'+p.pos,'dest:'+dest,'all');
+  for(var i=0;i<keys.length;i++){if(d.buckets[keys[i]])return d.buckets[keys[i]];}
+  return null;
+}
 // Per-player overlay tags, Stacked style: quiet coloured words on the meta
-// line, max two. Roster reads outrank the calendar read: HANDCUFF > STACK >
-// PLAYOFFS. Compact mode (the narrow "All" cards) keeps only the strongest
-// roster tag and skips the playoff read entirely - the row must not grow.
+// line, max two. Roster reads outrank the market and calendar reads:
+// HANDCUFF > STACK > RISER > PLAYOFFS. Compact mode (the narrow "All" cards)
+// keeps only the strongest tag and skips the playoff read - the row must
+// not grow.
 function mdRowTags(p,compact){
   var tags=[],mine=MD.mine||[];
   if(p.pos==='RB'){
@@ -8877,6 +8925,8 @@ function mdRowTags(p,compact){
   if(p.pos==='QB')st=mine.find(function(x){return (x.pos==='WR'||x.pos==='TE')&&x.team&&x.team===p.team;});
   else if(p.pos==='WR'||p.pos==='TE')st=mine.find(function(x){return x.pos==='QB'&&x.team&&x.team===p.team;});
   if(st)tags.push({t:'STACK',c:'var(--accent-bright)',tip:'Stacks with '+st.name});
+  var ri=tags.length<2&&p.pos!=='K'&&p.pos!=='DEF'?mdRiserInfo(p):null;
+  if(ri)tags.push({t:'RISER +'+ri.rise,c:'var(--yellow)',tip:'Drafted '+ri.rise+' picks earlier than his final ADP last season'});
   if(!compact&&tags.length<2&&p.pos!=='K'&&p.pos!=='DEF'){
     var pr=_mdPlayoffRuns();
     var pt=pr&&p.team?pr[p.team]:null;
@@ -9490,6 +9540,20 @@ function mdRenderDraftBar(){
       else _av+=' · won\'t make it back to you';
     }
   }
+  // Riser history: when the selected player is a riser, say what players who
+  // made the same jump actually returned - his real bucket, real numbers,
+  // seasons and sample size on the record. No bucket cleared n=15, no line.
+  var _rh='';
+  var _ri=mdRiserInfo(p);
+  if(_ri){
+    var _rb2=mdRiserBucket(p);
+    if(_rb2){
+      var _rd=window._mdRisers;
+      _rh='<span style="color:var(--yellow);font-weight:700">RISER +'+_ri.rise+'</span> · History for '+_rb2.label
+        +': <span style="color:var(--green)">'+_rb2.boom+'% boom</span> · '+_rb2.hit+'% hit · <span style="color:var(--red)">'+_rb2.bust+'% bust</span>'
+        +' ('+_rd.seasons+', n='+_rb2.n+')';
+    }
+  }
   // curated draft narratives: max two, quiet frame - the label is the only
   // accent so the block informs without shouting
   var _nar=mdNarratives(p).slice(0,2);
@@ -9508,6 +9572,7 @@ function mdRenderDraftBar(){
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
     +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">Draft '+p.name.split(' ').slice(-1)[0]+'</button></div>'
     +(_av?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)">'+_av+'</div>':'')
+    +(_rh?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)">'+_rh+'</div>':'')
     +_narHtml
     +mdProsConsHtml(p,2) // the two strongest each way; the card has the rest
     +'<div style="margin-top:7px;font-size:11px"><span style="color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">Full player card &rarr;</span></div>';
