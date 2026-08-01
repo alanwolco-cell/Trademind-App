@@ -499,6 +499,17 @@ async function fetchKtcValues(numQbs, pprVal, isDynasty, _retryReq){
     Object.assign(ktcById, data.byId);
     if(data.byName) Object.assign(ktcValues, data.byName);
     if(data.byIdFull) Object.assign(ktcFull, data.byIdFull);
+    // Tier cutoffs as PERCENTILES of the live value pool, not absolute
+    // FantasyCalc numbers - the scale drifts with the market, so a fixed
+    // 7000 meant 8 players one month and 20 the next. Elite = top 5%,
+    // premium = top 15%, starter = top 30%, flex = top 50% of positively
+    // valued QB/RB/WR/TE (checked 7/2026: the p5 line lands at the
+    // Puka Nacua / James Cook tier, which reads right).
+    try{
+      var _tv=Object.values(ktcFull).filter(function(v){return v&&v.value>100&&['QB','RB','WR','TE'].indexOf(v.position)>=0;})
+        .map(function(v){return v.value;}).sort(function(a,b){return b-a;});
+      if(_tv.length>=40)window._tierCuts={elite:_tv[Math.floor(_tv.length*0.05)],premium:_tv[Math.floor(_tv.length*0.15)],starter:_tv[Math.floor(_tv.length*0.30)],roster:_tv[Math.floor(_tv.length*0.50)]};
+    }catch(_){}
     console.log("[TM] FantasyCalc loaded:",Object.keys(ktcById).length,"players (isDynasty="+dyn+")");
     window._ktcIsDyn=(dyn==='true'); // which dataset is in memory right now
     updateModeUI();
@@ -755,10 +766,14 @@ function playerTierLabel(ktcVal, pid){
     return{label:'a bench player with upside to earn more',rank:1,short:pos+' #'+r};
   }
   if(!ktcVal||ktcVal<50)return{label:isR?'a fringe add - unlikely to help much this season':'a speculative stash',rank:0,short:'stash'};
-  if(ktcVal>=7000)return{label:isR?'a must-start elite - top tier weekly producer':'genuinely elite - one of the most valuable players in all of dynasty',rank:5,short:'elite'};
-  if(ktcVal>=5500)return{label:isR?'a high-end starter - strong weekly floor':'a premium dynasty player',rank:4,short:'premium'};
-  if(ktcVal>=4000)return{label:isR?'a solid starter - reliable weekly scorer':'a strong starter',rank:3,short:'starter'};
-  if(ktcVal>=2500)return{label:isR?'a flex-worthy option':'a solid roster player',rank:2,short:'roster'};
+  // Live percentile cutoffs (top 5/15/30/50% of the valued pool, computed at
+  // value-load time in fetchKtcValues) with the historical absolute numbers
+  // as the fallback for the first paint before values land.
+  var _c=window._tierCuts;
+  if(ktcVal>=(_c?_c.elite:7000))return{label:isR?'a must-start elite - top tier weekly producer':'genuinely elite - one of the most valuable players in all of dynasty',rank:5,short:'elite'};
+  if(ktcVal>=(_c?_c.premium:5500))return{label:isR?'a high-end starter - strong weekly floor':'a premium dynasty player',rank:4,short:'premium'};
+  if(ktcVal>=(_c?_c.starter:4000))return{label:isR?'a solid starter - reliable weekly scorer':'a strong starter',rank:3,short:'starter'};
+  if(ktcVal>=(_c?_c.roster:2500))return{label:isR?'a flex-worthy option':'a solid roster player',rank:2,short:'roster'};
   return{label:isR?'a matchup-based option':'a bench stash',rank:1,short:'bench'};
 }
 
@@ -8007,13 +8022,19 @@ async function _startMockDraftRun(){
   else if(_useLg&&window.leagueFormat&&window.leagueFormat.passTd>=5)MD.sixPt=(window.leagueFormat.passTd-4)/2;
   // TE premium toggle: same effect as typing it in the context box
   MD.tep=!!(document.getElementById('md-tep')||{}).checked;
-  if(MD.tep)MD.bias.TE=Math.max(MD.bias.TE||1,1.25);
+  // TE premium re-prices the BOARD itself (pool build below), not just bot
+  // appetite - the old bias path capped the effect at ~8 picks mid / 5 elite,
+  // far under what the math says the format is worth.
   // roster construction: how many of each position a team drafts. "Auto" means
   // the engine's normal shape; a number becomes a target every bot respects.
   MD.rosterTarget={};
   ['QB','RB','WR','TE','K','DEF'].forEach(function(ps){
     var _rc=document.getElementById('md-rc-'+ps.toLowerCase());
-    if(_rc&&_rc.value!=='auto')MD.rosterTarget[ps]=parseInt(_rc.value);
+    // NaN guard: a missing/blank control must mean "auto", never a NaN target
+    // - NaN targets silently disable every positional cap (ros.QB >= NaN is
+    // false), which is how the calibration harness first found bots drafting
+    // backup QBs in round 4.
+    if(_rc&&_rc.value!=='auto'){var _rcv=parseInt(_rc.value);if(!isNaN(_rcv))MD.rosterTarget[ps]=_rcv;}
   });
   if(MD.rosterTarget.K===0)MD.noK=true;
   if(MD.rosterTarget.DEF===0)MD.noD=true;
@@ -8062,7 +8083,12 @@ async function _startMockDraftRun(){
       var adp=adpOf(p);
       var dv;
       if(adp!=null){
-        // the ADP feed already matches this room's exact format
+        // the ADP feed already matches this room's exact format.
+        // dv is an ORDINAL board scale: 1 ADP pick = 40dv by construction, so
+        // dv ranks the room exactly like the market does. It is NOT a points
+        // scale - real value-per-pick varies ~3.7 pts/pick in R2 down to ~0.3
+        // in R9-11 (2026 projections) - so anything that needs point VALUE
+        // (VORP words, tiers) reads projections, never dv gaps.
         dv=11000-adp*40;
         // 6pt passing TDs re-price QBs one by one: the bonus lives in the
         // passing TDs, so high-passTD pocket QBs rise most while runners -
@@ -8083,10 +8109,27 @@ async function _startMockDraftRun(){
       return {id:p.id,name:p.name,pos:p.pos,team:p.team,dv:dv,adp:adp,exp:(p.exp!=null?p.exp:null)};
     })
     .sort(function(a,b){return b.dv-a.dv;}).slice(0,poolSize);
+  // TE premium: +0.5 PPR per catch moves the top-12 TEs 23-30 overall slots
+  // by pure 2026 projection math (derived 7/2026: Bowers 35->11, McBride
+  // 50->23, LaPorta 80->53). Live TEP rooms reprice less than pure value, so
+  // we apply ~60% of it: elite top-3 +14 picks, TE4-12 +16, the rest +8.
+  // The damping factor is a market heuristic - no free TEP ADP feed exists
+  // to fit it exactly (FFPC is paywalled).
+  if(MD.tep){
+    var _teRk=MD.pool.filter(function(x){return x.pos==='TE'&&x.adp;}).sort(function(a,b){return a.adp-b.adp;});
+    _teRk.forEach(function(x,i){x.dv+=(i<3?14:i<12?16:8)*40;});
+    MD.pool.sort(function(a,b){return b.dv-a.dv;});
+  }
   // Room size, tier-aware: in shallow rooms the ELITE QBs/TEs keep their
   // premium (a real edge at a scarce position matters MORE when every RB/WR
   // room is stacked) while mid-tier QB/TE crater - QB7 is free on an 8-team
   // wire. Deep 14-team rooms start them two deep, so every QB/TE rises.
+  // Derivation check (2026 projections, 7/2026): the replacement QB is FLAT
+  // 295-303 pts from QB9 to QB15, and replacement TE 136-169 from TE9-TE15 -
+  // so a mid QB/TE's edge over the wire is ~0-10 pts in an 8-10 team room
+  // while the elite top-3 edge (QB +23-31, TE +66-99 pts) survives every
+  // size. Direction confirmed; these magnitudes sit inside projection noise,
+  // so they stay as market-calibrated picks rather than a fitted number.
   if(!MD.sf){
     var _shift=MD.teams<=8?10:MD.teams<=10?5:MD.teams>=14?-4:0;
     if(_shift!==0){
@@ -8103,7 +8146,11 @@ async function _startMockDraftRun(){
     }
   }
   // Kickers (ranked by real 2025 kicking points) and team defenses (ranked by
-  // fewest fantasy points allowed) join with late-round values.
+  // fewest fantasy points allowed) join with late-round values. The dv range
+  // (K 190..76, DEF 205..91) is intentionally BELOW every draftable skill
+  // player, and it never decides when they go - mdAdvance hard-gates K/DEF
+  // to the final two rounds (-1e9 before then), so these numbers only order
+  // kickers among kickers. Harness invariant (c) verifies the gate.
   try{
     if(MD.noK)throw 0;
     var ks=Object.values(allPlayers).filter(function(p){return p.pos==='K'&&p.team;})
@@ -8131,18 +8178,28 @@ async function _startMockDraftRun(){
   // Replacement level per position for THIS room: the player still on the
   // board after every starter slot in the league is filled. The pick bar
   // turns the gap to this line into a VORP read - in words, never a number.
-  MD.replDv={};
+  // Effective starters INCLUDE the flex, derived by greedy lineup fill over
+  // 2026 projections (12-team, 1QB/2RB/2WR/1TE/1FLEX, 7/2026): in full PPR
+  // the flex went WR 11 of 12 times (WR 2.9 / RB 2.1 effective); in standard
+  // it flips RB-ward (RB 2.7 / WR 2.3); half-PPR is the midpoint. The flex
+  // never took a TE, so TE stays 1.0.
+  MD.replDv={};MD.replId={};
   (function(){
-    var starters={QB:MD.sf?2:1,RB:2,WR:MD.scoring>=1?3:2,TE:1};
+    var starters=MD.scoring>=1?{QB:MD.sf?2:1,RB:2.1,WR:2.9,TE:1}
+      :MD.scoring===0.5?{QB:MD.sf?2:1,RB:2.4,WR:2.6,TE:1}
+      :{QB:MD.sf?2:1,RB:2.7,WR:2.3,TE:1};
     Object.keys(starters).forEach(function(ps){
       var rk=MD.pool.filter(function(x){return x.pos===ps;});
-      var idx=Math.min(rk.length-1,starters[ps]*MD.teams);
+      var idx=Math.min(rk.length-1,Math.round(starters[ps]*MD.teams));
       MD.replDv[ps]=(idx>=0&&rk[idx])?rk[idx].dv:0;
+      MD.replId[ps]=(idx>=0&&rk[idx])?rk[idx].id:null;
     });
   })();
   // Positional ranks + tiers: the rank feeds the rough projection, the tiers
-  // drive the list separators and the cliff warnings. A new tier starts where
-  // the drop from the player above is worth roughly nine picks of value.
+  // drive the list separators and the cliff warnings. This dv pass (a break
+  // every ~9 picks of gap) is only the OPENING read - the moment projections
+  // land, mdRetierFromProj replaces it with real point-drop tiers, because a
+  // fixed dv gap means very different point drops in different ADP zones.
   MD._posRank={};MD.tierOf={};
   ['QB','RB','WR','TE','K','DEF'].forEach(function(ps){
     var t=1,prev=null,n=0;
@@ -8153,6 +8210,7 @@ async function _startMockDraftRun(){
       MD.tierOf[p.id]=t;prev=p.dv;
     });
   });
+  try{mdRetierFromProj();}catch(_){}  // projections already cached: use them now
   MD.order=[];
   for(var r=0;r<MD.rounds;r++){for(var s=1;s<=MD.teams;s++)MD.order.push(r%2===0?s:MD.teams+1-s);}
   MD.pickIdx=0;MD.mine=[];MD.log=[];MD.aiRosters={};MD.picks=[];MD.onClock=false;MD.posFilter='';MD.myOveralls=[];MD.lastSnipe='';
@@ -8268,7 +8326,12 @@ function mdAdvance(){
       var jitDv=((((MD.pickIdx*31+p.name.length*7+(MD.seed||0))%23)/22)-0.5)*2*ampDv;
       var sc=p.dv+jitDv;
       var bot0=MD.bots&&MD.bots[slot];
-      // roster construction (mid-round only; elites are taken on value)
+      // roster construction (mid-round only; elites are taken on value).
+      // Scale note: 40dv = 1 ADP pick, so -350 = ~9 picks of hesitation on a
+      // 4th player at one position and +30 = under a pick of pull toward a
+      // thin RB/WR room - deliberate whispers; the harness invariants
+      // (scripts/calibrate-room.mjs) are what verify the roster shapes stay
+      // sane, not these two numbers alone.
       if(have>=3)sc-=350;
       else if(!elite){
         if((p.pos==='RB'||p.pos==='WR')&&have<2)sc+=30;
@@ -8280,9 +8343,16 @@ function mdAdvance(){
       var _tgt=MD.rosterTarget||{};
       var _qbMax=_tgt.QB!=null?_tgt.QB:(MD.sf?3:2);
       var _teMax=_tgt.TE!=null?_tgt.TE:((bot0&&bot0.teCap)||1);
+      // Backup QB in 1QB: a hard gate before round 8 (like the K/DEF gate),
+      // then -700dv (~17.5 picks) of drag after it. A soft penalty alone
+      // could not hold the line: archetype (+620 cap) plus late-round jitter
+      // (±336) stack past 700, and harness invariant (f) kept catching QB2s
+      // in round 5. Real 1QB rooms draft their backup QBs in the double-digit
+      // rounds; only an explicit user roster target may override the gate.
+      // -450 on a TE2 = ~11 picks of drag, verified by invariant (d).
       if(p.pos==='QB'){
         if(ros.QB>=_qbMax)sc-=1e6;
-        else if(ros.QB>=(MD.sf?2:1))sc-=700;
+        else if(ros.QB>=(MD.sf?2:1))sc-=(_tgt.QB==null&&!MD.sf&&round<8)?1e6:700;
       }
       if(p.pos==='TE'){
         if(ros.TE>=Math.max(2,_teMax))sc-=1e6;
@@ -8299,10 +8369,24 @@ function mdAdvance(){
       // and the rescue below so the room drafts how HE described.
       var _fr=MD.ctxForce&&MD.ctxForce[_mdNormName(p.name)];
       var _frHold=!!(_fr&&_fr.mode==='at'&&round<_fr.r);
-      // faller rescue: a strong additive pull that caps ANY slide near adp+8 -
-      // a real room never lets a top player free-fall round after round. Skip it
-      // for a player we are deliberately holding for a later round.
-      if(p.adp&&!_frHold){var late=(MD.pickIdx+1)-p.adp; if(late>8)sc+=6000; else if(late>3)sc+=(late-3)*70;}
+      // faller rescue, scaled by the round's REAL spread: live drafts run
+      // ±1.4 picks of ADP stdev in round 1 but ±16+ by round 11 (FFC, 3,899
+      // drafts, 7/2026 fit: stdev ≈ 2.3 + 0.095*adp). The old flat cap of 8
+      // was right early and far too tight late - it made rounds 8+ draft in
+      // near-perfect ADP order. Hard stop at ~1.5 stdev, soft pull from
+      // ~0.75 stdev. Skip a player we are deliberately holding for later.
+      // And the rescue never buys a BACKUP at an onesie position: the QB-
+      // stocked teams pass on a sliding QB in real rooms too - the rescue
+      // belongs to whoever still needs one (harness invariant (f) caught the
+      // +6000 pull steamrolling the -700 backup penalty: bots took QB2s in
+      // round 4 before this gate).
+      var _canRescue=!((p.pos==='QB'&&ros.QB>=(MD.sf?2:1))||(p.pos==='TE'&&ros.TE>=1));
+      if(p.adp&&!_frHold&&_canRescue){
+        var _sdv=2.3+0.095*p.adp;
+        var late=(MD.pickIdx+1)-p.adp;
+        if(late>1.5*_sdv)sc+=6000;
+        else if(late>0.75*_sdv)sc+=(late-0.75*_sdv)*70;
+      }
       // K and D/ST: unpickable until the final rounds (the forced-fill above
       // seats them; this just keeps them out of the value board till then)
       if(p.pos==='K'||p.pos==='DEF')sc=(have>=1||round<Math.max(MD.rounds,15)-1)?-1e9:600;
@@ -8357,8 +8441,14 @@ function mdAdvance(){
     var bot=MD.bots&&MD.bots[slot];
     if(bot&&bot.reachP&&round>=3&&round<=MD.rounds-2&&Math.random()<bot.reachP){
       var _ov=MD.pickIdx+1;
+      var _ros2=MD.aiRosters[slot]||{};
       var sleepers=MD.pool.filter(function(x){
         if(!x.adp||x.adp<=_ov+4||x.adp>_ov+12||x.pos==='K'||x.pos==='DEF')return false;
+        // a reach is a crush on an upside player, never a BACKUP at an onesie
+        // position - unchecked, this random grab was how bots drafted QB2s in
+        // round 5 straight past the -700 penalty (harness invariant f)
+        if(x.pos==='QB'&&(_ros2.QB||0)>=(MD.sf?2:1))return false;
+        if(x.pos==='TE'&&(_ros2.TE||0)>=1)return false;
         // never let a random reach break a named round rule
         var fx=MD.ctxForce&&MD.ctxForce[_mdNormName(x.name)];
         if(fx&&fx.mode==='at'&&round<fx.r)return false;
@@ -8864,8 +8954,30 @@ async function mdLoadProjections(){
     (rows||[]).forEach(function(e){if(e&&e.player_id&&e.stats)byId[e.player_id]=e.stats;});
     if(!Object.keys(byId).length)return;
     window._mdProj={season:ACTIVE_SEASON,byId:byId};
+    try{mdRetierFromProj();}catch(_){}
     if(MD.onClock)mdShowChoices(MD.curRound||1);  // the columns appear in place
   }catch(_){}
+}
+// Re-tier on PROJECTED POINTS the moment they exist: the dv board is ordinal
+// (40dv = 1 ADP pick by construction), so a fixed dv gap means a ~15-point
+// cliff in round 2 and background noise in round 10. A tier break here is a
+// consecutive same-position drop beyond the p80 of typical top-24 drops in
+// the 2026 projections (QB 30 / RB 26 / WR 21 / TE 30 season pts, derived
+// 7/2026 - the median drop is 10-17, so p80 marks a real shelf, not noise).
+// The dv-gap tiers built at pool time remain the fallback until this runs.
+function mdRetierFromProj(){
+  if(!window._mdProj||!MD.pool||!MD.pool.length||!MD.tierOf)return;
+  var thr={QB:30,RB:26,WR:21,TE:30};
+  ['QB','RB','WR','TE'].forEach(function(ps){
+    var t=1,prev=null;
+    MD.pool.forEach(function(p){
+      if(p.pos!==ps)return;
+      var pj=mdProjPts(p.id);
+      if(prev!=null&&pj!=null&&(prev-pj)>=thr[ps]&&t<8)t++;
+      MD.tierOf[p.id]=t;
+      if(pj!=null)prev=pj;
+    });
+  });
 }
 // Bye weeks derived from the real schedule: a bye is simply a week where a
 // team has no game - no hand-kept table to go stale. Partial or missing
@@ -8924,9 +9036,17 @@ function _mdPlayoffRuns(){
   });
   var ranked=Object.keys(scores).sort(function(a,b){return scores[b]-scores[a];}); // softest first
   if(ranked.length<20)return null; // thin data: no read beats a wrong read
+  // One full standard deviation marks the extremes, not a fixed top/bottom 6:
+  // in the 2026 distribution (mean 82.5, σ 5.0) the gap between #6 and #7 was
+  // 0.1 points - a fixed count cuts straight through noise. ±1σ tags only
+  // slates genuinely apart from the pack (7/2026: 3 soft, 7 tough).
+  var _mean=0;ranked.forEach(function(t){_mean+=scores[t];});_mean/=ranked.length;
+  var _sd=0;ranked.forEach(function(t){_sd+=(scores[t]-_mean)*(scores[t]-_mean);});_sd=Math.sqrt(_sd/ranked.length);
   var out={_season:ACTIVE_SEASON};
-  ranked.slice(0,6).forEach(function(t){out[t]='soft';});
-  ranked.slice(-6).forEach(function(t){out[t]='tough';});
+  ranked.forEach(function(t){
+    if(scores[t]>_mean+_sd)out[t]='soft';
+    else if(scores[t]<_mean-_sd)out[t]='tough';
+  });
   window._mdPlayoff=out;
   return out;
 }
@@ -8963,7 +9083,11 @@ async function mdLoadSignals(){
   }catch(_){}
 }
 // A riser is a player whose current board ADP sits 3+ rounds ahead of his
-// final ADP last season - the same line the study drew.
+// final ADP last season - the same line the study drew. Note the study fixed
+// "3 rounds" at 36 picks (12-team convention); here it scales with the room
+// (24 picks in an 8-teamer, 42 in a 14-teamer) so the tag always means the
+// same THREE ROUNDS of this draft - the base rates still come from the
+// 12-team study and read as tendencies, not exact odds, in other sizes.
 function mdRiserInfo(p){
   var d=window._mdRisers;
   if(!d||!p.adp)return null;
@@ -9610,17 +9734,39 @@ function mdRenderDraftBar(){
   if(_pj!=null)_meta.push(_mdFmtStat(_pj)+' proj pts');
   if(_tier)_meta.push(_tier);
   if(_trendOk&&(_tier||p.adp))_meta.push('<span style="color:'+_twc+'">'+_tl2.word.toLowerCase()+'</span>');
-  var _rpl=MD.replDv&&MD.replDv[p.pos];
-  if(_rpl!=null&&p.dv){
-    var _gap=p.dv-_rpl;
-    _meta.push(_gap>=2400?'massive edge vs replacement'
-      :_gap>=1200?'big edge vs replacement'
-      :_gap>=400?'moderate edge vs replacement'
-      :_gap>=0?'thin edge vs replacement'
+  // VORP in words, from PROJECTED POINTS vs the replacement starter when the
+  // projection feed is up. Thresholds are the p10/p25/p50 of the positive
+  // gaps across the whole 2026 drafted pool (86/62/33 pts, derived 7/2026,
+  // rounded): "massive" is a top-decile edge, "big" top-quartile, "moderate"
+  // above the median. The old dv thresholds stay only as a fallback - a dv
+  // gap buys ~9 points of value in round 1 but ~3 in round 10, so it could
+  // never mean one thing.
+  var _rgap=null;
+  if(MD.replId&&MD.replId[p.pos]){
+    var _rpj=mdProjPts(MD.replId[p.pos]),_ppj2=mdProjPts(p.id);
+    if(_rpj!=null&&_ppj2!=null)_rgap=_ppj2-_rpj;
+  }
+  if(_rgap!=null){
+    _meta.push(_rgap>=85?'massive edge vs replacement'
+      :_rgap>=60?'big edge vs replacement'
+      :_rgap>=30?'moderate edge vs replacement'
+      :_rgap>=0?'thin edge vs replacement'
       :'below replacement level');
+  }else{
+    var _rpl=MD.replDv&&MD.replDv[p.pos];
+    if(_rpl!=null&&p.dv){
+      var _gap=p.dv-_rpl;
+      _meta.push(_gap>=2400?'massive edge vs replacement'
+        :_gap>=1200?'big edge vs replacement'
+        :_gap>=400?'moderate edge vs replacement'
+        :_gap>=0?'thin edge vs replacement'
+        :'below replacement level');
+    }
   }
   // Stacked's availability read, in words: where the market drafts him vs
-  // where your next turn comes up. ~6 picks of ADP drift is the coin-flip zone.
+  // where your next turn comes up. The coin-flip zone is the player's REAL
+  // ADP spread, not a flat 6: live drafts run ±1.4 picks in round 1 and ±16+
+  // by round 11 (FFC, 3,899 drafts, 7/2026 fit: stdev ≈ 2.3 + 0.095*adp).
   var _av='';
   if(p.adp){
     var _po=Math.round(+p.adp),_pr2=Math.max(1,Math.ceil(_po/MD.teams));
@@ -9628,8 +9774,9 @@ function mdRenderDraftBar(){
     var _nx=0;
     for(var _qi=MD.pickIdx+1;_qi<MD.order.length;_qi++){if(MD.order[_qi]===MD.mySlot){_nx=_qi+1;break;}}
     if(_nx){
+      var _dev=Math.round(2.3+0.095*_po);
       if(_po>=_nx)_av+=' · likely still there at your next pick (#'+_nx+')';
-      else if(_po+6>=_nx)_av+=' · could make it back to your next pick (#'+_nx+') - coin flip';
+      else if(_po+_dev>=_nx)_av+=' · could make it back to your next pick (#'+_nx+') - coin flip';
       else _av+=' · won\'t make it back to you';
     }
   }
