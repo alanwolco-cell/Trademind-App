@@ -8069,7 +8069,9 @@ async function _startMockDraftRun(){
         // whose rushing TDs were already worth 6 - move least
         if(MD.sixPt&&p.pos==='QB'){
           var _q6=(window._adpQ6||{})[p.id];
-          if(_q6)dv+=Math.min(14,_q6*50)*40*MD.sixPt;
+          // capped at ~8 picks: real 6pt rooms move elite QBs up a round or
+          // so, never into the top of round 1 (that is a Superflex behavior)
+          if(_q6)dv+=Math.min(8,_q6*50)*40*MD.sixPt;
         }
       }else{
         // beyond the ADP horizon: market value orders the tail, capped so it
@@ -8248,16 +8250,19 @@ function mdAdvance(){
     }catch(_){}
     cands.forEach(function(p){
       var have=ros[p.pos]||0;
-      // Rounds 1-2 sanity clamp: no bot takes a player 10+ picks ahead of his
-      // OWN board's ADP this early - no real room does, and no stack of
-      // archetype/6pt/bias nudges should be able to compose into it. A player
-      // the user's context named (ctxForce) is exempt: described rooms win.
-      if(round<=2&&p.adp&&p.adp>(MD.pickIdx+1)+10&&!(MD.ctxForce&&MD.ctxForce[_mdNormName(p.name)]))return;
+      // Rounds 1-2 sanity clamp: no bot reaches more than ~half a round in R1
+      // (6 picks) or ~a round in R2 (10) past his OWN board's ADP - no real
+      // room does, and no stack of archetype/6pt/bias nudges should compose
+      // into it. A player the user's context named (ctxForce) is exempt.
+      var _reachCap=round===1?6:10;
+      if(round<=2&&p.adp&&p.adp>(MD.pickIdx+1)+_reachCap&&!(MD.ctxForce&&MD.ctxForce[_mdNormName(p.name)]))return;
       var elite=p.adp&&p.adp<=Math.max(MD.teams*2,24); // top ~2 rounds: pure value
       // variance grows with the draft: tight in the first two rounds, about
       // half a round of noise in R3-6, a full round from R7 on. This is the
       // main defense against the "every mock looks identical" failure.
-      var ampDv=round<=2?70:round<=6?(MD.teams*20):(MD.teams*40);
+      // toned down (owner: "a little less random"): ~3-4 picks of noise in
+      // R3-6 and ~7 in R7+ - rooms still diverge via archetypes, not chaos
+      var ampDv=round<=2?70:round<=6?(MD.teams*14):(MD.teams*28);
       var jitDv=((((MD.pickIdx*31+p.name.length*7+(MD.seed||0))%23)/22)-0.5)*2*ampDv;
       var sc=p.dv+jitDv;
       var bot0=MD.bots&&MD.bots[slot];
@@ -8314,7 +8319,7 @@ function mdAdvance(){
         if(bot0.hero&&p.pos==='RB')bAdj=ros.RB>=1?-380:(elite?200:120);
         // outside the elite tier the archetype has to actually SHOW: doubled
         // and capped, it moves a drafter a visible handful of picks
-        if(!elite){bAdj*=2.2;bAdj=Math.max(-750,Math.min(750,bAdj));}
+        if(!elite){bAdj*=1.9;bAdj=Math.max(-620,Math.min(620,bAdj));}
         // punting QB in a superflex room is a rare breed - soften the fade
         if(MD.sf&&p.pos==='QB'&&bAdj<0)bAdj*=0.4;
         if(userSaid)bAdj*=0.2;
@@ -8351,7 +8356,7 @@ function mdAdvance(){
     if(bot&&bot.reachP&&round>=3&&round<=MD.rounds-2&&Math.random()<bot.reachP){
       var _ov=MD.pickIdx+1;
       var sleepers=MD.pool.filter(function(x){
-        if(!x.adp||x.adp<=_ov+4||x.adp>_ov+16||x.pos==='K'||x.pos==='DEF')return false;
+        if(!x.adp||x.adp<=_ov+4||x.adp>_ov+12||x.pos==='K'||x.pos==='DEF')return false;
         // never let a random reach break a named round rule
         var fx=MD.ctxForce&&MD.ctxForce[_mdNormName(x.name)];
         if(fx&&fx.mode==='at'&&round<fx.r)return false;
