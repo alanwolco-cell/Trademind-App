@@ -8201,6 +8201,7 @@ function mdAdvance(){
   if(slot===MD.mySlot){
     MD.onClock=true;MD.curRound=round;
     document.getElementById('md-status').innerHTML='<span style="color:var(--muted)">R'+round+'.'+pickNo+'</span><span style="color:var(--accent-bright);font-weight:700">You are on the clock</span><span id="md-clk"></span>';
+    mdRenderBoard(); // the ON THE CLOCK box must agree with the header (says YOU now)
     mdShowChoices(round);
     mdStartClock();
     if(MD.autoPilot)_mdAutoPick();
@@ -8381,8 +8382,12 @@ function mdAdvance(){
     ros[pick.pos]=(ros[pick.pos]||0)+1;ros.list.push(pick);
     MD.picks.push({slot:slot,round:round,pickNo:pickNo,p:pick,mine:false});
     MD.log.unshift('<span style="color:var(--muted)">R'+round+'.'+pickNo+'</span> '+botName+' - <strong style="color:var(--text);cursor:pointer" onclick="openPlayerCard(\''+pick.id+'\',\''+pick.name.replace(/'/g,"\\'")+'\')">'+pick.name+'</strong> '+mdPosTag(pick.pos));
-    mdRenderLog();mdRenderBoard();
+    // Advance BEFORE rendering: the board's ON THE CLOCK box reads
+    // MD.order[MD.pickIdx], so rendering first left it one pick behind -
+    // showing the bot who JUST picked as "on the clock" (the audit case:
+    // header says "You are on the clock", rail says "ON THE CLOCK Rob").
     MD.pickIdx++;
+    mdRenderLog();mdRenderBoard();
     setTimeout(mdAdvance,45);
   }
 }
@@ -9499,12 +9504,14 @@ function mdUserPick(p){
     var sg=document.getElementById('md-sage');
     if(sg){sg.style.display='block';sg.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Sage on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>';}
   }catch(_){}
+  // Advance first, then render - same rule as the bot path: the board's
+  // ON THE CLOCK box reads MD.order[MD.pickIdx] and must see the NEXT picker.
+  MD.pickIdx++;
   mdRenderBoard();
   MD.log.unshift('<span style="color:var(--muted)">R'+round+'</span> <strong style="color:var(--accent-bright);cursor:pointer" onclick="openPlayerCard(\''+p.id+'\',\''+p.name.replace(/'/g,"\\'")+'\')">YOU - '+p.name+'</strong> '+mdPosTag(p.pos));
   // sage box stays put and the grid stays filled - the page must not jump
   // around between picks
   mdRenderMine();mdRenderLog();
-  MD.pickIdx++;
   mdAdvance();
 }
 function _mdById(pid){return MD.pool.find(function(x){return x.id===pid;})||null;}
