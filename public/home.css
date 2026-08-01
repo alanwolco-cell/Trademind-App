@@ -1202,3 +1202,62 @@ html.v11 .nav-logo:hover .tm-logo-owl, html.v12 .nav-logo:hover .tm-logo-owl{
   html.v11 .sage-greet-owl, html.v12 .sage-greet-owl{animation:none}
   html.v11 .nav-logo:hover .tm-logo-owl, html.v12 .nav-logo:hover .tm-logo-owl{transform:none}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 6 — THE PHONE PASS. A systematic audit at 390x844 against the four
+   mobile sins: overlap with the fixed tab bar, sub-thumb tap targets, inputs
+   that trigger Safari's focus zoom, and rows that can push the page sideways.
+   Everything here is phone-scoped; the desktop never sees any of it.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width:700px){
+  /* The bottom tab bar owns the last ~57px of the viewport (plus the home
+     indicator), and three surfaces were parking under it:
+     - the sticky draft bar (its inline bottom now reads this variable),
+     - the Analyze status pill (inline bottom:28px sat behind the bar),
+     - every z-index 200/300 modal, which the z-index 350 bar overdrew -
+       leaving the tab bar tappable ON TOP of an open dialog. */
+  html.v11 #md-draftbar, html.v12 #md-draftbar{
+    --md-bar-b:calc(68px + env(safe-area-inset-bottom,0px));
+  }
+  html.v11 #anz-toast, html.v12 #anz-toast{
+    bottom:calc(76px + env(safe-area-inset-bottom,0px)) !important;
+  }
+  html.v11 #connect-modal, html.v12 #connect-modal,
+  html.v11 .modal-overlay,  html.v12 .modal-overlay,
+  html.v11 #md-edit-modal,  html.v12 #md-edit-modal,
+  html.v11 #md-hist-modal,  html.v12 #md-hist-modal{
+    z-index:450 !important;
+  }
+
+  /* Roster counters: eight chips on one un-wrapping inline row is wider than
+     a 390px phone - the one place this page could scroll sideways. Wrap them,
+     and since the counters are filter shortcuts now, give each a real tap
+     height while they are at it. */
+  html.v11 #md-needs, html.v12 #md-needs{flex-wrap:wrap}
+  html.v11 #md-needs span, html.v12 #md-needs span{
+    display:inline-flex;align-items:center;min-height:32px;padding:4px 10px;
+  }
+
+  /* Tap targets measured under 44px: the modal X (28px), the queue and draft
+     circles on every player row (20/26px - drawn inline, so !important is
+     the lever this file family already uses for those rows), the sortable
+     table header, and the Rookies/Drafted chips (now matching the position
+     chips beside them). */
+  html.v11 .cm-x, html.v12 .cm-x{width:40px;height:40px;top:6px;right:8px;font-size:18px}
+  html.v11 .md-ch-q,  html.v12 .md-ch-q{width:30px !important;height:30px !important}
+  html.v11 .md-ch-sel, html.v12 .md-ch-sel{width:40px !important;height:40px !important}
+  html.v11 .md-tbl-head .md-ch-stat, html.v12 .md-tbl-head .md-ch-stat{
+    min-height:32px;display:inline-flex;align-items:center;justify-content:flex-end;
+  }
+  html.v11 .md-flag-chip, html.v12 .md-flag-chip{
+    min-height:40px;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  }
+
+  /* Safari zooms the whole page onto any focused input under 16px, and every
+     input in the product sat at 12-14.5px - tapping the draft search or Ask
+     Sage jolted the layout. 16px on phones only; desktop keeps its scale. */
+  html.v11 .tm-input, html.v12 .tm-input{font-size:16px !important}
+  html.v11 .sage-composer textarea, html.v12 .sage-composer textarea,
+  html.v11 .comm-opinion-input textarea, html.v12 .comm-opinion-input textarea,
+  html.v11 .hero-mock-start textarea, html.v12 .hero-mock-start textarea{font-size:16px}
+}

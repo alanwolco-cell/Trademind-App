@@ -7318,7 +7318,7 @@ async function renderMarketSignals(){
     box.innerHTML=sg.data.signals.map(function(s){
       var chips=(s.candidates||[]).map(function(c){
         var _e=(c.name||'').replace(/'/g,"\\'");
-        return '<span onclick="openPlayerCard(\''+c.id+'\',\''+_e+'\')" style="display:inline-block;background:var(--surface3);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:11px;color:var(--text);margin:2px;cursor:pointer">'+escHtml(c.name)+' <span style="color:var(--muted)">ADP '+c.adp+'</span></span>';
+        return '<span onclick="openPlayerCard(\''+c.id+'\',\''+_e+'\')" style="display:inline-flex;align-items:center;min-height:32px;background:var(--surface3);border:1px solid var(--border);border-radius:100px;padding:3px 12px;font-size:11px;color:var(--text);margin:2px;cursor:pointer">'+escHtml(c.name)+'&nbsp;<span style="color:var(--muted)">ADP '+c.adp+'</span></span>';
       }).join('');
       return '<div style="padding:12px 0;border-bottom:1px solid var(--border)">'
         +'<div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.5">'+escHtml(s.claim)+'</div>'
@@ -9563,7 +9563,9 @@ function mdRenderDraftBar(){
     bar.id='md-draftbar';
     // BELOW the grid and sticky, so selecting a player never shifts the rows
     // above it - the card you tapped stays under your finger for the double tap.
-    bar.style.cssText='display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--surface3);border:1px solid var(--accent-bright);border-radius:12px;margin:10px 0;position:sticky;bottom:10px;z-index:5;box-shadow:0 6px 24px rgba(5,4,12,.45)';
+    // bottom reads a variable so the phone pass (home.css PART 6) can lift the
+    // bar clear of the fixed tab bar without fighting this inline style
+    bar.style.cssText='display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--surface3);border:1px solid var(--accent-bright);border-radius:12px;margin:10px 0;position:sticky;bottom:var(--md-bar-b,10px);z-index:5;box-shadow:0 6px 24px rgba(5,4,12,.45)';
     var ch=document.getElementById('md-choices');
     if(ch&&ch.parentElement)ch.parentElement.insertBefore(bar,ch.nextSibling);
   }
