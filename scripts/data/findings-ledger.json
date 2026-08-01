@@ -1,0 +1,32 @@
+{
+ "published": {
+  "8882b265df2f": {
+   "claim": "42% bust rate for WRs age 26-27 drafted in rounds 1-3 — vs 22% for WRs drafted in rounds 1-3 (2020-2025, n=19)",
+   "date": "2026-08-01"
+  },
+  "75d6c258233c": {
+   "claim": "40% boom rate for second-year players drafted in rounds 7-10 — vs 20% for players drafted in rounds 7-10 (2020-2025, n=35)",
+   "date": "2026-08-01"
+  },
+  "e784e88f4f93": {
+   "claim": "6% boom rate for ADP risers (up 3+ rounds) age 26-27 — vs 20% for ADP risers (up 3+ rounds) (2020-2025, n=34)",
+   "date": "2026-08-01"
+  },
+  "36f4f2fe4cd1": {
+   "claim": "38% boom rate for players age 23 or younger coming off a boom season — vs 20% for players age 23 or younger (2020-2025, n=26)",
+   "date": "2026-08-01"
+  },
+  "67fa659f9407": {
+   "claim": "6% boom rate for WRs coming off a bust season — vs 21% for WRs (2020-2025, n=33)",
+   "date": "2026-08-01"
+  },
+  "7471f5fa501e": {
+   "claim": "43% bust rate for rookie RBs drafted in rounds 11-16 — vs 21% for RBs drafted in rounds 11-16 (2020-2025, n=21)",
+   "date": "2026-08-01"
+  },
+  "a8bd11efaf5c": {
+   "claim": "0% bust rate for year 3-5 WRs age 23 or younger — vs 17% for year 3-5 WRs (2020-2025, n=22)",
+   "date": "2026-08-01"
+  }
+ }
+}

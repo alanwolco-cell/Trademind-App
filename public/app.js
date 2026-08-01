@@ -7279,6 +7279,32 @@ function renderMarketTab(){
   document.getElementById('mkt-fallers').innerHTML=fallers.map(moverRow).join('')||'<div class="mkt-empty">Values loading - connect a league or check back in a moment.</div>';
   renderTrendingWeek();
   renderTmTradeIndex();
+  renderMarketSignals();
+}
+// Market Signals: findings from the pattern miner (scripts/pattern-miner.mjs
+// writes public/signals.json). The card only exists while the data is fresh -
+// a missing or week-old file renders nothing at all, never a stale claim.
+async function renderMarketSignals(){
+  try{
+    if(window._mdSignals===undefined)await mdLoadSignals();
+    var box=document.getElementById('mkt-signals'),panel=document.getElementById('mkt-signals-panel');
+    if(!box||!panel)return;
+    var sg=window._mdSignals;
+    if(!sg||!sg.data.signals.length){panel.style.display='none';return;}
+    panel.style.display='block';
+    box.innerHTML=sg.data.signals.map(function(s){
+      var chips=(s.candidates||[]).map(function(c){
+        var _e=(c.name||'').replace(/'/g,"\\'");
+        return '<span onclick="openPlayerCard(\''+c.id+'\',\''+_e+'\')" style="display:inline-block;background:var(--surface3);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:11px;color:var(--text);margin:2px;cursor:pointer">'+escHtml(c.name)+' <span style="color:var(--muted)">ADP '+c.adp+'</span></span>';
+      }).join('');
+      return '<div style="padding:12px 0;border-bottom:1px solid var(--border)">'
+        +'<div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.5">'+escHtml(s.claim)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted2);line-height:1.55;margin-top:4px">'+escHtml(s.detail)+'</div>'
+        +(chips?'<div style="margin-top:6px"><span style="font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">This year\'s cohort</span><div style="margin-top:3px">'+chips+'</div></div>':'')
+        +'</div>';
+    }).join('')
+      +'<div style="font-size:9.5px;color:var(--muted);margin-top:8px">Computed '+escHtml(sg.data.computed_at)+' from '+escHtml(sg.data.seasons)+' draft history. Small samples - read these as tendencies, not verdicts.</div>';
+  }catch(_){}
 }
 
 // Most added / dropped this week - real waiver volume across all Sleeper leagues
@@ -7997,6 +8023,7 @@ async function _startMockDraftRun(){
   try{mdLoadProjections();}catch(_){}
   try{mdLoadByes();}catch(_){}
   try{mdLoadRiserRates();}catch(_){}
+  try{mdLoadSignals();}catch(_){}
   // Pool sized to the DRAFT, not to a value floor - the old (value>800) filter
   // left fewer players than a 12x15 draft needs and the board died mid-draft.
   var poolSize=Math.max(260,MD.teams*MD.rounds+80);
@@ -8877,6 +8904,24 @@ async function mdLoadRiserRates(){
     if(MD.onClock)mdShowChoices(MD.curRound||1);
   }catch(_){}
 }
+// Mined market signals (public/signals.json, written by the pattern miner).
+// Shared by the Research card and the board tags. Freshness gate: signals
+// older than seven days are treated as absent - silence beats stale.
+async function mdLoadSignals(){
+  if(window._mdSignals!==undefined)return;
+  window._mdSignals=null; // fetch once; stays null on any failure
+  try{
+    var r=await fetch('/signals.json?d='+new Date().toISOString().slice(0,10));
+    if(!r.ok)return;
+    var d=await r.json();
+    if(!d||!d.signals||!d.computed_at)return;
+    if((Date.now()-Date.parse(d.computed_at))>7*86400000)return;
+    var byId={};
+    d.signals.forEach(function(s){(s.candidates||[]).forEach(function(c){if(c&&c.id&&!byId[c.id])byId[c.id]=s.claim;});});
+    window._mdSignals={data:d,byId:byId};
+    if(MD.onClock)mdShowChoices(MD.curRound||1);
+  }catch(_){}
+}
 // A riser is a player whose current board ADP sits 3+ rounds ahead of his
 // final ADP last season - the same line the study drew.
 function mdRiserInfo(p){
@@ -8926,13 +8971,17 @@ function mdRowTags(p,compact){
   else if(p.pos==='WR'||p.pos==='TE')st=mine.find(function(x){return x.pos==='QB'&&x.team&&x.team===p.team;});
   if(st)tags.push({t:'STACK',c:'var(--accent-bright)',tip:'Stacks with '+st.name});
   var ri=tags.length<2&&p.pos!=='K'&&p.pos!=='DEF'?mdRiserInfo(p):null;
-  if(ri)tags.push({t:'RISER +'+ri.rise,c:'var(--yellow)',tip:'Drafted '+ri.rise+' picks earlier than his final ADP last season'});
+  // a player named by an active mined signal: the claim rides the RISER
+  // tooltip when he has one, or earns its own SIGNAL tag (last priority)
+  var sig=window._mdSignals&&window._mdSignals.byId?window._mdSignals.byId[p.id]:null;
+  if(ri)tags.push({t:'RISER +'+ri.rise,c:'var(--yellow)',tip:'Drafted '+ri.rise+' picks earlier than his final ADP last season'+(sig?' — '+sig:'')});
   if(!compact&&tags.length<2&&p.pos!=='K'&&p.pos!=='DEF'){
     var pr=_mdPlayoffRuns();
     var pt=pr&&p.team?pr[p.team]:null;
     if(pt==='soft')tags.push({t:'SOFT PLAYOFFS',c:'var(--green)',tip:'Easy defensive slate in weeks 15-17'});
     else if(pt==='tough')tags.push({t:'TOUGH PLAYOFFS',c:'var(--red)',tip:'Hard defensive slate in weeks 15-17'});
   }
+  if(!ri&&sig&&tags.length<2)tags.push({t:'SIGNAL',c:'var(--yellow)',tip:sig});
   return tags.slice(0,compact?1:2);
 }
 function mdRowTagsHtml(p,compact){

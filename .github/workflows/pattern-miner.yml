@@ -1,0 +1,32 @@
+# The stats bot's clock: runs the pattern miner on a schedule, at zero cost.
+# Publishes new findings while the shelf lasts; when it runs dry the miner
+# refills from the ledger with fresh candidates (today's ADP), so the Market
+# Signals card never goes stale. A push to main auto-deploys via Vercel.
+name: pattern-miner
+on:
+  schedule:
+    - cron: '0 10 * * 1,4'   # Mon & Thu 10:00 UTC (6am ET), before draft prime time
+  workflow_dispatch: {}       # manual run from the Actions tab
+permissions:
+  contents: write
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run miner (fresh dataset + today's ADP)
+        run: node scripts/pattern-miner.mjs --refresh
+      - name: Commit signals if changed
+        run: |
+          git config user.name "sage-stats-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/signals.json scripts/data/findings-ledger.json
+          if git diff --cached --quiet; then
+            echo "no new findings - nothing to publish"
+          else
+            git commit -m "Market Signals: hallazgos del minero $(date -u +%F)"
+            git push
+          fi
