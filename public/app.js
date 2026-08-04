@@ -10549,14 +10549,15 @@ function mdRenderBoard(){
       } else {
         var pos=pk.p.pos;
         var isLast=lastPk&&pk===lastPk;
-        // Landscape cells, Stacked density: pick number top-right, name up to
-        // two lines, pos + team below. Faces live in the list view and the
-        // player card; here they cost height the proportions cannot afford.
-        // The newest pick locks in with the brand's gradient sweep (mdb-latest).
+        // Landscape cells, Stacked density: face left (owner's call - the
+        // board must SHOW the players), pick number top-right, name up to two
+        // lines, pos + team below. The newest pick locks in with the brand's
+        // gradient sweep (mdb-latest).
         html+='<div class="mdb-cell mdb-pk pos-'+pos+(pk.mine?' mdb-minepick':'')+(isLast?' mdb-latest':'')+'" title="Click to change this pick" onclick="mdEditPick('+r+','+s2+')">'
           +'<div class="mdb-pickno">'+pk.round+'.'+(pk.pickNo<10?'0':'')+pk.pickNo+'</div>'
-          +'<div class="mdb-name">'+pk.p.name+'</div>'
-          +'<div class="mdb-sub">'+pos+' <span style="color:var(--muted)">'+(pk.p.team||'FA')+'</span></div>'
+          +'<img class="mdb-face" src="'+mdFaceUrl(pk.p)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'"'+(pk.p.pos==='DEF'?' style="object-fit:contain;padding:2px"':'')+'>'
+          +'<div class="mdb-namewrap"><div class="mdb-name">'+pk.p.name+'</div>'
+          +'<div class="mdb-sub">'+pos+' <span style="color:var(--muted)">'+(pk.p.team||'FA')+'</span></div></div>'
           +'</div>';
       }
     }

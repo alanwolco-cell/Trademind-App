@@ -498,3 +498,9 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   .mdb-cell.mdb-latest,.mdb-cell.mdb-onclock,.pm-overlay.open .pm-card{animation:none}
   .mdb-cell.mdb-latest::after,.md-tier-sep .sep-line::after{animation:none;display:none}
 }
+
+/* Board cells show the player's face (owner's call): small circle pinned
+   left, text wraps beside it. Cell grows a touch; the grid columns absorb it. */
+.mdb-cell.mdb-pk{display:flex;align-items:center;gap:7px}
+.mdb-face{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;background:var(--surface3);border:1px solid rgba(255,255,255,.07)}
+.mdb-namewrap{min-width:0;flex:1}
