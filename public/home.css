@@ -1261,3 +1261,20 @@ html.v11 .nav-logo:hover .tm-logo-owl, html.v12 .nav-logo:hover .tm-logo-owl{
   html.v11 .comm-opinion-input textarea, html.v12 .comm-opinion-input textarea,
   html.v11 .hero-mock-start textarea, html.v12 .hero-mock-start textarea{font-size:16px}
 }
+
+/* ── The homepage product film ──────────────────────────────────────────────
+   Square reel in the hero shot slot: contained width, generous radius, the
+   deep shadow that lifts dark media off the light page. Reduced motion gets
+   the poster only (the film pauses via the same media query the rest obeys). */
+html.v11 .mk-film, html.v12 .mk-film{
+  display:block;
+  width:min(620px, 92vw);
+  height:auto;
+  margin:0 auto;
+  border-radius:28px;
+  box-shadow:0 30px 80px rgba(20,10,50,.28);
+  background:#050507;
+}
+@media (prefers-reduced-motion: reduce){
+  html.v11 .mk-film, html.v12 .mk-film{content:url("/promo-poster.jpg")}
+}
