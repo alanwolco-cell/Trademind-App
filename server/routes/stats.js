@@ -314,6 +314,56 @@ router.get('/adp', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/stats/aav — real auction values from ESPN's live 2026 drafts
+// (ownership.auctionValueAverage on the undocumented kona_player_info view -
+// verified 8/2026: 164 players priced >= $0.50, all positions, Gibbs $63.77).
+// ESPN prices their default PPR $200 rooms only, so the response also carries
+// a curve fit of AAV against ESPN's own ADP - refit on every rebuild, never
+// hardcoded (8/2026 fit: ln(aav) = 4.13 - 0.0294*adp, R^2 0.984). The client
+// evaluates that curve at the FORMAT's ADP to derive half/standard/2QB values,
+// and labels anything curve-derived as such. Cached 12h; on total failure the
+// client falls back to its own dated static fit and says so.
+const aavMem = { ts: 0, doc: null };
+router.get('/aav', async (req, res) => {
+  try {
+    if (aavMem.doc && Date.now() - aavMem.ts < 12 * 60 * 60 * 1000) {
+      res.set('Cache-Control', 'public, max-age=21600');
+      return res.json(aavMem.doc);
+    }
+    const POS_ID = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DEF' };
+    const filter = { players: { limit: 400, sortDraftRanks: { sortPriority: 100, sortAsc: true, value: 'PPR' } } };
+    const r = await fetch('https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leaguedefaults/3?view=kona_player_info',
+      { headers: { 'x-fantasy-filter': JSON.stringify(filter) } });
+    if (!r.ok) throw new Error('espn ' + r.status);
+    const raw = await r.json();
+    const players = {}; const fitPts = [];
+    (raw.players || []).forEach(row => {
+      const pl = row.player || {}; const own = pl.ownership || {};
+      const aav = Number(own.auctionValueAverage) || 0;
+      const pos = POS_ID[pl.defaultPositionId] || '';
+      if (!pl.fullName || !pos || aav < 0.5) return;
+      players[norm(pl.fullName)] = { aav: +aav.toFixed(1), pos, name: pl.fullName, adp: +(Number(own.averageDraftPosition) || 0).toFixed(1) };
+      if (aav >= 1 && own.averageDraftPosition > 0 && own.averageDraftPosition <= 200) fitPts.push([own.averageDraftPosition, Math.log(aav)]);
+    });
+    if (Object.keys(players).length < 80) throw new Error('espn thin');
+    // least-squares ln(aav) = a + b*adp over the priced pool
+    let fit = null;
+    if (fitPts.length >= 60) {
+      const n = fitPts.length;
+      const sx = fitPts.reduce((s, p) => s + p[0], 0), sy = fitPts.reduce((s, p) => s + p[1], 0);
+      const sxx = fitPts.reduce((s, p) => s + p[0] * p[0], 0), sxy = fitPts.reduce((s, p) => s + p[0] * p[1], 0);
+      const b = (n * sxy - sx * sy) / (n * sxx - sx * sx), a = (sy - b * sx) / n;
+      const mean = sy / n; let ssr = 0, sst = 0;
+      fitPts.forEach(p => { const e = a + b * p[0]; ssr += (p[1] - e) ** 2; sst += (p[1] - mean) ** 2; });
+      fit = { a: +a.toFixed(4), b: +b.toFixed(5), r2: +(1 - ssr / sst).toFixed(3), n };
+    }
+    const doc = { updated: Date.now(), source: 'espn', budget: 200, scoring: 'ppr', count: Object.keys(players).length, players, fit };
+    aavMem.ts = Date.now(); aavMem.doc = doc;
+    res.set('Cache-Control', 'public, max-age=21600');
+    res.json(doc);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // GET /api/stats/build — warm/rebuild the dataset (also usable via cron)
 router.get('/build', async (req, res) => {
   if (!allowCron(req, res)) return;

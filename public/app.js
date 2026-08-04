@@ -7946,6 +7946,8 @@ async function _startMockDraftRun(){
   MD.scoring=parseFloat(document.getElementById('md-scoring').value);
   MD.sf=document.getElementById('md-format').value==='sf';
   MD.clockSecs=parseInt((document.getElementById('md-clock')||{}).value)||0;
+  MD.mode=((document.getElementById('md-dtype')||{}).value==='auction')?'auction':'snake';
+  MD.budget=parseInt((document.getElementById('md-budget')||{}).value)||200;
   try{mdSaveSettings();}catch(_){}  // remember this room on the device
   MD.queue=[];
   // fresh seed every draft: restarting must produce a DIFFERENT room, not a replay
@@ -8068,6 +8070,10 @@ async function _startMockDraftRun(){
   try{mdLoadByes();}catch(_){}
   try{mdLoadRiserRates();}catch(_){}
   try{mdLoadSignals();}catch(_){}
+  // auction values are AWAITED (unlike the display feeds): the room's whole
+  // economy prices off them, so a $0 board is worse than a 1s wait. On
+  // failure the engine still opens with curve-derived values and says so.
+  if(MD.mode==='auction'){try{await mdLoadAav();}catch(_){}}
   // Pool sized to the DRAFT, not to a value floor - the old (value>800) filter
   // left fewer players than a 12x15 draft needs and the board died mid-draft.
   var poolSize=Math.max(260,MD.teams*MD.rounds+80);
@@ -8248,6 +8254,12 @@ async function _startMockDraftRun(){
     _ln.innerHTML=_msg;
     _ln.style.display=_msg?'block':'none';
   }
+  // snake and auction share everything up to here (pool, values, feeds, UI
+  // shell); the room's clock and turn logic split below
+  if(MD.mode==='auction'){auStart();return;}
+  AU.active=false;
+  var _auw=document.getElementById('au-wrap');if(_auw)_auw.style.display='none';
+  var _dbw=document.getElementById('md-draftboard');if(_dbw)_dbw.style.display='';
   mdAdvance();
 }
 // Faces: players get their headshot, defenses get their team logo
@@ -9177,6 +9189,7 @@ function mdSplitCols(pos){
 }
 function _mdStat(p,k){
   if(k==='proj')return mdProjPts(p.id);
+  if(k==='aav')return AU.active?auValue(p):null;
   var pr=window._mdProj&&window._mdProj.byId[p.id];
   return pr&&pr[k]!=null?pr[k]:null;
 }
@@ -9261,7 +9274,9 @@ function mdShowChoices(round){
   // Sage only speaks when it is actually YOUR pick - in a live room he stays
   // quiet while someone else is on the clock (his last take stays visible).
   var rec=null;
-  if(!MP.active||MD.onClock){
+  // in an auction the advisor lives on the lot card ("worth up to $X"), not
+  // here - a "my pick is X" call makes no sense while money decides
+  if(!AU.active&&(!MP.active||MD.onClock)){
     MD.lastRec=null; // cleared first: a throw below must not leave a stale rec
     // Recommend only from players who are genuinely still available.
     var recPool=MD.pool.filter(function(p){return !taken[p.id];}).slice(0,10);
@@ -9305,7 +9320,7 @@ function mdShowChoices(round){
   // table. The "All" grid keeps its cards and shows PROJ inline.
   var tbl=!!(_proj&&pf);
   box.style.gridTemplateColumns=tbl?'1fr':'repeat(auto-fill,minmax(170px,1fr))';
-  var _cols=tbl?[{k:'proj',l:'Proj'}].concat(mdSplitCols(pf)):[];
+  var _cols=tbl?(AU.active?[{k:'aav',l:'AAV'}]:[]).concat([{k:'proj',l:'Proj'}]).concat(mdSplitCols(pf)):[];
   if(tbl){
     var hd=document.createElement('div');
     hd.className='md-tbl-head';
@@ -9370,7 +9385,7 @@ function mdShowChoices(round){
     var ctrlHtml=isTaken
       ?'<span style="flex-shrink:0;width:20px"></span><span style="flex-shrink:0;width:26px"></span>'
       :'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
-      +'<span class="md-ch-sel" title="Draft '+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
+      +'<span class="md-ch-sel" title="'+(AU.active?'Nominate ':'Draft ')+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
     d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
       +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
@@ -9378,6 +9393,7 @@ function mdShowChoices(round){
       +(isTaken?' · <span style="white-space:nowrap">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' · '+en.by+'</span>'
         :(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':'')))
       +(_bw?' · <span title="'+(_bwHot?'You already have '+_bwN+' players on this bye':'Bye week')+'" style="white-space:nowrap'+(_bwHot?';color:var(--red);font-weight:700':'')+'">BYE&nbsp;'+_bw+'</span>':'')
+      +(!tbl&&AU.active&&!isTaken?' · <span title="Auction value for this room" style="color:var(--muted2);font-weight:700;white-space:nowrap">$'+auValue(p)+'</span>':'')
       +(!tbl&&_pv!=null?' · <span title="Projected season points" style="color:var(--muted2);font-weight:700;white-space:nowrap">PROJ&nbsp;'+_mdFmtStat(_pv)+'</span>':'')
       +_tagsHtml
       +'</div></div>'
@@ -9685,6 +9701,10 @@ function mdRestartDraft(){
 }
 function mdBackToSetup(){
   mdStopClock();
+  // an auction keeps its own timer chain alive - kill it or the room keeps
+  // selling players on the hidden board
+  if(AU.stepT)clearTimeout(AU.stepT);
+  AU.active=false;AU.lot=null;
   var b=document.getElementById('md-board');
   if(b){b.style.display='none';b.dataset.live='0';}
   var s=document.getElementById('md-setup');if(s)s.style.display='block';
@@ -9810,18 +9830,496 @@ function mdRenderDraftBar(){
     +'<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_meta.join(' · ')+'</div></div>'
     +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+p.id+'\')" title="Sage weighs this exact pick against your roster">Ask Sage</button>'
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
-    +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">Draft '+p.name.split(' ').slice(-1)[0]+'</button></div>'
+    +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">'+(AU.active?'Nominate ':'Draft ')+p.name.split(' ').slice(-1)[0]+'</button></div>'
     +(_av?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)">'+_av+'</div>':'')
     +(_rh?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)">'+_rh+'</div>':'')
     +_narHtml
     +mdProsConsHtml(p,2) // the two strongest each way; the card has the rest
     +'<div style="margin-top:7px;font-size:11px"><span style="color:var(--accent-bright);cursor:pointer;font-weight:600" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">Full player card &rarr;</span></div>';
 }
+
+// ── AUCTION DRAFT ────────────────────────────────────────────────────────────
+// Solo auction room on the same dark board. Values come from ESPN's real
+// auction drafts (/api/stats/aav: auctionValueAverage, PPR $200); other
+// scorings evaluate the server's refit curve ln(aav)=a+b*adp at the FORMAT's
+// own ADP (8/2026 fit R^2 0.984, refit every cache rebuild). Every room then
+// NORMALIZES values to its own money: 12x$200 ESPN raw values sum to ~$1,892
+// of $2,400, and an 8-team $300 room prices nothing like that - so the
+// discretionary dollars (value above the $1 floor) are rescaled so the pool's
+// top (teams x rounds) players absorb exactly the room's spendable money.
+// That normalization plus live inflation is the whole economics of the room.
+var AU={active:false};
+async function mdLoadAav(){
+  if(window._mdAav!==undefined)return;
+  window._mdAav=null;
+  try{
+    var r=await fetch('/api/stats/aav');
+    if(!r.ok)return;
+    var d=await r.json();
+    if(d&&d.players&&Object.keys(d.players).length>=80)window._mdAav=d;
+  }catch(_){}
+}
+// Static fallback fit (the 8/2026 derivation) so the room still prices when
+// the feed is down - the UI then says the values are derived, not live.
+var AU_FIT_FALLBACK={a:4.133,b:-0.0294};
+function _auRawValue(p){
+  var d=window._mdAav;
+  var fit=(d&&d.fit)||AU_FIT_FALLBACK;
+  if(d){
+    var k=_mdNormName(p.name);
+    // suffix insurance: ESPN says "Marvin Harrison Jr.", Sleeper may not
+    var e=d.players[k]||d.players[k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'')];
+    // live ESPN price when we have it and the room is PPR (ESPN's scoring);
+    // other scorings re-derive from the format's own ADP via the curve
+    if(e&&e.pos===p.pos&&MD.scoring>=1)return e.aav;
+  }
+  if(p.adp)return Math.exp(fit.a+fit.b*p.adp);
+  if(p.pos==='K'||p.pos==='DEF')return 1; // priced by the room's $1 floor
+  return 0.5;
+}
+// Normalize the pool to THIS room's money and remember each player's price.
+function auPoolInit(){
+  var total=MD.teams*MD.budget;
+  var slots=MD.teams*MD.rounds;
+  var vals=MD.pool.map(function(p){return {p:p,raw:_auRawValue(p)};})
+    .sort(function(a,b){return b.raw-a.raw;});
+  var draftable=vals.slice(0,slots);
+  var discSum=0;
+  draftable.forEach(function(v){discSum+=Math.max(0,v.raw-1);});
+  // spendable money above the $1-per-slot floor, spread pro-rata over the
+  // draftable pool's discretionary value
+  var k=discSum>0?(total-slots)/discSum:0;
+  AU.val={};
+  vals.forEach(function(v,i){
+    AU.val[v.p.id]=i<slots?Math.max(1,Math.round(1+Math.max(0,v.raw-1)*k)):1;
+  });
+}
+function auValue(p){return (AU.val&&AU.val[p.id])||1;}
+// Live inflation: money still in the room vs value still on the board - the
+// central dynamic of every real auction (early overpays deflate the rest).
+function auInflation(){
+  var slotsLeft=0,money=0;
+  for(var s=1;s<=MD.teams;s++){
+    slotsLeft+=AU.slotsLeft[s];
+    money+=Math.max(0,AU.budgets[s]-AU.slotsLeft[s]); // spendable above $1 floors
+  }
+  var vals=MD.pool.map(function(p){return auValue(p);}).sort(function(a,b){return b-a;}).slice(0,slotsLeft);
+  var value=0;vals.forEach(function(v){value+=Math.max(0,v-1);});
+  if(value<=0)return 1;
+  // wide clamp on purpose: pool values are normalized to sum to the room's
+  // exact money, so full spend only happens if under-payments (second-price
+  // sales below sticker) feed back into HIGHER later prices. A tight 1.4 cap
+  // strangled that feedback and rooms banked hundreds (harness invariant b).
+  return Math.max(0.7,Math.min(2.2,money/value));
+}
+// roster progress vs the room's: >0 means this seat is buying ahead of pace.
+// Debug of invariant (b) showed the failure mode exactly: an eager proxy
+// seat owned 16 players by lot 20 and banked $168 - real managers ride the
+// room's rhythm, so buyers running ahead of proportional share cool off.
+function auPace(slot){
+  var total=MD.teams*MD.rounds,done=total;
+  for(var s=1;s<=MD.teams;s++)done-=AU.slotsLeft[s];
+  return (MD.rounds-AU.slotsLeft[slot])/MD.rounds-done/total;
+}
+// how much a bot wants this position right now (0..1 scale on value)
+function auNeed(ros,pos,slotsLeft){
+  var caps={QB:MD.sf?3:2,TE:2,K:1,DEF:1,RB:8,WR:8};
+  if((ros[pos]||0)>=(caps[pos]||8))return 0;
+  if(pos==='K'||pos==='DEF')return slotsLeft<=3?1:0.05; // real rooms: $1 at the end
+  var starters={QB:MD.sf?2:1,RB:2,WR:MD.scoring>=1?3:2,TE:1};
+  if((ros[pos]||0)<(starters[pos]||1))return 1;
+  // a fillable bench slot pays FULL sticker: the AAV feed already prices
+  // bench-tier players at what real managers pay for them, so a blanket
+  // haircut here made every mid-lot clear at ~80% of sticker and the room
+  // banked the difference (harness invariant b traced the leak to exactly
+  // this phase). Only true backups at onesie positions get discounted.
+  return (pos==='RB'||pos==='WR')?1:(MD.sf&&pos==='QB'?0.9:0.3);
+}
+// a bot's true ceiling for the player on the block
+function auBotMax(slot,p){
+  var ros=MD.aiRosters[slot]||{};
+  var sl=AU.slotsLeft[slot];
+  if(sl<=0)return 0;
+  var need=auNeed(ros,p.pos,sl);
+  if(need<=0)return 0;
+  var v=auValue(p)*AU.inflation*need;
+  var b=AU.bots[slot]||{};
+  var elite=auValue(p)>=AU.eliteLine;
+  if(b.k==='stars')v*=elite?1.25:0.8;      // stars-and-scraps: pay up top, $1 out
+  else if(b.k==='value'){
+    // value hunter: shops the margins in the first half, then gives up on
+    // discounts once the sale rack thins - a flat discount all draft made him
+    // the room's biggest hoarder ($32 avg banked; a real value hunter ends up
+    // buying VOLUME, not banking)
+    var _hl=0;for(var s4=1;s4<=MD.teams;s4++)_hl+=AU.slotsLeft[s4];
+    if(_hl>MD.teams*MD.rounds/2)v*=0.92;
+  }
+  // price enforcer bids other people's players up in auBidStep, not here
+  // spend-it-or-lose-it: an unspent dollar is worth NOTHING when the last lot
+  // closes. A bot sitting on more spare money per open slot than the sticker
+  // pays up to ~2x sticker in the body of the draft, and up to his FULL spare
+  // once the room is inside its last ~4 rounds' worth of slots - the "$9
+  // kicker because someone had $40 left" endgame every live auction produces.
+  // Without both stages, harness invariant (b) showed rooms banking ~$200 of
+  // $2,400 the way no real auction ever ends.
+  var spare=(AU.budgets[slot]-sl)/Math.max(1,sl);
+  if(spare>v){
+    var allLeft=0;for(var s3=1;s3<=MD.teams;s3++)allLeft+=AU.slotsLeft[s3];
+    // full spare unlocks by ROOM lateness or PERSONAL desperation: a seat
+    // down to its last 4 slots with money left must dump NOW - waiting for
+    // the room gate left hoarder seats banking $50-120 (invariant b trace)
+    v=Math.min(spare,(allLeft<=MD.teams*4||sl<=4)?spare:v*2+2);
+  }
+  // pace brake: ~2 roster spots ahead of the room's proportional share turns
+  // a buyer reluctant, ~1 ahead lukewarm - the partner force to spend-it-or-
+  // lose-it (that one drains rich LATE budgets; this stops the roster from
+  // filling EARLY with money still in pocket)
+  // pace brake, two stages: the terminal leak is a MATCHING failure - seats
+  // whose rosters fill early exit the market still holding money while the
+  // seats with open slots are broke. Braking a seat that runs ahead of the
+  // room's proportional share keeps money and slots depleting together.
+  // (An early stronger-brake experiment that seemed to backfire was polluted
+  // by the autopilot seat's own haircut bug, since fixed.)
+  var ahead=auPace(slot);
+  if(ahead>0.10)v*=0.6;else if(ahead>0.05)v*=0.85;
+  // ...and its symmetric twin, the nervous-money accelerator: a seat whose
+  // SPENDING lags the room's money flow bids hotter - the manager who looks
+  // up mid-draft, sees $160 in hand with the board thinning, and starts
+  // paying up. Brake + accelerator together are what keep every seat's money
+  // and roster emptying on the same clock (the matching failure behind
+  // invariant b).
+  var roomSpent=0;for(var s5=1;s5<=MD.teams;s5++)roomSpent+=MD.budget-AU.budgets[s5];
+  var roomMoneyFrac=roomSpent/(MD.teams*MD.budget);
+  var mySpentFrac=1-AU.budgets[slot]/MD.budget;
+  if(mySpentFrac<roomMoneyFrac-0.30)v*=1.5;
+  else if(mySpentFrac<roomMoneyFrac-0.15)v*=1.25;
+  // hard budget law: every remaining slot still needs its $1
+  var cap=AU.budgets[slot]-(sl-1);
+  // the end-of-auction blowout: once the money left clearly exceeds the value
+  // left to buy with it (inflation >= 1.25), dollars are melting - any player
+  // a bot can use is worth near his whole cap ("$38 for a handcuff because I
+  // had it", the close of every live auction). Without this, seats that
+  // filled cheap exited the market holding $50-110 (harness invariant b).
+  if(AU.inflation>=1.1&&need>=0.5)v=Math.max(v,cap*0.9);
+  return Math.max(need>0?1:0,Math.min(Math.round(v),cap));
+}
+// nomination strategy: mostly nominate the best player you DON'T want so the
+// room drains its budgets on him; sometimes float a mid-round target early
+function auBotNominate(slot){
+  var ros=MD.aiRosters[slot]||{};
+  var sl=AU.slotsLeft[slot];
+  var byV=MD.pool.slice().sort(function(a,b){return auValue(b)-auValue(a);});
+  // endgame: lock in your K and D/ST while a dollar still buys one - real
+  // rooms nominate their own onesies at the end, not more bench flyers
+  if(sl<=3){
+    if(!(ros.K>=1)&&!MD.noK){var _k=byV.filter(function(p){return p.pos==='K';})[0];if(_k)return _k;}
+    if(!(ros.DEF>=1)&&!MD.noD){var _d=byV.filter(function(p){return p.pos==='DEF';})[0];if(_d)return _d;}
+  }
+  // a drain nomination only works if SOMEONE will actually chase it - late
+  // in rooms, unwanted drains bounced back to the nominator at $1, burning
+  // ~60 roster slots a draft on players nobody chose (and stranding the
+  // money those slots were supposed to spend)
+  var wanted=function(p){
+    for(var s2=1;s2<=MD.teams;s2++){
+      if(s2===slot||AU.slotsLeft[s2]<=0)continue;
+      var r2=MD.aiRosters[s2]||{};
+      if(auNeed(r2,p.pos,AU.slotsLeft[s2])>=0.8)return true;
+    }
+    return false;
+  };
+  var drain=byV.filter(function(p){return auNeed(ros,p.pos,sl)<0.5&&wanted(p);})[0];
+  var want=byV.filter(function(p){return auNeed(ros,p.pos,sl)>=0.8&&auValue(p)<=Math.max(3,AU.budgets[slot]-(sl-1));});
+  var pick=(Math.random()<0.6&&drain)?drain:(want[Math.floor(Math.random()*Math.min(6,want.length))]||drain||byV[0]);
+  return pick||MD.pool[0];
+}
+function auStart(){
+  AU.active=true;
+  AU.budgets={};AU.slotsLeft={};AU.bots={};AU.sold=[];AU.lot=null;AU.nomTurn=0;
+  var AU_ARCHS=['balanced','stars','enforcer','value','balanced','balanced'];
+  for(var s=1;s<=MD.teams;s++){
+    AU.budgets[s]=MD.budget;
+    AU.slotsLeft[s]=MD.rounds;
+    MD.aiRosters[s]=MD.aiRosters[s]||{QB:0,RB:0,WR:0,TE:0,K:0,DEF:0,list:[]};
+    if(s!==MD.mySlot)AU.bots[s]={k:AU_ARCHS[Math.floor(Math.random()*AU_ARCHS.length)],name:(MD.bots[s]&&MD.bots[s].name)||('Team '+s)};
+  }
+  auPoolInit();
+  // the elite line for the stars archetype: top-12 by room value
+  var top=Object.values(AU.val).sort(function(a,b){return b-a;});
+  AU.eliteLine=top[11]||20;
+  AU.inflation=1;
+  var g=document.getElementById('md-draftboard');if(g)g.style.display='none';
+  var q=document.getElementById('md-queue-wrap');if(q)q.style.display='none';
+  var w=document.getElementById('au-wrap');if(w)w.style.display='block';
+  auRenderBudgets();
+  auAdvance();
+}
+function auAdvance(){
+  if(!AU.active)return; // the room was left mid-auction: stop cold
+  var anyLeft=false,poolLeft=MD.pool.length>0;
+  for(var s=1;s<=MD.teams;s++)if(AU.slotsLeft[s]>0)anyLeft=true;
+  if(!anyLeft||!poolLeft){auFinish();return;}
+  AU.inflation=auInflation();
+  // next nominator: rotate, skipping full rosters
+  var tries=0,slot;
+  do{slot=(AU.nomTurn%MD.teams)+1;AU.nomTurn++;tries++;}while(AU.slotsLeft[slot]<=0&&tries<=MD.teams);
+  if(AU.slotsLeft[slot]<=0){auFinish();return;}
+  AU.nominator=slot;
+  var st=document.getElementById('md-status');
+  if(slot===MD.mySlot){
+    MD.onClock=true;MD.curRound=1;
+    if(st)st.innerHTML='<span style="color:var(--accent-bright);font-weight:700">Your nomination</span><span style="color:var(--muted)"> - pick any player from the list below</span>';
+    mdShowChoices(1);
+    if(MD.autoPilot){var ap=auBotNominateUser();if(ap){auOpenLot(MD.mySlot,ap);return;}}
+    auRenderLot();
+  }else{
+    MD.onClock=false;
+    var nm=(AU.bots[slot]&&AU.bots[slot].name)||('Team '+slot);
+    if(st)st.innerHTML='Nominating: <b style="color:var(--text)">'+nm+'</b>';
+    var p=auBotNominate(slot);
+    auOpenLot(slot,p);
+  }
+}
+// the user's autopilot nominates like a balanced bot would
+function auBotNominateUser(){
+  var ros={};MD.mine.forEach(function(x){ros[x.pos]=(ros[x.pos]||0)+1;});
+  var sl=AU.slotsLeft[MD.mySlot];
+  var byV=MD.pool.slice().sort(function(a,b){return auValue(b)-auValue(a);});
+  if(sl<=3){
+    if(!(ros.K>=1)&&!MD.noK){var _k=byV.filter(function(p){return p.pos==='K';})[0];if(_k)return _k;}
+    if(!(ros.DEF>=1)&&!MD.noD){var _d=byV.filter(function(p){return p.pos==='DEF';})[0];if(_d)return _d;}
+  }
+  // same someone-must-want-it rule the bots follow
+  var wanted=function(p){
+    for(var s2=1;s2<=MD.teams;s2++){
+      if(s2===MD.mySlot||AU.slotsLeft[s2]<=0)continue;
+      var r2=MD.aiRosters[s2]||{};
+      if(auNeed(r2,p.pos,AU.slotsLeft[s2])>=0.8)return true;
+    }
+    return false;
+  };
+  return byV.filter(function(p){return auNeed(ros,p.pos,sl)<0.5&&wanted(p);})[0]
+    ||byV.filter(function(p){return auNeed(ros,p.pos,sl)>=0.8;})[0]
+    ||byV[0];
+}
+function auUserNominate(p){
+  if(!AU.active||AU.lot||AU.nominator!==MD.mySlot)return;
+  MD.onClock=false;
+  auOpenLot(MD.mySlot,p);
+}
+function auOpenLot(slot,p){
+  var i=MD.pool.indexOf(p);if(i<0){auAdvance();return;}
+  // every lot opens at $1 - tested "statement" openings (~40% of value on own
+  // targets) DETERRED the competition that makes prices, and the room banked
+  // more, not less. $1 opens with jump-bid escalation is what the sim
+  // supports and what most live rooms actually do.
+  AU.lot={p:p,bid:1,holder:slot,going:0,myMax:0};
+  // autopilot plays the user like a balanced manager: a standing limit bid at
+  // Sage's personal ceiling, cooled by the same pace brake the bots use (this
+  // is also how the calibration harness drives the user's seat)
+  if(MD.autoPilot&&AU.slotsLeft[MD.mySlot]>0){
+    var _w=auMyWorth(p).worth;
+    var _ah=auPace(MD.mySlot);
+    // same two-stage brake the bots use (the original harsher 0.45 version
+    // benched this seat for the whole value phase and it finished as the
+    // room's biggest hoarder - the brake must slow a seat, never bench it)
+    if(_ah>0.10)_w=Math.round(_w*0.6);else if(_ah>0.05)_w=Math.round(_w*0.85);
+    // own nomination: defend it only if the roster actually uses the player
+    if(slot===MD.mySlot){
+      var _ros3={};MD.mine.forEach(function(x){_ros3[x.pos]=(_ros3[x.pos]||0)+1;});
+      if(auNeed(_ros3,p.pos,AU.slotsLeft[MD.mySlot])<0.5)_w=0;
+    }
+    AU.lot.myMax=_w;
+  }
+  auRenderLot();auRenderBudgets();
+  AU.stepT=setTimeout(auBidStep,700);
+}
+// one beat of the room bidding. Bots outbid +$1 while the price is under
+// their max; the enforcer pushes OTHER people's lots to ~90% of value even
+// without need, betting on not winning. Two quiet beats end the lot.
+function auBidStep(){
+  var lot=AU.lot;if(!lot)return;
+  var next=lot.bid+1;
+  var cands=[];
+  for(var s=1;s<=MD.teams;s++){
+    if(s===lot.holder||s===MD.mySlot||AU.slotsLeft[s]<=0)continue;
+    var mx=auBotMax(s,lot.p);
+    var b=AU.bots[s]||{};
+    // enforcer: happily pushes a lot he does not even want toward value
+    if(b.k==='enforcer'&&mx<1){
+      var enf=Math.round(auValue(lot.p)*AU.inflation*0.9);
+      var cap=AU.budgets[s]-(AU.slotsLeft[s]-1);
+      mx=Math.min(enf,cap)* (AU.slotsLeft[s]>2?1:0);
+    }
+    if(mx>=next)cands.push({s:s,mx:mx});
+  }
+  // the user's limit bid works like a proxy: auto +$1 while under the cap
+  if(lot.holder!==MD.mySlot&&lot.myMax>=next&&AU.slotsLeft[MD.mySlot]>0){
+    var myCap=AU.budgets[MD.mySlot]-(AU.slotsLeft[MD.mySlot]-1);
+    if(next<=myCap){lot.bid=next;lot.holder=MD.mySlot;lot.going=0;auRenderLot();AU.stepT=setTimeout(auBidStep,700);return;}
+  }
+  if(cands.length){
+    cands.sort(function(a,b){return b.mx-a.mx;});
+    var w=cands[0];
+    // jump bids: a third of raises go "$15!" straight past +$1, the way real
+    // rooms bid - and a bidder flush with spare cash jumps bigger. Strict +$1
+    // closed every lot at the RUNNER-UP's ceiling (textbook second-price),
+    // which priced the whole draft ~10% under what winners would pay - the
+    // biggest single piece of invariant (b)'s leak.
+    var wSpare=(AU.budgets[w.s]-AU.slotsLeft[w.s])/Math.max(1,AU.slotsLeft[w.s]);
+    var jump=Math.random()<0.4?Math.ceil(Math.random()*Math.min(5,1+wSpare/8)):0;
+    lot.bid=Math.min(w.mx,next+jump);lot.holder=w.s;lot.going=0;
+    auRenderLot();
+    AU.stepT=setTimeout(auBidStep,700);
+  }else{
+    lot.going++;
+    if(lot.going>=3){auSell();return;}
+    auRenderLot();
+    AU.stepT=setTimeout(auBidStep,900);
+  }
+}
+function auUserBid(inc){
+  var lot=AU.lot;if(!lot||AU.slotsLeft[MD.mySlot]<=0)return;
+  var amt=inc==null?parseInt((document.getElementById('au-custom')||{}).value,10):lot.bid+inc;
+  if(!amt||amt<=lot.bid)return;
+  var cap=AU.budgets[MD.mySlot]-(AU.slotsLeft[MD.mySlot]-1);
+  if(amt>cap)amt=cap;
+  if(amt<=lot.bid)return;
+  lot.bid=amt;lot.holder=MD.mySlot;lot.going=0;
+  auRenderLot();
+  if(AU.stepT)clearTimeout(AU.stepT);
+  AU.stepT=setTimeout(auBidStep,700);
+}
+function auSetMax(){
+  var lot=AU.lot;if(!lot)return;
+  var v=parseInt((document.getElementById('au-max')||{}).value,10)||0;
+  lot.myMax=v;
+  auRenderLot();
+}
+function auSell(){
+  var lot=AU.lot;if(!lot)return;
+  AU.lot=null;
+  var slot=lot.holder,p=lot.p,price=lot.bid;
+  var i=MD.pool.indexOf(p);if(i>=0)MD.pool.splice(i,1);
+  AU.budgets[slot]-=price;
+  AU.slotsLeft[slot]--;
+  var ros=MD.aiRosters[slot];ros[p.pos]=(ros[p.pos]||0)+1;ros.list.push(p);
+  var n=AU.sold.length+1;
+  var mine=slot===MD.mySlot;
+  if(mine)MD.mine.push(p);
+  MD.picks.push({slot:slot,round:Math.ceil(n/MD.teams),pickNo:((n-1)%MD.teams)+1,p:p,mine:mine,price:price});
+  AU.sold.unshift({p:p,slot:slot,price:price,value:auValue(p)});
+  var who=mine?'YOU':((AU.bots[slot]&&AU.bots[slot].name)||('Team '+slot));
+  MD.log.unshift('<span style="color:var(--muted)">$'+price+'</span> '+who+' - <strong style="color:var(--text)">'+p.name+'</strong> '+mdPosTag(p.pos));
+  try{sndImpact();}catch(_){}
+  auRenderSold();auRenderBudgets();mdRenderMine();mdRenderLog();
+  if(MD.onClock)mdShowChoices(1);
+  AU.stepT=setTimeout(auAdvance,600);
+}
+// Sage's read on the block: personal ceiling = room value x live inflation,
+// bumped when it fills an open starter slot, capped by the budget law.
+function auMyWorth(p){
+  var ros={};MD.mine.forEach(function(x){ros[x.pos]=(ros[x.pos]||0)+1;});
+  var starters={QB:MD.sf?2:1,RB:2,WR:MD.scoring>=1?3:2,TE:1};
+  var needsIt=(ros[p.pos]||0)<(starters[p.pos]||1);
+  if(p.pos==='K'||p.pos==='DEF')needsIt=AU.slotsLeft[MD.mySlot]<=3&&!(ros[p.pos]>=1);
+  // the bench multiplier is 1.0 like the bots': sticker already IS the market
+  // price of a bench-tier player, and a 0.9 haircut here made the advisor
+  // (and the autopilot seat) lose every contested lot and bank $168
+  var v=auValue(p)*AU.inflation*(needsIt?1.1:1);
+  // spend-it-or-lose-it is real advice too: with more spare per open slot
+  // than the sticker, banking the money just donates it to the room
+  var _sl=AU.slotsLeft[MD.mySlot];
+  var spare=(AU.budgets[MD.mySlot]-_sl)/Math.max(1,_sl);
+  if(spare>v)v=Math.min(spare,_sl<=4?spare:v*2+2);
+  var cap=AU.budgets[MD.mySlot]-(AU.slotsLeft[MD.mySlot]-1);
+  // same end-of-auction read the bots get: when money outweighs the value
+  // left on the board, banking it just donates it to the room
+  if(AU.inflation>=1.15)v=Math.max(v,cap*0.75);
+  return {worth:Math.max(1,Math.min(Math.round(v),cap)),needsIt:needsIt};
+}
+function auSageLine(p){
+  var w=auMyWorth(p);
+  var why=w.needsIt?'fills an open starter spot':'depth price only - your starters are set';
+  var infl=AU.inflation>1.08?'the room is overpaying, let others chase':AU.inflation<0.92?'money is drying up - real discounts from here':'';
+  return 'Worth up to <b style="color:var(--accent-bright)">$'+w.worth+'</b> for you ('+why+(infl?' · '+infl:'')+')';
+}
+function auRenderLot(){
+  var box=document.getElementById('au-lot');if(!box)return;
+  var lot=AU.lot;
+  if(!lot){
+    box.innerHTML=AU.nominator===MD.mySlot
+      ?'<div style="padding:14px 16px;background:var(--surface2);border:1px solid var(--accent-bright);border-radius:12px;font-size:13px;color:var(--text)"><b>Your nomination.</b> Tap the arrow on any player below to put him on the block at $1.</div>'
+      :'';
+    return;
+  }
+  var p=lot.p;
+  var mine=lot.holder===MD.mySlot;
+  var holderName=mine?'YOU':((AU.bots[lot.holder]&&AU.bots[lot.holder].name)||('Team '+lot.holder));
+  var going=lot.going===1?' · <span style="color:var(--yellow)">going once</span>':lot.going===2?' · <span style="color:var(--red)">going twice</span>':'';
+  var canBid=AU.slotsLeft[MD.mySlot]>0&&!mine;
+  var srcNote=window._mdAav?'':' <span title="Live auction values are down; these are derived from ADP with our dated curve fit" style="color:var(--muted)">(derived)</span>';
+  box.innerHTML='<div style="padding:14px 16px;background:var(--surface3);border:1px solid var(--accent-bright);border-radius:12px">'
+    +'<div style="display:flex;align-items:center;gap:12px">'
+    +'<img src="'+mdFaceUrl(p)+'" style="width:52px;height:52px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain':'')+'" onerror="this.style.visibility=\'hidden\'">'
+    +'<div style="min-width:0;flex:1">'
+    +'<div style="font-family:var(--font-head);font-size:17px;font-weight:800;color:var(--text)">'+p.name+'</div>'
+    +'<div style="font-size:11px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+(p.team||'FA')+' · AAV $'+auValue(p)+srcNote+'</div>'
+    +'<div style="font-size:11.5px;color:var(--muted2);margin-top:3px">'+auSageLine(p)+'</div>'
+    +'</div>'
+    +'<div style="text-align:right;flex:none">'
+    +'<div style="font-family:var(--font-head);font-size:26px;font-weight:800;color:'+(mine?'var(--green)':'var(--text)')+'">$'+lot.bid+'</div>'
+    +'<div style="font-size:10.5px;color:'+(mine?'var(--green)':'var(--muted)')+'">'+holderName+going+'</div>'
+    +'</div></div>'
+    +(canBid
+      ?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:11px">'
+      +'<button class="btn-sm" onclick="auUserBid(1)">+$1</button>'
+      +'<button class="btn-sm" onclick="auUserBid(5)">+$5</button>'
+      +'<input type="number" id="au-custom" class="tm-input" style="flex:0 1 90px;padding:7px 10px;font-size:13px" placeholder="$">'
+      +'<button class="btn-sm" onclick="auUserBid(null)">Bid</button>'
+      +'<span style="flex:1"></span>'
+      +'<input type="number" id="au-max" class="tm-input" style="flex:0 1 90px;padding:7px 10px;font-size:13px" placeholder="Max $" value="'+(lot.myMax||'')+'">'
+      +'<button class="btn-sm" title="Limit bid: Sage bids +$1 for you up to this number, like a real auction proxy" onclick="auSetMax()">Set max</button>'
+      +'</div>'
+      :(mine?'<div style="margin-top:9px;font-size:11.5px;color:var(--green)">The bid is yours - hold or wait it out.</div>':''));
+}
+function auRenderBudgets(){
+  var box=document.getElementById('au-budgets');if(!box)return;
+  var html='';
+  for(var s=1;s<=MD.teams;s++){
+    var b=AU.budgets[s],sl=AU.slotsLeft[s];
+    var mine=s===MD.mySlot;
+    var perSlot=sl>0?(b-(sl-1)):0; // the most they can put on one player
+    var health=perSlot>=MD.budget*0.25?'var(--green)':perSlot>=MD.budget*0.08?'var(--yellow)':'var(--red)';
+    var nm=mine?'YOU':((AU.bots[s]&&AU.bots[s].name)||('T'+s));
+    html+='<span title="'+nm+': $'+b+' left, '+sl+' spots, max bid $'+Math.max(0,perSlot)+'" style="padding:3px 9px;border-radius:100px;border:1px solid '+(mine?'var(--accent-bright)':'var(--border)')+';font-size:10.5px;font-weight:700;color:'+(mine?'var(--accent-bright)':'var(--muted2)')+'">'+nm+' <span style="color:'+health+'">$'+b+'</span><span style="color:var(--muted)">/'+sl+'</span></span>';
+  }
+  box.innerHTML=html;
+}
+function auRenderSold(){
+  var wrap=document.getElementById('au-sold-wrap'),box=document.getElementById('au-sold');
+  if(!wrap||!box)return;
+  if(!AU.sold.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  box.innerHTML=AU.sold.slice(0,40).map(function(x){
+    var d=x.price-x.value;
+    var tag=d>=3?'<span style="color:var(--red)">+$'+d+' over</span>':d<=-3?'<span style="color:var(--green)">$'+(-d)+' under</span>':'<span style="color:var(--muted)">fair</span>';
+    var who=x.slot===MD.mySlot?'YOU':((AU.bots[x.slot]&&AU.bots[x.slot].name)||('T'+x.slot));
+    return '<div>'+mdPosTag(x.p.pos)+' <b style="color:var(--text)">'+x.p.name+'</b> · $'+x.price+' · '+who+' · '+tag+'</div>';
+  }).join('');
+}
+function auFinish(){
+  AU.active=false;AU.lot=null;
+  if(AU.stepT)clearTimeout(AU.stepT);
+  MD.onClock=false;
+  MD.pickIdx=MD.order.length; // mdFinish treats the draft as complete
+  mdFinish();
+}
 function mdConfirmDraft(){
   var p=MD.selChoice;
   if(!p)return;
   MD.selChoice=null;
   var bar=document.getElementById('md-draftbar');if(bar)bar.style.display='none';
+  if(AU.active){auUserNominate(p);return;} // auction: confirming NOMINATES
   if(MP.active){mpBoardPick(p);return;}
   // pin the viewport: the pick re-renders half the page and the browser's
   // scroll anchoring was yo-yoing the screen down and back up. The peek panel
@@ -9834,6 +10332,7 @@ function mdConfirmDraft(){
 // Undo back through your last pick: AI picks after it come back too
 function mdUndo(){
   if(MP.active)return; // live rooms: picks are final, like a real draft
+  if(AU.active)return; // auction: a sale is a sale - money moved, no undo
   if(!MD.picks||!MD.picks.some(function(pk){return pk.mine;}))return;
   mdStopClock();
   var undone=0;
@@ -10499,7 +10998,13 @@ async function ldPoll(){
 // picked (teams, seat, scoring, format, rounds, clock, mode, the fine-tune
 // toggles) comes back on this device next visit. A connected league still wins
 // for the settings it actually decides (its size, scoring, format, mode).
-var MD_SETTING_KEYS=['md-mode','md-teams','md-slot','md-scoring','md-format','md-rounds','md-clock'];
+var MD_SETTING_KEYS=['md-mode','md-teams','md-slot','md-scoring','md-format','md-rounds','md-clock','md-dtype','md-budget'];
+// Draft type drives one visible thing on the sheet: the budget cell
+function mdDtypeSync(){
+  var t=(document.getElementById('md-dtype')||{}).value;
+  var c=document.getElementById('md-budget-cell');
+  if(c)c.style.display=t==='auction'?'block':'none';
+}
 var MD_TOGGLE_KEYS=['md-6pt','md-tep'];
 function mdSaveSettings(){
   try{
@@ -10525,6 +11030,7 @@ function mdRestoreSettings(){
       if(e&&o[id]!=null)e.value=o[id];
     });
     MD_TOGGLE_KEYS.forEach(function(id){var e=document.getElementById(id);if(e&&o[id]!=null)e.checked=!!o[id];});
+    try{mdDtypeSync();}catch(_){}  // restored draft type shows/hides the budget cell
     // NEVER restore state invisibly: a remembered 6pt/TEP toggle lives inside
     // the COLLAPSED fine-tune panel, so a restored knob silently reshapes the
     // whole room ("I had normal settings" - the audit case: 6pt standard put
@@ -10600,6 +11106,7 @@ function mdSaveHistory(mode){
         var ov=(pk.round-1)*MD.teams+pk.pickNo;
         return {r:pk.round,n:pk.pickNo,s:pk.slot,pos:pk.p.pos,nm:pk.p.name,me:!!pk.mine,
           ov:ov,
+          pr:pk.price!=null?pk.price:undefined, // auction: the dollars paid
           adp:pk.p.adp!=null?+(+pk.p.adp).toFixed(1):null,
           delta:pk.p.adp!=null?Math.round(ov-pk.p.adp):null,
           tier:(ktcById[pk.p.id]?playerTierLabel(ktcById[pk.p.id],pk.p.id).short:null),
@@ -10759,7 +11266,7 @@ function mdRenderHistory(){
     }).join('');
 }
 function mdFinish(){
-  mdSaveHistory();
+  mdSaveHistory(MD.mode==='auction'?'auction':undefined);
   document.getElementById('md-status').textContent='Draft complete. Sage grades your board:';
   var pos={QB:0,RB:0,WR:0,TE:0};MD.mine.forEach(function(p){pos[p.pos]++;});
   var sage=document.getElementById('md-sage');
