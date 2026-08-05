@@ -7821,7 +7821,7 @@ function mdFantazy26Toggle(on){
     var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
     if(on){
       var snap={};
-      ['md-teams','md-scoring','md-format','md-rounds','md-slot'].forEach(function(id){
+      ['md-teams','md-scoring','md-format','md-rounds','md-slot','md-dtype','md-budget'].forEach(function(id){
         var e=document.getElementById(id);if(e)snap[id]=e.value;
       });
       snap['md-6pt']=!!(document.getElementById('md-6pt')||{}).checked;
@@ -7829,6 +7829,10 @@ function mdFantazy26Toggle(on){
       localStorage.setItem('tm_md_fantazy26','1');
       set('md-teams','10');try{mdSyncSlots();}catch(_){}
       set('md-scoring','0.5');set('md-format','1qb');set('md-rounds','15');set('md-slot','9');
+      // the league's 2026 draft IS an auction (owner's word) - the preset
+      // seats the room in auction mode, $200 Yahoo-standard budgets
+      set('md-dtype','auction');set('md-budget','200');
+      try{mdDtypeSync();}catch(_){}
       var c6=document.getElementById('md-6pt');if(c6)c6.checked=true;
       var ft=document.getElementById('md-finetune');if(ft)ft.open=true; // the 6pt flip stays visible
       if(!localStorage.getItem('tm_md_profiles_fantazy26')){
@@ -7842,9 +7846,10 @@ function mdFantazy26Toggle(on){
       var snap2=null;try{snap2=JSON.parse(localStorage.getItem('tm_md_fantazy26_prev')||'null');}catch(_){}
       if(snap2){
         if(snap2['md-teams']!=null){set('md-teams',snap2['md-teams']);try{mdSyncSlots();}catch(_){}}
-        ['md-scoring','md-format','md-rounds','md-slot'].forEach(function(id){
+        ['md-scoring','md-format','md-rounds','md-slot','md-dtype','md-budget'].forEach(function(id){
           if(snap2[id]!=null)set(id,snap2[id]);
         });
+        try{mdDtypeSync();}catch(_){}
         var c6b=document.getElementById('md-6pt');if(c6b)c6b.checked=!!snap2['md-6pt'];
       }
       localStorage.removeItem('tm_md_fantazy26_prev');
@@ -7939,7 +7944,7 @@ function _mdEnsureProfilesPanel(){
     +'<label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0">'
     +'<input type="checkbox" id="md-fantazy26" class="md-fz26-tick" onchange="mdFantazy26Toggle(this.checked)" style="accent-color:var(--accent-bright);width:18px;height:18px;margin:0;flex:none">'
     +'<span style="min-width:0"><span style="display:block;font-size:13px;font-weight:800;color:var(--text)">Fantazy 2026</span>'
-    +'<span style="display:block;font-size:11.5px;color:var(--muted2);margin-top:2px">Applies every league 2021 setting: 10 teams &middot; Half PPR &middot; 6pt pass TD &middot; 15 rounds &middot; your 10 managers in their seats</span></span>'
+    +'<span style="display:block;font-size:11.5px;color:var(--muted2);margin-top:2px">Applies every league 2021 setting: Auction $200 &middot; 10 teams &middot; Half PPR &middot; 1QB &middot; 6pt pass TD &middot; your 10 managers in their seats</span></span>'
     +'</label></div>');
   ft.insertAdjacentHTML('afterend',
     '<details id="md-profiles" style="margin:-6px 0 16px">'
