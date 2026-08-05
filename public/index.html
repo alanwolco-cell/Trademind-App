@@ -22,14 +22,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Mac advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://macdraft.app/">
-<meta property="og:image" content="https://macdraft.app/og.png?v=2026075819">
+<meta property="og:image" content="https://macdraft.app/og.png?v=2026075920">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Mac advising every pick.">
-<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026075819">
+<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026075920">
 <link rel="canonical" href="https://macdraft.app/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,18 +37,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026075819">
+<link rel="stylesheet" href="/styles.css?v=2026075920">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026075819" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026075920" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026075819">
+<link rel="stylesheet" href="/theme.css?v=2026075920">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026075819">
+<link rel="stylesheet" href="/home.css?v=2026075920">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -60,7 +60,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026075819">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026075920">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -226,6 +226,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <a href="#" id="hero-enter-btn" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Start a mock draft</a>
         <a href="#" class="mk-btnlink" onclick="event.preventDefault();goConnectLeague()">Connect your league</a>
       </div>
+      <p class="mk-fine" style="margin-top:14px">Already drafted? <a href="#" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')" style="color:var(--mk-acc);font-weight:600">Open the Trade Analyzer &rarr;</a></p>
     </div>
   </div>
   <!-- The product itself: a real war room mid-draft - the snake board,
@@ -233,7 +234,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
        the headline already carries the meaning. -->
   <div class="mk-hero-shot mk-reveal" aria-hidden="true">
     <!-- The product film: autoplay, muted, loops - the Apple treatment. -->
-    <video class="mk-film" src="/promo-reel.mp4" poster="/promo-poster.jpg" autoplay muted loop playsinline preload="metadata" width="1080" height="1080"></video>
+    <video class="mk-film" src="/promo-reel.mp4?v=2" poster="/promo-poster.jpg?v=2" autoplay muted loop playsinline preload="metadata" width="1080" height="1080"></video>
   </div>
 </div>
 
@@ -1576,11 +1577,15 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 <div class="mk-sec mk-dark mk-founder" id="home-founder">
   <div class="mk-wrap-narrow">
     <div class="mk-eyebrow-acc mk-reveal">Why Mac Draft exists</div>
-    <p class="mk-founder-lead mk-reveal">Every trade used to start the same way. A tab open on a value chart, another on injury news, a group chat where three people tell me three different things. Twenty minutes later I still decided on gut feeling, and half the time I was wrong.</p>
-    <p class="mk-reveal">The problem was never a lack of information. There is more of it every year. The problem is that none of it knows anything about me.</p>
-    <p class="mk-reveal">A value chart does not know I am one running back from contending. It does not know the manager I am negotiating with just lost his tight end, or that my window closes this season because my core turns thirty. It gives everyone the same number and leaves the hard part, the part that actually decides the trade, entirely to you.</p>
-    <p class="mk-reveal">That is what Mac does instead. It reads your roster, your league, your opponent and your timing, and then it tells you whether to make the trade, when to send it, and how to word it. Not a number. A decision you can act on.</p>
+    <p class="mk-founder-lead mk-reveal">Mac Draft started with a trade I almost blew. One tab on a value chart, another on injury news, a group chat where three friends told me three different things.</p>
+    <p class="mk-reveal">The problem was never a lack of information. The problem is that none of it knew anything about me - my roster, my league, my window.</p>
+    <p class="mk-reveal">So I built the fix. First for trades: Mac reads your roster, your league and the manager across the table before he weighs a single value. Then for the nights leagues are actually won: the draft. Rooms that behave like your friends do, bots with your leaguemates' habits, real auction money, and Mac on the headset for every pick.</p>
+    <p class="mk-reveal">One promise sits above every feature: accuracy. I would rather show you nothing than show you something wrong.</p>
     <p class="mk-founder-close mk-reveal">Life is good when you know the move.</p>
+    <div class="mk-cta-row mk-reveal" style="margin-top:22px">
+      <a href="#" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Start a mock draft</a>
+      <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Try the Trade Analyzer &rarr;</a>
+    </div>
     <div class="mk-founder-sign mk-reveal">Alan Wolcovinsky, founder</div>
   </div>
 </div>
@@ -1660,7 +1665,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026075819"></script>
+<script src="/app.js?v=2026075920"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
