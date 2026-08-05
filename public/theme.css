@@ -528,7 +528,9 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .au-face{width:96px;height:96px;border-radius:14px;object-fit:cover;background:var(--surface2);flex:none}
 .au-name{font-family:var(--font-head);font-size:25px;font-weight:800;line-height:1.15;color:var(--text)}
 .au-sub{font-size:14px;color:var(--muted2);margin-top:4px}
-.au-bidwrap{text-align:right;flex:none}
+.au-bidwrap{text-align:right;flex:0 1 auto;min-width:0;max-width:42%}
+.au-holder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.au-lot-head>div:not(.au-bidwrap){flex:1 1 55%;min-width:0}
 .au-bid-num{font-family:var(--font-head);font-size:52px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--text)}
 .au-bid-num.mine{color:var(--green)}
 .au-holder{font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);margin-top:5px}

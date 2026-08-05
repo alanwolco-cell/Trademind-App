@@ -514,19 +514,16 @@ sandbox.AU.active = false; sandbox.AU.lot = null;
 
 // Mac discreto: default collapsed, face is the toggle, gesture persists
 sandbox.localStorage.removeItem('tm_mac_collapsed');
-check('mac: collapsed by default', sandbox._macCollapsed() === true);
-sandbox.mdMacSay('Take Player X.', '<b>THE-FULL-READ</b>', { face: 'thinking' });
+// OWNER'S RULE (8/2026): Mac does not speak inside a live room at all - his
+// read lives in the player card, opened on demand. mdMacSay is a no-op that
+// keeps the box empty and hidden, whatever any caller passes it.
+sandbox.mdMacSay('essence', '<div>THE-FULL-READ</div>', {});
 const sageEl = document.getElementById('md-sage');
-check('mac: collapsed shows face + one line, not the full read', sageEl.innerHTML.indexOf('mac-face') >= 0 && sageEl.innerHTML.indexOf('Take Player X.') >= 0 && sageEl.innerHTML.indexOf('THE-FULL-READ') < 0);
-sandbox.mdMacToggle();
-check('mac: tap expands the full read', sageEl.innerHTML.indexOf('THE-FULL-READ') >= 0);
-check('mac: gesture persisted', sandbox.localStorage.getItem('tm_mac_collapsed') === '0');
-sandbox.mdMacToggle();
-check('mac: tap again collapses', sageEl.innerHTML.indexOf('THE-FULL-READ') < 0 && sandbox.localStorage.getItem('tm_mac_collapsed') === '1');
-sandbox.mdMacSay('', '<b>QUIET-READ</b>', {});
-check('mac: silent essence = face only (reads still computed)', sageEl.innerHTML.indexOf('mac-line') < 0 && sandbox.MD._mac.full.indexOf('QUIET-READ') >= 0);
-sandbox.mdMacSay('Your target is gone.', '<b>KILL</b>', { urgent: true, face: 'shocked' });
-check('mac: kill-call gets the dot badge while collapsed', sageEl.innerHTML.indexOf('mac-dot') >= 0 && sageEl.innerHTML.indexOf('shocked') >= 0);
+check('mac: silent inside the room (no in-draft voice)',
+  sageEl.innerHTML.indexOf('THE-FULL-READ') < 0 && sageEl.innerHTML === '' && sageEl.style.display === 'none',
+  JSON.stringify({ html: sageEl.innerHTML.slice(0, 40), display: sageEl.style.display }));
+check('mac: the room read still exists for the player card',
+  typeof sandbox.mdDraftRead === 'function');
 // auction advisor gating: irrelevant lot -> silence
 sandbox.AU.active = true; sandbox.AU.inflation = 1;
 sandbox.MD.mine = [{ pos: 'TE', id: 't1', name: 'T', team: 'KC' }];

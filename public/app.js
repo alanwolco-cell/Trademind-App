@@ -9800,7 +9800,8 @@ function mdShowChoices(round){
     };
     pool=pool.slice().sort(_sortCmp);
   }
-  var entries=pool.slice(0,18).map(function(p){return {p:p};});
+  // the whole draftable board, not a shop window of 18
+  var entries=pool.slice(0,200).map(function(p){return {p:p};});
   // Show drafted: taken players rejoin the list in place, attenuated and
   // tagged with who took them - so the run that just happened stays visible.
   if(MD.showTaken&&(MD.picks||[]).length){
@@ -9815,7 +9816,7 @@ function mdShowChoices(round){
     entries.sort(_sortCmp
       ?function(a,b){return _sortCmp(a.p,b.p);}
       :function(a,b){return (b.p.dv||0)-(a.p.dv||0);});
-    entries=entries.slice(0,30);
+    entries=entries.slice(0,200);
   }
   if(!entries.length){document.getElementById('md-choices').innerHTML='<div class="empty-state" style="grid-column:1/-1">No available player matches that search.</div>';mdRenderDraftBar();return;}
   // Mac only speaks when it is actually YOUR pick - in a live room he stays
@@ -10363,6 +10364,14 @@ function _macPaint(pulse){
   }
 }
 function mdMacSay(essence,full,opts){
+  // OWNER'S RULE: Mac does not speak inside a live room. He is one tap away in
+  // any player card (mdDraftRead) - never a voice over your shoulder mid-pick.
+  try{
+    var _b=document.getElementById('md-sage');
+    if(_b){_b.style.display='none';_b.innerHTML='';}
+  }catch(_){}
+  if(true)return;
+  /* legacy body kept for the trade screens that call the same helper */
   opts=opts||{};
   MD._mac={essence:essence||'',full:full||'',urgent:!!opts.urgent,face:opts.face||'thinking',onExpand:opts.onExpand||null};
   _macPaint(!!opts.urgent&&_macCollapsed());
@@ -11641,13 +11650,12 @@ function auRenderLot(){
     +'</div>'
     +'<div class="au-bidwrap">'
     +'<div class="au-bid-num'+(mine?' mine':'')+'">$'+lot.bid+'</div>'
-    +'<div class="au-holder"'+(mine?' style="color:var(--green)"':'')+'>'+holderName+(goingTxt?' · '+goingTxt:'')+'</div>'
+    +'<div class="au-holder"'+(mine?' style="color:var(--green)"':'')+'>'+holderName+'</div>'
     +'</div></div>'
     // the bid clock as a bar + the BIG call: the entry window made visible.
     // Any bid resets it - so this IS "how long do I have to jump in"
     +'<div class="au-going"><span class="'+(lot.going>=1?'on1':'')+'"></span><span class="'+(lot.going>=2?'on2':'')+'"></span><span></span></div>'
     +(lot.going>=1?'<div class="au-goingtxt '+(lot.going>=2?'g2':'g1')+'">'+(lot.going>=2?'GOING TWICE':'GOING ONCE')+'</div>':'')
-    +'<div class="au-mac">'+auSageLine(p,lot)+'</div>'
     // your money, pre-chewed - the #1 auction confusion answered on screen
     +'<div class="au-me">Max offer <b>$'+Math.max(0,myCap)+'</b> · Budget $'+myBudget+' · '+mySlots+' spots</div>'
     +(canBid
