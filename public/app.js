@@ -7797,8 +7797,29 @@ var MD_PROFILE_DESC={
 // owner ("Alan goat") and renders as "You". Seat 6's nickname really carries
 // quotes - typographic ones, because straight quotes are stripped by
 // _mdProfName (they would break the title="" attributes the name lands in).
-var FZ26_NAMES={1:'Adam Misstress',2:'elias y sultan',3:'Kopel',4:'Eli Gabay',
-  5:'Moises Lalo y JZ',6:'jacky “comish”',7:'Bashigger',8:'Moiza y aquaman',10:'Moshe Kahmaji'};
+// Seats renamed to the TEAM names (owner's call, 8/2026) and personalities
+// INFERRED FROM THE REAL 2025 DRAFT the owner supplied (15 rounds, pick by
+// pick). Seat 9 (Falafel) is the owner. mods = per-seat tweaks on top of the
+// base archetype:
+//  - the two zero-RB seats run a SOFTENED fade (~70% of the archetype's) -
+//    owner's read: "maybe that draft just fell that way"; they lean WR, they
+//    don't leave value on the table (the universal slide-rescue still caps
+//    any real faller for every bot).
+//  - Family Feud is robust-RB but "pica rookies mucho": young reach flag.
+var FZ26_SEED_V=2;
+var FZ26_SEATS={
+  1:{name:'Ness',arch:'bpa'},
+  2:{name:'Tyjae Spears',arch:'zerorb',mods:{posAdj:{RB:-290,WR:140,TE:40},eliteAdj:{RB:-170,WR:80}}},
+  3:{name:'THE DREAM TEAM',arch:'robustrb'},
+  4:{name:'SUCK IT',arch:'robustrb'},
+  5:{name:'H Yaazor',arch:'earlyqb'},
+  6:{name:'Real Madrid',arch:'hype'},
+  7:{name:'rana jr',arch:'zerorb',mods:{posAdj:{RB:-290,WR:140,TE:40},eliteAdj:{RB:-170,WR:80}}},
+  8:{name:'Adrian Peterson',arch:'tehunter'},
+  10:{name:'Family Feud ...',arch:'robustrb',mods:{young:1,reachP:0.10}}
+};
+// legacy alias for any straggler references: seat -> name
+var FZ26_NAMES={};Object.keys(FZ26_SEATS).forEach(function(k){FZ26_NAMES[k]=FZ26_SEATS[k].name;});
 function _mdFz26On(){try{return localStorage.getItem('tm_md_fantazy26')==='1';}catch(_){return false;}}
 function _mdProfilesKey(){
   // the preset owns its own bucket: enabling never clobbers the saved
@@ -7835,9 +7856,17 @@ function mdFantazy26Toggle(on){
       try{mdDtypeSync();}catch(_){}
       var c6=document.getElementById('md-6pt');if(c6)c6.checked=true;
       var ft=document.getElementById('md-finetune');if(ft)ft.open=true; // the 6pt flip stays visible
-      if(!localStorage.getItem('tm_md_profiles_fantazy26')){
-        var seed={};
-        Object.keys(FZ26_NAMES).forEach(function(s){seed[s]={name:FZ26_NAMES[s],arch:''};});
+      // versioned seed: reseed when the roster/personality inference changes
+      // (v2 = team names + 2025-draft-derived personalities); user tweaks on
+      // the CURRENT version survive reloads untouched
+      var _cur=null;try{_cur=JSON.parse(localStorage.getItem('tm_md_profiles_fantazy26')||'null');}catch(_){}
+      if(!_cur||_cur._v!==FZ26_SEED_V){
+        var seed={_v:FZ26_SEED_V};
+        Object.keys(FZ26_SEATS).forEach(function(s){
+          var e=FZ26_SEATS[s];
+          seed[s]={name:e.name,arch:e.arch||''};
+          if(e.mods)seed[s].mods=e.mods;
+        });
         localStorage.setItem('tm_md_profiles_fantazy26',JSON.stringify(seed));
       }
       MD._fzSlot=9;
@@ -7899,7 +7928,7 @@ function mdEffectiveProfiles(teams,mySlot){
     var nm=(pr.name!=null?pr.name:(names[ni]||'')).trim();
     ni++;
     if(!nm&&!pr.arch)continue;
-    out[s]={name:nm,arch:pr.arch||'',team:pr.team||''};
+    out[s]={name:nm,arch:pr.arch||'',team:pr.team||'',mods:pr.mods||null};
   }
   return out;
 }
@@ -7909,6 +7938,9 @@ function mdProfileSet(seat,field,val){
   var o=mdGetProfiles();
   o[seat]=o[seat]||{};
   o[seat][field]=field==='name'?_mdProfName(val):val;
+  // a hand-picked personality is a clean statement: drop any inferred mods
+  // (the softened fades / rookie flags from the 2025-draft seeding)
+  if(field==='arch')delete o[seat].mods;
   _mdProfilesSave(o);
   if(field==='arch')mdRenderProfiles();  // homer shows/hides its team select
 }
@@ -8271,6 +8303,15 @@ async function _startMockDraftRun(){
         MD.bots[seat].young=_pa.young;MD.bots[seat].rescue=_pa.rescue;
         MD.bots[seat].teCap=_pa.teCap||1;
         MD.bots[seat].homeTeam=_pa.homer?(pr.team||HOMER_TEAMS[Math.floor(Math.random()*HOMER_TEAMS.length)]):null;
+        // per-seat mods on top of the archetype (real-league inference: a
+        // softened zero-RB fade, a rookie reach flag) - replace, not merge,
+        // so a mod is a complete statement of that dimension
+        if(pr.mods){
+          if(pr.mods.posAdj)MD.bots[seat].posAdj=pr.mods.posAdj;
+          if(pr.mods.eliteAdj)MD.bots[seat].eliteAdj=pr.mods.eliteAdj;
+          if(pr.mods.reachP!=null)MD.bots[seat].reachP=pr.mods.reachP;
+          if(pr.mods.young!=null)MD.bots[seat].young=pr.mods.young;
+        }
       }
     });
   }catch(_){}
