@@ -7820,6 +7820,12 @@ var FZ26_SEATS={
 };
 // legacy alias for any straggler references: seat -> name
 var FZ26_NAMES={};Object.keys(FZ26_SEATS).forEach(function(k){FZ26_NAMES[k]=FZ26_SEATS[k].name;});
+// FZ26 auction market constants (owner-calibrated, see auBotMax):
+var FZ26_RB_PREM_ELITE=1.18; // "Bijan $63 AAV se va 74-75" => ~1.18x on elite RBs
+var FZ26_RB_PREM=1.10;       // the same lean on the rest of the RB board, softer
+var FZ26_RB_ELITE_AAV=40;    // elite line for the premium: top-tier RB money
+var FZ26_BID_CAP=1.25;       // hard ceiling: "RBs go ~15% over, not 30" - kills premium x inflation compounding
+var FZ26_CAP_FLOOR=5;        // stickers under $5 are endgame money-dumps, not market prices - exempt from the ceiling
 function _mdFz26On(){try{return localStorage.getItem('tm_md_fantazy26')==='1';}catch(_){return false;}}
 function _mdProfilesKey(){
   // the preset owns its own bucket: enabling never clobbers the saved
@@ -7856,19 +7862,10 @@ function mdFantazy26Toggle(on){
       try{mdDtypeSync();}catch(_){}
       var c6=document.getElementById('md-6pt');if(c6)c6.checked=true;
       var ft=document.getElementById('md-finetune');if(ft)ft.open=true; // the 6pt flip stays visible
-      // versioned seed: reseed when the roster/personality inference changes
-      // (v2 = team names + 2025-draft-derived personalities); user tweaks on
-      // the CURRENT version survive reloads untouched
-      var _cur=null;try{_cur=JSON.parse(localStorage.getItem('tm_md_profiles_fantazy26')||'null');}catch(_){}
-      if(!_cur||_cur._v!==FZ26_SEED_V){
-        var seed={_v:FZ26_SEED_V};
-        Object.keys(FZ26_SEATS).forEach(function(s){
-          var e=FZ26_SEATS[s];
-          seed[s]={name:e.name,arch:e.arch||''};
-          if(e.mods)seed[s].mods=e.mods;
-        });
-        localStorage.setItem('tm_md_profiles_fantazy26',JSON.stringify(seed));
-      }
+      // versioned seed - enforced at the READ point (_mdFz26Bucket), because
+      // a device whose toggle was already ON never re-runs this branch; the
+      // call here just makes the first enable eager instead of lazy
+      try{_mdFz26Bucket();}catch(_){}
       MD._fzSlot=9;
     }else{
       localStorage.removeItem('tm_md_fantazy26');
@@ -7900,8 +7897,31 @@ function _mdFz26SeatMoved(now){
   }
   if(now)MD._fzSlot=now;
 }
+// The fz26 bucket, version-checked AT THE READ POINT: a device whose toggle
+// was already ON when the seed evolved never re-runs mdFantazy26Toggle, so a
+// toggle-time-only check left v1 buckets (old owner names, no _v) alive
+// forever - the owner hit exactly that. A stale or missing bucket reseeds
+// from FZ26_SEATS, OVERWRITING v1 personalities tied to the old names (the
+// correct call: they described seats that no longer exist); tweaks made on
+// the CURRENT version pass through untouched. Idempotent, and it costs the
+// one JSON.parse every read already paid.
+function _mdFz26Bucket(){
+  var cur=null;try{cur=JSON.parse(localStorage.getItem('tm_md_profiles_fantazy26')||'null');}catch(_){}
+  if(cur&&cur._v===FZ26_SEED_V)return cur;
+  var seed={_v:FZ26_SEED_V};
+  Object.keys(FZ26_SEATS).forEach(function(s){
+    var e=FZ26_SEATS[s];
+    seed[s]={name:e.name,arch:e.arch||''};
+    if(e.mods)seed[s].mods=e.mods;
+  });
+  try{localStorage.setItem('tm_md_profiles_fantazy26',JSON.stringify(seed));}catch(_){}
+  return seed;
+}
 function mdGetProfiles(){
-  try{return JSON.parse(localStorage.getItem(_mdProfilesKey())||'null')||{};}catch(_){return {};}
+  try{
+    if(_mdFz26On())return _mdFz26Bucket();
+    return JSON.parse(localStorage.getItem(_mdProfilesKey())||'null')||{};
+  }catch(_){return {};}
 }
 function _mdProfilesSave(o){try{localStorage.setItem(_mdProfilesKey(),JSON.stringify(o));}catch(_){}}
 // Display names of the connected league's members, in league order, minus the
@@ -8244,6 +8264,7 @@ async function _startMockDraftRun(){
   // its pending auAdvance/auBidStep beats keep firing into the new room's
   // state and the auction advances twice per lot
   if(AU.stepT)clearTimeout(AU.stepT);
+  if(AU.pillT){clearInterval(AU.pillT);AU.pillT=null;}
   AU.active=false;AU.lot=null;
   await ensurePlayersLoaded();
   if(!Object.keys(ktcById).length)await fetchKtcValues(1,1,false);
@@ -8562,8 +8583,9 @@ async function _startMockDraftRun(){
   // and sageLive is keyed by pickIdx alone - both look valid and are not)
   MD.selChoice=null;MD.sageLive=null;MD.lastRec=null;MD.lastRecWhy='';
   // adaptive-advisor once-per-draft guards: each roster-shape callout and the
-  // one history-tendency mention reset with every new room
-  MD._shapeSaid={};MD._histSaid=0;
+  // one history-tendency mention reset with every new room - and Mac's face
+  // starts each room with nothing to say yet
+  MD._shapeSaid={};MD._histSaid=0;MD._mac=null;
   MD.initialRanks={};MD.pool.forEach(function(p,i){MD.initialRanks[p.id]=i+1;});
   document.querySelectorAll('.md-pos-chip').forEach(function(c){c.classList.toggle('active',!c.dataset.pos);});
   document.querySelectorAll('.md-flag-chip').forEach(function(c){c.classList.remove('active');});
@@ -8604,6 +8626,15 @@ async function _startMockDraftRun(){
   var _auw=document.getElementById('au-wrap');if(_auw)_auw.style.display='none';
   var _dbw=document.getElementById('md-draftboard');if(_dbw)_dbw.style.display='';
   var _ubS=document.getElementById('md-undo-btn');if(_ubS)_ubS.style.display='';  // back from an auction room
+  // ...and the board-bar controls the auction had shed come back for snake,
+  // along with every node the 3-zone layout borrowed
+  try{
+    _auLayoutOff();
+    var _vtS=document.querySelector('.md-view-btn');if(_vtS&&_vtS.parentElement)_vtS.parentElement.style.display='';
+    var _clS=document.getElementById('md-clock-live');if(_clS)_clS.style.display='';
+    var _ndS=document.getElementById('md-needs');if(_ndS)_ndS.style.display='';
+    var _avS=document.getElementById('md-available');if(_avS)_avS.style.display='';
+  }catch(_){}
   mdAdvance();
 }
 // Faces: players get their headshot, defenses get their team logo
@@ -8649,7 +8680,41 @@ function mdAdvance(){
       var _rp=pk.p.pos;if(_rp==='K'||_rp==='DEF')return;
       runPos[_rp]=(runPos[_rp]||0)+1;
     });
+    // ── STARTER-FILL GATE ── the same hard-guarantee pattern as the K/DEF
+    // forced fill (which has never produced a miss): real rooms always field
+    // a LEGAL lineup - personality plays freely inside that constraint. The
+    // deep audit (40 live rooms x 9 bots) found ~28% of bots finishing
+    // illegal (QB0, RB1, WR1...) because a capped archetype fade (-620dv)
+    // out-muscles the +30 need nudge every single round. When the remaining
+    // skill rounds (minus the final-round K/DEF reservations) are down to
+    // exactly the open starter holes, the bot may ONLY pick among the
+    // positions it still owes - best score within that subset, everything
+    // else about the scoring unchanged. By construction this cannot trigger
+    // before ~R9 of 15 (6 holes max), so early personality is untouched. A
+    // user's explicit roster target overrides the default minimum (RB:1 set
+    // on purpose IS the law), and a context-named player keeps his round rule
+    // (user data outranks the gate, documented precedence).
+    var _req={QB:MD.sf?2:1,RB:2,WR:2,TE:1};
+    Object.keys(_req).forEach(function(ps){
+      if(MD.rosterTarget&&MD.rosterTarget[ps]!=null)_req[ps]=Math.min(_req[ps],MD.rosterTarget[ps]);
+    });
+    var _gapPos={},_gapN=0;
+    Object.keys(_req).forEach(function(ps){
+      var _g2=_req[ps]-(ros[ps]||0);
+      if(_g2>0){_gapPos[ps]=1;_gapN+=_g2;}
+    });
+    var _kdReserved=((!MD.noK&&!(ros.K>=1))?1:0)+((!MD.noD&&!(ros.DEF>=1))?1:0);
+    var _gateOn=_gapN>0&&((MD.rounds-round+1)-_kdReserved)<=_gapN;
     var cands=MD.pool.slice(0,24);
+    // the gate must always have someone to point at: pull the best player at
+    // each owed position into the scan window (same pattern as ctxForce)
+    if(_gateOn){
+      Object.keys(_gapPos).forEach(function(ps){
+        for(var pg=0;pg<MD.pool.length;pg++){
+          if(MD.pool[pg].pos===ps){if(cands.indexOf(MD.pool[pg])<0)cands.push(MD.pool[pg]);break;}
+        }
+      });
+    }
     // A round-pinned player who is DUE must be scored even when he sits below
     // the scan window - the named rule is a guarantee, not a suggestion
     try{
@@ -8665,6 +8730,9 @@ function mdAdvance(){
       });
     }catch(_){}
     cands.forEach(function(p){
+      // gate active: only the owed starter positions may score (a context-
+      // named player keeps his rule - user data outranks the gate)
+      if(_gateOn&&!_gapPos[p.pos]&&!(MD.ctxForce&&MD.ctxForce[_mdNormName(p.name)]))return;
       var have=ros[p.pos]||0;
       // Rounds 1-2 sanity clamp: no bot reaches more than ~half a round in R1
       // (6 picks) or ~a round in R2 (10) past his OWN board's ADP - no real
@@ -8795,7 +8863,8 @@ function mdAdvance(){
     // early - never a fourth-rounder in the second. Candidates must sit
     // 5-16 picks past the current pick on the ADP board.
     var bot=MD.bots&&MD.bots[slot];
-    if(bot&&bot.reachP&&round>=3&&round<=MD.rounds-2&&Math.random()<bot.reachP){
+    // no random flyers while the gate is closing starter holes
+    if(bot&&bot.reachP&&!_gateOn&&round>=3&&round<=MD.rounds-2&&Math.random()<bot.reachP){
       var _ov=MD.pickIdx+1;
       var _ros2=MD.aiRosters[slot]||{};
       var sleepers=MD.pool.filter(function(x){
@@ -9663,14 +9732,13 @@ function mdShowChoices(round){
     }catch(_){}
     rec=r.rec;MD.lastRec=rec;MD.lastRecWhy=r.why;
     var openers=['I am taking','My pick is','Lock in','Give me','No hesitation:'];
-    var sage=document.getElementById('md-sage');
-    sage.style.display='block';
-    // Rec box stays SHORT: face, the call, one why line, the ask button. The
-    // pros/cons live in the pick bar when you actually weigh a player - both
-    // at once made the screen shout.
-    sage.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start">'
-      +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+rec.id+'.jpg" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-bright)" onerror="this.style.display=\'none\'">'
-      +'<div style="min-width:0;flex:1"><div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Mac · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
+    // The FULL read (face, call, why, the on-demand live ask) is always
+    // computed; Mac's face decides how much of it shows. The sageLive cache
+    // re-display runs on expand, since #md-sage-live only exists then.
+    var _macFull='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Mac · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
+      +'<div style="display:flex;gap:10px;align-items:flex-start;margin-top:2px">'
+      +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+rec.id+'.jpg" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-bright);flex:none" onerror="this.style.display=\'none\'">'
+      +'<div style="min-width:0;flex:1">'
       +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)">'+openers[(MD.pickIdx*7)%openers.length]+' '+rec.name+'</div>'
       +'<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-top:4px">'+r.why+'</div>'
       // The full Mac call is user-initiated only: one API request per click,
@@ -9678,10 +9746,36 @@ function mdShowChoices(round){
       // this box for the same pick via the MD.sageLive cache.
       +'<div id="md-sage-live" style="display:none"></div>'
       +'</div></div>';
-    if(!MP.active&&MD.sageLive&&MD.sageLive.pick===MD.pickIdx){
-      var _slh=document.getElementById('md-sage-live');
-      if(_slh){_slh.style.display='block';_slh.innerHTML=_mdSageLiveHtml(MD.sageLive.text);}
-    }
+    var _macShowLive=function(){
+      if(!MP.active&&MD.sageLive&&MD.sageLive.pick===MD.pickIdx){
+        var _slh=document.getElementById('md-sage-live');
+        if(_slh){_slh.style.display='block';_slh.innerHTML=_mdSageLiveHtml(MD.sageLive.text);}
+      }
+    };
+    // EDITORIAL BAR (owner: "que se meta cuando sea necesario"): the first
+    // two of your picks and the obvious ones (the top of the board going
+    // about where the market says) get a silent face - the read is a tap
+    // away, not in your face. A genuine kill-call (your queued target about
+    // to vanish behind the archetype read) overrides everything with the one
+    // line that matters, plus the collapsed-face pulse + dot.
+    var _essence='Take '+rec.name+'.';
+    var _face='thinking';var _urgent=false;
+    try{
+      var _early=MD.mine.length<2;
+      var _obvious=rec===recPool[0]&&rec.adp&&Math.abs((MD.pickIdx+1)-rec.adp)<=3;
+      if(_early||_obvious)_essence='';
+      if(/last man in this|cliff is right behind/.test(r.why)){_essence='Take '+rec.name+' - last man in his tier.';_face='scrutiny';}
+      var _q0=(MD.queue||[])[0];
+      if(_q0){
+        var _qp=MD.pool.find(function(x){return x.id===_q0;});
+        if(_qp&&MD.pool.filter(function(x){return x.pos===_qp.pos;}).slice(0,2).indexOf(_qp)>=0){
+          var _qt=mdThreatRead(_qp.pos);
+          if(_qt.gone>=0.65){_essence=_qp.name+' won\'t survive the turn - your move.';_face='shocked';_urgent=true;}
+        }
+      }
+    }catch(_){}
+    mdMacSay(_essence,_macFull,{face:_face,urgent:_urgent,onExpand:_macShowLive});
+    _macShowLive(); // no-op while collapsed (the host div is absent)
   }
   var box=document.getElementById('md-choices');
   box.innerHTML='';
@@ -9690,7 +9784,9 @@ function mdShowChoices(round){
   // table. The "All" grid keeps its cards and shows PROJ inline.
   var tbl=!!(_proj&&pf);
   box.style.gridTemplateColumns=tbl?'1fr':'repeat(auto-fill,minmax(170px,1fr))';
-  var _cols=tbl?(AU.active?[{k:'aav',l:'AAV'}]:[]).concat([{k:'proj',l:'Proj'}]).concat(mdSplitCols(pf)):[];
+  // auction list stays LIGHT (owner: face, name, pos, AAV - period): the
+  // full projection table belongs to snake's shopping flow, not a bid war
+  var _cols=tbl?(AU.active?[{k:'aav',l:'AAV'}]:[{k:'proj',l:'Proj'}].concat(mdSplitCols(pf))):[];
   if(tbl){
     var hd=document.createElement('div');
     hd.className='md-tbl-head';
@@ -9757,15 +9853,19 @@ function mdShowChoices(round){
       :'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
       +'<span class="md-ch-sel" title="'+(AU.active?'Nominate ':'Draft ')+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+    // auction rows read like a price list, not a scouting table: face, name,
+    // pos, AAV - the ADP/bye/proj/tag layers are snake's shopping detail
+    var _lite=AU.active&&!isTaken;
     d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
-      +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ MAC</span>':'')+'</div>'
-      +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
+      +'<div style="min-width:0;flex:1"><div style="font-size:'+(AU.active?'13px':'12px')+';font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ MAC</span>':'')+'</div>'
+      +'<div style="font-size:'+(AU.active?'12px':'10px')+';color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
       +(isTaken?' · <span style="white-space:nowrap">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' · '+en.by+'</span>'
+        :_lite?''
         :(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':'')))
-      +(_bw?' · <span title="'+(_bwHot?'You already have '+_bwN+' players on this bye':'Bye week')+'" style="white-space:nowrap'+(_bwHot?';color:var(--red);font-weight:700':'')+'">BYE&nbsp;'+_bw+'</span>':'')
-      +(!tbl&&AU.active&&!isTaken?' · <span title="Auction value for this room" style="color:var(--muted2);font-weight:700;white-space:nowrap">$'+auValue(p)+'</span>':'')
-      +(!tbl&&_pv!=null?' · <span title="Projected season points" style="color:var(--muted2);font-weight:700;white-space:nowrap">PROJ&nbsp;'+_mdFmtStat(_pv)+'</span>':'')
-      +_tagsHtml
+      +(_bw&&!_lite?' · <span title="'+(_bwHot?'You already have '+_bwN+' players on this bye':'Bye week')+'" style="white-space:nowrap'+(_bwHot?';color:var(--red);font-weight:700':'')+'">BYE&nbsp;'+_bw+'</span>':'')
+      +(!tbl&&_lite?' · <span title="Auction value for this room" style="color:var(--text);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums">$'+auValue(p)+'</span>':'')
+      +(!tbl&&!_lite&&_pv!=null?' · <span title="Projected season points" style="color:var(--muted2);font-weight:700;white-space:nowrap">PROJ&nbsp;'+_mdFmtStat(_pv)+'</span>':'')
+      +(_lite?'':_tagsHtml)
       +'</div></div>'
       +statsHtml
       +ctrlHtml;
@@ -10031,7 +10131,13 @@ function mdUserPick(p){
     }
     take+=noteBit;
     var sg=document.getElementById('md-sage');
-    if(sg){sg.style.display='block';sg.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Mac on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>';}
+    if(sg){
+      // Mac's reaction rides his discreet face: one-sentence essence when
+      // collapsed (steals cheer, reaches wince), the full take on tap
+      var _rFace=/^Steal|^Exactly what I wanted/.test(take)?'excited':/^A reach/.test(take)?'skeptical':'thinking';
+      var _rEss=(take.split('. ')[0]||'').slice(0,120);if(_rEss&&!/[.!]$/.test(_rEss))_rEss+='.';
+      mdMacSay(_rEss,'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Mac on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>',{face:_rFace});
+    }
   }catch(_){}
   // Advance first, then render - same rule as the bot path: the board's
   // ON THE CLOCK box reads MD.order[MD.pickIdx] and must see the NEXT picker.
@@ -10079,15 +10185,54 @@ function mdRestartDraft(){
 function mdBackToSetup(){
   mdStopClock();
   // an auction keeps its own timer chain alive - kill it or the room keeps
-  // selling players on the hidden board
+  // selling players on the hidden board; the 3-zone layout returns its
+  // borrowed nodes to the snake board on the way out
   if(AU.stepT)clearTimeout(AU.stepT);
+  if(AU.pillT){clearInterval(AU.pillT);AU.pillT=null;}
   AU.active=false;AU.lot=null;
+  try{_auLayoutOff();var _avB=document.getElementById('md-available');if(_avB)_avB.style.display='';}catch(_){}
   var b=document.getElementById('md-board');
   if(b){b.style.display='none';b.dataset.live='0';}
   var s=document.getElementById('md-setup');if(s)s.style.display='block';
   var pk=document.getElementById('md-player-peek');if(pk)pk.style.display='none';
   var sg=document.getElementById('md-sage');if(sg)sg.style.display='none';
   try{mdShowSection('solo');}catch(_){}
+}
+// ── Mac, discreet: his face IS the toggle ───────────────────────────────────
+// Collapsed by default: a small face + at most ONE short line when he has
+// something to say. Tapping the face expands the full read; tapping again
+// collapses. No extra buttons, no setting - the gesture persists on the
+// device (tm_mac_collapsed). He never auto-expands; the single exception is
+// a subtle one-time pulse + dot when a genuine kill-call lands while he is
+// collapsed (your queued target about to disappear). Reads are COMPUTED the
+// same either way - expanding just reveals them.
+function _macCollapsed(){try{return localStorage.getItem('tm_mac_collapsed')!=='0';}catch(_){return true;}}
+function mdMacToggle(){
+  try{localStorage.setItem('tm_mac_collapsed',_macCollapsed()?'0':'1');}catch(_){}
+  _macPaint(false);
+}
+function _macPaint(pulse){
+  var sg=document.getElementById('md-sage');if(!sg)return;
+  var st=MD._mac;
+  if(!st){sg.style.display='none';return;}
+  sg.style.display='block';
+  var face='/sage/sage-'+(st.face||'thinking')+'-64.png';
+  if(_macCollapsed()){
+    sg.innerHTML='<div class="mac-mini"><span class="mac-wrap"><img class="mac-face'+(pulse?' pulse':'')+'" src="'+face+'" alt="Mac" title="Mac\'s read - tap to expand" onclick="mdMacToggle()" onerror="this.style.visibility=\'hidden\'">'
+      +(st.urgent?'<span class="mac-dot"></span>':'')+'</span>'
+      +(st.essence?'<span class="mac-line">'+st.essence+'</span>':'')
+      +'</div>';
+  }else{
+    sg.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start">'
+      +'<span class="mac-wrap" style="flex:none"><img class="mac-face" src="'+face+'" alt="Mac" title="Mac\'s read - tap to collapse" onclick="mdMacToggle()" onerror="this.style.visibility=\'hidden\'"></span>'
+      +'<div style="min-width:0;flex:1">'+(st.full||'')+'</div></div>';
+    if(st.onExpand)try{st.onExpand();}catch(_){}
+  }
+}
+function mdMacSay(essence,full,opts){
+  opts=opts||{};
+  MD._mac={essence:essence||'',full:full||'',urgent:!!opts.urgent,face:opts.face||'thinking',onExpand:opts.onExpand||null};
+  _macPaint(!!opts.urgent&&_macCollapsed());
 }
 // ── Adaptive room + self reads (display layer ONLY - the bots' real picking
 // lives in mdAdvance and none of this feeds back into it) ───────────────────
@@ -10174,6 +10319,21 @@ function mdRenderDraftBar(){
   if(!MD.selChoice||!MD.onClock){bar.style.display='none';return;}
   var p=MD.selChoice;
   var _nmE=p.name.replace(/'/g,"\\'");
+  // AUCTION: the bar is a nomination CONFIRM, nothing more - face, name, the
+  // price facts, one giant "Nominate for $1". The snake bar's ADP-availability
+  // and narrative layers talk about pick order, which means nothing here.
+  if(AU.active){
+    var _w2=null;try{_w2=auMyWorth(p).worth;}catch(_){}
+    bar.style.display='block';
+    bar.innerHTML='<div style="display:flex;align-items:center;gap:12px">'
+      +'<img src="'+mdFaceUrl(p)+'" style="width:44px;height:44px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain':'')+'" onerror="this.style.visibility=\'hidden\'">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
+      +'<div style="font-size:13.5px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.pos+' · '+(p.team||'FA')+' · AAV $'+auValue(p)+(_w2!=null?' · worth up to $'+_w2+' for you':'')+'</div></div>'
+      +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
+      +'<button class="btn-load" style="width:auto;padding:14px 24px;font-size:15px;font-weight:800" onclick="mdConfirmDraft()">Nominate for $1</button>'
+      +'</div>';
+    return;
+  }
   // ONE quiet meta line under the name: ADP, tier word, direction, VORP word.
   // Everything deeper (full stats, news, trades) lives one click away on the
   // player card - the bar must read at a glance, not compete with the board.
@@ -10330,6 +10490,22 @@ function mdRenderDraftBar(){
 // top (teams x rounds) players absorb exactly the room's spendable money.
 // That normalization plus live inflation is the whole economics of the room.
 var AU={active:false};
+// ── auction pacing (render/timer layer ONLY - the decision beat _auBidOnce
+// never reads these, so the harness and the Sim paths are untouched by them).
+// Market heuristic: HUMAN LEGIBILITY - the owner lost count at ~0.7s beats;
+// a raise landing every 1.4-2.2s reads like a real room calling numbers, and
+// the entry window (silence -> GOING ONCE -> GOING TWICE -> SOLD) tells you
+// exactly how long you have. The fast path for the impatient is Sim.
+var AU_PACE={
+  BID_MIN:1400,BID_MAX:2200, // bot-vs-bot: a raise lands every 1.4-2.2s (randomized: human cadence)
+  GOING_2:2000,              // GOING ONCE -> GOING TWICE
+  HAMMER:1500,               // GOING TWICE -> SOLD
+  NEXT_LOT:1600              // SOLD -> next nomination (the splash gets its moment)
+};
+function _auBeatMs(){return AU_PACE.BID_MIN+Math.random()*(AU_PACE.BID_MAX-AU_PACE.BID_MIN);}
+// harness/QA hook: the calibration runs preset window._AU_FAST and every wait
+// collapses to a tick - pacing must never slow (or alter) a simulation
+function _auDelay(ms){return window._AU_FAST?1:ms;}
 async function mdLoadAav(){
   if(window._mdAav!==undefined)return;
   window._mdAav=null;
@@ -10423,7 +10599,25 @@ function auBotMax(slot,p){
   if(sl<=0)return 0;
   var need=auNeed(ros,p.pos,sl);
   if(need<=0)return 0;
-  var v=auValue(p)*AU.inflation*need;
+  var v;
+  // FZ26 RB MARKET PREMIUM (owner-observed: "en la liga de Fantazy la gente
+  // paga más por RBs - un Bijan se va 15% arriba"; calibrated on his real
+  // number: Bijan $63 AAV sells $74-75 in his room = ~1.18x; the 2025 draft
+  // evidence agrees, 3 of 9 managers robust-RB). Bots' WILLINGNESS only -
+  // the AAV shown to the user stays the data, the user's own max/grades
+  // never wear the premium, and live inflation redistributes the rest of
+  // the money by itself (RBs sucking dollars makes WRs cheaper, no manual
+  // compensation). The premium never COMPOUNDS with UPWARD inflation: take
+  // the larger force, not the product; a deflated room still discounts RBs
+  // (a late Bijan in a broke room going under AAV is real).
+  var _fzRB=_mdFz26On()&&p.pos==='RB';
+  if(_fzRB){
+    var _prem=auValue(p)>=FZ26_RB_ELITE_AAV?FZ26_RB_PREM_ELITE:FZ26_RB_PREM;
+    var _f=AU.inflation>=1?Math.max(_prem,AU.inflation):_prem*AU.inflation;
+    v=auValue(p)*_f*need;
+  }else{
+    v=auValue(p)*AU.inflation*need;
+  }
   var b=AU.bots[slot]||{};
   var elite=auValue(p)>=AU.eliteLine;
   if(b.k==='stars')v*=elite?1.25:0.8;      // stars-and-scraps: pay up top, $1 out
@@ -10435,6 +10629,11 @@ function auBotMax(slot,p){
     var _hl=0;for(var s4=1;s4<=MD.teams;s4++)_hl+=AU.slotsLeft[s4];
     if(_hl>MD.teams*MD.rounds/2)v*=0.92;
   }
+  // FZ26 RB doctrine, extended to the ARCHETYPE step: the premium IS the
+  // room's appetite for the position - a stars build's elite multiplier
+  // never stacks on top of it (max of the forces, not the product; first
+  // calibration run measured every elite pinned at the ceiling, mean 1.21)
+  if(_fzRB)v=Math.min(v,auValue(p)*(auValue(p)>=FZ26_RB_ELITE_AAV?FZ26_RB_PREM_ELITE:FZ26_RB_PREM)*Math.max(need,0.001));
   // price enforcer bids other people's players up in auBidStep, not here
   // spend-it-or-lose-it: an unspent dollar is worth NOTHING when the last lot
   // closes. A bot sitting on more spare money per open slot than the sticker
@@ -10472,8 +10671,13 @@ function auBotMax(slot,p){
   var roomSpent=0;for(var s5=1;s5<=MD.teams;s5++)roomSpent+=MD.budget-AU.budgets[s5];
   var roomMoneyFrac=roomSpent/(MD.teams*MD.budget);
   var mySpentFrac=1-AU.budgets[slot]/MD.budget;
-  if(mySpentFrac<roomMoneyFrac-0.30)v*=1.5;
-  else if(mySpentFrac<roomMoneyFrac-0.15)v*=1.25;
+  // FZ26 RB lots sit the accelerator out (same max-not-product doctrine):
+  // the premium already IS the seat's eagerness at the position - stacking
+  // nervous-money x1.5 on top pinned every elite at the ceiling (measured)
+  if(!_fzRB){
+    if(mySpentFrac<roomMoneyFrac-0.30)v*=1.5;
+    else if(mySpentFrac<roomMoneyFrac-0.15)v*=1.25;
+  }
   // hard budget law: every remaining slot still needs its $1
   var cap=AU.budgets[slot]-(sl-1);
   // the end-of-auction blowout: once the money left clearly exceeds the value
@@ -10482,6 +10686,15 @@ function auBotMax(slot,p){
   // had it", the close of every live auction). Without this, seats that
   // filled cheap exited the market holding $50-110 (harness invariant b).
   if(AU.inflation>=1.1&&need>=0.5)v=Math.max(v,cap*0.9);
+  // FZ26 HARD CEILING, applied LAST so nothing stacks past it (owner: "RBs
+  // go ~15% over, not 30" -> 1.25x cap, calibrated on Bijan $63 -> $74-75).
+  // The first draft capped the value phase only and the money-pressure
+  // stages (accelerator x1.5, endgame blowout) sailed straight through it -
+  // harness (j2) measured p95 1.44. Placed here every bot's max on every
+  // PRICED lot is bounded. The $1-4 closers stay exempt (FZ26_CAP_FLOOR):
+  // those prices are money-dumps, not market prices - capping them at
+  // 1.25 x $2 strands the room's leftover cash the way no live auction ends.
+  if(_mdFz26On()&&auValue(p)>=FZ26_CAP_FLOOR)v=Math.min(v,Math.floor(auValue(p)*FZ26_BID_CAP)); // floor: round() re-broke the ratio by half a dollar
   return Math.max(need>0?1:0,Math.min(Math.round(v),cap));
 }
 // nomination strategy: mostly nominate the best player you DON'T want so the
@@ -10512,6 +10725,333 @@ function auBotNominate(slot){
   var want=byV.filter(function(p){return auNeed(ros,p.pos,sl)>=0.8&&auValue(p)<=Math.max(3,AU.budgets[slot]-(sl-1));});
   var pick=(Math.random()<0.6&&drain)?drain:(want[Math.floor(Math.random()*Math.min(6,want.length))]||drain||byV[0]);
   return pick||MD.pool[0];
+}
+// ── The 3-zone auction skeleton (owner-approved Yahoo architecture, our
+// skin): LEFT = last sale + the lot card + compact budgets, always visible;
+// CENTER = research tabs (Players / Board / History) hosting the existing
+// available-players block; RIGHT = Queue / My team tabs + the autodraft
+// toggle. Built by MOVING the live nodes (never cloning - ids, handlers and
+// state ride along); everything borrowed from the snake board is remembered
+// in window._auMoved and returned by _auLayoutOff. On a stubbed DOM (the
+// harness) insertAdjacentHTML is absent and the whole layout no-ops.
+function _auLayoutOn(){
+  var wrap=document.getElementById('au-wrap');
+  if(!wrap||!wrap.insertAdjacentHTML)return;
+  if(!document.getElementById('au-zones')){
+    wrap.insertAdjacentHTML('afterbegin',
+      // phone chrome (hidden on desktop by CSS): the room header - X to
+      // leave, the pacing pill in the middle ("$48 · going once…")
+      '<div id="au-mhead"><button class="au-x" onclick="if(confirm(\'Leave the auction room?\'))mdBackToSetup()" title="Leave the room">&times;</button>'
+      +'<span class="au-mcol"><span id="au-mnum" class="au-mnum"></span><span id="au-mpill" class="au-mpill"></span></span><span style="width:34px;flex:none"></span></div>'
+      +'<div id="au-zones">'
+      +'<div id="au-z-left"><div id="au-last" style="display:none"></div></div>'
+      +'<div id="au-z-center"><div class="au-tabs" id="au-tabs">'
+      +'<button class="au-tab on" data-t="players" onclick="auSetTab(\'players\')">Players</button>'
+      +'<button class="au-tab" data-t="board" onclick="auSetTab(\'board\')">Board</button>'
+      +'<button class="au-tab" data-t="history" onclick="auSetTab(\'history\')">Results</button>'
+      +'</div><div id="au-board" style="display:none"></div><div id="au-results" style="display:none"></div></div>'
+      +'<div id="au-z-right"><div class="au-tabs" id="au-rtabs">'
+      +'<button class="au-tab on" data-t="queue" onclick="auSetRTab(\'queue\')">Queue</button>'
+      +'<button class="au-tab" data-t="team" onclick="auSetRTab(\'team\')">Team</button>'
+      +'<button class="au-tab" data-t="feed" onclick="auSetRTab(\'feed\')">Picks</button>'
+      +'</div><div id="au-rq"><div id="au-rq-hint" style="font-size:13px;color:var(--muted);padding:8px 2px">Star players with the + circle - your queue lands here, and Sim stops when one hits the block.</div></div>'
+      +'<div id="au-myteam" style="display:none"></div><div id="au-rfeed" style="display:none"></div><div id="au-rauto"></div></div>'
+      +'</div>'
+      // phone room tabs (fixed bottom, CSS-gated): Players / Queue / Board /
+      // Results - they drive the same zone tabs and scroll the zone into view
+      +'<div id="au-mtabs">'
+      +'<button onclick="auSetTab(\'players\');_auMScroll(\'au-z-center\')">Players</button>'
+      +'<button onclick="auSetRTab(\'queue\');_auMScroll(\'au-z-right\')">Queue</button>'
+      +'<button onclick="auSetTab(\'board\');_auMScroll(\'au-z-center\')">Board</button>'
+      +'<button onclick="auSetTab(\'history\');_auMScroll(\'au-z-center\')">Results</button>'
+      +'</div>');
+  }
+  var L=document.getElementById('au-z-left'),C=document.getElementById('au-z-center'),R=document.getElementById('au-rq');
+  // native au-wrap children take their zones
+  var lot=document.getElementById('au-lot');if(lot&&L)L.appendChild(lot);
+  var bud=document.getElementById('au-budgets');if(bud&&L)L.appendChild(bud);
+  var sw=document.getElementById('au-sold-wrap');if(sw&&C)C.appendChild(sw);
+  // borrowed from the snake board, returned on exit
+  window._auMoved=window._auMoved||[];
+  var borrow=function(el,host){
+    if(!el||!host||!el.parentElement)return;
+    if(window._auMoved.some(function(m){return m.el===el;})){host.appendChild(el);return;}
+    window._auMoved.push({el:el,parent:el.parentElement,next:el.nextSibling});
+    host.appendChild(el);
+  };
+  borrow(document.getElementById('md-available'),C);
+  borrow(document.getElementById('md-queue-wrap'),R);
+  var _auto=document.getElementById('md-auto');
+  var _lb=_auto&&_auto.closest?_auto.closest('label.md-solo-ctl'):null;
+  borrow(_lb,document.getElementById('au-rauto'));
+  AU.tab='players';AU.rtab='queue';
+  auSetTab('players');auSetRTab('queue');
+}
+function _auLayoutOff(){
+  (window._auMoved||[]).forEach(function(m){
+    try{
+      if(!m.parent)return;
+      if(m.next&&m.next.parentElement===m.parent)m.parent.insertBefore(m.el,m.next);
+      else m.parent.appendChild(m.el);
+    }catch(_){}
+  });
+  window._auMoved=[];
+}
+// center tabs: Players (the research table) / Board (who bought what) /
+// History (the chronological sold ticker)
+function auSetTab(t){
+  AU.tab=t;
+  var av=document.getElementById('md-available'),bd=document.getElementById('au-board'),rs=document.getElementById('au-results');
+  var sw=document.getElementById('au-sold-wrap');if(sw)sw.style.display='none'; // superseded by the Results tab
+  if(av)av.style.display=t==='players'?'':'none';
+  if(bd){bd.style.display=t==='board'?'block':'none';if(t==='board')_auRenderBoardTab();}
+  if(rs){rs.style.display=t==='history'?'block':'none';if(t==='history')_auRenderResults();}
+  document.querySelectorAll('#au-tabs .au-tab').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
+}
+function auSetRTab(t){
+  AU.rtab=t;
+  var q=document.getElementById('au-rq'),m=document.getElementById('au-myteam'),f=document.getElementById('au-rfeed');
+  if(q)q.style.display=t==='queue'?'block':'none';
+  if(m){m.style.display=t==='team'?'block':'none';if(t==='team')_auRenderMyTeam();}
+  if(f){f.style.display=t==='feed'?'block':'none';if(t==='feed')_auRenderFeed();}
+  document.querySelectorAll('#au-rtabs .au-tab').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});
+}
+// the lineup shape as an ordered slot list (QB, RB, RB, WR, WR, TE, FLEX, K,
+// DEF, BN...) - the connected league's shape when it drives the room. Shared
+// by the roster strip, the Rosters table and the Board placeholders.
+function _mdLineupOrder(){
+  var lf=(localStorage.getItem('tm_mock_uselg')!=='0'&&window.leagueFormat)?window.leagueFormat:null;
+  var slots={
+    QB:lf?((lf.numQBs||1)+(lf.hasSuperFlex?1:0)):(MD.sf?2:1),
+    RB:lf?(lf.numRBs||2):2,WR:lf?(lf.numWRs||2):2,TE:lf?(lf.numTEs||1):1,
+    FLEX:lf?((lf.flexCount||0)+(lf.recFlexCount||0)):1,
+    K:MD.noK?0:1,DEF:MD.noD?0:1
+  };
+  var ord=[];
+  ['QB','RB','WR','TE'].forEach(function(ps){for(var i=0;i<(slots[ps]||0);i++)ord.push(ps);});
+  for(var f=0;f<(slots.FLEX||0);f++)ord.push('FLEX');
+  if(slots.K)ord.push('K');
+  if(slots.DEF)ord.push('DEF');
+  var bn=Math.max(0,(MD.rounds||15)-ord.length);
+  for(var b=0;b<bn;b++)ord.push('BN');
+  return ord;
+}
+// assign a team's buys to lineup slots in buy order: base slot first, then
+// FLEX for RB/WR/TE overflow, then bench
+function _auSlotAssign(picks){
+  var open=_mdLineupOrder().map(function(l){return {l:l,pk:null};});
+  picks.forEach(function(pk){
+    var i,s=null;
+    for(i=0;i<open.length;i++)if(!open[i].pk&&open[i].l===pk.p.pos){s=open[i];break;}
+    if(!s&&['RB','WR','TE'].indexOf(pk.p.pos)>=0)for(i=0;i<open.length;i++)if(!open[i].pk&&open[i].l==='FLEX'){s=open[i];break;}
+    if(!s)for(i=0;i<open.length;i++)if(!open[i].pk&&open[i].l==='BN'){s=open[i];break;}
+    if(s)s.pk=pk;
+  });
+  return open;
+}
+// BOARD tab, Yahoo mobile pattern: horizontally scrolling columns PER
+// MANAGER - avatar row with "Max $X · $Y left", position-tinted cards for
+// every buy, dashed placeholders for the open slots.
+function _auRenderBoardTab(){
+  var b=document.getElementById('au-board');if(!b)return;
+  var html='<div class="au-boardrow">';
+  for(var s=1;s<=MD.teams;s++){
+    var nm=s===MD.mySlot?'You':((AU.bots[s]&&AU.bots[s].name)||('Team '+s));
+    var buys=(MD.picks||[]).filter(function(pk){return pk.slot===s;});
+    var sl=AU.slotsLeft[s]||0;
+    var cap=sl>0?(AU.budgets[s]||0)-(sl-1):0;
+    html+='<div class="au-bcol'+(s===MD.mySlot?' me':'')+'">'
+      +'<div class="au-bcolhd"><span class="au-bava">'+nm.charAt(0).toUpperCase()+'</span>'
+      +'<span class="au-bcoln">'+nm+'</span></div>'
+      +'<div class="au-bcolm">Max $'+Math.max(0,cap)+' · $'+(AU.budgets[s]||0)+'</div>'
+      +buys.map(function(pk){
+        return '<div class="au-bcard pos-'+pk.p.pos+'"><div class="au-bcardn">'+pk.p.name+'</div>'
+          +'<div class="au-bcardm">'+(pk.p.team||'FA')+' · '+pk.p.pos+(pk.grade?' · <b>'+pk.grade+'</b>':'')+'</div>'
+          +'<div class="au-bcardp">$'+(pk.price||0)+'</div></div>';
+      }).join('')
+      +(sl>0?new Array(Math.min(sl,3)+1).join('<div class="au-bcard empty"></div>'):'')
+      +'</div>';
+  }
+  b.innerHTML=html+'</div>';
+}
+// RESULTS tab: segmented Rosters | Picks. Picks = reverse-chrono sales with
+// ROUND badges (one nomination cycle = a round) and the buy grade; Rosters =
+// any team's slot table (empty slots stay visible - the "what do I still
+// need" view) behind a team selector with the aggregate grade.
+function _auRenderResults(){
+  var host=document.getElementById('au-results');if(!host)return;
+  AU.rview=AU.rview||'picks';
+  if(AU.rteam==null||!AU.budgets[AU.rteam])AU.rteam=MD.mySlot;
+  var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+  var seg='<div class="au-tabs" style="max-width:420px;margin:0 0 10px">'
+    +'<button class="au-tab'+(AU.rview==='rosters'?' on':'')+'" onclick="AU.rview=\'rosters\';_auRenderResults()">Teams</button>'
+    +'<button class="au-tab'+(AU.rview==='picks'?' on':'')+'" onclick="AU.rview=\'picks\';_auRenderResults()">Round by round</button>'
+    +'<button class="au-tab'+(AU.rview==='pos'?' on':'')+'" onclick="AU.rview=\'pos\';_auRenderResults()">Positions</button>'
+    +'</div>';
+  var body='';
+  if(AU.rview==='picks'){
+    var rows='',lastRound=null;
+    var all=(MD.picks||[]).slice().reverse(); // newest first
+    all.forEach(function(pk,i){
+      var overall=all.length-i;
+      if(pk.round!==lastRound){lastRound=pk.round;rows+='<div class="au-rndbadge">ROUND '+pk.round+'</div>';}
+      var who=pk.mine?'<b style="color:var(--accent-bright)">You</b>':((AU.bots[pk.slot]&&AU.bots[pk.slot].name)||('Team '+pk.slot));
+      rows+='<div class="au-pkrow">'
+        +'<span class="au-pkno">'+overall+'</span>'
+        +'<img src="'+mdFaceUrl(pk.p)+'" onerror="this.style.visibility=\'hidden\'">'
+        +'<span class="au-pkmain"><span class="au-pknm">'+pk.p.name+'</span>'
+        +'<span class="au-pkmeta" style="color:'+(pc[pk.p.pos]||'var(--muted)')+'">'+pk.p.pos+' · '+(pk.p.team||'FA')+' · $'+(pk.price||0)+'</span></span>'
+        +(pk.grade?'<span class="au-grade g-'+pk.grade.replace('+','p')+'">'+pk.grade+'</span>':'')
+        +'<span class="au-pkwho">'+who+'</span>'
+        +'</div>';
+    });
+    body=rows||'<div style="font-size:13.5px;color:var(--muted);padding:8px 2px">No sales yet.</div>';
+  }else if(AU.rview==='pos'){
+    // POSITIONS DRAFTED grid: teams x positions counts - who has filled what
+    // and who is still hunting (the strategic read: whose TE panic is coming)
+    var POSL=['QB','RB','WR','TE','K','DEF'];
+    var head='<div class="au-posrow au-poshead"><span class="au-posname"></span>'
+      +POSL.map(function(ps){return '<span class="au-poscell" style="color:'+(pc[ps]||'var(--muted)')+'">'+ps+'</span>';}).join('')+'</div>';
+    var prow='';
+    for(var s3=1;s3<=MD.teams;s3++){
+      var nm3=s3===MD.mySlot?'You':((AU.bots[s3]&&AU.bots[s3].name)||('Team '+s3));
+      var ros3=MD.aiRosters[s3]||{};
+      prow+='<div class="au-posrow'+(s3===MD.mySlot?' me':'')+'"><span class="au-posname">'+nm3+'</span>'
+        +POSL.map(function(ps){var n3=ros3[ps]||0;return '<span class="au-poscell'+(n3?'':' zero')+'">'+n3+'</span>';}).join('')+'</div>';
+    }
+    body=head+prow;
+  }else{
+    var opts='';
+    for(var s2=1;s2<=MD.teams;s2++){
+      var nm2=s2===MD.mySlot?'You':((AU.bots[s2]&&AU.bots[s2].name)||('Team '+s2));
+      opts+='<option value="'+s2+'"'+(s2===AU.rteam?' selected':'')+'>'+nm2+'</option>';
+    }
+    var tBuys=(MD.picks||[]).filter(function(pk){return pk.slot===AU.rteam;});
+    var tg=_auTeamGrade(AU.rteam);
+    body='<div class="au-rsel"><select class="opp-select" onchange="AU.rteam=parseInt(this.value,10);_auRenderResults()">'+opts+'</select>'
+      +'<span class="au-rselm">'+tBuys.length+'/'+MD.rounds+(tg?' · <span class="au-grade g-'+tg.replace('+','p')+'">'+tg+'</span>':'')+'</span></div>'
+      +_auSlotAssign(tBuys).map(function(o){return _auRosterRow(o,pc);}).join('');
+  }
+  host.innerHTML=seg+body;
+}
+// one roster row, shared by the rail Team tab and the Results Teams view:
+// slot chip | face + name + meta | grade | bye | $cost - and EMPTY slots stay
+// visible in lineup order, so the hole at QB is seen, not deduced
+function _auRosterRow(o,pc){
+  var chip='<span class="au-slotchip" style="color:'+(pc[o.l]||'var(--accent-bright)')+'">'+o.l+'</span>';
+  if(!o.pk)return '<div class="au-rrow empty">'+chip+'<span class="au-rempty">Empty</span></div>';
+  var pk=o.pk,bye=window._mdByes&&pk.p.team?window._mdByes[pk.p.team]:null;
+  return '<div class="au-rrow">'+chip
+    +'<img src="'+mdFaceUrl(pk.p)+'" onerror="this.style.visibility=\'hidden\'">'
+    +'<span class="au-pkmain"><span class="au-pknm">'+pk.p.name+'</span>'
+    +'<span class="au-pkmeta" style="color:'+(pc[pk.p.pos]||'var(--muted)')+'">'+pk.p.pos+' · '+(pk.p.team||'FA')+'</span></span>'
+    +(pk.grade?'<span class="au-grade g-'+pk.grade.replace('+','p')+'">'+pk.grade+'</span>':'')
+    +'<span class="au-rbye">'+(bye||'&ndash;')+'</span>'
+    +'<span class="au-rprice">$'+(pk.price||0)+'</span>'
+    +'</div>';
+}
+function _auRenderMyTeam(){
+  var m=document.getElementById('au-myteam');if(!m)return;
+  var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+  m.innerHTML=_auSlotAssign((MD.picks||[]).filter(function(pk){return pk.mine;}))
+    .map(function(o){return _auRosterRow(o,pc);}).join('');
+}
+// the rail mini-feed ("Picks" tab): sales AND room events, newest first
+function _auFeed(txt){
+  AU.feed=AU.feed||[];
+  AU.feed.unshift(txt);
+  if(AU.feed.length>60)AU.feed.length=60;
+  if(AU.rtab==='feed')_auRenderFeed();
+}
+function _auRenderFeed(){
+  var f=document.getElementById('au-rfeed');if(!f)return;
+  f.innerHTML=(AU.feed&&AU.feed.length)
+    ?AU.feed.map(function(t){return '<div class="au-feedrow">'+t+'</div>';}).join('')
+    :'<div style="font-size:13px;color:var(--muted);padding:8px 2px">The room\'s story lands here - sales, nominations, sims.</div>';
+}
+// the "Last:" strip - the sold splash's quiet permanent record, Yahoo order:
+// price first, player (pos·team in its color), then the buyer
+function _auRenderLast(){
+  var el=document.getElementById('au-last');if(!el)return;
+  var s0=AU.sold&&AU.sold[0];
+  if(!s0){el.style.display='none';return;}
+  var who=s0.slot===MD.mySlot?'YOU':((AU.bots[s0.slot]&&AU.bots[s0.slot].name)||('Team '+s0.slot));
+  var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'}[s0.p.pos]||'var(--muted)';
+  el.style.display='block';
+  // Yahoo detail the owner flagged: the PRICE wears the player's position color
+  el.innerHTML='<span style="color:var(--muted)">Last:</span> <b style="font-variant-numeric:tabular-nums;color:'+pc+'">$'+s0.price+'</b> · '+s0.p.name
+    +' <span style="color:'+pc+';font-weight:700">('+s0.p.pos+'·'+(s0.p.team||'FA')+')</span>'
+    +' <span style="color:var(--muted)">&rarr;</span> '+who;
+}
+// phone header pill: the pacing state at a glance
+function _auRenderMHead(){
+  var pill=document.getElementById('au-mpill');if(!pill)return;
+  var lot=AU.lot;
+  if(lot){
+    var hn=lot.holder===MD.mySlot?'you lead':(((AU.bots[lot.holder]||{}).name)||('Team '+lot.holder))+' leads';
+    pill.className='au-mpill'+(lot.going>=2?' g2':lot.going>=1?' g1':'');
+    pill.innerHTML='<b>$'+lot.bid+'</b> · '+(lot.going>=2?'going twice…':lot.going>=1?'going once…':hn);
+  }else{
+    pill.className='au-mpill';
+    pill.innerHTML=AU.nominator===MD.mySlot?'Your nomination':'Nominating…';
+  }
+}
+function _auMScroll(id){try{var e=document.getElementById(id);if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth',block:'start'});}catch(_){}}
+// the countdown number above the pill: whole seconds left in the CURRENT
+// pacing phase (bid window / going once / going twice / next lot). Pure
+// render - AU.phaseEnd is stamped wherever a beat gets scheduled.
+function _auTickPill(){
+  var n=document.getElementById('au-mnum');if(!n)return;
+  if(!AU.active||!AU.phaseEnd){n.textContent='';return;}
+  var left=Math.max(0,Math.ceil((AU.phaseEnd-Date.now())/1000));
+  n.textContent=String(left);
+}
+// the gap between lots gets narrated, never a dead screen: peek the wheel
+// for the next nominator (same rotation + full-roster skip auAdvance uses)
+function _auRenderInterlude(){
+  if(AU.lot||!AU.active)return;
+  var box=document.getElementById('au-lot');if(!box)return;
+  var t=AU.nomTurn,slot=null;
+  for(var i=0;i<MD.teams;i++){
+    var c=((t+i)%MD.teams)+1;
+    if(AU.slotsLeft[c]>0){slot=c;break;}
+  }
+  if(!slot)return;
+  var nm=slot===MD.mySlot?'You':((AU.bots[slot]&&AU.bots[slot].name)||('Team '+slot));
+  // the waiting state stays UNAMBIGUOUS: the card keeps its shape but every
+  // control reads dead ($-, dimmed stepper, disabled OFFER) - nothing to do
+  // yet, and the screen says exactly that
+  box.innerHTML='<div class="au-card au-waitcard">'
+    +'<div class="au-interlude" style="border:none;padding:0">'
+    +(slot===MD.mySlot?'Your nomination is next&hellip;':nm+' is nominating a player&hellip;')
+    +'</div>'
+    +'<div class="au-offerrow" style="opacity:.35;pointer-events:none" aria-hidden="true">'
+    +'<span class="au-step"><button class="au-stepbtn" disabled>&minus;</button><span class="au-stepval">$&ndash;</span><button class="au-stepbtn" disabled>+</button></span>'
+    +'<button class="au-bid-btn" disabled>OFFER $&ndash;</button>'
+    +'</div></div>';
+  var pill=document.getElementById('au-mpill');
+  if(pill){pill.className='au-mpill';pill.innerHTML=slot===MD.mySlot?'You nominate next&hellip;':'Nominating&hellip;';}
+}
+// custom-offer stepper: defaults to the next increment, bounded by the
+// budget law; resets whenever the live bid moves past it or the lot changes
+function auBumpCustom(d){
+  var lot=AU.lot;if(!lot)return;
+  var myCap=AU.slotsLeft[MD.mySlot]>0?AU.budgets[MD.mySlot]-(AU.slotsLeft[MD.mySlot]-1):0;
+  var eff=Math.max(lot.bid+1,AU.custom||0);
+  AU.custom=Math.max(lot.bid+1,Math.min(myCap,eff+d));
+  auRenderLot();
+}
+// the ONE primary action: offer the stepper's amount (next increment unless raised)
+function auOffer(){
+  var lot=AU.lot;if(!lot||AU.slotsLeft[MD.mySlot]<=0||lot.holder===MD.mySlot)return;
+  var amt=Math.max(lot.bid+1,AU.custom||0);
+  var cap=AU.budgets[MD.mySlot]-(AU.slotsLeft[MD.mySlot]-1);
+  if(amt>cap)amt=cap;
+  if(amt<=lot.bid)return;
+  lot.bid=amt;lot.holder=MD.mySlot;lot.going=0;AU.custom=null;
+  auRenderLot();auRenderBudgets();
+  if(AU.stepT)clearTimeout(AU.stepT);
+  AU.phaseEnd=Date.now()+AU_PACE.BID_MAX;AU.stepT=setTimeout(auBidStep,_auDelay(_auBeatMs()));
 }
 function auStart(){
   AU.active=true;
@@ -10547,11 +11087,32 @@ function auStart(){
   AU.eliteLine=top[11]||20;
   AU.inflation=1;
   var g=document.getElementById('md-draftboard');if(g)g.style.display='none';
-  var q=document.getElementById('md-queue-wrap');if(q)q.style.display='none';
   var w=document.getElementById('au-wrap');if(w)w.style.display='block';
+  try{_auLayoutOn();}catch(_){}  // the 3-zone room (queue lives in the right rail now)
+  AU.custom=null;
+  AU.tab='players';AU.rtab='queue';AU.rview='picks';AU.rteam=null;
+  AU.feed=[];_auFeed('<span style="color:var(--muted)">Auction started &middot; $'+MD.budget+' each</span>');
+  if(AU.pillT)clearInterval(AU.pillT);
+  AU.pillT=setInterval(_auTickPill,500); // phone countdown above the pill
   // a sale is a sale - mdUndo refuses in auctions, so don't show a dead button
   var _ub=document.getElementById('md-undo-btn');if(_ub)_ub.style.display='none';
+  // the board bar sheds everything that means nothing in an auction: the
+  // Board/List toggle drives the hidden snake grid, the pick timer has no
+  // role (money is the clock), and the cryptic "QB 0/1" counters move into
+  // the lot card's own money line ("$142 left · max bid $96 · 12 spots")
+  try{
+    var _vt=document.querySelector('.md-view-btn');if(_vt&&_vt.parentElement)_vt.parentElement.style.display='none';
+    var _cl3=document.getElementById('md-clock-live');if(_cl3)_cl3.style.display='none';
+    var _nd=document.getElementById('md-needs');if(_nd)_nd.style.display='none';
+  }catch(_){}
+  AU.bOpen=false;   // budgets start collapsed: mini-bars only
+  AU.noSplash=0;
+  // in the auction Mac lives ON the lot card (auSageLine); the snake box
+  // would only show a stale read from the last snake room
+  MD._mac=null;
+  var _sgA=document.getElementById('md-sage');if(_sgA)_sgA.style.display='none';
   auRenderBudgets();
+  try{mdRenderMine();}catch(_){}  // seed the phone roster strip before lot one
   auAdvance();
 }
 function auAdvance(){
@@ -10568,14 +11129,23 @@ function auAdvance(){
   var st=document.getElementById('md-status');
   if(slot===MD.mySlot){
     MD.onClock=true;MD.curRound=1;
-    if(st)st.innerHTML='<span style="color:var(--accent-bright);font-weight:700">Your nomination</span><span style="color:var(--muted)"> - pick any player from the list below</span>';
+    // short: the lot card itself carries the big "Your turn to nominate"
+    if(st)st.innerHTML='<span style="color:var(--accent-bright);font-weight:700">Your nomination</span>';
     mdShowChoices(1);
     if(MD.autoPilot){var ap=auBotNominateUser();if(ap){auOpenLot(MD.mySlot,ap);return;}}
     auRenderLot();
+    try{_auRenderMHead();}catch(_){}
   }else{
     MD.onClock=false;
     var nm=(AU.bots[slot]&&AU.bots[slot].name)||('Team '+slot);
-    if(st)st.innerHTML='Nominating: <b style="color:var(--text)">'+nm+'</b>';
+    // orientation #1: how many lots until YOUR nomination (rotation math off
+    // the nominator wheel; roster-full skips make it an upper bound, which
+    // only ever errs in the calm direction)
+    var _untilNom=(((MD.mySlot-slot-1)+2*MD.teams)%MD.teams)+1;
+    if(st)st.innerHTML='Nominating: <b style="color:var(--text)">'+nm+'</b>'
+      +'<span style="color:var(--accent-bright);font-weight:700;margin-left:10px">'
+      +(_untilNom<=1?'you nominate next':'your nomination in '+_untilNom)+'</span>';
+    try{_auFeed('<span style="color:var(--muted)">'+nm+' is nominating&hellip;</span>');}catch(_){}
     var p=auBotNominate(slot);
     auOpenLot(slot,p);
   }
@@ -10609,6 +11179,7 @@ function auUserNominate(p){
 }
 function auOpenLot(slot,p){
   var i=MD.pool.indexOf(p);if(i<0){auAdvance();return;}
+  AU.custom=null; // fresh lot, fresh stepper
   // every lot opens at $1 - tested "statement" openings (~40% of value on own
   // targets) DETERRED the competition that makes prices, and the room banked
   // more, not less. $1 opens with jump-bid escalation is what the sim
@@ -10632,7 +11203,7 @@ function auOpenLot(slot,p){
     AU.lot.myMax=_w;
   }
   auRenderLot();auRenderBudgets();
-  AU.stepT=setTimeout(auBidStep,700);
+  AU.phaseEnd=Date.now()+AU_PACE.BID_MAX;AU.stepT=setTimeout(auBidStep,_auDelay(_auBeatMs()));
 }
 // One decision beat of room bidding. Bots outbid +$1 while the price is
 // under their max; the enforcer pushes OTHER people's lots to ~90% of value
@@ -10685,7 +11256,14 @@ function auBidStep(){
   var r=_auBidOnce();
   if(r==='sold')return;
   auRenderLot();
-  AU.stepT=setTimeout(auBidStep,r==='quiet'?900:700);
+  auRenderBudgets(); // the live-bid badge rides the high bidder's row
+  // the ENTRY WINDOW, visible and steady: after a raise the room gets a
+  // human beat to respond; one silent beat shows GOING ONCE and holds 2s,
+  // the second shows GOING TWICE and holds 1.5s before the hammer. Any bid
+  // (bot or user) resets going to 0 and the window starts over.
+  var d=r==='quiet'?(AU.lot.going>=2?AU_PACE.HAMMER:AU_PACE.GOING_2):_auBeatMs();
+  AU.phaseEnd=Date.now()+d;
+  AU.stepT=setTimeout(auBidStep,_auDelay(d));
 }
 // "Sim this lot": the user sits this one out and the room finishes it NOW -
 // the exact same decision beat as the clock path, minus the waits. A
@@ -10699,13 +11277,22 @@ function auSimLot(){
   if(AU.stepT)clearTimeout(AU.stepT);
   var guard=0;
   while(AU.lot&&guard++<2000){if(_auBidOnce()==='sold')break;}
-  if(AU.lot){AU.stepT=setTimeout(auBidStep,700);return;}
+  if(AU.lot){AU.phaseEnd=Date.now()+AU_PACE.BID_MAX;AU.stepT=setTimeout(auBidStep,_auDelay(_auBeatMs()));return;}
   auRenderLot(); // clean card while the room takes its normal beat to the next lot
 }
 // "Sim to my turn": consecutive instant lots until it is YOUR nomination or
 // a player from your queue hits the block - whichever comes first.
 function auSimToMyTurn(){
   if(!AU.active||!AU.lot)return;
+  AU.noSplash=1; // ten SOLD splashes in a row is a strobe, not a moment
+  var _n0=(AU.sold||[]).length;
+  try{_auSimToMyTurnRun();}finally{
+    AU.noSplash=0;
+    var _nd=(AU.sold||[]).length-_n0;
+    if(_nd>0)try{_auFeed('<span style="color:var(--accent-bright)">Sim: '+_nd+' lot'+(_nd>1?'s':'')+' resolved</span>');}catch(_){}
+  }
+}
+function _auSimToMyTurnRun(){
   var guard=0;
   while(AU.active&&guard++<400){
     if(!AU.lot)break;
@@ -10713,7 +11300,7 @@ function auSimToMyTurn(){
     if(AU.stepT)clearTimeout(AU.stepT);
     var g2=0;
     while(AU.lot&&g2++<2000){if(_auBidOnce()==='sold')break;}
-    if(AU.lot){AU.stepT=setTimeout(auBidStep,700);return;} // guard tripped: back to the clock
+    if(AU.lot){AU.phaseEnd=Date.now()+AU_PACE.BID_MAX;AU.stepT=setTimeout(auBidStep,_auDelay(_auBeatMs()));return;} // guard tripped: back to the clock
     if(!AU.active)break;                 // that was the last lot
     if(AU.stepT)clearTimeout(AU.stepT);  // the pending between-lots beat
     auAdvance();                         // open the next nomination now
@@ -10730,13 +11317,42 @@ function auUserBid(inc){
   lot.bid=amt;lot.holder=MD.mySlot;lot.going=0;
   auRenderLot();
   if(AU.stepT)clearTimeout(AU.stepT);
-  AU.stepT=setTimeout(auBidStep,700);
+  AU.phaseEnd=Date.now()+AU_PACE.BID_MAX;AU.stepT=setTimeout(auBidStep,_auDelay(_auBeatMs()));
 }
 function auSetMax(){
   var lot=AU.lot;if(!lot)return;
   var v=parseInt((document.getElementById('au-max')||{}).value,10)||0;
   lot.myMax=v;
   auRenderLot();
+}
+// Grade a single auction buy: PAID vs the room's own sticker (auValue - the
+// normalized market price for THIS room's money). House derivation:
+//  - deadband first: within ±$2 every lot is a FAIR buy (B) - $1 endgame
+//    closers and small-money noise must never grade like a 2x overpay;
+//  - then the ratio cuts: paid <=75% of value = A (a genuine steal),
+//    75-90% = B+ (good value), 90-110% = B (market price), 110-130% = C+
+//    (paid up), >130% = D (bought the bidding war). Cut positions follow the
+//    spec sketch and were sanity-tuned against the harness distribution
+//    (invariant (i): the 600-room curve must center on B with thin tails).
+function auGradeBuy(price,value){
+  if(Math.abs(price-(value||0))<=2)return 'B';
+  var r=price/Math.max(1,value||0);
+  return r<=0.75?'A':r<=0.9?'B+':r<=1.1?'B':r<=1.3?'C+':'D';
+}
+// price-weighted team grade: letters to GPA (A 4 / B+ 3.3 / B 3 / C+ 2.3 /
+// D 1.3), weighted by dollars spent (a $60 overpay should drag more than a
+// $2 one), then back to the letter bands
+var AU_GPA={'A':4,'B+':3.3,'B':3,'C+':2.3,'D':1.3};
+function _auTeamGrade(slot){
+  var buys=(MD.picks||[]).filter(function(pk){return pk.slot===slot&&pk.price!=null;});
+  if(!buys.length)return '';
+  var wsum=0,gsum=0;
+  buys.forEach(function(pk){
+    var w=Math.max(1,pk.price);
+    gsum+=(AU_GPA[pk.grade||'B']||3)*w;wsum+=w;
+  });
+  var g=gsum/wsum;
+  return g>=3.65?'A':g>=3.15?'B+':g>=2.65?'B':g>=1.8?'C+':'D';
 }
 function auSell(){
   var lot=AU.lot;if(!lot)return;
@@ -10749,14 +11365,25 @@ function auSell(){
   var n=AU.sold.length+1;
   var mine=slot===MD.mySlot;
   if(mine)MD.mine.push(p);
-  MD.picks.push({slot:slot,round:Math.ceil(n/MD.teams),pickNo:((n-1)%MD.teams)+1,p:p,mine:mine,price:price});
-  AU.sold.unshift({p:p,slot:slot,price:price,value:auValue(p)});
+  var _g=auGradeBuy(price,auValue(p));
+  MD.picks.push({slot:slot,round:Math.ceil(n/MD.teams),pickNo:((n-1)%MD.teams)+1,p:p,mine:mine,price:price,grade:_g});
+  AU.sold.unshift({p:p,slot:slot,price:price,value:auValue(p),grade:_g});
   var who=mine?'YOU':((AU.bots[slot]&&AU.bots[slot].name)||('Team '+slot));
   MD.log.unshift('<span style="color:var(--muted)">$'+price+'</span> '+who+' - <strong style="color:var(--text)">'+p.name+'</strong> '+mdPosTag(p.pos));
   try{sndImpact();}catch(_){}
+  if(!AU.noSplash)auSoldSplash(p,price,who);
+  AU.custom=null; // the stepper belongs to the lot that just closed
   auRenderSold();auRenderBudgets();mdRenderMine();mdRenderLog();
+  try{
+    _auFeed('<b>$'+price+'</b> · '+p.name+' <span style="color:var(--muted)">&rarr;</span> '+who);
+    _auRenderLast();                       // the splash's permanent record
+    if(AU.tab==='board')_auRenderBoardTab();
+    if(AU.tab==='history')_auRenderResults();
+    if(AU.rtab==='team')_auRenderMyTeam();
+    _auRenderInterlude();                  // the gap between lots is narrated, never dead
+  }catch(_){}
   if(MD.onClock)mdShowChoices(1);
-  AU.stepT=setTimeout(auAdvance,600);
+  AU.phaseEnd=Date.now()+AU_PACE.NEXT_LOT;AU.stepT=setTimeout(auAdvance,_auDelay(AU_PACE.NEXT_LOT));
 }
 // Mac's read on the block: personal ceiling = room value x live inflation,
 // bumped when it fills an open starter slot, capped by the budget law.
@@ -10780,86 +11407,174 @@ function auMyWorth(p){
   if(AU.inflation>=1.15)v=Math.max(v,cap*0.75);
   return {worth:Math.max(1,Math.min(Math.round(v),cap)),needsIt:needsIt};
 }
-function auSageLine(p){
+// Mac's line on the block: ONE short sentence - the number and one qualifier
+// - and only at HIS moments. Editorial bar (owner: "que se meta cuando sea
+// necesario"): mute during bot-vs-bot bidding; he speaks when the entry
+// window opens (going once/twice) on a lot that is RELEVANT to you (fills a
+// need, or its sticker sits inside your max bid), or the instant the live
+// bid grazes his suggested ceiling - the two moments the number changes your
+// decision. Irrelevant lots get silence; Sim already covers disinterest.
+// Inflation still shapes the NUMBER itself via auMyWorth.
+function auSageLine(p,lot){
   var w=auMyWorth(p);
-  var why=w.needsIt?'fills an open starter spot':'depth price only - your starters are set';
-  var infl=AU.inflation>1.08?'the room is overpaying, let others chase':AU.inflation<0.92?'money is drying up - real discounts from here':'';
-  return 'Worth up to <b style="color:var(--accent-bright)">$'+w.worth+'</b> for you ('+why+(infl?' · '+infl:'')+')';
+  var myCap=AU.slotsLeft[MD.mySlot]>0?AU.budgets[MD.mySlot]-(AU.slotsLeft[MD.mySlot]-1):0;
+  var relevant=w.needsIt||auValue(p)<=myCap;
+  if(!relevant)return '';
+  var moment=!lot||lot.going>=1||lot.bid+1>=w.worth||lot.holder===MD.mySlot&&lot.bid>=w.worth;
+  if(!moment)return '';
+  var line='Worth up to <b style="color:var(--accent-bright)">$'+w.worth+'</b> for you'+(w.needsIt?' · fills a starter spot':' · depth price');
+  // FZ26: Mac anticipates the room's RB market with the SAME multiplier the
+  // bots bid with (never a separate invented number) - one sober clause,
+  // only when the gap actually moves the decision
+  if(_mdFz26On()&&p.pos==='RB'){
+    var _exp=Math.round(auValue(p)*(auValue(p)>=FZ26_RB_ELITE_AAV?FZ26_RB_PREM_ELITE:FZ26_RB_PREM));
+    if(_exp>=w.worth+3)line+=' · this room pays up for RBs - expect $'+_exp+'ish';
+  }
+  if(lot&&lot.bid>=w.worth)line+=' · <span style="color:var(--yellow)">past your number</span>';
+  return '<img src="/sage/sage-thinking-64.png" alt="" title="Mac\'s read" style="width:22px;height:22px;object-fit:contain;vertical-align:-6px;margin-right:5px" onerror="this.style.display=\'none\'">'+line;
 }
+// The lot card, Sleeper-clarity rules: the player and the PRICE own the
+// screen, ONE unmissable primary action (BID $next), your money in a single
+// legible line, everything else quiet. Classes live in theme.css (au-*).
 function auRenderLot(){
   var box=document.getElementById('au-lot');if(!box)return;
   var lot=AU.lot;
   if(!lot){
     box.innerHTML=AU.nominator===MD.mySlot
-      ?'<div style="padding:14px 16px;background:var(--surface2);border:1px solid var(--accent-bright);border-radius:12px;font-size:13px;color:var(--text)"><b>Your nomination.</b> Tap the arrow on any player below to put him on the block at $1.</div>'
+      ?'<div class="au-card" style="border-color:var(--accent-bright);text-align:center">'
+        +'<div style="font-family:var(--font-head);font-size:24px;font-weight:800;color:var(--text)">Your turn to nominate</div>'
+        +'<div style="font-size:14px;color:var(--muted2);margin-top:6px">Tap the arrow on any player below - he opens on the block at $1.</div>'
+        +'</div>'
       :'';
     return;
   }
   var p=lot.p;
   var mine=lot.holder===MD.mySlot;
   var holderName=mine?'YOU':((AU.bots[lot.holder]&&AU.bots[lot.holder].name)||('Team '+lot.holder));
-  var going=lot.going===1?' · <span style="color:var(--yellow)">going once</span>':lot.going===2?' · <span style="color:var(--red)">going twice</span>':'';
   var canBid=AU.slotsLeft[MD.mySlot]>0&&!mine;
-  var srcNote=window._mdAav?'':' <span title="Live auction values are down; these are derived from ADP with our dated curve fit" style="color:var(--muted)">(derived)</span>';
-  box.innerHTML='<div style="padding:14px 16px;background:var(--surface3);border:1px solid var(--accent-bright);border-radius:12px">'
-    +'<div style="display:flex;align-items:center;gap:12px">'
-    +'<img src="'+mdFaceUrl(p)+'" style="width:52px;height:52px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain':'')+'" onerror="this.style.visibility=\'hidden\'">'
+  var next=lot.bid+1;
+  var myBudget=AU.budgets[MD.mySlot]||0,mySlots=AU.slotsLeft[MD.mySlot]||0;
+  var myCap=mySlots>0?myBudget-(mySlots-1):0; // the budget law, pre-chewed: the #1 auction confusion, answered on screen
+  var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'}[p.pos]||'var(--muted2)';
+  var srcNote=window._mdAav?'':' <span title="Live auction values are down; these are derived from ADP" style="color:var(--muted)">(derived)</span>';
+  var goingTxt=lot.going===1?'going once':lot.going===2?'going twice':'';
+  box.innerHTML='<div class="au-card" style="border-color:var(--accent-bright)">'
+    +'<div class="au-lot-head">'
+    +'<img class="au-face" src="'+mdFaceUrl(p)+'"'+(p.pos==='DEF'?' style="object-fit:contain;padding:8px"':'')+' onerror="this.style.visibility=\'hidden\'">'
     +'<div style="min-width:0;flex:1">'
-    +'<div style="font-family:var(--font-head);font-size:17px;font-weight:800;color:var(--text)">'+p.name+'</div>'
-    +'<div style="font-size:11px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+(p.team||'FA')+' · AAV $'+auValue(p)+srcNote+'</div>'
-    +'<div style="font-size:11.5px;color:var(--muted2);margin-top:3px">'+auSageLine(p)+'</div>'
+    +'<div class="au-name">'+p.name+'</div>'
+    +'<div class="au-sub"><b style="color:'+posC+'">'+p.pos+'</b> · '+(p.team||'FA')
+    +((window._mdByes&&p.team&&window._mdByes[p.team])?' · BYE '+window._mdByes[p.team]:'')
+    +' · AAV $'+auValue(p)+srcNote+'</div>'
     +'</div>'
-    +'<div style="text-align:right;flex:none">'
-    +'<div style="font-family:var(--font-head);font-size:26px;font-weight:800;color:'+(mine?'var(--green)':'var(--text)')+'">$'+lot.bid+'</div>'
-    +'<div style="font-size:10.5px;color:'+(mine?'var(--green)':'var(--muted)')+'">'+holderName+going+'</div>'
+    +'<div class="au-bidwrap">'
+    +'<div class="au-bid-num'+(mine?' mine':'')+'">$'+lot.bid+'</div>'
+    +'<div class="au-holder"'+(mine?' style="color:var(--green)"':'')+'>'+holderName+(goingTxt?' · '+goingTxt:'')+'</div>'
     +'</div></div>'
+    // the bid clock as a bar + the BIG call: the entry window made visible.
+    // Any bid resets it - so this IS "how long do I have to jump in"
+    +'<div class="au-going"><span class="'+(lot.going>=1?'on1':'')+'"></span><span class="'+(lot.going>=2?'on2':'')+'"></span><span></span></div>'
+    +(lot.going>=1?'<div class="au-goingtxt '+(lot.going>=2?'g2':'g1')+'">'+(lot.going>=2?'GOING TWICE':'GOING ONCE')+'</div>':'')
+    +'<div class="au-mac">'+auSageLine(p,lot)+'</div>'
+    // your money, pre-chewed - the #1 auction confusion answered on screen
+    +'<div class="au-me">Max offer <b>$'+Math.max(0,myCap)+'</b> · Budget $'+myBudget+' · '+mySlots+' spots</div>'
     +(canBid
-      ?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:11px">'
-      +'<button class="btn-sm" onclick="auUserBid(1)">+$1</button>'
-      +'<button class="btn-sm" onclick="auUserBid(5)">+$5</button>'
-      +'<input type="number" id="au-custom" class="tm-input" style="flex:0 1 90px;padding:7px 10px;font-size:13px" placeholder="$">'
-      +'<button class="btn-sm" onclick="auUserBid(null)">Bid</button>'
+      ?(function(){
+        // Yahoo-pattern offer controls: a stepper sets YOUR number (defaults
+        // to the next increment), the ONE primary button offers it
+        var eff=Math.min(Math.max(lot.bid+1,AU.custom||0),Math.max(1,myCap));
+        return '<div class="au-offerrow">'
+          +'<span class="au-step"><button class="au-stepbtn" onclick="auBumpCustom(-1)" title="Offer less">&minus;</button>'
+          +'<span class="au-stepval">$'+eff+'</span>'
+          +'<button class="au-stepbtn" onclick="auBumpCustom(1)" title="Offer more">+</button></span>'
+          +(eff<=myCap&&eff>lot.bid
+            ?'<button class="au-bid-btn" onclick="auOffer()">OFFER $'+eff+'</button>'
+            :'<button class="au-bid-btn" disabled title="The budget law: every open roster spot keeps its $1">OFFER $'+eff+'</button>')
+          +'</div>';
+      })()
+      +'<div class="au-quiet">'
+      +'<input type="number" id="au-max" class="tm-input" placeholder="Max $" value="'+(lot.myMax||'')+'">'
+      +'<button class="btn-sm" title="Limit bid: Mac bids +$1 for you up to this number, like a real auction proxy" onclick="auSetMax()">Max</button>'
       +'<span style="flex:1"></span>'
-      +'<input type="number" id="au-max" class="tm-input" style="flex:0 1 90px;padding:7px 10px;font-size:13px" placeholder="Max $" value="'+(lot.myMax||'')+'">'
-      +'<button class="btn-sm" title="Limit bid: Mac bids +$1 for you up to this number, like a real auction proxy" onclick="auSetMax()">Set max</button>'
       // not your guy? skip the theater: the bots resolve the lot instantly
       // with the same logic, and a standing max keeps proxy-bidding for you
-      +'<button class="btn-sm" title="'+(lot.myMax>0?'Resolve this lot instantly - your $'+lot.myMax+' max keeps bidding for you':'Not your guy? The room finishes this lot instantly - you sit it out')+'" onclick="auSimLot()">'+(lot.myMax>0?'Sim (keeps your $'+lot.myMax+' max)':'Sim')+'</button>'
+      +'<button class="btn-sm" title="'+(lot.myMax>0?'Skip the theater - resolve this lot instantly; your $'+lot.myMax+' max keeps bidding for you':'Skip the theater - resolve this lot instantly; you sit it out')+'" onclick="auSimLot()">'+(lot.myMax>0?'Sim (keeps your $'+lot.myMax+' max)':'Sim')+'</button>'
       +'<button class="btn-sm" title="Simulate every lot until your nomination - or until someone nominates a player from your queue" onclick="auSimToMyTurn()">Sim to my turn</button>'
       +'</div>'
       :(mine
-        ?'<div style="margin-top:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:11.5px;color:var(--green)">The bid is yours - hold or wait it out.</span>'
+        ?'<div class="au-quiet" style="margin-top:14px"><span style="font-size:14px;font-weight:700;color:var(--green)">The bid is yours - hold or wait it out.</span>'
+        +'<span style="flex:1"></span>'
         +'<button class="btn-sm" title="Skip the going-once theater: resolve this lot instantly with the same logic" onclick="auSimLot()">Sim</button></div>'
-        :''));
+        :(mySlots<=0?'<div class="au-quiet" style="margin-top:14px"><span style="font-size:14px;color:var(--muted2)">Your roster is full - watching the room play out.</span></div>':'')))
+    +'</div>';
+  try{_auRenderMHead();}catch(_){}  // the phone pill mirrors every lot state
 }
+// The budgets column, Yahoo-pattern: one compact row per team, the live bid
+// riding as a badge on the CURRENT HIGH BIDDER (the $1 open naturally sits
+// on the nominator). Numbers people actually use - budget left, and the max
+// bid on hover/tap - nothing else.
 function auRenderBudgets(){
   var box=document.getElementById('au-budgets');if(!box)return;
-  var html='';
-  for(var s=1;s<=MD.teams;s++){
+  // the static shell laid this container out as a pill row; the column owns
+  // its own layout now
+  box.style.display='block';box.style.gap='';
+  var rows='';
+  // You FIRST and highlighted, then the room in seat order; every row shows
+  // dollars left AND picks made (N/rounds)
+  var _ord2=[MD.mySlot];
+  for(var s0=1;s0<=MD.teams;s0++)if(s0!==MD.mySlot)_ord2.push(s0);
+  _ord2.forEach(function(s){
     var b=AU.budgets[s],sl=AU.slotsLeft[s];
     var mine=s===MD.mySlot;
-    var perSlot=sl>0?(b-(sl-1)):0; // the most they can put on one player
-    var health=perSlot>=MD.budget*0.25?'var(--green)':perSlot>=MD.budget*0.08?'var(--yellow)':'var(--red)';
-    var nm=mine?'YOU':((AU.bots[s]&&AU.bots[s].name)||('T'+s));
-    html+='<span title="'+nm+': $'+b+' left, '+sl+' spots, max bid $'+Math.max(0,perSlot)+'" style="padding:3px 9px;border-radius:100px;border:1px solid '+(mine?'var(--accent-bright)':'var(--border)')+';font-size:10.5px;font-weight:700;color:'+(mine?'var(--accent-bright)':'var(--muted2)')+'">'+nm+' <span style="color:'+health+'">$'+b+'</span><span style="color:var(--muted)">/'+sl+'</span></span>';
-  }
-  box.innerHTML=html;
+    var nm=mine?'You':((AU.bots[s]&&AU.bots[s].name)||('Team '+s));
+    var perSlot=sl>0?(b-(sl-1)):0;
+    var hb=AU.lot&&AU.lot.holder===s;
+    rows+='<div class="au-brow'+(mine?' me':'')+(sl<=0?' out':'')+'" title="'+nm+': $'+b+' left · '+sl+' spots · max bid $'+Math.max(0,perSlot)+'">'
+      +'<span class="au-bname">'+nm+'</span>'
+      +(hb?'<span class="au-bbadge">$'+AU.lot.bid+'</span>':'')
+      +'<span class="au-bcount">'+(MD.rounds-sl)+'/'+MD.rounds+'</span>'
+      +'<span class="au-bmoney">$'+b+'</span>'
+      +'</div>';
+  });
+  box.innerHTML='<div class="au-bwrap"><div class="au-bhd">Budgets</div>'+rows+'</div>';
 }
 function auRenderSold(){
   var wrap=document.getElementById('au-sold-wrap'),box=document.getElementById('au-sold');
   if(!wrap||!box)return;
-  if(!AU.sold.length){wrap.style.display='none';return;}
+  // the sold ticker is the History TAB's content now - visible only there
+  if(!AU.sold.length||(AU.tab&&AU.tab!=='history')){wrap.style.display='none';return;}
   wrap.style.display='block';
+  box.style.fontSize='14px'; // the shell says 12px; the room's floor is 14
   box.innerHTML=AU.sold.slice(0,40).map(function(x){
     var d=x.price-x.value;
     var tag=d>=3?'<span style="color:var(--red)">+$'+d+' over</span>':d<=-3?'<span style="color:var(--green)">$'+(-d)+' under</span>':'<span style="color:var(--muted)">fair</span>';
     var who=x.slot===MD.mySlot?'YOU':((AU.bots[x.slot]&&AU.bots[x.slot].name)||('T'+x.slot));
-    return '<div>'+mdPosTag(x.p.pos)+' <b style="color:var(--text)">'+x.p.name+'</b> · $'+x.price+' · '+who+' · '+tag+'</div>';
+    return '<div style="display:flex;gap:8px;align-items:baseline">'+mdPosTag(x.p.pos)+' <b style="color:var(--text)">'+x.p.name+'</b>'
+      +'<span style="flex:1"></span>'
+      +'<span style="font-variant-numeric:tabular-nums;font-weight:700;color:var(--text)">$'+x.price+'</span>'
+      +'<span style="color:var(--muted)">'+who+'</span> '+tag+'</div>';
   }).join('');
+}
+// The SOLD moment: a brief centered splash - big word, face, price, buyer -
+// then gone (1.5s; CSS animation, cut dead under prefers-reduced-motion).
+// Suppressed during multi-lot sims so ten sales don't strobe the screen.
+function auSoldSplash(p,price,who){
+  try{
+    var old=document.getElementById('au-splash');if(old)old.remove();
+    var d=document.createElement('div');
+    d.id='au-splash';d.className='au-splash';
+    d.innerHTML='<div class="card"><div class="s1">SOLD</div>'
+      +'<img src="'+mdFaceUrl(p)+'" onerror="this.style.visibility=\'hidden\'">'
+      +'<div class="s2">'+p.name+'</div>'
+      +'<div class="s3">$'+price+' · '+who+'</div></div>';
+    document.body.appendChild(d);
+    setTimeout(function(){try{d.remove();}catch(_){}},1500);
+  }catch(_){}
 }
 function auFinish(){
   AU.active=false;AU.lot=null;
   if(AU.stepT)clearTimeout(AU.stepT);
+  if(AU.pillT){clearInterval(AU.pillT);AU.pillT=null;}
   MD.onClock=false;
   // clear the frozen last-lot card - the sold list below is the record
   var _lb=document.getElementById('au-lot');if(_lb)_lb.innerHTML='';
@@ -11015,6 +11730,36 @@ function mdRenderMine(){
         });
       }
       needsEl.innerHTML=chips.join('');
+      // ── Yahoo-pattern ROSTER STRIP (phone; CSS hides it on desktop where
+      // the rails carry this): every lineup slot as a chip - empty = the
+      // position initials in its color, filled = the player's FACE with a
+      // position tick. One glance answers "what do I still need". Tap opens
+      // My team. Shared by snake and auction (the shape math above is the
+      // same); bench slots fill the remaining rounds.
+      try{
+        var _hostS=document.getElementById('md-board');
+        if(_hostS&&_hostS.insertAdjacentHTML&&!document.getElementById('md-rstrip')){
+          _hostS.insertAdjacentHTML('beforeend','<div id="md-rstrip" title="My team" onclick="AU.active?auSetRTab(\'team\'):mdShowMyRoster()"></div>');
+        }
+        var _strip=document.getElementById('md-rstrip');
+        if(_strip){
+          // shared shape/assignment with the Rosters table (_auSlotAssign);
+          // your picks carry .p in snake AND auction, and the auction ones
+          // carry the buy GRADE, which rides the face as a mini badge
+          var _open=_auSlotAssign((MD.picks||[]).filter(function(pk){return pk.mine;}));
+          var _pcS={QB:'var(--pos-qb)',RB:'var(--pos-rb)',WR:'var(--pos-wr)',TE:'var(--pos-te)',K:'var(--pos-k)',DEF:'var(--pos-def)',FLEX:'var(--accent-bright)',BN:'var(--muted)'};
+          _strip.innerHTML=_open.map(function(o){
+            if(!o.pk)return '<span class="rs-slot" style="color:'+(_pcS[o.l]||'var(--muted)')+'">'+o.l+'</span>';
+            var pl=o.pk.p;
+            return '<span class="rs-slot filled" title="'+o.l+': '+pl.name.replace(/"/g,'&quot;')+(o.pk.grade?' ('+o.pk.grade+')':'')+'">'
+              +'<img src="'+mdFaceUrl(pl)+'" onerror="this.style.visibility=\'hidden\'">'
+              +'<i style="background:'+(_pcS[pl.pos]||'var(--muted)')+'"></i>'
+              +(o.pk.grade?'<b class="rs-g">'+o.pk.grade+'</b>':'')
+              +'</span>';
+          }).join('');
+          _strip.classList.toggle('in-au',!!AU.active);
+        }
+      }catch(_){}
     }
   }catch(_){}
   var _mdMine=document.getElementById('md-mine');if(_mdMine)_mdMine.innerHTML=['QB','RB','WR','TE','K','DEF'].filter(function(pos){return byPos[pos]&&byPos[pos].length;}).map(function(pos){
@@ -11292,7 +12037,13 @@ async function mpBoardPick(p){
     var take=(MD.lastRec&&MD.lastRec.id===p.id)
       ?('Exactly what I wanted. '+(MD.lastRecWhy||''))
       :('Noted. I leaned '+(MD.lastRec?MD.lastRec.name:'elsewhere')+', but '+p.name+' is your call to make - live drafts are won on conviction.');
-    if(sg){sg.style.display='block';sg.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Mac on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>';}
+    if(sg){
+      // Mac's reaction rides his discreet face: one-sentence essence when
+      // collapsed (steals cheer, reaches wince), the full take on tap
+      var _rFace=/^Steal|^Exactly what I wanted/.test(take)?'excited':/^A reach/.test(take)?'skeptical':'thinking';
+      var _rEss=(take.split('. ')[0]||'').slice(0,120);if(_rEss&&!/[.!]$/.test(_rEss))_rEss+='.';
+      mdMacSay(_rEss,'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Mac on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>',{face:_rFace});
+    }
   }catch(_){}
   MD.onClock=false;
   var ch=document.getElementById('md-choices');if(ch)ch.innerHTML='';
@@ -12013,9 +12764,13 @@ function mdFinish(){
       +'<button class="btn-sm" onclick="switchScreen(\'sage\');setTimeout(function(){var i=document.getElementById(\'sage-chat-input\');if(i){i.value=\'How did I do in my last mock draft?\';i.focus();}},300)">Ask Mac about this draft</button>'
       +'</div>';
   }
-  sage.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac\'s verdict · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
+  // the verdict rides Mac's discreet face too: the grade letter IS the
+  // essence, the full breakdown one tap away (respects the collapse gesture)
+  mdMacSay('Draft complete - grade '+letter+'. Tap for the full verdict.',
+    '<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac\'s verdict · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
     +'<div style="font-size:13px;color:var(--muted2);line-height:1.7">'+pos.QB+' QB / '+pos.RB+' RB / '+pos.WR+' WR / '+pos.TE+' TE across '+MD.mine.length+' picks. '+takes+'Run it back from another slot and watch the board shift.</div>'
-    +valHtml+rivalHtml+perPick;
+    +valHtml+rivalHtml+perPick,
+    {face:letter.charAt(0)==='A'?'excited':letter.charAt(0)==='D'?'deadpan':'thinking'});
   document.getElementById('md-choices').innerHTML='';
   // Hand the draft to Ask Mac: a compact summary he can grade in chat
   try{

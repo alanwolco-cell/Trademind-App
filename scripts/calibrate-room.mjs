@@ -116,6 +116,9 @@ const sandbox = {
 };
 sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
+// fast-path flag: auction pacing (AU_PACE, human-legibility delays) collapses
+// to 1ms ticks - the sanctioned accelerated path; decisions never read it
+sandbox._AU_FAST = 1;
 vm.createContext(sandbox);
 vm.runInContext(APP, sandbox, { filename: 'app.js' });
 
@@ -287,6 +290,29 @@ function checkFormat(name, rooms, opts) {
       `RBs by R6: zerorb ${rbZ && rbZ.toFixed(2)} < bpa ${rbB && rbB.toFixed(2)} < robustrb ${rbR && rbR.toFixed(2)} | QB1 round: earlyqb ${qE && qE.toFixed(2)} vs lateqb ${qL && qL.toFixed(2)}`]);
   }
 
+  // (i) LEGAL LINEUPS: every bot fields at least QB1/RB2/WR2/TE1 (SF: QB2) -
+  // the starter-fill gate's hard guarantee, same class as the K/DEF forced
+  // fill. Pre-gate audit measured ~28% illegal rosters; the bar is ZERO.
+  {
+    const req = { QB: opts.sf ? 2 : 1, RB: 2, WR: 2, TE: 1 };
+    let illN = 0, botN = 0; const illEx = [];
+    rooms.forEach(r => {
+      const per = {};
+      r.picks.forEach(pk => {
+        if (pk.mine) return;
+        const c = (per[pk.slot] = per[pk.slot] || { QB: 0, RB: 0, WR: 0, TE: 0 });
+        if (c[pk.p.pos] !== undefined) c[pk.p.pos]++;
+      });
+      Object.entries(per).forEach(([s, c]) => {
+        botN++;
+        const bad = Object.keys(req).filter(ps => c[ps] < req[ps]);
+        if (bad.length) { illN++; if (illEx.length < 3) illEx.push(`slot ${s}: ${bad.map(ps => ps + c[ps]).join('/')}`); }
+      });
+    });
+    res.push([`(i) legal lineups (min QB${req.QB}/RB2/WR2/TE1 per bot)`, illN === 0,
+      `${illN}/${botN} illegal rosters${illEx.length ? ' e.g. ' + illEx.join('; ') : ''}`]);
+  }
+
   console.log(`\n=== ${name} (${rooms.length} rooms) ===`);
   let fails = 0;
   res.forEach(([label, ok, detail]) => { if (!ok) fails++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}\n      ${detail}`); });
@@ -354,6 +380,17 @@ function checkAuction(name, rooms) {
   });
   res.push(['(e) $1 endgame sales exist (5+ per room)', dollarOk / rooms.length >= 0.95,
     `${(dollarOk / rooms.length * 100).toFixed(1)}% of rooms; median $1 sales ${dollarCounts.sort((a, b) => a - b)[Math.floor(dollarCounts.length / 2)]}`]);
+  // (g) buy-grade curve: grading every sale (paid vs room sticker, house
+  // cuts in auGradeBuy) must produce a curve that centers on B with thin
+  // tails - most lots clear near sticker, genuine steals and busts are rare.
+  // Bands set from the measured 600-room distribution (see report).
+  {
+    const gc = { A: 0, 'B+': 0, B: 0, 'C+': 0, D: 0 }; let gn = 0;
+    rooms.forEach(r => r.sold.forEach(s => { const g = sandbox.auGradeBuy(s.price, s.value); gc[g] = (gc[g] || 0) + 1; gn++; }));
+    const fB = (gc['B'] + gc['B+']) / (gn || 1), fA = gc['A'] / (gn || 1), fD = gc['D'] / (gn || 1);
+    res.push(['(g) buy grades center on B (B family >= 50%, A <= 15%, D <= 20%)', gn > 0 && fB >= 0.5 && fA <= 0.15 && fD <= 0.2,
+      `n=${gn}: A ${(fA * 100).toFixed(1)}% · B+ ${(gc['B+'] / gn * 100).toFixed(1)}% · B ${(gc['B'] / gn * 100).toFixed(1)}% · C+ ${(gc['C+'] / gn * 100).toFixed(1)}% · D ${(fD * 100).toFixed(1)}%`]);
+  }
   // (f) inflation responds: hot early rooms cool off later
   let hotRooms = 0, cooled = 0;
   rooms.forEach(r => {
@@ -462,6 +499,54 @@ for (const f of FORMATS) {
   sandbox.localStorage.removeItem('tm_md_profiles'); // never leak into other checks
   console.log(`\n=== League drafter profiles (${snakeRooms.length} snake + ${auRooms} auction rooms) ===`);
   res.forEach(([label, ok, detail]) => { if (!ok) totalFails++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}\n      ${detail}`); });
+}
+// ── (j) FZ26 auction RB market: elite RBs sell at the owner's premium ──────
+// (Bijan $63 AAV -> $74-75 = ~1.18x) inside the hard 1.25x ceiling, and the
+// room's money math stays legal. Targets: elite RB (AAV>=40) mean ratio in
+// [1.12, 1.20], p95 <= 1.25 (cap), and the concrete sanity: an AAV $60-65
+// elite typically $70-77, NEVER > $81.
+{
+  sandbox.localStorage.setItem('tm_md_fantazy26', '1'); // bucket self-seeds v2 at read
+  const N = Math.max(10, Math.round(ROOMS / 6));
+  const ratios = [], topRatios = [], leftovers2 = []; let negB2 = 0, roomsN = 0;
+  for (let i = 0; i < N; i++) {
+    let r;
+    try { r = await runRoom({ teams: 10, rounds: 15, scoring: 0.5, sf: false, auction: true, budget: 200, slot: 9 }); }
+    catch (e) { console.error(`room error (fz26 auction #${i}):`, e.message); totalFails++; break; }
+    roomsN++;
+    Object.values(r.budgets).forEach(b => { if (b < 0) negB2++; });
+    leftovers2.push(Object.values(r.budgets).reduce((a, b) => a + b, 0));
+    let top = null;
+    r.sold.forEach(s => {
+      if (s.p.pos !== 'RB') return;
+      if (!top || s.value > top.value) top = s; // the room's Bijan
+      if (s.value < 40 || s.slot === r.mySlot) return; // user's seat bids premium-free by design
+      ratios.push(s.price / s.value);
+    });
+    if (top && top.value >= 30) topRatios.push(top.price / top.value);
+  }
+  ratios.sort((a, b) => a - b);
+  const mean = ratios.reduce((a, b) => a + b, 0) / (ratios.length || 1);
+  const p95 = ratios.length ? ratios[Math.min(ratios.length - 1, Math.floor(ratios.length * 0.95))] : 0;
+  topRatios.sort((a, b) => a - b);
+  const tMed = topRatios.length ? topRatios[Math.floor(topRatios.length / 2)] : 0;
+  const tMax = topRatios.length ? topRatios[topRatios.length - 1] : 0;
+  const res2 = [];
+  res2.push(['(j1) elite RB mean ratio in [1.12, 1.20]', ratios.length > 0 && mean >= 1.12 && mean <= 1.20,
+    `n=${ratios.length}, mean ${mean.toFixed(3)}`]);
+  res2.push(['(j2) p95 <= 1.25 (the hard cap holds)', ratios.length > 0 && p95 <= 1.25 + 1e-9,
+    `p95 ${p95.toFixed(3)}`]);
+  // the owner's dollar sanity ($63 -> $74-75, never $81+) translated to
+  // ratio space on each room's TOP RB, because this 10-team half-PPR board
+  // normalizes its top stickers below the $60s: median 1.10-1.25, max < 1.29
+  res2.push(['(j3) each room\'s top RB: median ratio 1.10-1.25, never >= 1.29 ($81 on a $63)', topRatios.length > 0 && tMed >= 1.10 && tMed <= 1.25 && tMax < 1.29,
+    `n=${topRatios.length}, median ${tMed.toFixed(3)}, max ${tMax.toFixed(3)}`]);
+  res2.push(['(j4) budgets stay legal under the premium', negB2 === 0,
+    `${negB2} negative budgets; avg unspent $${(leftovers2.reduce((a, b) => a + b, 0) / (leftovers2.length || 1)).toFixed(1)} of $2000`]);
+  sandbox.localStorage.removeItem('tm_md_fantazy26');
+  sandbox.localStorage.removeItem('tm_md_profiles_fantazy26');
+  console.log(`\n=== FZ26 auction RB market (${roomsN} rooms) ===`);
+  res2.forEach(([label, ok, detail]) => { if (!ok) totalFails++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}\n      ${detail}`); });
 }
 console.log(`\n${totalFails === 0 ? 'ALL GREEN' : totalFails + ' FAILURE(S)'} — engine values ${totalFails === 0 ? 'hold up against' : 'need another look vs'} live boards.`);
 process.exit(totalFails === 0 ? 0 : 1);

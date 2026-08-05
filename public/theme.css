@@ -517,3 +517,215 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 #md-finetune>summary::marker,#md-profiles>summary::marker{color:var(--accent-bright);font-size:14px}
 #md-finetune>summary,#md-profiles>summary{transition:color .15s ease}
 #md-finetune>summary:hover,#md-profiles>summary:hover{color:var(--text)}
+
+/* ═══ AUCTION ROOM — the Sleeper-clarity pass ═══════════════════════════════
+   One hierarchy: the LOT and its price tower over everything; ONE primary
+   action (BID); your money in a single legible line; everyone else's budgets
+   collapsed to mini-bars. All type >= 14px, money always tabular. */
+#au-wrap{font-size:14.5px}
+.au-card{padding:18px;background:var(--surface3);border:1px solid var(--border2);border-radius:16px}
+.au-lot-head{display:flex;gap:14px;align-items:center}
+.au-face{width:96px;height:96px;border-radius:14px;object-fit:cover;background:var(--surface2);flex:none}
+.au-name{font-family:var(--font-head);font-size:25px;font-weight:800;line-height:1.15;color:var(--text)}
+.au-sub{font-size:14px;color:var(--muted2);margin-top:4px}
+.au-bidwrap{text-align:right;flex:none}
+.au-bid-num{font-family:var(--font-head);font-size:52px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--text)}
+.au-bid-num.mine{color:var(--green)}
+.au-holder{font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);margin-top:5px}
+/* the bid clock as a bar: two quiet beats light up before the hammer */
+.au-going{display:flex;gap:5px;margin-top:10px}
+.au-going span{height:6px;flex:1;border-radius:100px;background:var(--surface2);border:1px solid var(--border);transition:background .25s}
+.au-going span.on1{background:var(--yellow);border-color:transparent}
+.au-going span.on2{background:#f87171;border-color:transparent}
+.au-mac{font-size:14px;color:var(--muted2);margin-top:14px}
+.au-me{font-size:17px;font-weight:700;color:var(--text);margin-top:8px;font-variant-numeric:tabular-nums}
+.au-me b{color:var(--green)}
+.au-bid-btn{display:block;min-height:58px;width:100%;margin-top:14px;border:none;border-radius:14px;background:var(--accent-bright);color:#0d0817;font-family:var(--font-head);font-size:22px;font-weight:800;cursor:pointer;font-variant-numeric:tabular-nums;transition:transform .08s}
+.au-bid-btn:active{transform:scale(.985)}
+.au-bid-btn[disabled]{opacity:.4;cursor:not-allowed}
+.au-quiet{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.au-quiet .tm-input{width:92px;padding:10px;font-size:14px;font-variant-numeric:tabular-nums}
+.au-quiet .btn-sm{font-size:13px;padding:9px 14px}
+/* everyone else's money: mini-bars with initials, numbers on tap/hover only */
+.au-bstrip{margin:10px 0}
+.au-bstrip-bars{display:flex;gap:6px;align-items:flex-end}
+.au-bbar{flex:1;max-width:36px;text-align:center}
+.au-bbar i{display:block;height:34px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);position:relative;overflow:hidden;font-style:normal}
+.au-bbar i b{position:absolute;left:0;right:0;bottom:0;display:block;background:var(--accent);opacity:.8}
+.au-bbar.me i b{background:var(--green)}
+.au-bbar u{display:block;font-size:10px;font-weight:800;color:var(--muted);text-decoration:none;margin-top:3px;white-space:nowrap;overflow:hidden}
+.au-btoggle{font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;background:none;border:none;padding:5px 0}
+.au-btoggle:hover{color:var(--text)}
+.au-bdetail{margin-top:6px;font-size:14px;line-height:2;color:var(--muted2);font-variant-numeric:tabular-nums}
+/* the SOLD moment: brief centered overlay, brand sweep, then gone */
+.au-splash{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.au-splash .card{padding:26px 44px;border-radius:20px;background:rgba(10,8,20,.93);border:1px solid var(--accent-bright);text-align:center;animation:auSplash 1.5s ease forwards}
+.au-splash .s1{font-family:var(--font-head);font-size:42px;font-weight:800;letter-spacing:.14em;background:linear-gradient(100deg,var(--accent-bright),#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.au-splash img{width:64px;height:64px;border-radius:50%;object-fit:cover;margin:10px auto 6px;display:block;background:var(--surface2)}
+.au-splash .s2{font-size:18px;font-weight:800;color:var(--text)}
+.au-splash .s3{font-size:15px;font-weight:700;color:var(--muted2);margin-top:3px;font-variant-numeric:tabular-nums}
+@keyframes auSplash{0%{opacity:0;transform:scale(.92)}10%{opacity:1;transform:scale(1)}78%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}
+@media(prefers-reduced-motion:reduce){.au-splash .card{animation:none}}
+/* 390px first: tighter head, the BID button rides above the tab bar */
+@media(max-width:700px){
+  .au-face{width:72px;height:72px}
+  .au-name{font-size:20px}
+  .au-bid-num{font-size:42px}
+  .au-card{padding:14px}
+  #au-wrap .au-bid-btn{position:sticky;bottom:var(--md-bar-b,10px);z-index:40;box-shadow:0 10px 30px rgba(5,4,12,.6)}
+}
+
+/* Mac, discreet: the face is the toggle. Collapsed = face + one line + an
+   urgency dot; a single subtle pulse marks a kill-call, never auto-expand. */
+.mac-mini{display:flex;align-items:center;gap:10px;min-height:40px}
+.mac-wrap{position:relative;display:inline-block;flex:none}
+.mac-face{width:38px;height:38px;object-fit:contain;cursor:pointer;display:block}
+.mac-dot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--red);border:2px solid var(--surface2)}
+.mac-line{font-size:13.5px;color:var(--muted2);line-height:1.5}
+.mac-face.pulse{animation:macPulse .9s ease 1}
+@keyframes macPulse{0%{transform:scale(1)}30%{transform:scale(1.18)}60%{transform:scale(.96)}100%{transform:scale(1)}}
+/* the entry-window call: big, unmissable, color-coded to the going bar */
+.au-goingtxt{font-family:var(--font-head);font-size:26px;font-weight:800;letter-spacing:.12em;margin-top:10px;text-align:center}
+.au-goingtxt.g1{color:var(--yellow)}
+.au-goingtxt.g2{color:#f87171}
+@media(prefers-reduced-motion:reduce){.mac-face.pulse{animation:none}}
+
+/* ═══ AUCTION 3-ZONE SKELETON (Yahoo architecture, our skin) ═════════════════
+   Desktop >=1000px: auction column | research | yours. Below that the zones
+   stack: lot first, research, then queue/team. */
+#au-zones{display:grid;grid-template-columns:360px minmax(0,1fr) 250px;gap:14px;align-items:start}
+@media(max-width:999px){#au-zones{grid-template-columns:1fr}}
+#au-last{font-size:14px;color:var(--muted2);padding:6px 2px;font-variant-numeric:tabular-nums}
+#au-last b{color:var(--text)}
+/* zone tabs: quiet segmented row, the active one lifts */
+.au-tabs{display:flex;gap:2px;padding:3px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;margin-bottom:10px}
+.au-tab{flex:1;background:transparent;border:none;border-radius:8px;padding:8px 10px;font-size:13.5px;font-weight:600;color:var(--muted2);cursor:pointer}
+.au-tab.on{background:var(--surface3);color:var(--text);box-shadow:0 1px 4px rgba(5,4,12,.4)}
+/* budgets: a compact row per team, live-bid badge on the high bidder */
+.au-bwrap{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:8px 10px}
+.au-bhd{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:2px 2px 6px}
+.au-brow{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:14px;color:var(--muted2);font-variant-numeric:tabular-nums}
+.au-brow.me .au-bname{color:var(--accent-bright);font-weight:800}
+.au-brow.out{opacity:.45}
+.au-bname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.au-bbadge{background:var(--accent-bright);color:#0d0817;font-weight:800;font-size:12px;border-radius:100px;padding:2px 9px}
+.au-bmoney{font-weight:700;color:var(--text)}
+/* offer controls: stepper + the one primary button share a row */
+.au-offerrow{display:flex;gap:10px;align-items:stretch;margin-top:14px}
+.au-step{display:inline-flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:4px;flex:none}
+.au-stepbtn{width:40px;min-height:48px;border:none;background:transparent;color:var(--text);font-size:20px;font-weight:800;cursor:pointer;border-radius:10px}
+.au-stepbtn:hover{background:var(--surface3)}
+.au-stepval{min-width:56px;text-align:center;font-family:var(--font-head);font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text)}
+.au-offerrow .au-bid-btn{margin-top:0;flex:1}
+/* board tab: who bought what, position colors on every cell */
+.au-boardgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.au-bcol{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:8px;min-width:0}
+.au-bcol.me{border-color:var(--accent-bright)}
+.au-bcolhd{font-size:12.5px;font-weight:800;color:var(--text);padding:2px 2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.au-bcolhd span{color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.au-bcell{display:flex;gap:6px;align-items:baseline;font-size:12.5px;color:var(--muted2);padding:2px 4px;border-left:2px solid var(--border)}
+.au-bcell span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.au-bcell b{font-variant-numeric:tabular-nums;color:var(--text)}
+.au-bcell.pos-QB{border-left-color:var(--pos-qb)}.au-bcell.pos-RB{border-left-color:var(--pos-rb)}
+.au-bcell.pos-WR{border-left-color:var(--pos-wr)}.au-bcell.pos-TE{border-left-color:var(--pos-te)}
+.au-bcell.pos-K{border-left-color:var(--pos-k)}.au-bcell.pos-DEF{border-left-color:var(--pos-def)}
+/* my team rail rows */
+.au-mtrow{display:flex;gap:8px;align-items:baseline;font-size:13.5px;color:var(--muted2);padding:4px 2px;font-variant-numeric:tabular-nums}
+.au-mtrow b{color:var(--text)}
+#au-rauto{margin-top:12px}
+
+/* ═══ AUCTION MOBILE BLUEPRINT (Yahoo skeleton at <=700px) ═══════════════════
+   Header pill · Last strip · compact lot card with side-by-side stepper +
+   Offer · roster strip above the room tabs · room tabs fixed at the bottom.
+   All chrome hidden on desktop, where the 3 zones carry the same jobs. */
+#au-mhead,#au-mtabs,#md-rstrip{display:none}
+@media(max-width:700px){
+  #au-mhead{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:46;background:var(--surface);border-bottom:1px solid var(--border);padding:8px 4px;margin-bottom:8px}
+  .au-x{width:34px;height:34px;flex:none;border:none;background:transparent;color:var(--muted2);font-size:24px;line-height:1;cursor:pointer;border-radius:10px}
+  .au-mpill{flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--muted2);background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:7px 14px;font-variant-numeric:tabular-nums}
+  .au-mpill b{color:var(--text);font-size:15px}
+  .au-mpill.g1{color:var(--yellow);border-color:var(--yellow)}
+  .au-mpill.g2{color:#f87171;border-color:#f87171}
+  /* the lot card row 2: stepper left + Offer right, side by side (this
+     REPLACES the earlier sticky full-width button - Yahoo's layout wins) */
+  #au-wrap .au-bid-btn{position:static;box-shadow:none;min-height:52px;font-size:19px}
+  .au-me{text-align:center}
+  /* filter chips scroll in one row under the search */
+  #au-z-center #md-pos-filter{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;max-width:100%}
+  #au-z-center #md-pos-filter::-webkit-scrollbar{display:none}
+  /* room tabs pinned at the very bottom (they stand in for the app tab bar
+     while the room is on screen), roster strip riding just above them */
+  #au-mtabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--surface);border-top:1px solid var(--border);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+  #au-mtabs button{flex:1;min-height:44px;border:none;background:transparent;color:var(--muted2);font-size:13px;font-weight:700;border-radius:10px;cursor:pointer}
+  #au-mtabs button:active{background:var(--surface2);color:var(--text)}
+  #md-rstrip{display:flex;gap:6px;overflow-x:auto;position:fixed;left:0;right:0;z-index:69;background:var(--surface);border-top:1px solid var(--border);padding:7px 10px;scrollbar-width:none;bottom:var(--md-bar-b,10px)}
+  #md-rstrip::-webkit-scrollbar{display:none}
+  #md-rstrip.in-au{bottom:calc(56px + env(safe-area-inset-bottom))}
+  #md-board{padding-bottom:60px}
+  #au-wrap{padding-bottom:120px}
+  .rs-slot{flex:none;width:34px;height:34px;border-radius:10px;border:1.5px solid currentColor;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:var(--surface2);position:relative}
+  .rs-slot.filled{border-color:var(--border2);overflow:hidden}
+  .rs-slot.filled img{width:100%;height:100%;object-fit:cover}
+  .rs-slot.filled i{position:absolute;left:0;right:0;bottom:0;height:4px;display:block}
+}
+
+/* ═══ AUCTION FINAL SPEC: grades, Results, per-manager Board, countdown ══════ */
+/* buy grades: one letter chip, color by band */
+.au-grade{flex:none;min-width:26px;text-align:center;font-size:11.5px;font-weight:800;border-radius:7px;padding:3px 5px;background:var(--surface2);border:1px solid var(--border)}
+.au-grade.g-A{color:var(--green);border-color:var(--green)}
+.au-grade.g-Bp{color:#86efac;border-color:rgba(134,239,172,.5)}
+.au-grade.g-B{color:var(--muted2)}
+.au-grade.g-Cp{color:var(--yellow);border-color:rgba(250,204,21,.4)}
+.au-grade.g-D{color:#f87171;border-color:rgba(248,113,113,.5)}
+/* Results · Picks rows */
+.au-rndbadge{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;padding:10px 2px 4px}
+.au-pkrow,.au-rrow{display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:1px solid var(--border);font-size:14px}
+.au-pkrow img,.au-rrow img{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;background:var(--surface2)}
+.au-pkno{width:24px;flex:none;text-align:right;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.au-pkmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.au-pknm{font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.au-pkmeta{font-size:12px;font-weight:700}
+.au-pkwho{flex:none;font-size:12.5px;color:var(--muted2);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Results · Rosters */
+.au-rsel{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.au-rselm{font-size:13.5px;color:var(--muted2);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:6px}
+.au-slotchip{flex:none;width:40px;font-size:10.5px;font-weight:800;text-align:center;border:1.5px solid currentColor;border-radius:8px;padding:4px 0;background:var(--surface2)}
+.au-rrow.empty{opacity:.55}
+.au-rempty{font-size:13px;color:var(--muted)}
+.au-rbye{flex:none;width:30px;text-align:center;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.au-rprice{flex:none;width:44px;text-align:right;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+/* Board: horizontal manager columns, position-tinted buy cards */
+.au-boardrow{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px}
+.au-boardrow .au-bcol{flex:0 0 150px}
+.au-bava{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--surface3);border:1px solid var(--border2);align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted2);margin-right:6px}
+.au-bcoln{font-size:12.5px;font-weight:800;color:var(--text)}
+.au-bcolm{font-size:11.5px;color:var(--muted);padding:2px 2px 8px;font-variant-numeric:tabular-nums}
+.au-bcard{border-radius:10px;padding:6px 8px;margin-bottom:6px;border:1px solid var(--border);background:var(--surface2)}
+.au-bcard.pos-QB{background:color-mix(in srgb,var(--pos-qb) 14%,transparent);border-color:color-mix(in srgb,var(--pos-qb) 35%,transparent)}
+.au-bcard.pos-RB{background:color-mix(in srgb,var(--pos-rb) 14%,transparent);border-color:color-mix(in srgb,var(--pos-rb) 35%,transparent)}
+.au-bcard.pos-WR{background:color-mix(in srgb,var(--pos-wr) 14%,transparent);border-color:color-mix(in srgb,var(--pos-wr) 35%,transparent)}
+.au-bcard.pos-TE{background:color-mix(in srgb,var(--pos-te) 14%,transparent);border-color:color-mix(in srgb,var(--pos-te) 35%,transparent)}
+.au-bcard.pos-K{background:color-mix(in srgb,var(--pos-k) 14%,transparent);border-color:color-mix(in srgb,var(--pos-k) 35%,transparent)}
+.au-bcard.pos-DEF{background:color-mix(in srgb,var(--pos-def) 14%,transparent);border-color:color-mix(in srgb,var(--pos-def) 35%,transparent)}
+.au-bcard.empty{border-style:dashed;min-height:34px;background:transparent}
+.au-bcardn{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.au-bcardm{font-size:11px;color:var(--muted2)}
+.au-bcardm b{color:var(--text)}
+.au-bcardp{font-size:12.5px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+/* interlude card + roster-strip grade badge + countdown number */
+.au-interlude{text-align:center;font-family:var(--font-head);font-size:19px;font-weight:800;color:var(--muted2);border-style:dashed}
+.rs-g{position:absolute;top:-1px;right:-1px;font-size:8.5px;font-weight:800;font-style:normal;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:0 3px;color:var(--text);line-height:1.5}
+.au-mcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.au-mnum{font-family:var(--font-head);font-size:22px;font-weight:800;line-height:1;color:var(--text);font-variant-numeric:tabular-nums;min-height:22px}
+
+/* desktop-final details: rail feed, positions matrix, budgets pick-count */
+.au-feedrow{font-size:13px;color:var(--muted2);padding:5px 2px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;line-height:1.5}
+.au-feedrow b{color:var(--text)}
+.au-posrow{display:flex;align-items:center;gap:4px;padding:4px 2px;border-bottom:1px solid var(--border);font-size:13.5px;font-variant-numeric:tabular-nums}
+.au-posrow.me .au-posname{color:var(--accent-bright);font-weight:800}
+.au-poshead{border-bottom:1px solid var(--border2);font-size:11px;font-weight:800}
+.au-posname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted2);font-weight:600}
+.au-poscell{flex:none;width:34px;text-align:center;color:var(--text);font-weight:700}
+.au-poscell.zero{color:var(--muted);opacity:.5}
+.au-bcount{flex:none;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.au-waitcard{border-style:dashed}
