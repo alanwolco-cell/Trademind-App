@@ -729,3 +729,24 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .au-poscell.zero{color:var(--muted);opacity:.5}
 .au-bcount{flex:none;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .au-waitcard{border-style:dashed}
+
+/* Lot card, narrow screens: a long name may NEVER collide with the price.
+   The name is allowed to break anywhere, and on phones the whole head scales
+   down so face + name + money always share the row honestly. */
+.au-name{overflow-wrap:anywhere;word-break:break-word}
+.au-bidwrap{min-width:0}
+@media (max-width:760px){
+  .au-lot-head{gap:10px}
+  .au-face{width:64px;height:64px;border-radius:12px}
+  .au-name{font-size:19px;line-height:1.2}
+  .au-sub{font-size:12.5px;margin-top:3px}
+  .au-bid-num{font-size:34px}
+  .au-holder{font-size:11px;margin-top:3px}
+  .au-me{font-size:14.5px}
+  .au-bid-btn{min-height:52px;font-size:19px}
+}
+@media (max-width:400px){
+  .au-face{width:54px;height:54px}
+  .au-name{font-size:17px}
+  .au-bid-num{font-size:29px}
+}

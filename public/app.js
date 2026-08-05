@@ -8596,6 +8596,10 @@ async function _startMockDraftRun(){
   mdRenderBoard();
   document.getElementById('md-setup').style.display='none';
   var _bd=document.getElementById('md-board');_bd.style.display='block';_bd.dataset.live='1';
+  // inside a live room the section chips (Solo mock / With friends / Live
+  // assist / History) are noise - you are already in the room. Back to setup
+  // (mdBackToSetup / mdShowSection) brings them back.
+  var _secs=document.getElementById('md-sections');if(_secs)_secs.style.display='none';
   // Land at the TOP of the draft board so the room and your picks are the first
   // thing you see - not scrolled past into the player list.
   // Offset for the real fixed chrome: 60px nav (+12 breathing room), plus the
@@ -9380,7 +9384,7 @@ async function mdLoadProjections(){
     if(!Object.keys(byId).length)return;
     window._mdProj={season:ACTIVE_SEASON,byId:byId};
     try{mdRetierFromProj();}catch(_){}
-    if(MD.onClock)mdShowChoices(MD.curRound||1);  // the columns appear in place
+    if(MD.onClock||AU.active)mdShowChoices(MD.curRound||1);  // the columns appear in place
   }catch(_){}
 }
 // Re-tier on PROJECTED POINTS the moment they exist: the dv board is ordinal
@@ -9437,7 +9441,7 @@ async function mdLoadByes(){
       (sched[g.away]=sched[g.away]||{})[g.week]=g.home;
     });
     window._mdSched=sched;
-    if(MD.onClock)mdShowChoices(MD.curRound||1);
+    if(MD.onClock||AU.active)mdShowChoices(MD.curRound||1);
     try{mdRenderMine();}catch(_){}
   }catch(_){}
 }
@@ -9486,7 +9490,7 @@ async function mdLoadRiserRates(){
     var d=await r.json();
     if(!d||!d.prev||!d.buckets)return;
     window._mdRisers=d;
-    if(MD.onClock)mdShowChoices(MD.curRound||1);
+    if(MD.onClock||AU.active)mdShowChoices(MD.curRound||1);
   }catch(_){}
 }
 // Mined market signals (public/signals.json, written by the pattern miner).
@@ -9504,7 +9508,7 @@ async function mdLoadSignals(){
     var byId={};
     d.signals.forEach(function(s){(s.candidates||[]).forEach(function(c){if(c&&c.id&&!byId[c.id])byId[c.id]=s.claim;});});
     window._mdSignals={data:d,byId:byId};
-    if(MD.onClock)mdShowChoices(MD.curRound||1);
+    if(MD.onClock||AU.active)mdShowChoices(MD.curRound||1);
   }catch(_){}
 }
 // A riser is a player whose current board ADP sits 3+ rounds ahead of his
@@ -9882,6 +9886,9 @@ function mdShowChoices(round){
 function mdShowSection(sec){
   var boardEl=document.getElementById('md-board');
   var boardOn=boardEl&&boardEl.dataset.live==='1';
+  // leaving a room restores the section chips (hidden while a draft is live)
+  var _secs=document.getElementById('md-sections');
+  if(_secs)_secs.style.display=boardOn?'none':'flex';
   var map={
     'ld-card':sec==='live',
     'mp-card':sec==='friends',
@@ -11113,6 +11120,7 @@ function auStart(){
   var _sgA=document.getElementById('md-sage');if(_sgA)_sgA.style.display='none';
   auRenderBudgets();
   try{mdRenderMine();}catch(_){}  // seed the phone roster strip before lot one
+  try{mdShowChoices(1);}catch(_){}  // the research table exists from second one
   auAdvance();
 }
 function auAdvance(){
@@ -11382,7 +11390,9 @@ function auSell(){
     if(AU.rtab==='team')_auRenderMyTeam();
     _auRenderInterlude();                  // the gap between lots is narrated, never dead
   }catch(_){}
-  if(MD.onClock)mdShowChoices(1);
+  // the research table is the auction's whole left brain - it must stay
+  // painted at all times (MD.onClock is a snake concept and is never true here)
+  mdShowChoices(1);
   AU.phaseEnd=Date.now()+AU_PACE.NEXT_LOT;AU.stepT=setTimeout(auAdvance,_auDelay(AU_PACE.NEXT_LOT));
 }
 // Mac's read on the block: personal ceiling = room value x live inflation,
@@ -11686,7 +11696,7 @@ function mdApplyEdit(pk,cand){
   }
   pk.p=cand;
   mdRenderBoard();
-  if(MD.onClock)mdShowChoices(MD.curRound||1);
+  if(MD.onClock||AU.active)mdShowChoices(MD.curRound||1);
 }
 function mdRenderMine(){
   var byPos={QB:[],RB:[],WR:[],TE:[]};
