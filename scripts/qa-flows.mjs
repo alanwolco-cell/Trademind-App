@@ -463,7 +463,13 @@ const mtHtml = document.getElementById('au-myteam').innerHTML;
 check('rail Team: slot rows with visible empties + $cost', mtHtml.indexOf('au-slotchip') >= 0 && mtHtml.indexOf('Empty') >= 0 && mtHtml.indexOf('au-rprice') >= 0, mtHtml.slice(0, 120));
 sandbox._auRenderFeed();
 const feedHtml = document.getElementById('au-rfeed').innerHTML;
-check('rail Picks feed: sales + sim + nominations narrated', feedHtml.indexOf('au-feedrow') >= 0 && feedHtml.indexOf('Sim:') >= 0 && feedHtml.indexOf('nominating') >= 0 && feedHtml.indexOf('Auction started') >= 0, feedHtml.slice(0, 200));
+// the feed is a SALES LEDGER: prices, players, buyers - plus room events.
+// "X is nominating" was removed on purpose (owner: it buried the actual
+// sales, and the lot card already says who is nominating).
+check('rail Picks feed: a clean sales ledger (no nomination chatter)',
+  feedHtml.indexOf('au-feedrow') >= 0 && feedHtml.indexOf('au-fprice') >= 0 && feedHtml.indexOf('au-fwho') >= 0
+  && feedHtml.indexOf('Sim:') >= 0 && feedHtml.indexOf('Auction started') >= 0 && feedHtml.indexOf('is nominating') < 0,
+  feedHtml.slice(0, 200));
 AU2.rview = 'pos'; sandbox._auRenderResults();
 const posHtml = document.getElementById('au-results').innerHTML;
 check('results Positions: teams x positions counts', posHtml.indexOf('au-posrow') >= 0 && posHtml.indexOf('au-poscell') >= 0 && posHtml.indexOf('Positions') >= 0, posHtml.slice(0, 120));

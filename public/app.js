@@ -6032,6 +6032,65 @@ function pctMove(p){
 function capFirst(x){return String(x||'').charAt(0).toUpperCase()+String(x||'').slice(1);}
 // One shared market opinion so the site never contradicts itself: the same
 // signals drive the Buy/Sell lists and the player card chip.
+// Inside a live room the trade language ("sell-high window") is nonsense -
+// you are not cashing anyone out, you are deciding a pick. This read replaces
+// it with what actually matters at the table, and NEVER comes back empty:
+// where he sits vs the board, whether he survives your turn, the run, the
+// tier, the money. Falls through to the market read outside a draft.
+function mdDraftRead(pid){
+  try{
+    var bd=document.getElementById('md-board');
+    if(!bd||bd.dataset.live!=='1')return null;
+    var p=null,i;
+    for(i=0;i<(MD.pool||[]).length;i++)if(MD.pool[i].id===pid){p=MD.pool[i];break;}
+    var took=null;
+    (MD.picks||[]).forEach(function(pk){if(pk&&pk.p&&pk.p.id===pid)took=pk;});
+    var ACC='var(--accent-bright)',GRN='var(--green)',YEL='var(--yellow)',RED='var(--red)';
+    // already gone: say who has him and what it cost
+    if(took){
+      var who=took.mine?'You':(((MD.bots&&MD.bots[took.slot]||{}).name)||('Team '+took.slot));
+      if(AU.active){
+        var sale=null;(AU.sold||[]).forEach(function(s0){if(s0&&s0.p&&s0.p.id===pid)sale=s0;});
+        return {k:'sold',label:took.mine?'You bought him':'Off the board',color:took.mine?GRN:'var(--muted)',
+          why:sale?(who+' landed him for $'+sale.price+(sale.value?' - room value said $'+sale.value:'')+'.'):(who+' owns him now.')};
+      }
+      return {k:'gone',label:took.mine?'Your pick':'Off the board',color:took.mine?GRN:'var(--muted)',
+        why:who+' took him at '+took.round+'.'+(took.pickNo<10?'0':'')+took.pickNo+'.'};
+    }
+    if(!p)return null;
+    // AUCTION: money talk
+    if(AU.active){
+      var val=auValue(p),worth=null;
+      try{worth=auMyWorth(p);}catch(_){}
+      var lot=AU.lot;
+      if(lot&&lot.p&&lot.p.id===pid)
+        return {k:'onblock',label:'On the block now',color:ACC,
+          why:'Bidding is at $'+lot.bid+(worth?' - he is worth up to $'+worth+' to your roster.':'.')};
+      return {k:'avail',label:'Still unsold',color:ACC,
+        why:'Room value $'+val+(worth?' · worth up to $'+worth+' to you':'')+'. Nominate him when you want him priced.'};
+    }
+    // SNAKE: survival talk
+    var ov=(MD.pickIdx||0)+1, nextMine=null;
+    for(i=MD.pickIdx||0;i<(MD.order||[]).length;i++)if(MD.order[i]===MD.mySlot){nextMine=i+1;break;}
+    var tier=(MD.tierOf&&MD.tierOf[pid])||null;
+    var left=tier?(MD.pool||[]).filter(function(x){return x.pos===p.pos&&MD.tierOf[x.id]===tier;}).length:0;
+    if(tier&&left<=2)
+      return {k:'cliff',label:left===1?'Last one in his tier':'Two left in his tier',color:RED,
+        why:'After him the '+p.pos+' board drops a level. If you want this tier, it is now.'};
+    if(nextMine&&p.adp){
+      var gap=Math.round(nextMine-p.adp);
+      if(gap>=8)return {k:'value',label:'Falling past his price',color:GRN,
+        why:'The board had him around '+Math.round(p.adp)+' and he is still here at '+ov+'. That is value sitting on the table.'};
+      if(gap>=-4)return {k:'coinflip',label:'Coin flip to survive',color:YEL,
+        why:'Your next pick is '+nextMine+' and his price is '+Math.round(p.adp)+'. He might make it back, he might not.'};
+      return {k:'gonebyturn',label:'Will not last',color:RED,
+        why:'He goes around '+Math.round(p.adp)+' and your next turn is '+nextMine+'. Take him now or lose him.'};
+    }
+    // last resort: never blank
+    return {k:'onboard',label:'On the board',color:ACC,
+      why:p.adp?('The market drafts him around '+Math.round(p.adp)+'; you are at pick '+ov+'.'):'Still available in this room.'};
+  }catch(_){return null;}
+}
 function sageMarketRead(pid){
   var fc=ktcFull[pid]; var p=allPlayers[pid];
   if(!fc||!p)return null;
@@ -6074,7 +6133,7 @@ function openPlayerCard(pid, name){
       if(!chip){chip=document.createElement('div');chip.id='pm-market-read';
         chip.style.cssText='margin-top:7px;font-size:11px;line-height:1.5';info.appendChild(chip);}
       var rid=(pid&&allPlayers[pid])?pid:null;
-      var mr=rid?sageMarketRead(rid):null;
+      var mr=rid?(mdDraftRead(rid)||sageMarketRead(rid)):null;
       var veg='';
       try{
         var nm=rid&&allPlayers[rid]&&allPlayers[rid].name;
@@ -9394,20 +9453,44 @@ async function mdLoadProjections(){
 // the 2026 projections (QB 30 / RB 26 / WR 21 / TE 30 season pts, derived
 // 7/2026 - the median drop is 10-17, so p80 marks a real shelf, not noise).
 // The dv-gap tiers built at pool time remain the fallback until this runs.
-function mdRetierFromProj(){
-  if(!window._mdProj||!MD.pool||!MD.pool.length||!MD.tierOf)return;
-  var thr={QB:30,RB:26,WR:21,TE:30};
-  ['QB','RB','WR','TE'].forEach(function(ps){
-    var t=1,prev=null;
-    MD.pool.forEach(function(p){
-      if(p.pos!==ps)return;
-      var pj=mdProjPts(p.id);
-      if(prev!=null&&pj!=null&&(prev-pj)>=thr[ps]&&t<8)t++;
-      MD.tierOf[p.id]=t;
-      if(pj!=null)prev=pj;
+// Tiers the way a drafter actually means them: a tier ends where the MARKET
+// steps down, not where a projection sheet does. Absolute point gaps put every
+// TE in one bucket (they project within a few points of each other while the
+// room prices them 4x apart - Bowers $35 next to Fannin $8), so the break test
+// is PROPORTIONAL to the value at that spot, with a floor so the tail does not
+// shatter into singletons and a size cap so a tier never becomes a phone book.
+var MD_TIER_DROP=0.14;   // >=14% step down from the running tier's top = new tier
+var MD_TIER_MAX=6;       // no tier longer than this - readability beats purity
+function mdBuildTiers(){
+  if(!MD.pool||!MD.pool.length)return;
+  MD.tierOf=MD.tierOf||{};
+  var useAav=!!(AU&&AU.active&&AU.val);
+  var valOf=function(p){
+    if(useAav){var v=(AU.val&&AU.val[p.id])||0;if(v>0)return v;}
+    var pj=(typeof mdProjPts==='function')?mdProjPts(p.id):null;
+    if(pj!=null&&pj>0&&!useAav)return pj;
+    return p.dv||0;
+  };
+  ['QB','RB','WR','TE','K','DEF'].forEach(function(ps){
+    var list=MD.pool.filter(function(p){return p.pos===ps;});
+    if(!list.length)return;
+    list.sort(function(a,b){return valOf(b)-valOf(a);});
+    var t=1,top=valOf(list[0]),count=0;
+    // the floor scales with the position's own top so a $60 board and a
+    // 300-point board both break sensibly
+    var floor=Math.max(0.5,top*0.035);
+    list.forEach(function(p,i){
+      var v=valOf(p);
+      if(i>0){
+        var stepped=(top-v)>=Math.max(floor,top*MD_TIER_DROP);
+        if((stepped||count>=MD_TIER_MAX)&&t<8){t++;top=v;count=0;}
+      }
+      MD.tierOf[p.id]=t;count++;
     });
   });
 }
+// kept as the old name so every caller (and the projection arrival) still works
+function mdRetierFromProj(){mdBuildTiers();}
 // Bye weeks derived from the real schedule: a bye is simply a week where a
 // team has no game - no hand-kept table to go stale. Partial or missing
 // schedule means NO byes shown, never guessed ones.
@@ -9855,8 +9938,12 @@ function mdShowChoices(round){
     var ctrlHtml=isTaken
       ?'<span style="flex-shrink:0;width:20px"></span><span style="flex-shrink:0;width:26px"></span>'
       :'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
-      +'<span class="md-ch-sel" title="'+(AU.active?'Nominate ':'Draft ')+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
-      +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
+      // the nominate arrow only exists on YOUR nomination turn - during someone
+      // else's lot there is nothing to nominate and the purple invites a
+      // click that does nothing
+      +((AU.active&&AU.nominator!==MD.mySlot)?''
+        :('<span class="md-ch-sel" title="'+(AU.active?'Nominate ':'Draft ')+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
+          +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>'));
     // auction rows read like a price list, not a scouting table: face, name,
     // pos, AAV - the ADP/bye/proj/tag layers are snake's shopping detail
     var _lite=AU.active&&!isTaken;
@@ -10964,6 +11051,7 @@ function _auRenderMyTeam(){
     .map(function(o){return _auRosterRow(o,pc);}).join('');
 }
 // the rail mini-feed ("Picks" tab): sales AND room events, newest first
+function _posColor(ps){return {QB:'var(--pos-qb)',RB:'var(--pos-rb)',WR:'var(--pos-wr)',TE:'var(--pos-te)',K:'var(--pos-k)',DEF:'var(--pos-def)'}[ps]||'';}
 function _auFeed(txt){
   AU.feed=AU.feed||[];
   AU.feed.unshift(txt);
@@ -11111,6 +11199,11 @@ function auStart(){
     var _vt=document.querySelector('.md-view-btn');if(_vt&&_vt.parentElement)_vt.parentElement.style.display='none';
     var _cl3=document.getElementById('md-clock-live');if(_cl3)_cl3.style.display='none';
     var _nd=document.getElementById('md-needs');if(_nd)_nd.style.display='none';
+    // the snake's "My team" peek is dead weight here - the rail has a Team tab
+    // and the phone strip shows the same roster, always on
+    var _pk=document.getElementById('md-player-peek');
+    if(_pk){_pk.style.display='none';_pk.dataset.roster='';}
+    document.querySelectorAll('[onclick*="mdShowMyRoster"]').forEach(function(b){b.style.display='none';});
   }catch(_){}
   AU.bOpen=false;   // budgets start collapsed: mini-bars only
   AU.noSplash=0;
@@ -11153,7 +11246,8 @@ function auAdvance(){
     if(st)st.innerHTML='Nominating: <b style="color:var(--text)">'+nm+'</b>'
       +'<span style="color:var(--accent-bright);font-weight:700;margin-left:10px">'
       +(_untilNom<=1?'you nominate next':'your nomination in '+_untilNom)+'</span>';
-    try{_auFeed('<span style="color:var(--muted)">'+nm+' is nominating&hellip;</span>');}catch(_){}
+    // (no feed line: "who is nominating" is transient state, and the lot card
+    // already says it - in the feed it buried the actual sales)
     var p=auBotNominate(slot);
     auOpenLot(slot,p);
   }
@@ -11251,8 +11345,22 @@ function _auBidOnce(){
     // which priced the whole draft ~10% under what winners would pay - the
     // biggest single piece of invariant (b)'s leak.
     var wSpare=(AU.budgets[w.s]-AU.slotsLeft[w.s])/Math.max(1,AU.slotsLeft[w.s]);
-    var jump=Math.random()<0.4?Math.ceil(Math.random()*Math.min(5,1+wSpare/8)):0;
-    lot.bid=Math.min(w.mx,next+jump);lot.holder=w.s;lot.going=0;
+    // REAL rooms don't crawl $1 at a time toward an obvious price. When the
+    // bid is still far under what the lot is plainly worth, the room jumps -
+    // hard early ("$40!"), then settles into small raises as it closes on
+    // value. Two regimes, owner-driven ("no tiene por que escalar tan lento"):
+    //   FAR  (bid < 60% of the field's ceiling): leap most of the remaining
+    //        gap, 45-75% of it, so a $60 player reaches the $40s in one beat.
+    //   NEAR (the last stretch): the old small raise, where the drama lives.
+    var ceil=w.mx, gap=ceil-next, jump=0;
+    if(gap>3&&next<ceil*0.6){
+      jump=Math.round(gap*(0.45+Math.random()*0.30));
+      // never overshoot into the ceiling itself - leave room to be outbid
+      jump=Math.min(jump,Math.max(1,ceil-next-1));
+    }else if(Math.random()<0.4){
+      jump=Math.ceil(Math.random()*Math.min(5,1+wSpare/8));
+    }
+    lot.bid=Math.min(ceil,next+jump);lot.holder=w.s;lot.going=0;
     return 'bid';
   }
   lot.going++;
@@ -11383,7 +11491,9 @@ function auSell(){
   AU.custom=null; // the stepper belongs to the lot that just closed
   auRenderSold();auRenderBudgets();mdRenderMine();mdRenderLog();
   try{
-    _auFeed('<b>$'+price+'</b> · '+p.name+' <span style="color:var(--muted)">&rarr;</span> '+who);
+    _auFeed('<span class="au-fprice">$'+price+'</span><span class="au-fname">'+p.name
+      +'<span class="au-fpos" style="color:'+(_posColor(p.pos)||'var(--muted)')+'">'+p.pos+'</span></span>'
+      +'<span class="au-fwho">'+who+'</span>');
     _auRenderLast();                       // the splash's permanent record
     if(AU.tab==='board')_auRenderBoardTab();
     if(AU.tab==='history')_auRenderResults();

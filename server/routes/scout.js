@@ -1,4 +1,4 @@
-// Web-scouted pros and cons: Sage researches each player on the live web
+// Web-scouted pros and cons: Mac researches each player on the live web
 // (camp news, role changes, injuries, coaching quotes) and the result is
 // cached on Blob for 7 days - one research call serves every user.
 const express = require('express');

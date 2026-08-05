@@ -334,7 +334,7 @@ const rankKey = (id, mode) => (mode === 'redraft' ? 'r_' : '') + id;
 async function seedRanks(db, mode) {
   const fetch = require('node-fetch');
   const r = await fetch('https://api.fantasycalc.com/values/current?isDynasty=' + (mode === 'redraft' ? 'false' : 'true') + '&numQbs=1&ppr=1', {
-    headers: { 'User-Agent': 'TradeMind/1.0', 'Accept': 'application/json' }
+    headers: { 'User-Agent': 'Mac Draft/1.0', 'Accept': 'application/json' }
   });
   if (!r.ok) throw new Error('FantasyCalc ' + r.status);
   const players = await r.json();
@@ -494,7 +494,7 @@ router.get('/feedback', async (req, res) => {
   res.json(db.feedback || []);
 });
 
-// ── TRADE INDEX: market comps from real TradeMind trades ────────────────────
+// ── TRADE INDEX: market comps from real Mac Draft trades ────────────────────
 // GET /api/community/trade-index — most-traded players in the last 30 days
 router.get('/trade-index', async (req, res) => {
   try {
@@ -536,7 +536,7 @@ router.get('/player-trades', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── REFERRALS: earn a bonus Sage question per friend who joins via your link ──
+// ── REFERRALS: earn a bonus Mac question per friend who joins via your link ──
 // Un-abusable by design: the reward only fires when the referred person connects a
 // REAL Sleeper league (hard to fake) for the first time; one claim per device kills
 // self-referral and multi-accounting; self-referral is blocked outright; and each
@@ -544,7 +544,7 @@ router.get('/player-trades', async (req, res) => {
 const MAX_REFERRALS = 10;
 // Questions each side gains on the day a referral lands. Both sides get the
 // same: the person sharing has to feel paid for the favour, and the person
-// arriving needs room to actually try Sage before deciding. Expires that day.
+// arriving needs room to actually try Mac before deciding. Expires that day.
 const REFERRAL_BONUS = 2;
 router.post('/referral/claim', async (req, res) => {
   try {
@@ -587,12 +587,12 @@ router.get('/referral/status', async (req, res) => {
   const db = await readDb();
   res.json({ bonus: (db.refBonus || {})[user] || 0, referred: ((db.refList || {})[user] || []).length, cap: MAX_REFERRALS });
 });
-// Read-only helper for sage.js to extend a user's free weekly Sage allowance.
+// Read-only helper for sage.js to extend a user's free weekly Mac allowance.
 // UTC day number, the same bucket sage.js counts usage in.
 const _dayNum = () => Math.floor(Date.now() / 86400000);
 
 // The referral bonus is a SAME-DAY boost, not a permanent raise. It gives both
-// sides room to actually use Sage on the day the referral lands and then
+// sides room to actually use Mac on the day the referral lands and then
 // expires, so a handful of invites can never turn into a free unlimited plan.
 function grantReferralBonus(db, user, n) {
   db.refBonus = db.refBonus || {};

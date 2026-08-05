@@ -750,3 +750,11 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   .au-name{font-size:17px}
   .au-bid-num{font-size:29px}
 }
+
+/* Picks feed: a sales ledger, not a chat log. Price leads (tabular), player
+   with his position colour, buyer right-aligned. */
+.au-feedrow{display:flex;align-items:baseline;gap:9px;padding:9px 2px;border-bottom:1px solid var(--border);font-size:13.5px}
+.au-fprice{font-family:var(--font-head);font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);min-width:46px}
+.au-fname{flex:1;min-width:0;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.au-fpos{font-size:10px;font-weight:800;margin-left:6px;letter-spacing:.04em}
+.au-fwho{color:var(--muted);font-size:12.5px;white-space:nowrap;max-width:42%;overflow:hidden;text-overflow:ellipsis}

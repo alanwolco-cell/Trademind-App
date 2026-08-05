@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const NodeCache = require('node-cache');
 const router = express.Router();
 
-// ── Ask Sage AI: open-ended fantasy football Q&A ────────────────────────────
+// ── Ask Mac AI: open-ended fantasy football Q&A ────────────────────────────
 // DORMANT until ANTHROPIC_API_KEY is set in the environment. To activate:
 //   1. Create an API key at https://platform.claude.com
 //   2. Add ANTHROPIC_API_KEY to Vercel env vars, redeploy.
@@ -25,7 +25,7 @@ async function buildGrounding() {
   let fullList = [];
   try {
     const r = await fetch('https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=1&ppr=1', {
-      headers: { 'User-Agent': 'TradeMind/1.0', 'Accept': 'application/json' }
+      headers: { 'User-Agent': 'Mac Draft/1.0', 'Accept': 'application/json' }
     });
     if (r.ok) {
       const players = await r.json();
@@ -100,7 +100,7 @@ async function buildGrounding() {
 }
 
 // ── Naming players in a conversation ────────────────────────────────────────
-// Deciding who the user is talking about is what lets Sage quote a real value
+// Deciding who the user is talking about is what lets Mac quote a real value
 // instead of guessing. The old test was `lastName.length > 4`, which silently
 // hid two whole categories:
 //
@@ -150,7 +150,7 @@ function namedInConvo(name, txt) {
   return hasWord(txt, last);
 }
 
-const SAGE_PERSONA = `You are Sage, the resident fantasy football brain of TradeMind (trademindff.com), a trade advisor for dynasty and redraft leagues. You are not a calculator: a calculator compares numbers, you weigh a manager's roster, league, timing and opponent and then tell them what to do.
+const SAGE_PERSONA = `You are Mac, the resident fantasy football brain of Mac Draft (trademindff.com), a trade advisor for dynasty and redraft leagues. You are not a calculator: a calculator compares numbers, you weigh a manager's roster, league, timing and opponent and then tell them what to do.
 ACCURACY OVER SPEED: for any question about a player's current role, depth chart, or starting job, verify with web search BEFORE answering unless the provided scout context explicitly covers it. Never name a player's competition from memory. If you realize mid-answer you are unsure, search first, answer once - never publish a correction to your own previous message.
 When the news is genuinely good for the user - a clear win, a rising player they own - you may close with "Life is good." Use it sparingly, only when it fits.
 SITUATION FIRST: a player's outlook is his situation, not just his value. Before answering about any player, weigh: teammates who left or arrived (a departed WR1 means more targets for the WR2), coaching and scheme changes, depth chart role, and age. If the scout context provided does not cover the player's current situation, USE WEB SEARCH to check for offseason moves before answering - never give an outlook from the value number alone.
@@ -180,7 +180,7 @@ Grounding rules:
 - NEVER answer about a different player than the one asked about. If the asked player is not in your data, search for him or say you do not have his current value - do not substitute a similarly named or similar-role player.
 - Never invent stats, values, or news. Every number you state must come from the values below or a search you ran this turn. If a claim depends on current facts you have not verified, search first or say you are not certain - never guess.
 - NEGOTIATION COACH: when the user pastes a conversation from their league chat, asks how to reply to a manager, or says NEGOTIATION COACH MODE, switch to coaching. Reply with (1) the exact message they should send next - written in their casual league-chat voice, persuasive but never desperate - then (2) one line of strategy. Use the market values to anchor the ask. HARD RULE: never offer up anything the user said they refuse to give - work around their constraints, and if the deal is impossible within them, say so and suggest the closest viable alternative.
-- NAVIGATION: TradeMind has tools you can send the user to. To add a button that opens one, put a token at the very END of your reply, on its own: [[go:KEY]]. Valid KEYs: analyze (the Trade Analyzer), ideas (Trade Ideas for their league), league (My League), research (player Research and compare), draft (the mock Draft room), news (fantasy News), community (Community). Add one ONLY when it helps the user act on your answer - e.g. after telling them to run a specific trade use [[go:analyze]], after suggesting they browse ideas use [[go:ideas]], if they ask what to draft use [[go:draft]]. Max 2. NEVER write the token inside a sentence and never mention it - the app strips it and turns it into a button.`;
+- NAVIGATION: Mac Draft has tools you can send the user to. To add a button that opens one, put a token at the very END of your reply, on its own: [[go:KEY]]. Valid KEYs: analyze (the Trade Analyzer), ideas (Trade Ideas for their league), league (My League), research (player Research and compare), draft (the mock Draft room), news (fantasy News), community (Community). Add one ONLY when it helps the user act on your answer - e.g. after telling them to run a specific trade use [[go:analyze]], after suggesting they browse ideas use [[go:ideas]], if they ask what to draft use [[go:draft]]. Max 2. NEVER write the token inside a sentence and never mention it - the app strips it and turns it into a button.`;
 
 // Per-user daily message limit. A public launch spins up many serverless
 // instances, so a per-instance counter caps at DAILY_LIMIT x (instance count)
@@ -353,10 +353,10 @@ router.get('/quota', async (req, res) => {
 router.post('/chat', async (req, res) => {
   if (!configured()) return res.status(503).json({ error: 'not configured' });
   try {
-    // Sage answers signed-in managers only - an anonymous public tap was an
+    // Mac answers signed-in managers only - an anonymous public tap was an
     // unlimited spend surface
     const user = String((req.body || {}).user || '').trim().slice(0, 40);
-    if (!user) return res.status(401).json({ error: 'Sign in with your Sleeper username to talk to Sage.' });
+    if (!user) return res.status(401).json({ error: 'Sign in with your Sleeper username to talk to Mac.' });
     const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
     const device = String((req.body || {}).device || '').slice(0, 64);
     const pro = await isPro(readAcctId(req), user);
@@ -366,13 +366,13 @@ router.post('/chat', async (req, res) => {
         return res.status(429).json({ error: "You have reached this month's fair-use limit (" + PRO_MONTHLY + " questions). It resets on the 1st - and if you genuinely need more, reach out." });
       }
       if (u.day > PRO_DAILY) {
-        return res.status(429).json({ error: "That is a lot of Sage for one day (" + PRO_DAILY + "). Give it a rest and I will be sharp again tomorrow." });
+        return res.status(429).json({ error: "That is a lot of Mac for one day (" + PRO_DAILY + "). Give it a rest and I will be sharp again tomorrow." });
       }
     } else {
       // per-IP cap catches one device farming free questions via throwaway names
       if (u.ip > IP_FREE_DAILY) {
         return res.status(429).json({
-          error: "This network has used its free Sage for today. Go Pro for unlimited, or come back tomorrow.",
+          error: "This network has used its free Mac for today. Go Pro for unlimited, or come back tomorrow.",
           upgrade: true,
         });
       }
@@ -382,7 +382,7 @@ router.post('/chat', async (req, res) => {
       if (u.day > _effDaily || u.week > _effWeekly) {
         const which = u.week > _effWeekly ? 'this week' : 'today';
         return res.status(429).json({
-          error: "That is your free Sage for " + which + " - looks like you are putting me to work, which I love. Go Pro and ask me anything, anytime. I will be here before every move.",
+          error: "That is your free Mac for " + which + " - looks like you are putting me to work, which I love. Go Pro and ask me anything, anytime. I will be here before every move.",
           upgrade: true,
         });
       }
@@ -395,7 +395,7 @@ router.post('/chat', async (req, res) => {
       content: String(m.content || '').slice(0, 2000)
     })).filter(m => m.content);
     if (!history.length) return res.status(400).json({ error: 'empty messages' });
-    if (history[0].role !== 'user') history.unshift({ role: 'user', content: 'Hey Sage.' });
+    if (history[0].role !== 'user') history.unshift({ role: 'user', content: 'Hey Mac.' });
 
     const Anthropic = require('@anthropic-ai/sdk');
     const client = new Anthropic();
@@ -437,7 +437,7 @@ router.post('/chat', async (req, res) => {
             if (p.posRankRed) bits.push(`positional rank redraft ${p.pos}${p.posRankRed}`);
             const pv = projMap[p.name.toLowerCase()];
             if (pv != null) bits.push(`outlook ${pv} pts/wk`);
-            // Current teammates = his ACTUAL target/touch competition, so Sage
+            // Current teammates = his ACTUAL target/touch competition, so Mac
             // never names a departed player. fullList is value-sorted; look up
             // each player's CURRENT team via the roster map.
             if (r.team && r.team !== 'FA') {
@@ -453,7 +453,7 @@ router.post('/chat', async (req, res) => {
           }).join('\n')
       : '';
     // The user's connected league: format and window, computed client-side.
-    // This is what lets Sage answer redraft questions in redraft terms and
+    // This is what lets Mac answer redraft questions in redraft terms and
     // know the user's window without asking.
     let leagueTxt = '';
     const lc = (req.body || {}).leagueContext;
@@ -488,7 +488,7 @@ router.post('/chat', async (req, res) => {
               (r.mine ? '>> THE USER\'S TEAM' : String(r.team || 'Team').slice(0, 28)) + ': ' + (r.core || []).slice(0, 10).join(', ')
             ).join('\n');
       }
-      if (lc.lastMock) leagueTxt += '\nTheir most recent TradeMind mock draft (when they ask how they did, how their draft went, or about "my mock", grade THIS - the pick vs market rank gap tells you steals and reaches): ' + String(lc.lastMock).slice(0, 900);
+      if (lc.lastMock) leagueTxt += '\nTheir most recent Mac Draft mock draft (when they ask how they did, how their draft went, or about "my mock", grade THIS - the pick vs market rank gap tells you steals and reaches): ' + String(lc.lastMock).slice(0, 900);
     }
 
     const system = [
@@ -508,7 +508,7 @@ router.post('/chat', async (req, res) => {
       { type: 'text', text: (g.calendarTxt || '') + (mentionedTxt ? '\n\n' + mentionedTxt : '') + (notesTxt ? '\n\n' + notesTxt : '') }
     ];
 
-    // Stream the answer as Server-Sent Events so text appears as Sage writes it
+    // Stream the answer as Server-Sent Events so text appears as Mac writes it
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -576,7 +576,7 @@ router.post('/chat', async (req, res) => {
       // client renders whatever text arrived. Only signal a hard failure when
       // nothing was produced at all.
       if (full.trim()) { send({ done: true, model: answeredModel }); }
-      else { failed = true; send({ error: 'Sage hit a snag. Try again in a moment.' }); }
+      else { failed = true; send({ error: 'Mac hit a snag. Try again in a moment.' }); }
     }
     // Only a genuine failure (an error, or the model producing NO text at all)
     // refunds the question. A real answer - even "I do not have that data" -
@@ -585,7 +585,7 @@ router.post('/chat', async (req, res) => {
     res.end();
   } catch (e) {
     console.error('[sage]', e.message);
-    res.status(502).json({ error: 'Sage is unavailable right now.' });
+    res.status(502).json({ error: 'Mac is unavailable right now.' });
   }
 });
 
@@ -596,5 +596,5 @@ router.get('/status', (req, res) => {
 
 module.exports = router;
 // Exported so the player matcher can be exercised directly. Getting this wrong
-// is invisible in production: Sage just quietly answers without the data.
+// is invisible in production: Mac just quietly answers without the data.
 module.exports.namedInConvo = namedInConvo;

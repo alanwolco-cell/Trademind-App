@@ -18,7 +18,7 @@ function getStripe() {
 }
 
 // ── Entitlement store: who is Pro. Blob-backed (writes only happen on a
-//    purchase/cancel, so volume is tiny), cached in memory for 30s so a Sage
+//    purchase/cancel, so volume is tiny), cached in memory for 30s so a Mac
 //    request doesn't hit blob every time.
 //
 //    Keyed by ACCOUNT ID (sha256 of the browser's account key), never by
@@ -72,7 +72,7 @@ async function saveEnt(e) {
 // The account key stays the credential for MANAGING the plan - cancel, resume,
 // billing portal, plan details - so knowing someone's public Sleeper name still
 // buys you nothing there. The residual exposure is that a person who knows a
-// subscriber's name could borrow their unlimited Sage; the per-day and
+// subscriber's name could borrow their unlimited Mac; the per-day and
 // per-month fair-use ceilings already cap what that can cost.
 const _live = (rec) => !!(rec && (rec.status === 'active' || rec.status === 'trialing'));
 

@@ -31,7 +31,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS locked to TradeMind's own origins. A missing Origin (server-to-server,
+// CORS locked to Mac Draft's own origins. A missing Origin (server-to-server,
 // the Stripe webhook, health checks) is allowed; browser requests from any other
 // website are refused, so nobody can build a front-end on top of this API.
 // Add every new custom domain here, or its browser requests get refused.
@@ -79,8 +79,8 @@ app.get('/player/:slug', (req, res) => {
     if (!_indexHtml) _indexHtml = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
     const nice = String(req.params.slug).replace(/[^a-z0-9-]/gi, '').split('-')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 60);
-    const title = nice ? `${nice} - Dynasty Value, Trades & Sage's Take | TradeMind` : 'TradeMind';
-    const desc = nice ? `${nice}'s live fantasy football market value, trade history and comps, and what Sage would pay. Updated daily on TradeMind.` : '';
+    const title = nice ? `${nice} - Dynasty Value, Trades & Mac's Take | Mac Draft` : 'Mac Draft';
+    const desc = nice ? `${nice}'s live fantasy football market value, trade history and comps, and what Mac would pay. Updated daily on Mac Draft.` : '';
     let html = _indexHtml.replace(/<title>[\s\S]*?<\/title>/, '<title>' + title + '</title>');
     if (desc) html = html.replace(/(<meta name="description" content=")[^"]*(">)/, '$1' + desc + '$2');
     res.set('Cache-Control', 'public, max-age=300, s-maxage=3600');
@@ -123,7 +123,7 @@ app.get('*', (req, res) => {
 // Local dev: start server. Vercel: export app for serverless handler.
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`TradeMind running on http://localhost:${PORT}`);
+    console.log(`Mac Draft running on http://localhost:${PORT}`);
   });
 }
 
