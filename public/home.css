@@ -1375,3 +1375,16 @@ html.v11 .hero, html.v12 .hero{
     radial-gradient(820px 560px at 10% 80%, rgba(103,232,249,.05), transparent 58%),
     #0d0d14;
 }
+
+/* Mac rides the phone tab bar - full colour, lifted a touch so he sits like
+   an icon, and he brightens with the active tab instead of tinting. */
+html.v11 .tabbar-mac, html.v12 .tabbar-mac{
+  object-fit:contain;
+  display:block;
+  margin:0 auto -1px;
+  opacity:.72;
+  transition:opacity .18s var(--mk-ease),transform .18s var(--mk-ease);
+}
+html.v11 .tabbar-item.active .tabbar-mac, html.v12 .tabbar-item.active .tabbar-mac{
+  opacity:1;transform:scale(1.1);
+}

@@ -9501,11 +9501,13 @@ var MD_TIER_MAX=6;       // no tier longer than this - readability beats purity
 function mdBuildTiers(){
   if(!MD.pool||!MD.pool.length)return;
   MD.tierOf=MD.tierOf||{};
+  // TIER = a step down in the SAME ranking the list is sorted by. Tiering on
+  // projections while the list sorts on price produced tiers that jumped
+  // around on screen (Tier 5 above Tier 4). Auction sorts on money, snake on
+  // draft value - so tier on exactly that.
   var useAav=!!(AU&&AU.active&&AU.val);
   var valOf=function(p){
     if(useAav){var v=(AU.val&&AU.val[p.id])||0;if(v>0)return v;}
-    var pj=(typeof mdProjPts==='function')?mdProjPts(p.id):null;
-    if(pj!=null&&pj>0&&!useAav)return pj;
     return p.dv||0;
   };
   ['QB','RB','WR','TE','K','DEF'].forEach(function(ps){
