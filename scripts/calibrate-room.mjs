@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const APP = fs.readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
-const BASE = process.env.CAL_BASE || 'https://trademindff.com';
+const BASE = process.env.CAL_BASE || 'https://macdraft.app';
 const argv = process.argv.slice(2);
 const ROOMS = parseInt(argv[argv.indexOf('--rooms') + 1], 10) || 600;
 
