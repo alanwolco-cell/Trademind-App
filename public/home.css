@@ -1358,3 +1358,19 @@ html.v11 .hero, html.v12 .hero{
       var(--mk-page);
   }
 }
+
+/* ── PART 7c — THE ATMOSPHERE FOLLOWS THE SCROLL ───────────────────────────
+   Owner: "cuando scrolleas se pierde el background." The page and band
+   tokens become layered auroras - every section below the hero keeps a soft
+   purple/teal breath instead of collapsing to flat charcoal. */
+:root{
+  --mk-page:
+    radial-gradient(1100px 700px at 12% 8%, rgba(107,63,255,.10), transparent 62%),
+    radial-gradient(900px 620px at 88% 42%, rgba(103,232,249,.05), transparent 60%),
+    radial-gradient(1000px 700px at 40% 96%, rgba(107,63,255,.07), transparent 62%),
+    #0a0a10;
+  --mk-band:
+    radial-gradient(1000px 640px at 85% 10%, rgba(107,63,255,.09), transparent 60%),
+    radial-gradient(820px 560px at 10% 80%, rgba(103,232,249,.05), transparent 58%),
+    #0d0d14;
+}
