@@ -7778,6 +7778,20 @@ var MD_PROFILE_LABELS=[
   ['bpa','Best available'],['hype','Hype chaser'],['homer','Homer'],
   ['valuestrict','Value strict']
 ];
+// plain-English explanations (owner's call: a casual player has no idea what
+// a "homer" or a "Zero RB truther" is) - option tooltips + the panel legend
+var MD_PROFILE_DESC={
+  zerorb:'Skips running backs early - loads up on receivers first',
+  herorb:'One elite RB early, then hammers wide receivers',
+  robustrb:'Pounds running backs in the first rounds, builds a wall',
+  earlyqb:'Grabs a top quarterback rounds earlier than most people',
+  lateqb:'Waits forever on QB - fills the other spots first',
+  tehunter:'Reaches early for an elite tight end',
+  bpa:'Pure value - always takes the best player on the board',
+  hype:'Reaches for the hot young names the group chat loves',
+  homer:'Overpays for players from their favorite NFL team',
+  valuestrict:'Never reaches - pounces on anyone who slides'
+};
 // Fantazy 2026: the owner's real Yahoo room (league id 664858, "league 2021")
 // as a one-tap preset. Names seat-ordered from the live league; seat 9 is the
 // owner ("Alan goat") and renders as "You". Seat 6's nickname really carries
@@ -7918,15 +7932,27 @@ function _mdEnsureProfilesPanel(){
   if(document.getElementById('md-profiles'))return;
   var ft=document.getElementById('md-finetune');
   if(!ft||!ft.insertAdjacentHTML)return;
+  // The Fantazy 2026 switch lives OUTSIDE the collapsed panels, visible the
+  // moment the setup opens (owner's call), and says exactly what it applies.
+  ft.insertAdjacentHTML('beforebegin',
+    '<div id="md-fz26-bar" style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin:0 0 14px">'
+    +'<label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0">'
+    +'<input type="checkbox" id="md-fantazy26" class="md-fz26-tick" onchange="mdFantazy26Toggle(this.checked)" style="accent-color:var(--accent-bright);width:18px;height:18px;margin:0;flex:none">'
+    +'<span style="min-width:0"><span style="display:block;font-size:13px;font-weight:800;color:var(--text)">Fantazy 2026</span>'
+    +'<span style="display:block;font-size:11.5px;color:var(--muted2);margin-top:2px">Applies every league 2021 setting: 10 teams &middot; Half PPR &middot; 6pt pass TD &middot; 15 rounds &middot; your 10 managers in their seats</span></span>'
+    +'</label></div>');
   ft.insertAdjacentHTML('afterend',
     '<details id="md-profiles" style="margin:-6px 0 16px">'
     +'<summary style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;padding:4px 0">Your league\'s drafters: names and personalities</summary>'
     +'<div style="padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-top:8px">'
-    +'<label style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted2);cursor:pointer;margin-bottom:10px" title="One tap: 10 teams, half PPR, 1QB, 15 rounds, 6pt passing TDs, and the ten real managers seated">'
-    +'<input type="checkbox" id="md-fantazy26" onchange="mdFantazy26Toggle(this.checked)" style="accent-color:var(--accent-bright);margin:0">Fantazy 2026 - league 2021 preset'
-    +'</label>'
     +'<div id="md-profiles-note" style="font-size:11.5px;color:var(--muted2);margin-bottom:10px"></div>'
     +'<div id="md-profiles-rows" style="display:flex;flex-direction:column;gap:6px"></div>'
+    +'<details style="margin-top:10px"><summary style="font-size:11px;font-weight:700;color:var(--accent-bright);cursor:pointer">What do these styles mean?</summary>'
+    +'<div style="margin-top:8px;display:grid;gap:5px">'
+    +MD_PROFILE_LABELS.map(function(al){
+      return '<div style="font-size:11.5px;line-height:1.45"><strong style="color:var(--text)">'+al[1]+'</strong> <span style="color:var(--muted2)">- '+MD_PROFILE_DESC[al[0]]+'</span></div>';
+    }).join('')
+    +'</div></details>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
     +'<button class="btn-sm" onclick="mdProfilesRandomizeAll()" title="Deal every seat a random personality">Randomize all</button>'
     +'<button class="btn-sm" onclick="mdProfilesClear()" title="Back to random names and personalities">Clear</button>'
@@ -7964,7 +7990,7 @@ function mdRenderProfiles(){
     var arch=pr.arch||'';
     var opts='<option value=""'+(arch?'':' selected')+'>Random</option>'
       +MD_PROFILE_LABELS.map(function(al){
-        return '<option value="'+al[0]+'"'+(arch===al[0]?' selected':'')+'>'+al[1]+'</option>';
+        return '<option value="'+al[0]+'" title="'+(MD_PROFILE_DESC[al[0]]||'')+'"'+(arch===al[0]?' selected':'')+'>'+al[1]+'</option>';
       }).join('');
     var teamSel=arch==='homer'
       ?'<select class="opp-select" style="width:auto;font-size:12px" title="The NFL team this homer overpays for" onchange="mdProfileSet('+s+',\'team\',this.value)">'

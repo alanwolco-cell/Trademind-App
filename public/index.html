@@ -22,14 +22,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Mac advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://macdraft.app/">
-<meta property="og:image" content="https://macdraft.app/og.png?v=2026075112">
+<meta property="og:image" content="https://macdraft.app/og.png?v=2026075213">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Mac advising every pick.">
-<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026075112">
+<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026075213">
 <link rel="canonical" href="https://macdraft.app/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,18 +37,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026075112">
+<link rel="stylesheet" href="/styles.css?v=2026075213">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026075112" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026075213" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026075112">
+<link rel="stylesheet" href="/theme.css?v=2026075213">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026075112">
+<link rel="stylesheet" href="/home.css?v=2026075213">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -60,7 +60,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026075112">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026075213">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -109,7 +109,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <!-- The menu button: every tool beyond the mock and Mac lives in here, on
        desktop and phone alike. On small screens the bottom tab bar's "More"
        opens the same drawer, so the button hides there. -->
-  <button class="theme-toggle icon" id="nav-burger" onclick="mobMenuToggle()" title="Menu" aria-label="Menu">
+  <button class="theme-toggle icon nav-burger-alive" id="nav-burger" onclick="mobMenuToggle()" title="Menu" aria-label="Menu"><span class="nav-burger-dot" aria-hidden="true"></span>
     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
   </button>
   <div style="position:relative;margin-left:4px;display:flex;align-items:center" id="nav-search-wrap">
@@ -219,16 +219,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="mk-hero-inner">
     <!-- app.js swaps this line for "Welcome back, <user>" on a return visit -->
     <div class="mk-eyebrow" id="hero-badge-text">Mac Draft</div>
-    <h1>The mock draft that <br>drafts like your league.</h1>
-    <p class="mk-sub">Tell it how your room actually drafts, in plain words. The bots reach, wait and snipe like the people you know - and Mac advises every pick.</p>
+    <h1>Draft like it's <br>draft night.</h1>
+    <p class="mk-sub">Mock drafts that behave like your league. Snake or auction, with Mac on the headset.</p>
     <div class="mk-hero-cta hero-cta" id="hero-cta">
-      <label class="mk-field-label" for="hero-mock-ctx">How does your league draft?</label>
-      <textarea id="hero-mock-ctx" class="mk-hero-field" rows="2" placeholder="RBs fly off the board early, two QBs always go in round 2, everyone waits on TE..."></textarea>
       <div class="mk-cta-row">
-        <a href="#" id="hero-enter-btn" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Build my mock draft</a>
-        <a href="#" class="mk-btnlink" onclick="event.preventDefault();document.getElementById('home-how').scrollIntoView({behavior:'smooth'})">See how it works</a>
+        <a href="#" id="hero-enter-btn" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Start a mock draft</a>
+        <a href="#" class="mk-btnlink" onclick="event.preventDefault();goConnectLeague()">Connect your league</a>
       </div>
-      <p class="mk-fine">No account, no signup, just draft. Or <a href="#" onclick="event.preventDefault();goConnectLeague()">connect Sleeper</a> to autofill your settings. Works with Sleeper, Yahoo, ESPN and home leagues.</p>
     </div>
   </div>
   <!-- The product itself: a real war room mid-draft - the snake board,
@@ -1026,7 +1023,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Describe your room, pick your seat, draft. The bots behave like the league you describe, and Mac advises every pick.</div>
           <div style="margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
             <div style="font-size:11px;color:var(--accent-bright);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">How does your league draft?</div>
-            <textarea id="md-context" class="tm-input" rows="3" style="width:100%;resize:vertical;font-size:14px;line-height:1.55" oninput="mdContextPreview()" placeholder="e.g. RBs fly off the board early, two or three QBs always go in round 2, TE premium, everyone waits on kickers..."></textarea>
+            <textarea id="md-context" class="tm-input" rows="3" style="width:100%;resize:vertical;font-size:14px;line-height:1.55" oninput="mdContextPreview()" placeholder="e.g. RBs fly off the board early, two or three QBs always go in round 2, everyone waits on kickers..."></textarea>
             <div id="md-context-read" style="font-size:11px;color:var(--accent-bright);margin-top:4px;min-height:14px"></div>
             <div id="md-connect-hint" style="display:none;font-size:12px;color:var(--muted2);margin-top:8px">Play on Sleeper? <span onclick="goConnectLeague()" style="color:var(--accent-bright);cursor:pointer;font-weight:700">Connect your league</span> and the settings below fill themselves. Yahoo and ESPN managers: set them by hand, it takes ten seconds.</div>
             <div id="md-lg-current" style="display:none;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:12px;color:var(--muted2)">
@@ -1526,41 +1523,17 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="mk-card mk-reveal">
           <h3>A real snake board.</h3>
           <p>Every pick lands on the grid as it happens, position-coloured, your column marked.</p>
-          <div class="mk-mock" aria-hidden="true">
-            <div class="mk-mock-row2">
-              <div class="mk-chip" style="--pos:#4ade80"><b>Bijan Robinson</b><span>RB · ATL</span></div>
-              <div class="mk-chip" style="--pos:#fbbf24"><b>Ja'Marr Chase</b><span>WR · CIN</span></div>
-            </div>
-            <div class="mk-mock-row2">
-              <div class="mk-chip mk-chip-you" style="--pos:#fbbf24"><b>Puka Nacua</b><span>WR · LAR</span></div>
-              <div class="mk-chip" style="--pos:#a78bfa"><b>Josh Allen</b><span>QB · BUF</span></div>
-            </div>
-            <div class="mk-mock-row2">
-              <div class="mk-chip" style="--pos:#f87171"><b>Brock Bowers</b><span>TE · LV</span></div>
-              <div class="mk-chip" style="--pos:#4ade80"><b>Saquon Barkley</b><span>RB · PHI</span></div>
-            </div>
-          </div>
+          <img class="mk-shot" src="/shot-board.jpg" alt="" loading="lazy">
         </div>
         <div class="mk-card mk-reveal">
           <h3>The clock is yours.</h3>
           <p>Timer on or off. Undo a pick. Flip on auto-draft when life happens.</p>
-          <div class="mk-mock" aria-hidden="true">
-            <div class="mk-clockhead"><span>Round 5 · Pick 5</span><b>0:42</b></div>
-            <div class="mk-clockcell">You are on the clock</div>
-            <div class="mk-mock-row2">
-              <div class="mk-chip" style="--pos:#fbbf24"><b>Jameson Williams</b><span>WR · ADP 51.6</span></div>
-              <div class="mk-chip" style="--pos:#4ade80"><b>David Montgomery</b><span>RB · ADP 56.3</span></div>
-            </div>
-          </div>
+          <img class="mk-shot" src="/shot-advice.jpg" alt="" loading="lazy">
         </div>
         <div class="mk-card mk-reveal">
-          <h3>Queue and tier cliffs.</h3>
-          <p>Line up your targets, and see the positional cliff before it takes them.</p>
-          <div class="mk-mock" aria-hidden="true">
-            <div class="mk-chip" style="--pos:#a78bfa"><b>Joe Burrow</b><span>QB · ADP 57.1</span></div>
-            <div class="mk-tierline">Tier 3 ends in 2 picks</div>
-            <div class="mk-chip" style="--pos:#f87171"><b>Harold Fannin</b><span>TE · ADP 62.6</span></div>
-          </div>
+          <h3>Auction mode.</h3>
+          <p>Real dollar values, live room inflation, and Mac telling you what he is worth to you.</p>
+          <img class="mk-shot" src="/shot-auction.jpg" alt="" loading="lazy">
         </div>
       </div>
     </div>
@@ -1687,7 +1660,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026075112"></script>
+<script src="/app.js?v=2026075213"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

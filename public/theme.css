@@ -511,3 +511,9 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
    values) and as quiet dark pills over the board - no home.css involved. */
 #md-profiles .btn-sm{background:var(--surface);border:1px solid var(--border2);color:var(--muted2)}
 #md-profiles .btn-sm:hover{color:var(--text);border-color:var(--border2);background:var(--surface)}
+
+/* Setup disclosure arrows, easier to spot (owner: "que se note que ahí hay
+   algo más"): bigger accent chevron + a hover invite on the label. */
+#md-finetune>summary::marker,#md-profiles>summary::marker{color:var(--accent-bright);font-size:14px}
+#md-finetune>summary,#md-profiles>summary{transition:color .15s ease}
+#md-finetune>summary:hover,#md-profiles>summary:hover{color:var(--text)}
