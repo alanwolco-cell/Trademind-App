@@ -1346,16 +1346,16 @@ html.v11 .nav-burger-dot::after, html.v12 .nav-burger-dot::after{
 }
 html.v11 .hero, html.v12 .hero{
   background:
-    linear-gradient(180deg, rgba(10,10,16,.30) 0%, rgba(10,10,16,.55) 62%, var(--mk-page) 100%),
+    linear-gradient(180deg, rgba(10,10,16,.30) 0%, rgba(10,10,16,.55) 62%, var(--mk-page-solid) 100%),
     url("/bg-stage.jpg") center top / cover no-repeat,
-    var(--mk-page);
+    var(--mk-page-solid);
 }
 @media (max-width:700px){
   html.v11 .hero, html.v12 .hero{
     background:
-      linear-gradient(180deg, rgba(10,10,16,.30) 0%, rgba(10,10,16,.55) 62%, var(--mk-page) 100%),
+      linear-gradient(180deg, rgba(10,10,16,.30) 0%, rgba(10,10,16,.55) 62%, var(--mk-page-solid) 100%),
       url("/bg-stage-m.jpg") center top / cover no-repeat,
-      var(--mk-page);
+      var(--mk-page-solid);
   }
 }
 
@@ -1364,6 +1364,7 @@ html.v11 .hero, html.v12 .hero{
    tokens become layered auroras - every section below the hero keeps a soft
    purple/teal breath instead of collapsing to flat charcoal. */
 :root{
+  --mk-page-solid:#0a0a10;
   --mk-page:
     radial-gradient(1100px 700px at 12% 8%, rgba(107,63,255,.10), transparent 62%),
     radial-gradient(900px 620px at 88% 42%, rgba(103,232,249,.05), transparent 60%),
