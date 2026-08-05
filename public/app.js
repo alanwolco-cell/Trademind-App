@@ -7899,7 +7899,8 @@ var FZ26_NAMES={};Object.keys(FZ26_SEATS).forEach(function(k){FZ26_NAMES[k]=FZ26
 var FZ26_RB_PREM_ELITE=1.18; // "Bijan $63 AAV se va 74-75" => ~1.18x on elite RBs
 var FZ26_RB_PREM=1.10;       // the same lean on the rest of the RB board, softer
 var FZ26_RB_ELITE_AAV=40;    // elite line for the premium: top-tier RB money
-var FZ26_BID_CAP=1.25;       // hard ceiling: "RBs go ~15% over, not 30" - kills premium x inflation compounding
+var AU_BID_CAP=1.20;         // owner 8/2026: no room pays more than 20% over a priced player's value
+var FZ26_BID_CAP=AU_BID_CAP; // fz26 uses the same ceiling (kept as its own name for the premium's docs)
 var FZ26_CAP_FLOOR=5;        // stickers under $5 are endgame money-dumps, not market prices - exempt from the ceiling
 function _mdFz26On(){try{return localStorage.getItem('tm_md_fantazy26')==='1';}catch(_){return false;}}
 function _mdProfilesKey(){
@@ -10836,7 +10837,11 @@ function auBotMax(slot,p){
   // PRICED lot is bounded. The $1-4 closers stay exempt (FZ26_CAP_FLOOR):
   // those prices are money-dumps, not market prices - capping them at
   // 1.25 x $2 strands the room's leftover cash the way no live auction ends.
-  if(_mdFz26On()&&auValue(p)>=FZ26_CAP_FLOOR)v=Math.min(v,Math.floor(auValue(p)*FZ26_BID_CAP)); // floor: round() re-broke the ratio by half a dollar
+  // THE CEILING, applied LAST so no stage (premium, inflation, accelerator,
+  // endgame blowout) can stack past it - and now it governs EVERY room, not
+  // just fz26 (owner: elites were closing at 1.25-1.34x; ceiling is 1.20x).
+  // Sub-$5 closers stay exempt: those are money-dumps, not market prices.
+  if(auValue(p)>=FZ26_CAP_FLOOR)v=Math.min(v,Math.floor(auValue(p)*AU_BID_CAP)); // floor: round() re-broke the ratio by half a dollar
   return Math.max(need>0?1:0,Math.min(Math.round(v),cap));
 }
 // nomination strategy: mostly nominate the best player you DON'T want so the
