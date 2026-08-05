@@ -22,14 +22,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Mac advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://macdraft.app/">
-<meta property="og:image" content="https://macdraft.app/og.png?v=2026075920">
+<meta property="og:image" content="https://macdraft.app/og.png?v=2026076021">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
 <meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Mac advising every pick.">
-<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026075920">
+<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026076021">
 <link rel="canonical" href="https://macdraft.app/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,18 +37,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026075920">
+<link rel="stylesheet" href="/styles.css?v=2026076021">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026075920" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026076021" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026075920">
+<link rel="stylesheet" href="/theme.css?v=2026076021">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026075920">
+<link rel="stylesheet" href="/home.css?v=2026076021">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -60,7 +60,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026075920">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026076021">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -1325,10 +1325,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="card" style="max-width:680px">
         <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px">Why Mac Draft exists</div>
         <div style="font-size:14px;color:var(--muted2);line-height:1.85">
-          <p style="margin-bottom:14px">I've played fantasy football for years, in dynasty leagues and redraft leagues, with friends who take it as seriously as I do. And every time a trade came up, I did the same dance you probably do: open one site for values, another for news, a group chat for opinions, and then still make the call half on gut feeling.</p>
-          <p style="margin-bottom:14px">The tools out there show you a number. That's it. Two players, two values, a green check or a red X. But nobody trades in a vacuum. The number doesn't know that their RB1 just went down, that your league starts three receivers, that the manager you're dealing with panics after two losses, or that you needed to make this move two weeks ago. The number doesn't help you actually get the deal done either.</p>
-          <p style="margin-bottom:14px">That gap is why I built Mac Draft. Mac doesn't just weigh values. He reads the situation: who left, who arrived, whose window is open, who you're negotiating with and what makes them say yes. He tells you if the trade is right, when to send it, and how to pitch it. The stuff a sharp friend would tell you, if your sharp friend never slept and watched every depth chart in the league.</p>
-          <p style="margin-bottom:14px">One promise matters more to me than any feature: accuracy. I would rather show you nothing than show you something wrong, because I know real people make real decisions with this. If you ever catch a mistake, tell me. It gets fixed.</p>
+          <p style="margin-bottom:14px">Mac Draft started with a trade I almost blew. I've played fantasy for years - dynasty and redraft, with friends who take it as seriously as I do - and every big decision looked the same: a value chart in one tab, injury news in another, and a group chat full of contradictions.</p>
+          <p style="margin-bottom:14px">The tools out there show you a number. Two players, two values, a green check or a red X. But nobody plays in a vacuum. The number doesn't know your roster, your league, or whose window is closing.</p>
+          <p style="margin-bottom:14px">So Mac learned to read the situation first - your team, your league, the manager across the table - for trades, and then for the nights leagues are actually won: the draft. Mock rooms that behave like your real league, bots with your friends' habits, auctions with real dollar values, and Mac advising every pick.</p>
+          <p style="margin-bottom:14px">One promise matters more to me than any feature: accuracy. I would rather show you nothing than show you something wrong, because real people make real decisions with this.</p>
+          <p style="margin-bottom:14px"><a href="#" onclick="event.preventDefault();goMock()" style="color:var(--accent-bright);font-weight:700">Build a mock draft &rarr;</a> &nbsp;&middot;&nbsp; <a href="#" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')" style="color:var(--accent-bright);font-weight:700">Open the Trade Analyzer &rarr;</a></p>
           <p style="margin-bottom:4px">Make the move you know is right. Life is good.</p>
           <p style="color:var(--muted);font-size:12.5px;margin-top:18px">Alan, founder of Mac Draft</p>
         </div>
@@ -1665,7 +1666,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026075920"></script>
+<script src="/app.js?v=2026076021"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
