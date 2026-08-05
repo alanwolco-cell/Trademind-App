@@ -7865,7 +7865,7 @@ var MD_PROFILE_DESC={
 //    don't leave value on the table (the universal slide-rescue still caps
 //    any real faller for every bot).
 //  - Family Feud is robust-RB but "pica rookies mucho": young reach flag.
-var FZ26_SEED_V=2;
+var FZ26_SEED_V=3;
 var FZ26_SEATS={
   1:{name:'Ness',arch:'bpa'},
   2:{name:'Tyjae Spears',arch:'zerorb',mods:{posAdj:{RB:-290,WR:140,TE:40},eliteAdj:{RB:-170,WR:80}}},
@@ -7875,8 +7875,24 @@ var FZ26_SEATS={
   6:{name:'Real Madrid',arch:'hype'},
   7:{name:'rana jr',arch:'zerorb',mods:{posAdj:{RB:-290,WR:140,TE:40},eliteAdj:{RB:-170,WR:80}}},
   8:{name:'Adrian Peterson',arch:'tehunter'},
+  9:{name:'Falafel',arch:'valuestrict'},
   10:{name:'Family Feud ...',arch:'robustrb',mods:{young:1,reachP:0.10}}
 };
+// Which of the ten IS the user: seats are fixed by the 2025 draft order, so
+// picking your team just moves your seat to that team's chair. Persisted so a
+// reload keeps you as yourself.
+function mdFz26SetMe(seat){
+  seat=parseInt(seat,10);if(!seat)return;
+  try{localStorage.setItem('tm_md_fz26_me',String(seat));}catch(_){}
+  var sl=document.getElementById('md-slot');
+  if(sl){sl.value=String(seat);try{mdSaveSettings();}catch(_){}}
+  MD._fzSlot=seat;
+  try{mdRenderProfiles();}catch(_){}
+}
+function _mdFz26Me(){
+  try{var v=parseInt(localStorage.getItem('tm_md_fz26_me'),10);if(v>=1&&v<=10)return v;}catch(_){}
+  return null;
+}
 // legacy alias for any straggler references: seat -> name
 var FZ26_NAMES={};Object.keys(FZ26_SEATS).forEach(function(k){FZ26_NAMES[k]=FZ26_SEATS[k].name;});
 // FZ26 auction market constants (owner-calibrated, see auBotMax):
@@ -7914,7 +7930,8 @@ function mdFantazy26Toggle(on){
       localStorage.setItem('tm_md_fantazy26_prev',JSON.stringify(snap));
       localStorage.setItem('tm_md_fantazy26','1');
       set('md-teams','10');try{mdSyncSlots();}catch(_){}
-      set('md-scoring','0.5');set('md-format','1qb');set('md-rounds','15');set('md-slot','9');
+      set('md-scoring','0.5');set('md-format','1qb');set('md-rounds','15');
+      set('md-slot',String(_mdFz26Me()||9));  // your team's chair, if you picked one
       // the league's 2026 draft IS an auction (owner's word) - the preset
       // seats the room in auction mode, $200 Yahoo-standard budgets
       set('md-dtype','auction');set('md-budget','200');
@@ -7925,7 +7942,7 @@ function mdFantazy26Toggle(on){
       // a device whose toggle was already ON never re-runs this branch; the
       // call here just makes the first enable eager instead of lazy
       try{_mdFz26Bucket();}catch(_){}
-      MD._fzSlot=9;
+      MD._fzSlot=_mdFz26Me()||9;
     }else{
       localStorage.removeItem('tm_md_fantazy26');
       var snap2=null;try{snap2=JSON.parse(localStorage.getItem('tm_md_fantazy26_prev')||'null');}catch(_){}
@@ -8086,6 +8103,26 @@ function mdRenderProfiles(){
   var fzCb=document.getElementById('md-fantazy26');
   if(fzCb)fzCb.checked=fzOn;
   if(fzOn&&MD._fzSlot==null)MD._fzSlot=mySlot;  // reload with the preset on
+  // "Which of these ten are you?" - the seats belong to the teams (2025 draft
+  // order), so choosing your team simply seats you in its chair
+  var meBox=document.getElementById('md-fz26-me');
+  if(fzOn){
+    if(!meBox){
+      var host=document.getElementById('md-profiles-note');
+      if(host&&host.insertAdjacentHTML){
+        host.insertAdjacentHTML('afterend','<div id="md-fz26-me" style="display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap"></div>');
+        meBox=document.getElementById('md-fz26-me');
+      }
+    }
+    if(meBox){
+      var meSeat=_mdFz26Me()||mySlot;
+      meBox.innerHTML='<span style="font-size:12.5px;font-weight:700;color:var(--text)">In this league I am</span>'
+        +'<select class="opp-select" style="width:auto;min-width:190px" onchange="mdFz26SetMe(this.value)">'
+        +Object.keys(FZ26_SEATS).sort(function(a,b){return a-b;}).map(function(k){
+          return '<option value="'+k+'"'+(String(meSeat)===String(k)?' selected':'')+'>'+FZ26_SEATS[k].name+'</option>';
+        }).join('')+'</select>';
+    }
+  }else if(meBox){meBox.remove();}
   var note=document.getElementById('md-profiles-note');
   if(note)note.textContent=fzOn
     ?'Fantazy 2026 is on: the real "league 2021" room. Set each rival\'s personality once - it sticks for every mock of this league.'
@@ -10836,6 +10873,7 @@ function _auLayoutOn(){
       // phone chrome (hidden on desktop by CSS): the room header - X to
       // leave, the pacing pill in the middle ("$48 · going once…")
       '<div id="au-mhead"><button class="au-x" onclick="if(confirm(\'Leave the auction room?\'))mdBackToSetup()" title="Leave the room">&times;</button>'
+      +'<button class="au-x au-restart" onclick="mdRestartDraft()" title="Restart this draft">&#8635;</button>'
       +'<span class="au-mcol"><span id="au-mnum" class="au-mnum"></span><span id="au-mpill" class="au-mpill"></span></span><span style="width:34px;flex:none"></span></div>'
       +'<div id="au-zones">'
       +'<div id="au-z-left"><div id="au-last" style="display:none"></div></div>'

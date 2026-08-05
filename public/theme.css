@@ -733,8 +733,16 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 /* Lot card, narrow screens: a long name may NEVER collide with the price.
    The name is allowed to break anywhere, and on phones the whole head scales
    down so face + name + money always share the row honestly. */
-.au-name{overflow-wrap:anywhere;word-break:break-word}
+.au-name{overflow-wrap:break-word;word-break:normal;hyphens:none}
 .au-bidwrap{min-width:0}
+/* narrow: the head wraps to two rows before it ever squeezes a name to
+   letter-per-line - money moves under the player, never on top of him */
+@media (max-width:820px){
+  .au-lot-head{flex-wrap:wrap}
+  .au-lot-head>div{flex:1 1 190px}
+  .au-bidwrap{flex:1 0 100%;text-align:left;margin-top:6px;display:flex;align-items:baseline;gap:10px}
+  .au-holder{margin-top:0}
+}
 @media (max-width:760px){
   .au-lot-head{gap:10px}
   .au-face{width:64px;height:64px;border-radius:12px}
@@ -758,3 +766,4 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .au-fname{flex:1;min-width:0;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .au-fpos{font-size:10px;font-weight:800;margin-left:6px;letter-spacing:.04em}
 .au-fwho{color:var(--muted);font-size:12.5px;white-space:nowrap;max-width:42%;overflow:hidden;text-overflow:ellipsis}
+.au-restart{margin-left:6px;font-size:19px;line-height:1}

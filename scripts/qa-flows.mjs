@@ -239,8 +239,8 @@ check('fz26: 6pt passing TDs flipped on', document.getElementById('md-6pt').chec
 // inferred personalities + per-seat mods); assert against FZ26_NAMES itself
 const FZN = sandbox.FZ26_NAMES;
 const fzProfs = JSON.parse(sandbox.localStorage.getItem('tm_md_profiles_fantazy26'));
-check('fz26: the real league names seeded (owner seat 9 empty)',
-  fzProfs && !fzProfs['9'] && Object.keys(FZN).every(s => fzProfs[s] && fzProfs[s].name === FZN[s]),
+check('fz26: all ten league teams seeded (you pick which one is you)',
+  fzProfs && Object.keys(FZN).length === 10 && Object.keys(FZN).every(s => fzProfs[s] && fzProfs[s].name === FZN[s]),
   JSON.stringify(fzProfs));
 sandbox.MD.autoPilot = false;
 await sandbox._startMockDraftRun();
@@ -248,7 +248,7 @@ check('fz26: room is 10-team half-PPR 1QB 15R, owner seat 9',
   sandbox.MD.teams === 10 && sandbox.MD.scoring === 0.5 && !sandbox.MD.sf
   && sandbox.MD.rounds === 15 && sandbox.MD.mySlot === 9);
 check('fz26: bots carry the real league names',
-  !sandbox.MD.bots[9] && Object.keys(FZN).every(s => sandbox.MD.bots[s] && sandbox.MD.bots[s].name === sandbox._mdProfName(FZN[s])),
+  !sandbox.MD.bots[sandbox.MD.mySlot] && Object.keys(FZN).filter(s => +s !== sandbox.MD.mySlot).every(s => sandbox.MD.bots[s] && sandbox.MD.bots[s].name === sandbox._mdProfName(FZN[s])),
   JSON.stringify(Object.keys(sandbox.MD.bots).map(s => sandbox.MD.bots[s].name)));
 check('fz26: 6pt engine flag live', sandbox.MD.sixPt === 1);
 check('fz26: QB bias applied without claiming userPos',
@@ -276,11 +276,11 @@ check('fz26: profile key back to normal', sandbox._mdProfilesKey() === 'tm_md_pr
 sandbox.localStorage.setItem('tm_md_fantazy26', '1');
 sandbox.localStorage.setItem('tm_md_profiles_fantazy26', JSON.stringify({ 1: { name: 'Adam Misstress', arch: 'zerorb' }, 2: { name: 'elias y sultan', arch: '' } }));
 const mig = sandbox.mdGetProfiles();
-check('fz26 fix: stale v1 bucket reseeds on read', mig._v === 2 && mig['1'].name === sandbox.FZ26_NAMES['1'] && mig['3'].name === sandbox.FZ26_NAMES['3'] && !mig['9'], JSON.stringify(mig).slice(0, 160));
+check('fz26 fix: stale v1 bucket reseeds on read', mig._v === 3 && mig['1'].name === sandbox.FZ26_NAMES['1'] && mig['3'].name === sandbox.FZ26_NAMES['3'] && mig['9'].name === sandbox.FZ26_NAMES['9'], JSON.stringify(mig).slice(0, 160));
 const persisted2 = JSON.parse(sandbox.localStorage.getItem('tm_md_profiles_fantazy26'));
-check('fz26 fix: reseed persisted with the version tag', persisted2._v === 2 && persisted2['1'].name === sandbox.FZ26_NAMES['1']);
+check('fz26 fix: reseed persisted with the version tag', persisted2._v === 3 && persisted2['1'].name === sandbox.FZ26_NAMES['1']);
 sandbox.mdProfileSet(1, 'arch', 'hype');
-check('fz26 fix: idempotent - v2 tweaks survive later reads', sandbox.mdGetProfiles()['1'].arch === 'hype' && sandbox.mdGetProfiles()._v === 2);
+check('fz26 fix: idempotent - v3 tweaks survive later reads', sandbox.mdGetProfiles()['1'].arch === 'hype' && sandbox.mdGetProfiles()._v === 3);
 sandbox.localStorage.removeItem('tm_md_fantazy26');
 sandbox.localStorage.removeItem('tm_md_profiles_fantazy26');
 
