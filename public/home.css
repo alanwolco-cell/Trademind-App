@@ -1335,3 +1335,26 @@ html.v11 .nav-burger-dot::after, html.v12 .nav-burger-dot::after{
 @media (prefers-reduced-motion: reduce){
   html.v11 .nav-burger-dot::after, html.v12 .nav-burger-dot::after{animation:none}
 }
+
+/* ── PART 7b — THE STADIUM BREATHES ────────────────────────────────────────
+   Owner: "full black is too black - put a draft board back there." A blurred
+   night stadium with the big board glowing (Higgsfield) sits behind the hero;
+   the page base lifts from pure black to charcoal so the dark has depth. */
+:root{
+  --mk-page:#0a0a10;
+  --mk-band:#0d0d14;
+}
+html.v11 .hero, html.v12 .hero{
+  background:
+    linear-gradient(180deg, rgba(10,10,16,.30) 0%, rgba(10,10,16,.55) 62%, var(--mk-page) 100%),
+    url("/bg-stage.jpg") center top / cover no-repeat,
+    var(--mk-page);
+}
+@media (max-width:700px){
+  html.v11 .hero, html.v12 .hero{
+    background:
+      linear-gradient(180deg, rgba(10,10,16,.30) 0%, rgba(10,10,16,.55) 62%, var(--mk-page) 100%),
+      url("/bg-stage-m.jpg") center top / cover no-repeat,
+      var(--mk-page);
+  }
+}
