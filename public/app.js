@@ -11270,6 +11270,7 @@ function auAdvance(){
     MD.onClock=true;MD.curRound=1;
     // short: the lot card itself carries the big "Your turn to nominate"
     if(st)st.innerHTML='<span style="color:var(--accent-bright);font-weight:700">Your nomination</span>';
+    try{sndYourTurn();}catch(_){}   // your turn to put someone on the block
     mdShowChoices(1);
     if(MD.autoPilot){var ap=auBotNominateUser();if(ap){auOpenLot(MD.mySlot,ap);return;}}
     auRenderLot();
@@ -11407,8 +11408,19 @@ function _auBidOnce(){
 }
 function auBidStep(){
   if(!AU.lot)return;
+  var wasMine=AU.lot.holder===MD.mySlot;
   var r=_auBidOnce();
   if(r==='sold')return;
+  // the room has a voice: a soft tick on every raise, a sharper note the beat
+  // you get outbid, and the clock's urgent tick as the hammer comes down
+  try{
+    if(r==='bid'){
+      if(wasMine&&AU.lot&&AU.lot.holder!==MD.mySlot)sndClockUrgent();
+      else sndPickSoft();
+    }else if(r==='quiet'&&AU.lot){
+      if(AU.lot.going>=2)sndClockUrgent();else if(AU.lot.going>=1)sndClockTick();
+    }
+  }catch(_){}
   auRenderLot();
   auRenderBudgets(); // the live-bid badge rides the high bidder's row
   // the ENTRY WINDOW, visible and steady: after a raise the room gets a
@@ -11524,7 +11536,7 @@ function auSell(){
   AU.sold.unshift({p:p,slot:slot,price:price,value:auValue(p),grade:_g});
   var who=mine?'YOU':((AU.bots[slot]&&AU.bots[slot].name)||('Team '+slot));
   MD.log.unshift('<span style="color:var(--muted)">$'+price+'</span> '+who+' - <strong style="color:var(--text)">'+p.name+'</strong> '+mdPosTag(p.pos));
-  try{sndImpact();}catch(_){}
+  try{if(slot===MD.mySlot)sndWin();else sndImpact();}catch(_){}
   if(!AU.noSplash)auSoldSplash(p,price,who);
   AU.custom=null; // the stepper belongs to the lot that just closed
   auRenderSold();auRenderBudgets();mdRenderMine();mdRenderLog();
