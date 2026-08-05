@@ -17,19 +17,19 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Mac Draft - The Mock Draft That Drafts Like Your League</title>
-<meta name="description" content="Fantasy football mock drafts personalized to your league. Describe how your room drafts, or connect Sleeper, and practice against bots that reach, wait and snipe like the real thing. Sage advises every pick.">
+<meta name="description" content="Fantasy football mock drafts personalized to your league. Describe how your room drafts, or connect Sleeper, and practice against bots that reach, wait and snipe like the real thing. Mac advises every pick.">
 <meta property="og:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
-<meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Sage advising every pick.">
+<meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Mac advising every pick.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://trademindff.com/">
-<meta property="og:image" content="https://trademindff.com/og.png?v=2026074910">
+<meta property="og:image" content="https://trademindff.com/og.png?v=2026075011">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
-<meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Sage advising every pick.">
-<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026074910">
+<meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Mac advising every pick.">
+<meta name="twitter:image" content="https://trademindff.com/og.png?v=2026075011">
 <link rel="canonical" href="https://trademindff.com/">
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,18 +37,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026074910">
+<link rel="stylesheet" href="/styles.css?v=2026075011">
 <!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026074910" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026075011" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026074910">
+<link rel="stylesheet" href="/theme.css?v=2026075011">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026074910">
+<link rel="stylesheet" href="/home.css?v=2026075011">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -60,7 +60,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026074910">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026075011">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -70,7 +70,7 @@ if(_skin){
 }
 </script>
 <script>
-// Sage wakes up every time the site opens or is refreshed, then blinks forever.
+// Mac wakes up every time the site opens or is refreshed, then blinks forever.
 // Class goes on <html> before first paint so there's no flash.
 document.documentElement.classList.add('sage-boot');
 // Opening or refreshing always starts at the top: the first thing anyone sees
@@ -90,13 +90,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
   <div class="nav-links">
     <!-- The bar carries the two products only: the mock draft (the front door)
-         and Ask Sage (the copilot). Everything else lives behind the menu
+         and Ask Mac (the copilot). Everything else lives behind the menu
          button on the right - hidden, not removed. -->
     <div class="nav-item">
       <button class="nav-item-btn screen-nav" data-screen="mock" onclick="goMock()">Mock Draft</button>
     </div>
     <div class="nav-item">
-      <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')"><img src="/sage/sage-32.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:5px">Ask Sage</button>
+      <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')"><img src="/sage/sage-32.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:5px">Ask Mac</button>
     </div>
   </div>
 
@@ -106,7 +106,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="nav-right">
   <!-- sign in from anywhere; hidden once a session exists -->
   <button class="btn-sm" id="nav-signin" style="display:none;margin-right:6px" onclick="goConnectLeague()">Connect</button>
-  <!-- The menu button: every tool beyond the mock and Sage lives in here, on
+  <!-- The menu button: every tool beyond the mock and Mac lives in here, on
        desktop and phone alike. On small screens the bottom tab bar's "More"
        opens the same drawer, so the button hides there. -->
   <button class="theme-toggle icon" id="nav-burger" onclick="mobMenuToggle()" title="Menu" aria-label="Menu">
@@ -153,7 +153,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="nav-dd-sep" style="margin:4px 0"></div>
       <div class="user-dd-item" onclick="openReferral();closeAllDropdowns()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6M19 8v6"/></svg>
-        Refer friends, earn Sage
+        Refer friends, earn Mac
       </div>
       <div class="user-dd-item" id="user-dd-pro" onclick="sagePillPro();closeAllDropdowns()" style="color:var(--accent-bright)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.3L12 17.8 5.7 21.5l1.7-7.3L2 9.5l7.1-.6z"/></svg>
@@ -175,7 +175,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <button class="theme-toggle icon" onclick="mobMenuToggle()" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <button class="mob-menu-item" onclick="mobGo('mock','solo')">Mock Draft</button>
-      <button class="mob-menu-item" onclick="mobGo('sage')"><img src="/sage/sage-32.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:6px">Ask Sage</button>
+      <button class="mob-menu-item" onclick="mobGo('sage')"><img src="/sage/sage-32.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:6px">Ask Mac</button>
       <div class="mob-group">
         <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)">Draft modes<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="mob-subs">
@@ -220,7 +220,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- app.js swaps this line for "Welcome back, <user>" on a return visit -->
     <div class="mk-eyebrow" id="hero-badge-text">Mac Draft</div>
     <h1>The mock draft that <br>drafts like your league.</h1>
-    <p class="mk-sub">Tell it how your room actually drafts, in plain words. The bots reach, wait and snipe like the people you know - and Sage advises every pick.</p>
+    <p class="mk-sub">Tell it how your room actually drafts, in plain words. The bots reach, wait and snipe like the people you know - and Mac advises every pick.</p>
     <div class="mk-hero-cta hero-cta" id="hero-cta">
       <label class="mk-field-label" for="hero-mock-ctx">How does your league draft?</label>
       <textarea id="hero-mock-ctx" class="mk-hero-field" rows="2" placeholder="RBs fly off the board early, two QBs always go in round 2, everyone waits on TE..."></textarea>
@@ -232,7 +232,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
   </div>
   <!-- The product itself: a real war room mid-draft - the snake board,
-       "you are on the clock", and Sage's call. Decorative for screen readers:
+       "you are on the clock", and Mac's call. Decorative for screen readers:
        the headline already carries the meaning. -->
   <div class="mk-hero-shot mk-reveal" aria-hidden="true">
     <!-- The product film: autoplay, muted, loops - the Apple treatment. -->
@@ -265,7 +265,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div class="sleeper-connect">
               <div class="sleeper-icon"><img src="data:image/png;base64,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" alt="Sleeper" width="34" height="34" style="border-radius:8px;display:block"></div>
               <div class="connect-title">Connect your Sleeper account</div>
-              <div class="connect-sub">Sage reads your full roster, opponent tendencies, and trade history. Automatically.</div>
+              <div class="connect-sub">Mac reads your full roster, opponent tendencies, and trade history. Automatically.</div>
             </div>
             <div class="input-group">
               <input type="text" id="sleeper-username" class="tm-input" placeholder="Your Sleeper username" onkeydown="if(event.key==='Enter')loadUser()">
@@ -460,7 +460,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
 
             <div style="margin:14px 0 12px">
-              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Anything else Sage should know? <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></div>
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Anything else Mac should know? <span style="font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></div>
               <textarea id="trade-context" class="tm-input" rows="2" style="width:100%;resize:vertical;font-size:13px;line-height:1.5" placeholder="e.g. He just lost his starting RB for the season, we start 3 WRs, he owes me a favor from last year's trade..."></textarea>
             </div>
             <button class="analyze-btn" onclick="runAnalysis()">Analyze This Trade</button>
@@ -487,12 +487,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="verdict-top">
             <!-- REX -->
             <div class="sage-wrap" id="sage-wrap">
-              <img class="sage-asset" id="sage-owl" src="/sage/sage-256.png" alt="Sage" style="object-fit:contain">
-              <div class="sage-tag">Sage</div>
+              <img class="sage-asset" id="sage-owl" src="/sage/sage-256.png" alt="Mac" style="object-fit:contain">
+              <div class="sage-tag">Mac</div>
             </div>
             <!-- Verdict text -->
             <div class="verdict-right">
-              <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem">Sage says...</div>
+              <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem">Mac says...</div>
               <div class="verdict-headline" id="verdict-headline" style="font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-.03em;margin-bottom:.5rem">-</div>
               <div class="verdict-body" id="verdict-body" style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:.75rem">-</div>
             </div>
@@ -797,7 +797,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div id="tab-startsit" class="tab-content">
       <div class="card" id="startsit-card">
         <div style="font-size:16px;font-weight:700;margin-bottom:4px">Who do I start?</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Add the players you're deciding between. Sage ranks them using live market value, 30-day momentum, usage stats, and each player's current situation.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Add the players you're deciding between. Mac ranks them using live market value, 30-day momentum, usage stats, and each player's current situation.</div>
         <div id="asksage-inputs">
           <div class="ac-wrap" style="display:block;margin-bottom:8px;position:relative"><input type="text" class="tm-input asksage-input" style="width:100%" placeholder="Player 1..." autocomplete="off"><div class="ac-dropdown asksage-dd"></div></div>
           <div class="ac-wrap" style="display:block;margin-bottom:8px;position:relative"><input type="text" class="tm-input asksage-input" style="width:100%" placeholder="Player 2..." autocomplete="off"><div class="ac-dropdown asksage-dd"></div></div>
@@ -917,16 +917,16 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
     </div><!-- end screen-research -->
 
-    <!-- ASK SAGE SCREEN -->
+    <!-- ASK MAC SCREEN -->
     <div class="screen" id="screen-sage">
     <div id="tab-asksage" class="tab-content active">
-      <!-- SAGE AI CHAT (activates when the server has an Anthropic API key).
+      <!-- MAC AI CHAT (activates when the server has an Anthropic API key).
            Every visit starts a fresh chat; past conversations live in the sidebar. -->
       <div class="sage-layout">
       <aside class="sage-side" id="sage-side" aria-label="Past chats"></aside>
       <div class="card sage-centered" id="sage-chat-card" style="margin-bottom:14px">
         <div id="sage-greeting" style="text-align:center;margin:8px 0 30px">
-          <img src="/sage/sage-128.png" alt="Sage" id="sage-greet-owl" class="sage-greet-owl" style="width:76px;height:76px;object-fit:contain;margin-bottom:12px">
+          <img src="/sage/sage-128.png" alt="Mac" id="sage-greet-owl" class="sage-greet-owl" style="width:76px;height:76px;object-fit:contain;margin-bottom:12px">
           <div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--text)">Ask me anything.</div>
           <div style="font-size:13px;color:var(--muted);margin-top:7px">The friend everyone texts before hitting Accept.</div>
           <div class="sage-caps">
@@ -935,12 +935,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <span class="sage-cap"><b>Live</b> market values</span>
             <span class="sage-cap"><b>Never</b> emotional</span>
           </div>
-          <button class="btn-sm" id="sage-connect-hint" style="display:none;margin-top:12px" onclick="goConnectLeague()">Connect your Sleeper league so Sage sees your roster →</button>
+          <button class="btn-sm" id="sage-connect-hint" style="display:none;margin-top:12px" onclick="goConnectLeague()">Connect your Sleeper league so Mac sees your roster →</button>
         </div>
         <div id="sage-chat-log" class="sage-chat-log"></div>
         <div class="sage-composer" id="sage-composer">
-          <textarea id="sage-chat-input" rows="2" placeholder="Ask Sage anything about fantasy football..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sageChatSend();}" oninput="sageGrowInput(this)" disabled></textarea>
-          <button id="sage-chat-send" onclick="sageChatSend()" title="Send" disabled>Ask Sage</button>
+          <textarea id="sage-chat-input" rows="2" placeholder="Ask Mac anything about fantasy football..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sageChatSend();}" oninput="sageGrowInput(this)" disabled></textarea>
+          <button id="sage-chat-send" onclick="sageChatSend()" title="Send" disabled>Ask Mac</button>
         </div>
         <div id="sage-quota" style="display:none;text-align:center;margin-top:8px;font-size:12px;color:var(--muted)"></div>
         <div id="sage-suggestions" style="display:none;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center"></div>
@@ -1023,7 +1023,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         </div>
         <div id="md-setup">
           <div style="font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:3px">Build your mock draft</div>
-          <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Describe your room, pick your seat, draft. The bots behave like the league you describe, and Sage advises every pick.</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Describe your room, pick your seat, draft. The bots behave like the league you describe, and Mac advises every pick.</div>
           <div style="margin-bottom:16px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">
             <div style="font-size:11px;color:var(--accent-bright);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">How does your league draft?</div>
             <textarea id="md-context" class="tm-input" rows="3" style="width:100%;resize:vertical;font-size:14px;line-height:1.55" oninput="mdContextPreview()" placeholder="e.g. RBs fly off the board early, two or three QBs always go in round 2, TE premium, everyone waits on kickers..."></textarea>
@@ -1090,8 +1090,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
               </div>
             </div>
           </details>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Draft strategy</div>
-          <div id="md-strats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px"></div>
           <button class="btn-load" id="md-start-btn" style="width:auto;padding:12px 30px" onclick="startMockDraft()">Start mock draft</button>
         </div>
         <div id="md-history-wrap" style="display:none"><div id="md-history"></div></div>
@@ -1104,7 +1102,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:auto">Draft board</div>
             <span id="md-needs" style="display:flex;gap:6px;font-size:10px;font-weight:700"></span>
             <div id="md-status"></div>
-            <label class="md-solo-ctl" title="Sage drafts your picks for you until you turn it off" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2);cursor:pointer;padding:6px 11px;border:1px solid var(--border);border-radius:10px">
+            <label class="md-solo-ctl" title="Mac drafts your picks for you until you turn it off" style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2);cursor:pointer;padding:6px 11px;border:1px solid var(--border);border-radius:10px">
               <input type="checkbox" id="md-auto" onchange="mdAutoToggle(this.checked)" style="accent-color:var(--accent-bright);margin:0">Auto-draft
             </label>
             <span style="display:inline-flex;border:1px solid var(--border);border-radius:100px;overflow:hidden;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">
@@ -1315,8 +1313,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div id="tab-archetypes" class="tab-content">
       <div class="card">
           <div style="font-size:16px;font-weight:700;margin-bottom:4px">The 9 Manager Archetypes</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem">How Sage reads every manager in your league</div>
-          <div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:12px">When you analyze a trade, Sage classifies your opponent by two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience + total market value) and their <strong style="color:var(--text)">actual trade history</strong> in your league. Here's each type and how to trade with them:</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem">How Mac reads every manager in your league</div>
+          <div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-bottom:12px">When you analyze a trade, Mac classifies your opponent by two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience + total market value) and their <strong style="color:var(--text)">actual trade history</strong> in your league. Here's each type and how to trade with them:</div>
           <div id="archetype-guide"></div>
         </div>
 
@@ -1331,7 +1329,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div style="font-size:14px;color:var(--muted2);line-height:1.85">
           <p style="margin-bottom:14px">I've played fantasy football for years, in dynasty leagues and redraft leagues, with friends who take it as seriously as I do. And every time a trade came up, I did the same dance you probably do: open one site for values, another for news, a group chat for opinions, and then still make the call half on gut feeling.</p>
           <p style="margin-bottom:14px">The tools out there show you a number. That's it. Two players, two values, a green check or a red X. But nobody trades in a vacuum. The number doesn't know that their RB1 just went down, that your league starts three receivers, that the manager you're dealing with panics after two losses, or that you needed to make this move two weeks ago. The number doesn't help you actually get the deal done either.</p>
-          <p style="margin-bottom:14px">That gap is why I built Mac Draft. Sage doesn't just weigh values. He reads the situation: who left, who arrived, whose window is open, who you're negotiating with and what makes them say yes. He tells you if the trade is right, when to send it, and how to pitch it. The stuff a sharp friend would tell you, if your sharp friend never slept and watched every depth chart in the league.</p>
+          <p style="margin-bottom:14px">That gap is why I built Mac Draft. Mac doesn't just weigh values. He reads the situation: who left, who arrived, whose window is open, who you're negotiating with and what makes them say yes. He tells you if the trade is right, when to send it, and how to pitch it. The stuff a sharp friend would tell you, if your sharp friend never slept and watched every depth chart in the league.</p>
           <p style="margin-bottom:14px">One promise matters more to me than any feature: accuracy. I would rather show you nothing than show you something wrong, because I know real people make real decisions with this. If you ever catch a mistake, tell me. It gets fixed.</p>
           <p style="margin-bottom:4px">Make the move you know is right. Life is good.</p>
           <p style="color:var(--muted);font-size:12.5px;margin-top:18px">Alan, founder of Mac Draft</p>
@@ -1423,7 +1421,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 </section>
 
 <!-- THE MARKETING STORY - Apple's alternation: white hero above, then this
-     near-black statement, light how-it-works, black Sage, light war room and
+     near-black statement, light how-it-works, black Mac, light war room and
      league connect, black founder note. One message per full-bleed section.
      The section IDs are load-bearing: switchScreen() in app.js toggles them
      so the story lives ONLY on home. -->
@@ -1467,7 +1465,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       </div>
       <div class="mk-step mk-reveal">
         <div class="mk-step-num">04</div>
-        <h3>Sage on every pick</h3>
+        <h3>Mac on every pick</h3>
         <p>Notes, stats, news, and a straight answer: take him or pass.</p>
       </div>
     </div>
@@ -1476,20 +1474,20 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
 <div id="home-story">
 
-  <!-- ASK SAGE - near-black full-bleed. Face, one real exchange, and the
+  <!-- ASK MAC - near-black full-bleed. Face, one real exchange, and the
        three reasons managers trust him. The eye rects keep the .sage-hero-eye
        class so the idle blink in app.js carries onto the marketing page. -->
   <div class="mk-sec mk-dark">
     <div class="mk-wrap mk-center">
       <div class="mk-sage-face mk-reveal">
-        <img src="/sage/sage-256.png" alt="Sage the owl" style="width:96px;height:96px;object-fit:contain">
+        <img src="/sage/sage-256.png" alt="Mac the owl" style="width:96px;height:96px;object-fit:contain">
       </div>
-      <h2 class="mk-h2 mk-reveal">Meet Sage.<br><span class="mk-h2-dim">Your advisor on every pick.</span></h2>
+      <h2 class="mk-h2 mk-reveal">Meet Mac.<br><span class="mk-h2-dim">Your advisor on every pick.</span></h2>
       <p class="mk-sub mk-reveal">Always in your corner. Notes, stats, news, and a straight answer: take him or pass.</p>
 
       <div class="mk-chat mk-reveal" aria-hidden="true">
         <div class="mk-chat-q">I'm on the clock at 5.05 and already strong at WR. Who's the pick?</div>
-        <div class="mk-chat-a"><span class="mk-chat-tag">Sage</span>No hesitation: Jameson Williams. 6.8 yards after catch per grab means he manufactures points on his own. You are already strong at WR, so this is a stack-the-deck pick that doubles as trade bait.</div>
+        <div class="mk-chat-a"><span class="mk-chat-tag">Mac</span>No hesitation: Jameson Williams. 6.8 yards after catch per grab means he manufactures points on his own. You are already strong at WR, so this is a stack-the-deck pick that doubles as trade bait.</div>
       </div>
 
       <div class="mk-trio">
@@ -1508,7 +1506,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       </div>
 
       <div class="mk-cta-row mk-center-row mk-reveal">
-        <a href="#" class="mk-btn" onclick="event.preventDefault();switchScreen('sage')">Ask Sage</a>
+        <a href="#" class="mk-btn" onclick="event.preventDefault();switchScreen('sage')">Ask Mac</a>
         <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('sage')">New to fantasy football? Just ask</a>
       </div>
     </div>
@@ -1608,7 +1606,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <p class="mk-founder-lead mk-reveal">Every trade used to start the same way. A tab open on a value chart, another on injury news, a group chat where three people tell me three different things. Twenty minutes later I still decided on gut feeling, and half the time I was wrong.</p>
     <p class="mk-reveal">The problem was never a lack of information. There is more of it every year. The problem is that none of it knows anything about me.</p>
     <p class="mk-reveal">A value chart does not know I am one running back from contending. It does not know the manager I am negotiating with just lost his tight end, or that my window closes this season because my core turns thirty. It gives everyone the same number and leaves the hard part, the part that actually decides the trade, entirely to you.</p>
-    <p class="mk-reveal">That is what Sage does instead. It reads your roster, your league, your opponent and your timing, and then it tells you whether to make the trade, when to send it, and how to word it. Not a number. A decision you can act on.</p>
+    <p class="mk-reveal">That is what Mac does instead. It reads your roster, your league, your opponent and your timing, and then it tells you whether to make the trade, when to send it, and how to word it. Not a number. A decision you can act on.</p>
     <p class="mk-founder-close mk-reveal">Life is good when you know the move.</p>
     <div class="mk-founder-sign mk-reveal">Alan Wolcovinsky, founder</div>
   </div>
@@ -1664,10 +1662,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <span>Draft</span>
   </button>
   <button type="button" class="tabbar-item" data-tab="sage" onclick="tabGo('sage')">
-    <!-- Chat bubble, not a sparkle: Sage is an advisor you ask, and the star
+    <!-- Chat bubble, not a sparkle: Mac is an advisor you ask, and the star
          glyph read as the generic AI-assistant sparkle we are removing. -->
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 20l1.4-4.2A8.4 8.4 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg>
-    <span>Sage</span>
+    <span>Mac</span>
   </button>
   <button type="button" class="tabbar-item" data-tab="analyze" onclick="tabGo('analyze')">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 13l-4 4 4 4"/><path d="M4 17h16"/></svg>
@@ -1689,7 +1687,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026074910"></script>
+<script src="/app.js?v=2026075011"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

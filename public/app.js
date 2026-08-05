@@ -258,7 +258,7 @@ function scrollToEl(el,center){
   window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
 }
 // Escape hatch for anyone who lands on a tool page and feels lost.
-function _sageEscHtml(){return '<div style="margin-top:16px;font-size:13px;color:var(--muted2)">New here? <span onclick="switchScreen(\'sage\')" style="color:var(--accent-bright);cursor:pointer;font-weight:700">Just ask Sage &rarr;</span></div>';}
+function _sageEscHtml(){return '<div style="margin-top:16px;font-size:13px;color:var(--muted2)">New here? <span onclick="switchScreen(\'sage\')" style="color:var(--accent-bright);cursor:pointer;font-weight:700">Just ask Mac &rarr;</span></div>';}
 function goConnectLeague(){
   // Connect from wherever you are: a modal, not a trip back to the analyzer.
   var cur=document.querySelector('.screen.active');
@@ -285,7 +285,7 @@ function openConnectModal(){
     document.body.appendChild(m);
   }
   m.style.display='flex';
-  // Modal is now the active connection flow: retire any inline Sage sign-in so
+  // Modal is now the active connection flow: retire any inline Mac sign-in so
   // the user never faces two prompts at once.
   var inl=document.getElementById('sage-inline-signin');if(inl)inl.remove();
   var inp=document.getElementById('cm-user');
@@ -400,7 +400,7 @@ function setSageState(state){
   if(asset){
     var name=state==='win'?'win':state==='reject'?'no':state==='even'?'even':'thinking';
     asset.dataset.state=name;
-    asset.setAttribute('aria-label',state==='win'?'Sage approves the trade':state==='reject'?'Sage advises against the trade':'Sage is reviewing the trade');
+    asset.setAttribute('aria-label',state==='win'?'Mac approves the trade':state==='reject'?'Mac advises against the trade':'Mac is reviewing the trade');
     // The owl mascot expresses the verdict with a real face per state
     if(asset.tagName==='IMG'){
       var expr=state==='win'?'excited':state==='reject'?'skeptical':state==='even'?'deadpan':state==='thinking'?'thinking':'';
@@ -409,18 +409,18 @@ function setSageState(state){
   }
 }
 
-/* Sage is a product character. The real mascot is the purple three-lobe face
-   that already ships inline as SVG on the hero, the "Meet Sage" card, the Ask
-   Sage greeting and every verdict. An earlier pass swapped all of those for a
+/* Mac is a product character. The real mascot is the purple three-lobe face
+   that already ships inline as SVG on the hero, the "Meet Mac" card, the Ask
+   Mac greeting and every verdict. An earlier pass swapped all of those for a
    flat "S" letter-mark placeholder - that "S in a circle" was the tell in Ask
-   Sage. We keep the real SVG mascot everywhere instead; it already expresses
+   Mac. We keep the real SVG mascot everywhere instead; it already expresses
    the verdict (win/reject/gaze mouths via .sage-wrap state classes), so there
    is nothing to upgrade. Left as a no-op so any cached caller stays safe. */
 function upgradeSageAssets(){ /* intentionally left blank: keep the real SVG mascot */ }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',upgradeSageAssets);
 else upgradeSageAssets();
 
-// The Ask Sage greeting owl peeks: every few seconds it flashes a quick
+// The Ask Mac greeting owl peeks: every few seconds it flashes a quick
 // expression (mostly a thoughtful glance, rarely a shocked double-take) and
 // settles back into its perch pose. Skipped under prefers-reduced-motion.
 (function sageGreetPeek(){
@@ -428,7 +428,7 @@ else upgradeSageAssets();
   var HOME='/sage/sage-128.png';
   function peek(){
     var el=document.getElementById('sage-greet-owl');
-    if(el&&el.offsetParent){ // only while Ask Sage is actually on screen
+    if(el&&el.offsetParent){ // only while Ask Mac is actually on screen
       var r=Math.random();
       var expr=r<0.45?'thinking':r<0.75?'scrutiny':r<0.92?'excited':'shocked';
       el.src='/sage/sage-'+expr+'-128.png';
@@ -438,7 +438,7 @@ else upgradeSageAssets();
   }
   setTimeout(peek,3500);
 })();
-// Sage idle behaviors: gaze + blink
+// Mac idle behaviors: gaze + blink
 (function sageIdleInit(){
   function sageLook(){
     var w=document.getElementById('sage-wrap');
@@ -469,7 +469,7 @@ function toggleSageMore(btn){
   var d=document.getElementById('sage-more-detail');
   if(!d)return;
   var open=d.classList.toggle('open');
-  if(btn)btn.innerHTML=open?'Show less <span>&#9652;</span>':'Why Sage says this <span>&#9662;</span>';
+  if(btn)btn.innerHTML=open?'Show less <span>&#9652;</span>':'Why Mac says this <span>&#9662;</span>';
 }
 
 function toggleBreakdown(){
@@ -792,7 +792,7 @@ var PLAYER_NOTES = {
   "cam ward": {note:"rookie year on a 3-14 Titans team: 3,169 yds, 15 TD behind an NFL-worst 55 sacks; 10 of his 15 TDs came from Week 11 on - the late-season arrow points up; TEN drafted WR Carnell Tate #4 overall to help", curve:"24 - cautious rise; supporting cast was the problem"},
   "shedeur sanders": {note:"took over mid-season in CLE - 7/10 TD-INT in 8 games with one 364-yd, 3-TD spike week; in an open camp battle under new HC Todd Monken; no first-round rookie QB was added", curve:"24 - speculative hold; no guaranteed 2026 job"},
   // gap-fill batch (July 2026): the top of the superflex/PPR board was going
-  // note-less in round 1, which left Sage's Take and Keep-in-mind empty
+  // note-less in round 1, which left Mac's Take and Keep-in-mind empty
   "drake maye": {note:"year-2 leap in 2025 - among the league leaders in completion percentage and EPA, dragged New England back to relevance; adds steady if unspectacular rushing; the arrow points straight up", curve:"23 - ascending; top-5 dynasty QB trajectory", curveRed:"a top-5 upside pick THIS season; efficiency plus a stable rushing floor"},
   "justin herbert": {note:"top-10 fantasy production in most of his healthy seasons on pure arm talent; Harbaugh's run-lean shape caps the weekly ceiling more than the player does; high floor, muted spike weeks", curve:"28 - prime; value tracks the offense's pass rate", curveRed:"high-floor QB1 range; ceiling depends on pass volume, not talent"},
   "jaxon smithnjigba": {note:"led the NFL in receiving yards in 2025 - a target-monopoly season with Sam Darnold; route wins, YAC and volume all elite; the offense runs through him", curve:"24 - cornerstone; top-3 dynasty WR conversation", curveRed:"alpha target share locked in; WR1-overall upside this season"},
@@ -1294,7 +1294,7 @@ async function loadLeague(lid,name,rosters,season){
   var isDynastyLeague;
   if(leagueInfo&&leagueInfo.settings&&leagueInfo.settings.type!=null){
     // 2 = dynasty. 1 = KEEPER: redraft values are the right lens (you keep a
-    // few, you do not own the roster forever), with a keeper flag for Sage.
+    // few, you do not own the roster forever), with a keeper flag for Mac.
     isDynastyLeague=leagueInfo.settings.type===2;
     window._isKeeper=leagueInfo.settings.type===1;
     window._detectedMode=isDynastyLeague?'dynasty':'redraft';
@@ -1541,12 +1541,12 @@ window.addEventListener('message',function(ev){
 });
 initYahooOAuth();
 
-// ── Sage AI chat (shows itself when the server has an Anthropic key) ─────────
+// ── Mac AI chat (shows itself when the server has an Anthropic key) ─────────
 var _sageChat=[];
-var SAGE_SUGGESTIONS=[
+var MAC_SUGGESTIONS=[
   'Should I trade Rashee Rice for Jordan Addison and a 2027 2nd?',
   'Build a rebuild plan for my 2-8 dynasty team',
-  'Paste a league convo - Sage writes your reply',
+  'Paste a league convo - Mac writes your reply',
   'Top 3 buy-low WRs right now?'
 ];
 function _sageRenderSuggestions(){
@@ -1554,7 +1554,7 @@ function _sageRenderSuggestions(){
   if(!box)return;
   if(_sageChat.length){box.style.display='none';return;}
   box.style.display='flex';
-  box.innerHTML=SAGE_SUGGESTIONS.map(function(q){
+  box.innerHTML=MAC_SUGGESTIONS.map(function(q){
     var isHint=q.indexOf('Paste a league convo')===0;
     if(isHint)return '<button class="sage-sugg" onclick="var i=document.getElementById(\'sage-chat-input\');if(!i.disabled){i.placeholder=\'Paste the conversation and what you want out of the trade...\';i.focus();}">'+q+'</button>';
     return '<button class="sage-sugg" onclick="var i=document.getElementById(\'sage-chat-input\');if(!i.disabled){i.value=this.textContent;i.focus();try{sageGrowInput(i);}catch(_){}}">'+q+'</button>';
@@ -1593,14 +1593,14 @@ function _sageLoadThreads(){
       localStorage.removeItem('tm_sage_chat');
     }
   }catch(_){}
-  // Yahoo API terms (Exhibit A, 3.e): a Sage conversation may contain analysis of
+  // Yahoo API terms (Exhibit A, 3.e): a Mac conversation may contain analysis of
   // a Yahoo-imported roster (Input/Output), which must not be retained beyond 30
   // days. Purge stale threads on every load so nothing Yahoo-derived lingers.
   try{var _cut=Date.now()-30*86400000;_sageThreads=_sageThreads.filter(function(t){return t&&t.ts&&t.ts>=_cut;});}catch(_){}
   _sageStoreThreads();
   _sageLoadedUser=(localStorage.getItem('tm_username')||'anon').toLowerCase();
 }
-// Reset the Ask Sage view to the current account's chats (call on account switch).
+// Reset the Ask Mac view to the current account's chats (call on account switch).
 function sageReloadForUser(){
   _sageActive=null;_sageChat=[];
   _sageLoadThreads();
@@ -1703,7 +1703,7 @@ function initSageChat(){
     if(d&&d.configured){
       var inp=document.getElementById('sage-chat-input');
       var btn=document.getElementById('sage-chat-send');
-      if(inp){inp.disabled=false;inp.placeholder='Ask Sage anything about fantasy football...';}
+      if(inp){inp.disabled=false;inp.placeholder='Ask Mac anything about fantasy football...';}
       if(btn){btn.disabled=false;}
     }
   }).catch(function(){});
@@ -1714,7 +1714,7 @@ function _sageChatAppend(role,text){
   var div=document.createElement('div');
   div.className='sage-msg '+(role==='user'?'user':'sage');
   if(role!=='user'){
-    var tag=document.createElement('span');tag.className='sage-msg-tag';tag.textContent='Sage';div.appendChild(tag);
+    var tag=document.createElement('span');tag.className='sage-msg-tag';tag.textContent='Mac';div.appendChild(tag);
   }
   div.appendChild(document.createTextNode(text));
   log.appendChild(div);
@@ -1734,7 +1734,7 @@ function _sageUpgradeButton(){
   btn.onclick=sageUpgrade;
   var sub=document.createElement('div');
   sub.style.cssText='font-size:11px;color:var(--muted)';
-  sub.textContent='Unlimited Sage. Cancel anytime.';
+  sub.textContent='Unlimited Mac. Cancel anytime.';
   wrap.appendChild(btn);wrap.appendChild(sub);
   log.appendChild(wrap);
   log.scrollTop=log.scrollHeight;
@@ -1749,10 +1749,10 @@ function _proBenefitsHtml(){
   return '<div style="text-align:center;margin-bottom:20px">'
       +'<div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-bright)">Mac Draft</div>'
       +'<div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.02em;margin-top:2px">Go <span class="hl">Pro</span></div>'
-      +'<div style="font-size:13px;color:var(--muted2);margin-top:5px">Unlimited Sage. For managers who mean it.</div>'
+      +'<div style="font-size:13px;color:var(--muted2);margin-top:5px">Unlimited Mac. For managers who mean it.</div>'
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:13px;margin-bottom:22px">'
-      +_proBenefit('Unlimited Sage','Ask as much as you want, all season long. No daily or weekly caps.')
+      +_proBenefit('Unlimited Mac','Ask as much as you want, all season long. No daily or weekly caps.')
       +_proBenefit('The sharpest read','Every trade weighed with our most capable AI, not a lite model.')
       +_proBenefit('The deep stuff','Opponent tendencies, negotiation coaching, and player scouting on demand.')
       +_proBenefit('Always in your corner','One clear answer before every move. Cancel anytime.')
@@ -1814,7 +1814,7 @@ async function sageCheckout(btn){
     if(btn){btn.disabled=false;btn.innerHTML='Continue &nbsp;&middot;&nbsp; $6.99/mo';}
   }
 }
-// Show how many free questions are left (or Pro status) under the Ask Sage box.
+// Show how many free questions are left (or Pro status) under the Ask Mac box.
 // A stable per-BROWSER id so the free allowance is scoped to the device, not the
 // account - signing out and using another username gives no extra questions.
 function _deviceId(){
@@ -1860,8 +1860,8 @@ async function openReferral(){
   if(!m){m=document.createElement('div');m.id='referral-modal';m.onclick=function(e){if(e.target===m)closeReferral();};document.body.appendChild(m);}
   m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:20px';
   m.innerHTML="<div style='max-width:440px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 22px'>"
-    +"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px'><div style='font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em'>Refer friends, earn Sage</div><span onclick='closeReferral()' style='cursor:pointer;color:var(--muted);font-size:20px;line-height:1'>&times;</span></div>"
-    +"<div style='font-size:13px;color:var(--muted2);line-height:1.55;margin:6px 0 16px'>Send this link to a friend. When they connect a real Sleeper league, you both get two extra Ask Sage questions that day. Up to "+(st.cap||10)+" from referrals.</div>"
+    +"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px'><div style='font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em'>Refer friends, earn Mac</div><span onclick='closeReferral()' style='cursor:pointer;color:var(--muted);font-size:20px;line-height:1'>&times;</span></div>"
+    +"<div style='font-size:13px;color:var(--muted2);line-height:1.55;margin:6px 0 16px'>Send this link to a friend. When they connect a real Sleeper league, you both get two extra Ask Mac questions that day. Up to "+(st.cap||10)+" from referrals.</div>"
     +"<div style='display:flex;gap:8px;margin-bottom:14px'><input id='referral-link-input' readonly value='"+link.replace(/'/g,"&#39;")+"' style='flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 12px;font-size:12.5px;color:var(--text);outline:none'><button onclick='copyReferral(this)' class='ideas-refresh' style='white-space:nowrap'>Copy</button></div>"
     +"<div style='display:flex;gap:10px'>"
     +"<div style='flex:1;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px'><div style='font-family:var(--font-head);font-size:26px;font-weight:800;color:var(--accent-bright)'>"+(st.referred||0)+"</div><div style='font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em'>Friends joined</div></div>"
@@ -1953,7 +1953,7 @@ async function sageUpdateQuota(){
   if(!user){el.style.display='none';return;}
   try{
     var d=await (await fetch('/api/sage/quota?user='+encodeURIComponent(user)+'&device='+encodeURIComponent(_deviceId()))).json();
-    if(d.pro){el.innerHTML='<span style="color:var(--accent-bright);font-weight:700">Pro</span> &middot; Unlimited Sage &middot; <span onclick="sageManageBilling()" style="cursor:pointer;text-decoration:underline">Manage</span>';el.style.display='block';return;}
+    if(d.pro){el.innerHTML='<span style="color:var(--accent-bright);font-weight:700">Pro</span> &middot; Unlimited Mac &middot; <span onclick="sageManageBilling()" style="cursor:pointer;text-decoration:underline">Manage</span>';el.style.display='block';return;}
     var left=Math.min(d.dailyLeft,d.weeklyLeft);
     var span=(d.weeklyLeft<d.dailyLeft)?'this week':'today';
     var go=' &middot; <span style="color:var(--accent-bright);cursor:pointer;text-decoration:underline" onclick="sageUpgrade()">Go Pro for unlimited</span>';
@@ -1969,10 +1969,10 @@ async function sageUpdateQuota(){
     el.style.display='block';
   }catch(_){el.style.display='none';}
 }
-// Sage figures out the user's window HIMSELF: roster value rank in the league,
+// Mac figures out the user's window HIMSELF: roster value rank in the league,
 // record, and the age of the core decide contending vs rebuilding. Shipped with
 // every chat message so he never has to ask.
-// The connected league's scoring rules in one line so Sage weighs positions
+// The connected league's scoring rules in one line so Mac weighs positions
 // the way THIS league scores, not the way a generic league does
 function _lfRules(){
   try{
@@ -1986,7 +1986,7 @@ function _lfRules(){
 }
 // What the manager actually told us, in their own words. These three answers
 // were collected right before the analysis and then dropped on the floor: they
-// never reached Sage, who instead got a `situation` the app INFERRED from
+// never reached Mac, who instead got a `situation` the app INFERRED from
 // roster value and age. So a manager could say "I'm contending", get ranked
 // 9th by the algorithm, and be answered as a rebuilder. Stated beats inferred.
 const _YOU_WINDOW=['contending, likes this roster to make a run',
@@ -2053,7 +2053,7 @@ function _sageLeagueCtx(){
     return {mode:leagueMode,keeper:!!window._isKeeper,league:leagueName||'',teams:n,record:g?(w+'-'+l):'',situation:sit,why:why,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock(),rosters:rosters};
   }catch(_){return {mode:leagueMode,keeper:!!window._isKeeper,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock()};}
 }
-// Latest mock draft as one compact line so Sage can grade it in chat
+// Latest mock draft as one compact line so Mac can grade it in chat
 function _sageLastMock(){
   try{
     var m=JSON.parse(localStorage.getItem('tm_last_mock')||'null');
@@ -2065,7 +2065,7 @@ function _sageLastMock(){
   }catch(_){return '';}
 }
 // The analyzer's math can't know what's happening in your league. Whatever the
-// user types in the context box gets a short live Sage read under the verdict.
+// user types in the context box gets a short live Mac read under the verdict.
 async function sageContextRead(give,get,valueTier){
   var box=document.getElementById('trade-context');
   var txt=box?box.value.trim():'';
@@ -2081,7 +2081,7 @@ async function sageContextRead(give,get,valueTier){
     el.style.cssText='margin:10px 0 12px;padding:11px 14px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:11px;font-size:12.5px;color:var(--muted2);line-height:1.6';
     body.parentElement.insertBefore(el,body.nextSibling);
   }
-  el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage on your context</div><span class="sage-status">Factoring it in...</span>';
+  el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac on your context</div><span class="sage-status">Factoring it in...</span>';
   var tierWord={crushing:'a clear win for me',winning:'a win for me',even:'even',losing:'a loss for me',getting_fleeced:'a big loss for me'}[valueTier]||'close';
   var giveN=(give||[]).join(', ')||'my players';
   var getN=(get||[]).join(', ')||'their players';
@@ -2106,14 +2106,14 @@ async function sageContextRead(give,get,valueTier){
         lines.forEach(function(ln){
           ln=ln.trim();if(ln.indexOf('data: ')!==0)return;
           try{var ev=JSON.parse(ln.slice(6));if(ev.t){full+=ev.t;
-            el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage on your context</div>'+full.replace(/</g,'&lt;').replace(/\n/g,'<br>');}}catch(_){}
+            el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac on your context</div>'+full.replace(/</g,'&lt;').replace(/\n/g,'<br>');}}catch(_){}
         });
       }
     }
-    if(!full.trim())el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage on your context</div>Could not get a read right now - the verdict above stands on the numbers.';
-    else if(ctype.indexOf('text/event-stream')<0)el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage on your context</div>'+full.replace(/</g,'&lt;').replace(/\n/g,'<br>');
+    if(!full.trim())el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac on your context</div>Could not get a read right now - the verdict above stands on the numbers.';
+    else if(ctype.indexOf('text/event-stream')<0)el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac on your context</div>'+full.replace(/</g,'&lt;').replace(/\n/g,'<br>');
   }catch(_){
-    el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage on your context</div>Could not get a read right now - the verdict above stands on the numbers.';
+    el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac on your context</div>Could not get a read right now - the verdict above stands on the numbers.';
   }
 }
 // Inline sign-in, right inside the chat: username in, no password, no leaving
@@ -2134,7 +2134,7 @@ function sageShowSignin(){
   var box=document.createElement('div');
   box.className='sage-msg sage';
   box.id='sage-inline-signin';
-  box.innerHTML='<span class="sage-msg-tag">Sage</span>'
+  box.innerHTML='<span class="sage-msg-tag">Mac</span>'
     +'<div style="font-size:13px;line-height:1.6;margin-bottom:10px">Sign in with your Sleeper username first so I know whose league I am looking at. No password, takes ten seconds.</div>'
     +'<div style="display:flex;gap:8px;max-width:380px">'
     +'<input type="text" id="sage-si-input" class="tm-input" style="flex:1;font-size:14px" placeholder="Your Sleeper username" onkeydown="if(event.key===\'Enter\')sageInlineSignIn()">'
@@ -2162,9 +2162,9 @@ async function sageInlineSignIn(){
     if(st)st.textContent='No Sleeper account found under that name. Check the spelling - it is case sensitive.';
   }
 }
-// Sage can send the user to any tool. It emits [[go:KEY]] in its reply; we strip
+// Mac can send the user to any tool. It emits [[go:KEY]] in its reply; we strip
 // that from the text and render a clickable chip that navigates there.
-var SAGE_NAV={
+var MAC_NAV={
   home:{label:'Home',go:function(){switchScreen('home');}},
   analyze:{label:'Open the Trade Analyzer',go:function(){switchScreen('analyze');try{showAnalyzeTab('analyzer');}catch(_){}}},
   ideas:{label:'See Trade Ideas',go:function(){switchScreen('analyze');try{showAnalyzeTab('ideas');}catch(_){}}},
@@ -2177,13 +2177,13 @@ var SAGE_NAV={
   learn:{label:'Fantasy 101',go:function(){goLearn();}}
 };
 function _sageStripNav(txt){return String(txt).replace(/\[\[go:[a-z]*\]\]/gi,'').replace(/\[\[go:[a-z]*$/i,'').replace(/[ \t]+(\n|$)/g,'$1').replace(/\s+$/,'');}
-function _sageNavKeys(txt){var out=[],seen={},m,re=/\[\[go:([a-z]+)\]\]/gi;while((m=re.exec(String(txt)))){var k=m[1].toLowerCase();if(SAGE_NAV[k]&&!seen[k]){seen[k]=1;out.push(k);}}return out.slice(0,2);}
+function _sageNavKeys(txt){var out=[],seen={},m,re=/\[\[go:([a-z]+)\]\]/gi;while((m=re.exec(String(txt)))){var k=m[1].toLowerCase();if(MAC_NAV[k]&&!seen[k]){seen[k]=1;out.push(k);}}return out.slice(0,2);}
 function _sageRenderNav(container,txt){
   var keys=_sageNavKeys(txt);if(!keys.length||!container)return;
   var wrap=document.createElement('div');
   wrap.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:11px';
   keys.forEach(function(k){
-    var nav=SAGE_NAV[k];var b=document.createElement('button');
+    var nav=MAC_NAV[k];var b=document.createElement('button');
     b.className='sage-nav-chip';b.innerHTML=nav.label+' <span style="opacity:.75">&rarr;</span>';
     b.onclick=function(){try{nav.go();}catch(_){}};
     wrap.appendChild(b);
@@ -2198,7 +2198,7 @@ async function sageChatSend(){
   var q=inp.value.trim();
   if(!q||window._sageBusy)return;
   try{tmTrack('sage_asked');}catch(_){}
-  // Sage talks to signed-in managers only (protects the whole community's access)
+  // Mac talks to signed-in managers only (protects the whole community's access)
   if(!localStorage.getItem('tm_username')){
     _sageHideGreeting();
     sageShowSignin();
@@ -2213,10 +2213,10 @@ async function sageChatSend(){
   _sageChat.push({role:'user',content:q});
   var sugg=document.getElementById('sage-suggestions');
   if(sugg)sugg.style.display='none';
-  // Status line while Sage gets going, replaced by live text the moment he writes
+  // Status line while Mac gets going, replaced by live text the moment he writes
   var typing=document.createElement('div');
   typing.className='sage-msg sage';
-  typing.innerHTML='<span class="sage-msg-tag"><img src="/sage/sage-thinking-64.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-6px;margin-right:4px" onerror="this.style.display=\'none\'">Sage</span><span class="sage-status">Reading the market...</span>';
+  typing.innerHTML='<span class="sage-msg-tag"><img src="/sage/sage-thinking-64.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-6px;margin-right:4px" onerror="this.style.display=\'none\'">Mac</span><span class="sage-status">Reading the market...</span>';
   log.appendChild(typing);log.scrollTop=log.scrollHeight;
   var statusEl=typing.querySelector('.sage-status');
   var liveText=null;var full='';
@@ -2232,7 +2232,7 @@ async function sageChatSend(){
   }
   try{
     // Ship the scout notes for every player named in the conversation - this is
-    // how Sage knows the situation (who left, who arrived), not just the value.
+    // how Mac knows the situation (who left, who arrived), not just the value.
     var _noteMatches=[];
     try{
       var convoTxt=_sageChat.slice(-6).map(function(m){return m.content;}).join(' ').toLowerCase()
@@ -2440,7 +2440,7 @@ async function loadTradeAlerts(){
   // Was a dead end: it told you to connect a league without giving you any way
   // to do it, so the panel looked broken. Now the message IS the action.
   if(!leagues.length){dd.innerHTML='<div style="padding:14px;text-align:center">'
-    +'<div style="font-size:12px;color:var(--muted2);line-height:1.5;margin-bottom:10px">Connect a league and Sage will tell you the moment a trade lands.</div>'
+    +'<div style="font-size:12px;color:var(--muted2);line-height:1.5;margin-bottom:10px">Connect a league and Mac will tell you the moment a trade lands.</div>'
     +'<button class="btn-sm" onclick="closeAllDropdowns();goConnectLeague()">Connect a league</button></div>';return;}
   var seen=0;try{seen=parseInt(localStorage.getItem('tm_alerts_seen')||'0');}catch(_){}
   var items=[];
@@ -2518,13 +2518,13 @@ async function coachSend(){
   var text=inp.value.trim();
   if(!text||window._coachBusy)return;
   window._coachBusy=true;
-  if(btn){btn.disabled=true;btn.textContent='Sage is drafting...';}
+  if(btn){btn.disabled=true;btn.textContent='Mac is drafting...';}
   out.style.display='block';out.textContent='Thinking through the negotiation...';
   try{
     var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({leagueContext:_sageLeagueCtx(),user:localStorage.getItem('tm_username')||'',device:_deviceId(),messages:[{role:'user',content:'NEGOTIATION COACH MODE. Below is a trade conversation from my league chat plus what I want. Draft the exact next message I should send - persuasive, casual league-chat tone, no salesman energy. Then add one line of strategy advice.\n\n'+text.slice(0,1600)}]})});
     var d=await res.json().catch(function(){return {};});
-    out.textContent=(res.ok&&d.answer)?d.answer:'Sage hit a snag. Try again in a moment.';
-  }catch(_){out.textContent='Sage hit a snag. Try again in a moment.';}
+    out.textContent=(res.ok&&d.answer)?d.answer:'Mac hit a snag. Try again in a moment.';
+  }catch(_){out.textContent='Mac hit a snag. Try again in a moment.';}
   window._coachBusy=false;
   if(btn){btn.disabled=false;btn.textContent='Draft my reply';}
 }
@@ -3246,7 +3246,7 @@ const profiles={
 function oppDesc(p){return (leagueMode==='redraft'&&p&&p.descR)?p.descR:(p?p.desc:'');}
 function oppName(p){return (leagueMode==='redraft'&&p&&p.nameR)?p.nameR:(p?p.name:'');}
 
-// Renders the archetype explainer on the Learn tab from the same profiles Sage actually uses
+// Renders the archetype explainer on the Learn tab from the same profiles Mac actually uses
 function renderArchetypeGuide(){
   var el=document.getElementById('archetype-guide');
   if(!el)return;
@@ -3264,7 +3264,7 @@ function renderArchetypeGuide(){
   el.innerHTML=Object.keys(profiles).map(function(k){
     var p=profiles[k];
     return '<div class="d101-section"><div class="d101-term">'+p.icon+' '+p.name+'</div>'
-      +'<div class="d101-def">'+p.desc+'<br><span style="color:var(--muted)"><strong style="color:var(--text)">How Sage detects it:</strong> '+(detect[k]||'roster and trade patterns')+'.</span></div></div><div class="d101-divider"></div>';
+      +'<div class="d101-def">'+p.desc+'<br><span style="color:var(--muted)"><strong style="color:var(--text)">How Mac detects it:</strong> '+(detect[k]||'roster and trade patterns')+'.</span></div></div><div class="d101-divider"></div>';
   }).join('');
 }
 
@@ -3951,7 +3951,7 @@ function inferOppProfile(roster){
 }
 
 // Staged analysis narration: quick cycling status pill so hitting Analyze
-// feels like Sage actually working through it, then it gets out of the way.
+// feels like Mac actually working through it, then it gets out of the way.
 function _anzToast(){
   try{
     var old=document.getElementById('anz-toast');if(old)old.remove();
@@ -3993,7 +3993,7 @@ async function runAnalysis(){
     if(resultsEl)resultsEl.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted);font-size:14px">You need players on <strong style="color:var(--text)">both sides</strong> to analyze. Fill in what you\'re giving AND what you\'re getting.</div>';
     return;
   }
-  // StoryBrand micro-moment: Sage visibly working through the steps
+  // StoryBrand micro-moment: Mac visibly working through the steps
   try{
     var _tz=document.getElementById('anz-toast');
     if(!_tz){_tz=document.createElement('div');_tz.id='anz-toast';
@@ -4004,7 +4004,7 @@ async function runAnalysis(){
     _steps.forEach(function(s,i){setTimeout(function(){_tz.textContent=s;},i*330);});
     setTimeout(function(){_tz.style.opacity='0';setTimeout(function(){_tz.style.display='none';},350);},_steps.length*330+700);
   }catch(_){}
-  _anzToast(); // staged "Sage is working" lines while the battle plays
+  _anzToast(); // staged "Mac is working" lines while the battle plays
   // Deduct BK (only if user is logged in)
   var bkOk=await chargeBK();
   if(!bkOk)return;
@@ -4153,7 +4153,7 @@ async function runAnalysis(){
   window._oppReadVals={sig1:winNow,sig2:attach,sig3:recency};
   _resetOppRead();
   renderVsBattle(giveInputEls,getInputEls,ktcGap,hasKtc,valueTier);
-  // First verdict a user ever sees: introduce Sage ONCE, right at the moment
+  // First verdict a user ever sees: introduce Mac ONCE, right at the moment
   // of full attention. Never shown again - the tool sells itself after that.
   try{
     if(!localStorage.getItem('tm_met_sage')){
@@ -4163,7 +4163,7 @@ async function runAnalysis(){
         var ms=document.createElement('div');
         ms.id='meet-sage-strip';
         ms.style.cssText='margin:0 0 14px;padding:12px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.35);border-radius:12px;font-size:12.5px;color:var(--muted2);line-height:1.6';
-        ms.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Meet Sage</div>'
+        ms.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Meet Mac</div>'
           +'Knows your team. Knows your league. Never gets emotional. Always in your corner. What you are about to read is one clear recommendation, built for YOUR situation - not a ranking.'
           +'<span style="float:right;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;margin-left:10px" onclick="this.parentElement.remove()">&times;</span>';
         vh.parentElement.insertBefore(ms,vh);
@@ -4217,7 +4217,7 @@ async function runAnalysis(){
     vc.style.borderTop=valueTier==="getting_fleeced"||valueTier==="losing"?"4px solid var(--red)":valueTier==="even"?"4px solid var(--yellow)":"4px solid var(--green)";
     vc.style.background=valueTier==="getting_fleeced"?"rgba(217,138,160,0.05)":valueTier==="losing"?"rgba(217,138,160,0.03)":valueTier==="even"?"rgba(230,192,122,0.03)":"rgba(34,197,94,0.03)";
   }
-  // Wolco's manager profile - drives Sage's personalized coaching line
+  // Wolco's manager profile - drives Mac's personalized coaching line
 var USER_PROFILE={risk:'upside',window:'builder-adaptive-active',youth:'context',nego:'fair-options'};
 function sageStyleNote(valueTier){
   // A line that reflects HOW this manager likes to play, tuned to the verdict
@@ -4236,7 +4236,7 @@ function sageStyleNote(valueTier){
   // lives behind a small toggle so the read stays easy.
   var depthHtml=_depthNote?"<div style='margin-top:8px;font-size:11px;color:var(--muted2);line-height:1.6'><strong style='color:var(--text)'>Roster math:</strong> "+_depthNote+"</div>":"";
   var moreHtml=(whyHtml||styleHtml||depthHtml)
-    ?"<button class='sage-more-toggle' onclick='toggleSageMore(this)'>Why Sage says this <span>&#9662;</span></button><div id='sage-more-detail'>"+whyHtml+depthHtml+styleHtml+"</div>"
+    ?"<button class='sage-more-toggle' onclick='toggleSageMore(this)'>Why Mac says this <span>&#9662;</span></button><div id='sage-more-detail'>"+whyHtml+depthHtml+styleHtml+"</div>"
     :"";
   if(valueTier==='even')bodyText+=' A fair trade is not a failed trade: if each side fills a different need, you both walk away better. That is what trading is for.';
   document.getElementById("verdict-body").innerHTML=bodyText+"<div style='margin-top:12px'><span style='font-size:11px;font-weight:600;color:var(--accent-bright);background:var(--accent-dim);border:1px solid rgba(167,139,250,.3);border-radius:100px;padding:4px 11px;display:inline-block'>"+p.icon+" Opponent profile: "+oppName(p)+"</span></div>"+moreHtml;
@@ -4500,7 +4500,7 @@ function setShareContext(btn){
 async function _timingSchedulePass(getInputEls,oppRosterObj,valueTier){
   var el=document.getElementById('bc-psych-desc');
   if(!el||!getInputEls||!getInputEls.length)return;
-  // On a deal Sage already calls bad, timing advice like "pulling the trigger
+  // On a deal Mac already calls bad, timing advice like "pulling the trigger
   // now is still fine" flatly contradicts the verdict. The value gap doesn't get
   // fixed by a soft schedule - so skip the timing tip entirely on bad deals.
   if(valueTier==='getting_fleeced'||valueTier==='losing')return;
@@ -5124,7 +5124,7 @@ async function checkShareParam(){
             +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;text-align:center">Market value breakdown</div>'
             +bar('Give side total',t.gv||0,'var(--green)')+bar('Get side total',t.tv||0,'var(--accent-bright)')+'</div>';
         })():'')
-      +'<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted)">Sage read the opponent as: <strong style="color:var(--accent-bright)">'+(t.profile||'Unknown')+'</strong></div>'
+      +'<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted)">Mac read the opponent as: <strong style="color:var(--accent-bright)">'+(t.profile||'Unknown')+'</strong></div>'
       +'<div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
       +'<button onclick="counterSharedTrade()" style="background:var(--surface2);border:1px solid rgba(155,114,232,.45);color:var(--accent-bright);font-weight:700;font-size:13px;padding:10px 24px;border-radius:100px;cursor:pointer;font-family:var(--font-body)">Counter this offer</button>'
       +'<a href="/" style="display:inline-block;background:#9b72e8;color:#fff;font-weight:700;font-size:13px;padding:10px 26px;border-radius:100px;text-decoration:none">Analyze YOUR trade</a></div>';
@@ -5152,7 +5152,7 @@ function switchScreen(name,_noPush){
   if(screen)screen.classList.add("active");
   var nav=document.querySelector("[data-screen='"+name+"']");
   if(nav)nav.classList.add("active");
-  // Sage chat: the "connect your league" nudge is about roster context, so it
+  // Mac chat: the "connect your league" nudge is about roster context, so it
   // only makes sense for a manager who is already signed in but has no league
   // loaded yet. For a signed-out visitor it would be a second, competing entry
   // point next to the inline sign-in - which is exactly the double prompt we are
@@ -6176,7 +6176,7 @@ function openPlayerCard(pid, name){
       stat(depthLabel,"Depth Chart");
   }
 
-  // ── Sage's Take: an opinionated read on the player, with the why ──
+  // ── Mac's Take: an opinionated read on the player, with the why ──
   var takeEl=document.getElementById('pm-sage-take');
   if(!takeEl&&grid){
     takeEl=document.createElement('div');
@@ -6195,7 +6195,7 @@ function openPlayerCard(pid, name){
       // when the headline came from the note itself, the why must not repeat it
       var whyParts=(curveTxt?_clauses4.slice(0,2):_clauses4.slice(1,3)).join('; ')||_clauses4[0];
       takeEl.innerHTML='<div style="margin:14px 0 4px;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.25);border-radius:12px">'
-        +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Sage\'s Take</div>'
+        +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Mac\'s Take</div>'
         +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px">'+takeLine.charAt(0).toUpperCase()+takeLine.slice(1)+'</div>'
         +'<div style="font-size:12px;color:var(--muted2);line-height:1.6"><strong style="color:var(--text)">Why:</strong> '+whyParts+'.</div>'
         +'</div>';
@@ -6233,7 +6233,7 @@ function openPlayerCard(pid, name){
         :'';
     }
   }catch(_){}
-  // ── Draft day: if a mock is LIVE and he is still on the board, Sage's risk
+  // ── Draft day: if a mock is LIVE and he is still on the board, Mac's risk
   // lanes are one click away right here in the card ──
   try{
     var _sw=document.getElementById('pm-sage-wrap');
@@ -6248,8 +6248,8 @@ function openPlayerCard(pid, name){
       _sw.innerHTML=_inPool
         ?'<div style="margin:0 0 12px;padding:12px 14px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:10px">'
           +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Draft day</div>'
-          +'<div style="font-size:12px;color:var(--muted2);line-height:1.55;margin-bottom:8px">Still on the board in your mock. One call gets Sage\'s risk lanes for this exact pick.</div>'
-          +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+pid+'\',\'pm-sage-live\')">Ask Sage: my options here</button>'
+          +'<div style="font-size:12px;color:var(--muted2);line-height:1.55;margin-bottom:8px">Still on the board in your mock. One call gets Mac\'s risk lanes for this exact pick.</div>'
+          +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+pid+'\',\'pm-sage-live\')">Ask Mac: my options here</button>'
           +'<div id="pm-sage-live" style="display:none"></div></div>'
         :'';
     }
@@ -7657,7 +7657,7 @@ async function rankEmBoard(){
   }catch(_){el.innerHTML='<div class="empty-state">Rankings unavailable right now.</div>';}
 }
 
-// ── MOCK DRAFT WITH SAGE ─────────────────────────────────────────────────────
+// ── MOCK DRAFT WITH MAC ─────────────────────────────────────────────────────
 var MD_STRATS={
   bpa:{name:'Best Available',desc:'Take the highest-value player on the board every time.',icon:'★'},
   zerorb:{name:'Zero RB',desc:'Load up on WR/TE early, wait on RB until the mid rounds.',icon:'○'},
@@ -7732,15 +7732,254 @@ function mdSyncSlots(){
   var sl=document.getElementById('md-slot');
   if(!sl)return;
   var cur=parseInt(sl.value)||5;
-  if(sl.options.length===t&&parseInt(sl.options[sl.options.length-1].value)===t)return;
+  if(sl.options.length===t&&parseInt(sl.options[sl.options.length-1].value)===t){try{mdRenderProfiles();}catch(_){}return;}
   sl.innerHTML='';
   for(var i=1;i<=t;i++){
     var o=document.createElement('option');o.value=String(i);o.textContent=String(i);
     if(i===Math.min(cur,t))o.selected=true;
     sl.appendChild(o);
   }
+  try{mdRenderProfiles();}catch(_){}  // seat rows follow the room size
 }
-// Auto-draft: Sage runs your picks - queue first, then his recommendation,
+// ── League drafter profiles: a name + drafting personality per seat ─────────
+// The whole point: mock against YOUR league. Each seat can carry a real
+// manager's name and one of the ten engine archetypes (MD_ARCHS below);
+// "Random" keeps the normal random deal for that seat. Saved per league
+// (tm_md_profiles_{leagueId}, or tm_md_profiles with no league) so the same
+// room comes back every time this league mocks.
+// PRECEDENCE (documented once, enforced in mdAdvance): the free-text context
+// still outranks everything - on any position the user's context or league
+// settings touched, EVERY archetype nudge (profiled or dealt) shrinks to a
+// whisper (bAdj*=0.2 via MD.userPos). A profile only decides WHICH archetype
+// a seat plays, standing in for the random deal - never overriding user data.
+// MD_ARCHS: posAdj = dv nudge in the mid rounds; eliteAdj = a smaller nudge
+// that IS allowed to reorder the top two rounds (a real zero-RB drafter
+// passes on elite RBs too - the faller rescue keeps it from going absurd);
+// reachP = odds of jumping early on a sleeper.
+var MD_ARCHS=[
+  {k:'zerorb',   posAdj:{RB:-420,WR:200,TE:60}, eliteAdj:{RB:-260,WR:120}, reachP:0.06},
+  {k:'herorb',   posAdj:{WR:160},               eliteAdj:{RB:160},         reachP:0.05, hero:1},
+  {k:'robustrb', posAdj:{RB:340,WR:-80},        eliteAdj:{RB:200},         reachP:0.03},
+  {k:'earlyqb',  posAdj:{QB:380},               eliteAdj:{QB:240},         reachP:0.05},
+  {k:'lateqb',   posAdj:{QB:-500},              eliteAdj:{QB:-220},        reachP:0.05},
+  {k:'tehunter', posAdj:{TE:360},               eliteAdj:{TE:220},         reachP:0.04, teCap:2},
+  {k:'bpa',      posAdj:{},                     eliteAdj:{},               reachP:0.01},
+  {k:'hype',     posAdj:{},                     eliteAdj:{},               reachP:0.22, young:1},
+  {k:'homer',    posAdj:{},                     eliteAdj:{},               reachP:0.06, homer:1},
+  {k:'valuestrict',posAdj:{},                   eliteAdj:{},               reachP:0,    rescue:1}
+];
+// fan-heavy franchises a RANDOM homer roots for; a profiled homer picks any
+var HOMER_TEAMS=['KC','PHI','DAL','SF','BUF','DET','GB','MIA','BAL','CIN','NYJ','MIN','LAC','SEA','PIT','DEN'];
+var MD_NFL_TEAMS=['ARI','ATL','BAL','BUF','CAR','CHI','CIN','CLE','DAL','DEN','DET','GB','HOU','IND','JAX','KC','LAC','LAR','LV','MIA','MIN','NE','NO','NYG','NYJ','PHI','PIT','SEA','SF','TB','TEN','WAS'];
+// human labels for the picker, in the panel's display order
+var MD_PROFILE_LABELS=[
+  ['zerorb','Zero RB truther'],['herorb','Hero RB'],['robustrb','Robust RB'],
+  ['earlyqb','QB early'],['lateqb','QB late'],['tehunter','TE hunter'],
+  ['bpa','Best available'],['hype','Hype chaser'],['homer','Homer'],
+  ['valuestrict','Value strict']
+];
+// Fantazy 2026: the owner's real Yahoo room (league id 664858, "league 2021")
+// as a one-tap preset. Names seat-ordered from the live league; seat 9 is the
+// owner ("Alan goat") and renders as "You". Seat 6's nickname really carries
+// quotes - typographic ones, because straight quotes are stripped by
+// _mdProfName (they would break the title="" attributes the name lands in).
+var FZ26_NAMES={1:'Adam Misstress',2:'elias y sultan',3:'Kopel',4:'Eli Gabay',
+  5:'Moises Lalo y JZ',6:'jacky “comish”',7:'Bashigger',8:'Moiza y aquaman',10:'Moshe Kahmaji'};
+function _mdFz26On(){try{return localStorage.getItem('tm_md_fantazy26')==='1';}catch(_){return false;}}
+function _mdProfilesKey(){
+  // the preset owns its own bucket: enabling never clobbers the saved
+  // profiles of the connected league (or the global set), and the
+  // personalities the owner assigns to his rivals persist with the preset
+  if(_mdFz26On())return 'tm_md_profiles_fantazy26';
+  return (typeof leagueId!=='undefined'&&leagueId)?('tm_md_profiles_'+leagueId):'tm_md_profiles';
+}
+// Toggle the preset: ON snapshots the current setup (so OFF is a faithful
+// restore, reload-proof), applies the league's real shape, and seeds the ten
+// member names once. Settings mapped to knobs the engine actually has:
+// 10 teams / half PPR / 1QB / 15 rounds (QB+2RB+2WR+TE+FLEX+K+DEF = 9
+// starters + 6 bench; the 2 IR slots are never drafted) / 6pt passing TDs
+// via the existing md-6pt toggle / owner default seat 9. Roster-construction
+// targets stay on Auto ON PURPOSE: those selects mean TOTAL players drafted
+// per position, not starters - writing the starter counts (RB2/WR2...) there
+// would cap every bench at zero, which is not what the league does.
+function mdFantazy26Toggle(on){
+  try{
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+    if(on){
+      var snap={};
+      ['md-teams','md-scoring','md-format','md-rounds','md-slot'].forEach(function(id){
+        var e=document.getElementById(id);if(e)snap[id]=e.value;
+      });
+      snap['md-6pt']=!!(document.getElementById('md-6pt')||{}).checked;
+      localStorage.setItem('tm_md_fantazy26_prev',JSON.stringify(snap));
+      localStorage.setItem('tm_md_fantazy26','1');
+      set('md-teams','10');try{mdSyncSlots();}catch(_){}
+      set('md-scoring','0.5');set('md-format','1qb');set('md-rounds','15');set('md-slot','9');
+      var c6=document.getElementById('md-6pt');if(c6)c6.checked=true;
+      var ft=document.getElementById('md-finetune');if(ft)ft.open=true; // the 6pt flip stays visible
+      if(!localStorage.getItem('tm_md_profiles_fantazy26')){
+        var seed={};
+        Object.keys(FZ26_NAMES).forEach(function(s){seed[s]={name:FZ26_NAMES[s],arch:''};});
+        localStorage.setItem('tm_md_profiles_fantazy26',JSON.stringify(seed));
+      }
+      MD._fzSlot=9;
+    }else{
+      localStorage.removeItem('tm_md_fantazy26');
+      var snap2=null;try{snap2=JSON.parse(localStorage.getItem('tm_md_fantazy26_prev')||'null');}catch(_){}
+      if(snap2){
+        if(snap2['md-teams']!=null){set('md-teams',snap2['md-teams']);try{mdSyncSlots();}catch(_){}}
+        ['md-scoring','md-format','md-rounds','md-slot'].forEach(function(id){
+          if(snap2[id]!=null)set(id,snap2[id]);
+        });
+        var c6b=document.getElementById('md-6pt');if(c6b)c6b.checked=!!snap2['md-6pt'];
+      }
+      localStorage.removeItem('tm_md_fantazy26_prev');
+      MD._fzSlot=null;
+    }
+    try{mdSaveSettings();}catch(_){}
+    try{mdRenderProfiles();}catch(_){}
+  }catch(_){}
+}
+// Fantazy 2026 seat move: the owner IS his seat ("Alan goat" follows him),
+// so moving sends the displaced manager to the vacated seat - all nine named
+// rivals stay in the room. No-op while the preset is off.
+function _mdFz26SeatMoved(now){
+  if(!_mdFz26On())return;
+  var was=MD._fzSlot;
+  if(now&&was&&now!==was){
+    var o=mdGetProfiles();
+    if(o[now]){o[was]=o[now];delete o[now];_mdProfilesSave(o);}
+  }
+  if(now)MD._fzSlot=now;
+}
+function mdGetProfiles(){
+  try{return JSON.parse(localStorage.getItem(_mdProfilesKey())||'null')||{};}catch(_){return {};}
+}
+function _mdProfilesSave(o){try{localStorage.setItem(_mdProfilesKey(),JSON.stringify(o));}catch(_){}}
+// Display names of the connected league's members, in league order, minus the
+// user (their seat is "You"). loadLeague fills leagueUsers from Sleeper.
+function _mdLeagueMemberNames(){
+  try{
+    if(_mdFz26On())return [];  // the preset room is the Yahoo league, not the connected Sleeper one
+    return (leagueUsers||[]).filter(function(u){return u.user_id!==userId;})
+      .map(function(u){return ((u.metadata&&u.metadata.team_name)||u.display_name||'').trim();})
+      .filter(Boolean);
+  }catch(_){return [];}
+}
+// The profiles the ENGINE sees for a room of this size: saved edits merged
+// over the league-name defaults, so a connected league drafts under its real
+// member names even if the panel was never opened. More seats than members
+// leaves the extras fully random.
+function mdEffectiveProfiles(teams,mySlot){
+  var saved=mdGetProfiles();
+  var names=_mdLeagueMemberNames();
+  var out={},ni=0;
+  for(var s=1;s<=teams;s++){
+    if(s===mySlot)continue;
+    var pr=saved[s]||{};
+    var nm=(pr.name!=null?pr.name:(names[ni]||'')).trim();
+    ni++;
+    if(!nm&&!pr.arch)continue;
+    out[s]={name:nm,arch:pr.arch||'',team:pr.team||''};
+  }
+  return out;
+}
+// escape once at write time: these names land in innerHTML all over the board
+function _mdProfName(v){return String(v||'').replace(/[<>&"']/g,'').slice(0,20);}
+function mdProfileSet(seat,field,val){
+  var o=mdGetProfiles();
+  o[seat]=o[seat]||{};
+  o[seat][field]=field==='name'?_mdProfName(val):val;
+  _mdProfilesSave(o);
+  if(field==='arch')mdRenderProfiles();  // homer shows/hides its team select
+}
+function mdProfilesRandomizeAll(){
+  var teams=parseInt((document.getElementById('md-teams')||{}).value)||12;
+  var mySlot=parseInt((document.getElementById('md-slot')||{}).value)||5;
+  var o=mdGetProfiles();
+  for(var s=1;s<=teams;s++){
+    if(s===mySlot)continue;
+    o[s]=o[s]||{};
+    o[s].arch=MD_PROFILE_LABELS[Math.floor(Math.random()*MD_PROFILE_LABELS.length)][0];
+    if(o[s].arch==='homer'&&!o[s].team)o[s].team=HOMER_TEAMS[Math.floor(Math.random()*HOMER_TEAMS.length)];
+  }
+  _mdProfilesSave(o);
+  mdRenderProfiles();
+}
+function mdProfilesClear(){
+  try{localStorage.removeItem(_mdProfilesKey());}catch(_){}
+  mdRenderProfiles();
+}
+// The panel lives in JS, not index.html (same pattern as md-draftbar): it is
+// injected once as a sibling of the fine-tune details. Styling: inherited
+// setup classes (tm-input/opp-select) plus the #md-profiles rules in
+// theme.css - all var(--...) driven, so the light-sheet token flip paints it.
+function _mdEnsureProfilesPanel(){
+  if(document.getElementById('md-profiles'))return;
+  var ft=document.getElementById('md-finetune');
+  if(!ft||!ft.insertAdjacentHTML)return;
+  ft.insertAdjacentHTML('afterend',
+    '<details id="md-profiles" style="margin:-6px 0 16px">'
+    +'<summary style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;cursor:pointer;padding:4px 0">Your league\'s drafters: names and personalities</summary>'
+    +'<div style="padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-top:8px">'
+    +'<label style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted2);cursor:pointer;margin-bottom:10px" title="One tap: 10 teams, half PPR, 1QB, 15 rounds, 6pt passing TDs, and the ten real managers seated">'
+    +'<input type="checkbox" id="md-fantazy26" onchange="mdFantazy26Toggle(this.checked)" style="accent-color:var(--accent-bright);margin:0">Fantazy 2026 - league 2021 preset'
+    +'</label>'
+    +'<div id="md-profiles-note" style="font-size:11.5px;color:var(--muted2);margin-bottom:10px"></div>'
+    +'<div id="md-profiles-rows" style="display:flex;flex-direction:column;gap:6px"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<button class="btn-sm" onclick="mdProfilesRandomizeAll()" title="Deal every seat a random personality">Randomize all</button>'
+    +'<button class="btn-sm" onclick="mdProfilesClear()" title="Back to random names and personalities">Clear</button>'
+    +'</div></div></details>');
+}
+function mdRenderProfiles(){
+  try{_mdEnsureProfilesPanel();}catch(_){}
+  var box=document.getElementById('md-profiles-rows');
+  if(!box)return;
+  var teams=parseInt((document.getElementById('md-teams')||{}).value)||12;
+  var mySlot=parseInt((document.getElementById('md-slot')||{}).value)||5;
+  var saved=mdGetProfiles();
+  var names=_mdLeagueMemberNames();
+  var fzOn=_mdFz26On();
+  var fzCb=document.getElementById('md-fantazy26');
+  if(fzCb)fzCb.checked=fzOn;
+  if(fzOn&&MD._fzSlot==null)MD._fzSlot=mySlot;  // reload with the preset on
+  var note=document.getElementById('md-profiles-note');
+  if(note)note.textContent=fzOn
+    ?'Fantazy 2026 is on: the real "league 2021" room. Set each rival\'s personality once - it sticks for every mock of this league.'
+    :(typeof leagueId!=='undefined'&&leagueId&&names.length)
+    ?'Your league’s managers, straight from '+(leagueName||'your league')+'. Give each one the personality you know they draft with - the bots will play it.'
+    :'Name the drafters in your room and give each a personality. Connect a Sleeper league and the real member names fill in by themselves.';
+  var html='',ni=0;
+  for(var s=1;s<=teams;s++){
+    if(s===mySlot){
+      html+='<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="width:22px;font-size:11px;font-weight:700;color:var(--muted);text-align:right;flex:none">'+s+'</span>'
+        +'<span style="flex:1;font-size:12.5px;font-weight:700;color:var(--accent-bright)">You</span></div>';
+      continue;
+    }
+    var pr=saved[s]||{};
+    var nm=pr.name!=null?pr.name:(names[ni]||'');
+    ni++;
+    var arch=pr.arch||'';
+    var opts='<option value=""'+(arch?'':' selected')+'>Random</option>'
+      +MD_PROFILE_LABELS.map(function(al){
+        return '<option value="'+al[0]+'"'+(arch===al[0]?' selected':'')+'>'+al[1]+'</option>';
+      }).join('');
+    var teamSel=arch==='homer'
+      ?'<select class="opp-select" style="width:auto;font-size:12px" title="The NFL team this homer overpays for" onchange="mdProfileSet('+s+',\'team\',this.value)">'
+        +MD_NFL_TEAMS.map(function(t2){return '<option'+(pr.team===t2?' selected':'')+'>'+t2+'</option>';}).join('')+'</select>'
+      :'';
+    html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span style="width:22px;font-size:11px;font-weight:700;color:var(--muted);text-align:right;flex:none">'+s+'</span>'
+      +'<input type="text" class="tm-input" style="flex:1;min-width:110px;padding:7px 10px;font-size:12.5px" maxlength="20" placeholder="Random name" value="'+nm.replace(/"/g,'&quot;')+'" oninput="mdProfileSet('+s+',\'name\',this.value)">'
+      +'<select class="opp-select" style="width:auto;min-width:140px;font-size:12px" onchange="mdProfileSet('+s+',\'arch\',this.value)">'+opts+'</select>'
+      +teamSel
+      +'</div>';
+  }
+  box.innerHTML=html;
+}
+// Auto-draft: Mac runs your picks - queue first, then his recommendation,
 // then best available - until you flip it back off. Solo rooms only.
 function mdAutoToggle(on){
   MD.autoPilot=!!on;
@@ -7760,12 +7999,12 @@ function _mdAutoPick(){
     if(p)mdUserPick(p);
   },900);
 }
-// Sage's REAL read on a pick: one on-demand API call (never per hover, never
+// Mac's REAL read on a pick: one on-demand API call (never per hover, never
 // automatic) carrying the full draft context - your roster, the round, the
 // board - so the answer is about THIS pick in THIS room.
 async function mdAskSageLive(pid,hostId){
   // hostId lets the big player card host the lanes in place; the war room's
-  // Sage box stays the default
+  // Mac box stays the default
   var host=document.getElementById(hostId||'md-sage-live');
   if(!host||MD._sageLiveBusy)return;
   var p=pid?(_mdById(pid)||MD.lastRec):(MD.selChoice||MD.lastRec);
@@ -7773,7 +8012,7 @@ async function mdAskSageLive(pid,hostId){
   MD._sageLiveBusy=true;
   document.querySelectorAll('.md-sage-ask').forEach(function(b){b.style.opacity='.5';b.style.pointerEvents='none';});
   host.style.display='block';
-  host.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Sage is reading the board...</div>';
+  host.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Mac is reading the board...</div>';
   try{host.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(_){}
   var round=MD.curRound||Math.floor(MD.pickIdx/MD.teams)+1;
   var overall=MD.pickIdx+1;
@@ -7788,9 +8027,9 @@ async function mdAskSageLive(pid,hostId){
       if(n)notes.push({name:x.name.toLowerCase(),note:n.note,curve:n.curve});
     });
   }catch(_){}
-  // One call, several lanes: drafting is strategy preference, so Sage lays
+  // One call, several lanes: drafting is strategy preference, so Mac lays
   // out the risk paths and the drafter picks the lane - never one answer.
-  // The prompt DECLARES the format: without it Sage drifts into dynasty
+  // The prompt DECLARES the format: without it Mac drifts into dynasty
   // reasoning (age curves, long-term value) on a seasonal board.
   var _mockDyn=(((document.getElementById('md-mode')||{}).value)||((typeof leagueMode!=='undefined')?leagueMode:'redraft'))==='dynasty';
   var q='MOCK DRAFT, LIVE PICK. Round '+round+', overall pick '+overall+' in a '+MD.teams+'-team '
@@ -7830,7 +8069,7 @@ async function mdAskSageLive(pid,hostId){
   }catch(_){}
   if(full.trim()){
     MD.sageLive={pick:MD.pickIdx,text:full};
-    // remember which player Sage placed in which lane: if the drafter takes
+    // remember which player Mac placed in which lane: if the drafter takes
     // one of them, the pick records the lane - fuel for the tendency coaching
     // layer that reads the history later
     try{
@@ -7843,7 +8082,7 @@ async function mdAskSageLive(pid,hostId){
     }catch(_){}
     host.innerHTML=_mdSageLiveHtml(full);
   }else{
-    host.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Sage could not be reached for this one. The inline read above still stands.</div>';
+    host.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Mac could not be reached for this one. The inline read above still stands.</div>';
   }
   MD._sageLiveBusy=false;
   document.querySelectorAll('.md-sage-ask').forEach(function(b){b.style.opacity='';b.style.pointerEvents='';});
@@ -7851,13 +8090,13 @@ async function mdAskSageLive(pid,hostId){
 function _mdSageLiveHtml(txt){
   // same nav-token stripping as the main chat, so [[go:...]] never shows raw
   try{txt=_sageStripNav(txt);}catch(_){txt=String(txt).replace(/\[\[go:[^\]]*\]\]/g,'').trim();}
-  // Lane format: Sage answers in risk lanes (SAFE / UPSIDE / VALUE / NEED),
+  // Lane format: Mac answers in risk lanes (SAFE / UPSIDE / VALUE / NEED),
   // one per line. Render them as clean rows; fall back to prose if the model
   // ignored the format.
   var rows=_mdParseLanes(txt);
   if(rows.length>=2){
     return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px"><img src="/sage/sage-excited-64.png" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-8px;margin-right:6px" onerror="this.style.display=\'none\'">Sage: pick your lane</div>'
+      +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px"><img src="/sage/sage-excited-64.png" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-8px;margin-right:6px" onerror="this.style.display=\'none\'">Mac: pick your lane</div>'
       +rows.map(function(r){
         var parts=r.body.split(/\s+-\s+|\s+–\s+/);
         var who=parts.length>1?parts[0]:'';
@@ -7868,7 +8107,7 @@ function _mdSageLiveHtml(txt){
       }).join('')+'</div>';
   }
   return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'
-    +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px"><img src="/sage/sage-thinking-64.png" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-8px;margin-right:6px" onerror="this.style.display=\'none\'">Sage\'s full read</div>'
+    +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px"><img src="/sage/sage-thinking-64.png" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-8px;margin-right:6px" onerror="this.style.display=\'none\'">Mac\'s full read</div>'
     +'<div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+escHtml(txt)+'</div></div>';
 }
 function _mdParseLanes(txt){
@@ -7938,6 +8177,11 @@ async function startMockDraft(){
   }
 }
 async function _startMockDraftRun(){
+  // a restart can land mid-auction: kill the old room's timer chain FIRST or
+  // its pending auAdvance/auBidStep beats keep firing into the new room's
+  // state and the auction advances twice per lot
+  if(AU.stepT)clearTimeout(AU.stepT);
+  AU.active=false;AU.lot=null;
   await ensurePlayersLoaded();
   if(!Object.keys(ktcById).length)await fetchKtcValues(1,1,false);
   MD.mySlot=parseInt(document.getElementById('md-slot').value)||5;
@@ -7957,25 +8201,8 @@ async function _startMockDraftRun(){
   // complaint about mock tools is that every room drafts identically; a fresh
   // random mix of archetypes each draft is what makes two mocks with the same
   // settings produce visibly different boards.
-  // posAdj = dv nudge in the mid rounds; eliteAdj = a smaller nudge that IS
-  // allowed to reorder the top two rounds (a real zero-RB drafter passes on
-  // elite RBs too - the faller rescue keeps it from going absurd);
-  // reachP = odds of jumping early on a sleeper.
   var BOT_NAMES=['Mike','Tony','Dre','Sarah','Marcus','Jess','Rob','Vinny','Trey','Zoe','Pablo','Kev','Nate','Carlos','Benny','Rico','Grace','Deion','Sam','Tank','Lena','Moose','Jorge','Duke','Cam','Ravi','Nico','Gus'];
   var shuffled=BOT_NAMES.slice().sort(function(){return Math.random()-0.5;});
-  var MD_ARCHS=[
-    {k:'zerorb',   posAdj:{RB:-420,WR:200,TE:60}, eliteAdj:{RB:-260,WR:120}, reachP:0.06},
-    {k:'herorb',   posAdj:{WR:160},               eliteAdj:{RB:160},         reachP:0.05, hero:1},
-    {k:'robustrb', posAdj:{RB:340,WR:-80},        eliteAdj:{RB:200},         reachP:0.03},
-    {k:'earlyqb',  posAdj:{QB:380},               eliteAdj:{QB:240},         reachP:0.05},
-    {k:'lateqb',   posAdj:{QB:-500},              eliteAdj:{QB:-220},        reachP:0.05},
-    {k:'tehunter', posAdj:{TE:360},               eliteAdj:{TE:220},         reachP:0.04, teCap:2},
-    {k:'bpa',      posAdj:{},                     eliteAdj:{},               reachP:0.01},
-    {k:'hype',     posAdj:{},                     eliteAdj:{},               reachP:0.22, young:1},
-    {k:'homer',    posAdj:{},                     eliteAdj:{},               reachP:0.06, homer:1},
-    {k:'valuestrict',posAdj:{},                   eliteAdj:{},               reachP:0,    rescue:1}
-  ];
-  var HOMER_TEAMS=['KC','PHI','DAL','SF','BUF','DET','GB','MIA','BAL','CIN','NYJ','MIN','LAC','SEA','PIT','DEN'];
   var archDeck=[];
   while(archDeck.length<MD.teams)archDeck=archDeck.concat(MD_ARCHS.slice().sort(function(){return Math.random()-0.5;}));
   MD.bots={};
@@ -7991,6 +8218,31 @@ async function _startMockDraftRun(){
       homeTeam:_arch.homer?HOMER_TEAMS[Math.floor(Math.random()*HOMER_TEAMS.length)]:null
     };
   }
+  // League drafter PROFILES override the random deal: a seat with a profile
+  // keeps its custom (or league-member) name, and a chosen personality
+  // replaces the dealt archetype - "Random" keeps the deal. Precedence with
+  // the free-text context is documented at MD_ARCHS: profiles pick the
+  // archetype, user data still outranks any archetype in mdAdvance.
+  try{
+    var _profs=mdEffectiveProfiles(MD.teams,MD.mySlot);
+    Object.keys(_profs).forEach(function(pss){
+      var seat=parseInt(pss,10),pr=_profs[pss];
+      if(!MD.bots[seat]||!pr)return;
+      // profiled = this seat carries a name the USER gave it (or the league
+      // did) - the room-read advisor only cites seats by name when true
+      if(pr.name){MD.bots[seat].name=_mdProfName(pr.name);MD.bots[seat].profiled=1;}
+      var _pa=null;
+      for(var ai=0;ai<MD_ARCHS.length;ai++)if(MD_ARCHS[ai].k===pr.arch){_pa=MD_ARCHS[ai];break;}
+      if(_pa){
+        MD.bots[seat].arch=_pa.k;
+        MD.bots[seat].posAdj=_pa.posAdj;MD.bots[seat].eliteAdj=_pa.eliteAdj;
+        MD.bots[seat].reachP=_pa.reachP;MD.bots[seat].hero=_pa.hero;
+        MD.bots[seat].young=_pa.young;MD.bots[seat].rescue=_pa.rescue;
+        MD.bots[seat].teCap=_pa.teCap||1;
+        MD.bots[seat].homeTeam=_pa.homer?(pr.team||HOMER_TEAMS[Math.floor(Math.random()*HOMER_TEAMS.length)]):null;
+      }
+    });
+  }catch(_){}
   var _ctxTxt=((document.getElementById('md-context')||{}).value||'').trim();
   var _pc=mdParseContext(_ctxTxt);
   MD.bias=_pc.bias;MD.ctxForce=_pc.force||{};MD.ctxPosRound=_pc.posRound||{};
@@ -8047,6 +8299,18 @@ async function _startMockDraftRun(){
   Object.keys(MD.bias||{}).forEach(function(ps){if(MD.bias[ps]!==1)MD.userPos[ps]=1;});
   Object.keys(MD.ctxPosRound||{}).forEach(function(ps){MD.userPos[ps]=1;});
   if(MD.tep)MD.userPos.TE=1;
+  // Fantazy 2026 scoring honesty: the real league also pays passing at
+  // 20yd/pt (vs the 25yd/pt default) and -2 per INT - the engine has NO knob
+  // for passing-yardage rate, so that part is not modeled and this comment is
+  // the record. The 6pt-passing-TD half IS real (preset flips md-6pt). What
+  // fits cleanly: 20yd/pt is +25% points on air yards, worth roughly 1-2
+  // extra picks on the top QBs beyond the 6pt repricing, minus a hair for
+  // -2 INTs on the gunslingers - a light QB bias of 1.06 (declared market
+  // heuristic; same scale the '3 WR starters' league nudge uses). Applied
+  // AFTER the userPos pass on purpose: a preset nudge must not claim QB as
+  // "user data", or it would mute the QB-early/QB-late personalities the
+  // owner assigns to his rivals.
+  if(_mdFz26On())MD.bias.QB=Math.max(MD.bias.QB||1,1.06);
   // the described room is per-league knowledge: remember it for THIS league so
   // the next mock of the same league starts with the same real managers
   try{
@@ -8221,6 +8485,13 @@ async function _startMockDraftRun(){
   for(var r=0;r<MD.rounds;r++){for(var s=1;s<=MD.teams;s++)MD.order.push(r%2===0?s:MD.teams+1-s);}
   MD.pickIdx=0;MD.mine=[];MD.log=[];MD.aiRosters={};MD.picks=[];MD.onClock=false;MD.posFilter='';MD.myOveralls=[];MD.lastSnipe='';
   MD.rookiesOnly=false;MD.showTaken=false;MD.availSort=null;
+  // stale-selection guards: a selChoice or cached Mac answer from the LAST
+  // draft must never surface in this one (selChoice points into the old pool,
+  // and sageLive is keyed by pickIdx alone - both look valid and are not)
+  MD.selChoice=null;MD.sageLive=null;MD.lastRec=null;MD.lastRecWhy='';
+  // adaptive-advisor once-per-draft guards: each roster-shape callout and the
+  // one history-tendency mention reset with every new room
+  MD._shapeSaid={};MD._histSaid=0;
   MD.initialRanks={};MD.pool.forEach(function(p,i){MD.initialRanks[p.id]=i+1;});
   document.querySelectorAll('.md-pos-chip').forEach(function(c){c.classList.toggle('active',!c.dataset.pos);});
   document.querySelectorAll('.md-flag-chip').forEach(function(c){c.classList.remove('active');});
@@ -8260,6 +8531,7 @@ async function _startMockDraftRun(){
   AU.active=false;
   var _auw=document.getElementById('au-wrap');if(_auw)_auw.style.display='none';
   var _dbw=document.getElementById('md-draftboard');if(_dbw)_dbw.style.display='';
+  var _ubS=document.getElementById('md-undo-btn');if(_ubS)_ubS.style.display='';  // back from an auction room
   mdAdvance();
 }
 // Faces: players get their headshot, defenses get their team logo
@@ -8509,7 +8781,7 @@ function mdPosTag(pos){
   var c={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'}[pos]||'#94a3b8';
   return '<span style="font-size:9px;font-weight:700;color:'+c+'">'+pos+'</span>';
 }
-// Sage's recommendation honours the chosen strategy
+// Mac's recommendation honours the chosen strategy
 function mdRecommend(top,round){
   var myPos={QB:0,RB:0,WR:0,TE:0};MD.mine.forEach(function(p){myPos[p.pos]=(myPos[p.pos]||0)+1;});
   var _tk={};(MD.picks||[]).forEach(function(pk){if(pk&&pk.p&&pk.p.id)_tk[pk.p.id]=1;});
@@ -9221,13 +9493,21 @@ function mdSetPosFilter(btn){
   document.querySelectorAll('.md-pos-chip').forEach(function(c){c.classList.toggle('active',c===btn);});
   mdFilterChoices();
 }
-function mdFilterChoices(){if(MD.onClock)mdShowChoices(MD.curRound||1);}
+// Filters repaint the list ANY time the board is live - the old on-clock-only
+// gate made every chip feel dead during bot turns and (worse) through whole
+// auction bidding wars. Off-clock renders are safe because the Mac/rec block
+// inside mdShowChoices only runs on the clock (so a filter click can never
+// overwrite his pick reaction or the end-of-draft grade).
+function mdFilterChoices(){
+  var bd=document.getElementById('md-board');
+  if(bd&&bd.dataset.live==='1')mdShowChoices(MD.curRound||1);
+}
 function mdShowChoices(round){
   var q=((document.getElementById('md-avail-search')||{}).value||'').toLowerCase().trim();
   var pf=MD.posFilter||'';
   // A player already on the board can NEVER be available or recommended - guard by
   // the picks list, not just the pool, so a laggy server pool can't resurrect a
-  // drafted player in the list or in Sage's rec.
+  // drafted player in the list or in Mac's rec.
   var taken={};(MD.picks||[]).forEach(function(pk){if(pk&&pk.p&&pk.p.id)taken[pk.p.id]=1;});
   var pool=MD.pool.filter(function(p){return !taken[p.id]&&(!pf||p.pos===pf)&&(!MD.rookiesOnly||p.exp===0)&&(!q||p.name.toLowerCase().indexOf(q)>=0);});
   var _proj=window._mdProj&&window._mdProj.byId;
@@ -9270,13 +9550,15 @@ function mdShowChoices(round){
       :function(a,b){return (b.p.dv||0)-(a.p.dv||0);});
     entries=entries.slice(0,30);
   }
-  if(!entries.length){document.getElementById('md-choices').innerHTML='<div class="empty-state" style="grid-column:1/-1">No available player matches that search.</div>';return;}
-  // Sage only speaks when it is actually YOUR pick - in a live room he stays
+  if(!entries.length){document.getElementById('md-choices').innerHTML='<div class="empty-state" style="grid-column:1/-1">No available player matches that search.</div>';mdRenderDraftBar();return;}
+  // Mac only speaks when it is actually YOUR pick - in a live room he stays
   // quiet while someone else is on the clock (his last take stays visible).
   var rec=null;
   // in an auction the advisor lives on the lot card ("worth up to $X"), not
-  // here - a "my pick is X" call makes no sense while money decides
-  if(!AU.active&&(!MP.active||MD.onClock)){
+  // here - a "my pick is X" call makes no sense while money decides. And only
+  // ON THE CLOCK: an off-clock repaint (filters during a bot's turn, or after
+  // the draft) must leave Mac's last take - or his final grade - alone.
+  if(!AU.active&&MD.onClock){
     MD.lastRec=null; // cleared first: a throw below must not leave a stale rec
     // Recommend only from players who are genuinely still available.
     var recPool=MD.pool.filter(function(p){return !taken[p.id];}).slice(0,10);
@@ -9291,6 +9573,22 @@ function mdShowChoices(round){
         else if(_left===2)r.why+=' Only one more '+r.rec.pos+' left in this tier after him.';
       }
     }catch(_){}
+    // room + self reads (advice layer, engine untouched): the live positional
+    // run, and your roster shape once it has become a strategy - each shape
+    // gets named exactly once per draft, then the advisor stays quiet
+    try{
+      var _run2=mdRunRead();
+      if(_run2&&r.rec&&_run2.pos===r.rec.pos)r.why+=' And '+_run2.count+' of the last five picks were '+_run2.pos+'s - the run is live, which is exactly why the position thins right now.';
+      var _mp2={QB:0,RB:0,WR:0,TE:0};MD.mine.forEach(function(x){if(_mp2[x.pos]!=null)_mp2[x.pos]++;});
+      MD._shapeSaid=MD._shapeSaid||{};
+      if(round>=4&&_mp2.WR>=3&&_mp2.RB===0&&!MD._shapeSaid.zerorb){
+        MD._shapeSaid.zerorb=1;
+        r.why+=' Bigger picture: you are all-in on a Zero RB build - from round 6 the RBs left are dregs, so pivot now or commit to it.';
+      }else if(round>=4&&_mp2.RB>=3&&_mp2.WR===0&&!MD._shapeSaid.allrb){
+        MD._shapeSaid.allrb=1;
+        r.why+=' Bigger picture: three RBs and not one WR yet - the receiver tiers are draining while you wall up.';
+      }
+    }catch(_){}
     rec=r.rec;MD.lastRec=rec;MD.lastRecWhy=r.why;
     var openers=['I am taking','My pick is','Lock in','Give me','No hesitation:'];
     var sage=document.getElementById('md-sage');
@@ -9300,10 +9598,10 @@ function mdShowChoices(round){
     // at once made the screen shout.
     sage.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start">'
       +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+rec.id+'.jpg" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-bright)" onerror="this.style.display=\'none\'">'
-      +'<div style="min-width:0;flex:1"><div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Sage · '+MD_STRATS[MD.strat].name+'</div>'
+      +'<div style="min-width:0;flex:1"><div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Mac · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
       +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)">'+openers[(MD.pickIdx*7)%openers.length]+' '+rec.name+'</div>'
       +'<div style="font-size:12px;color:var(--muted2);line-height:1.6;margin-top:4px">'+r.why+'</div>'
-      // The full Sage call is user-initiated only: one API request per click,
+      // The full Mac call is user-initiated only: one API request per click,
       // never one per hover or per render. His answer survives re-renders of
       // this box for the same pick via the MD.sageLive cache.
       +'<div id="md-sage-live" style="display:none"></div>'
@@ -9372,7 +9670,7 @@ function mdShowChoices(round){
     }
     var d=document.createElement('div');
     // styling lives in theme.css: the pos-XX class carries the edge colour,
-    // md-ch-rec marks Sage's pick, md-ch-on the selected row, md-ch-taken a
+    // md-ch-rec marks Mac's pick, md-ch-on the selected row, md-ch-taken a
     // drafted player shown in place
     d.className='md-ch-row pos-'+p.pos+(!isTaken&&p===rec?' md-ch-rec':'')+(isSel?' md-ch-on':'')+(isTaken?' md-ch-taken':'');
     // in table mode every row carries the stat columns; the "All" grid keeps
@@ -9388,7 +9686,7 @@ function mdShowChoices(round){
       +'<span class="md-ch-sel" title="'+(AU.active?'Nominate ':'Draft ')+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
       +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
     d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
-      +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ SAGE</span>':'')+'</div>'
+      +'<div style="min-width:0;flex:1"><div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ MAC</span>':'')+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
       +(isTaken?' · <span style="white-space:nowrap">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' · '+en.by+'</span>'
         :(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':'')))
@@ -9458,11 +9756,14 @@ function _clockPillHtml(left){
   var hot=left<=10;
   return ' <span style="display:inline-block;font-family:var(--font-head);font-size:17px;font-weight:800;line-height:1;padding:4px 13px;border-radius:100px;border:1.5px solid '+(hot?'#f87171':'var(--border2)')+';color:'+(hot?'#f87171':'var(--text)')+';vertical-align:-3px;margin-left:8px'+(hot?';background:rgba(248,113,113,.08)':'')+'">'+left+'s</span>';
 }
-// Pick clock (solo mocks): counts down in the status line; at zero Sage
+// Pick clock (solo mocks): counts down in the status line; at zero Mac
 // drafts his own recommendation for you, exactly like a real draft room.
 function mdStartClock(){
   mdStopClock();
-  if(!MD.clockSecs||MP.active)return;
+  // AU guard: the snake clock's timeout drafts via mdUserPick, which would
+  // corrupt an auction (found via mdSetClockLive during your own nomination -
+  // the auction has no pick clock, money is the clock)
+  if(!MD.clockSecs||MP.active||AU.active)return;
   MD.clkLeft=MD.clockSecs;
   var paint=function(){var el=document.getElementById('md-clk');
     if(el)el.innerHTML=_clockPillHtml(MD.clkLeft);};
@@ -9474,7 +9775,7 @@ function mdStartClock(){
       else if(MD.clkLeft>0&&MD.clkLeft<=30&&MD.clkLeft%10===0)sndClockTick();
     }catch(_){}
     if(MD.clkLeft<=0){mdStopClock();
-      // Sleeper rules: your queue drafts first, then Sage's rec, then BPA.
+      // Sleeper rules: your queue drafts first, then Mac's rec, then BPA.
       // Every candidate is validated against the live pool - a stale reference
       // to an already-drafted player must never be drafted again.
       var p=null;
@@ -9499,7 +9800,7 @@ function mdQueueToggle(pid){
   var i=MD.queue.indexOf(pid);
   if(i>=0)MD.queue.splice(i,1);else{MD.queue.push(pid);try{sndPickSoft();}catch(_){}}
   mdRenderQueue();
-  if(MD.onClock)mdShowChoices(MD.curRound||1);
+  mdFilterChoices();  // the +/- queue circles repaint off-clock too
 }
 function mdQueuePickFrom(pid){
   if(!MD.onClock)return;
@@ -9586,7 +9887,7 @@ function mdRenderQueue(){
       +(p.adp?' <span style="font-size:9.5px;color:var(--muted);white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':'')
       +(risk&&!ready?' <span style="font-size:9px;font-weight:800;color:#f87171">MAY NOT LAST</span>':'')
       +'</span>'
-      +(MD.onClock?'<button onclick="mdQueueDraft(\''+pid+'\')" style="flex:none;background:'+(ready?'var(--green)':'var(--accent-bright)')+';border:none;color:#0d0817;font-size:10px;font-weight:800;padding:5px 12px;border-radius:100px;cursor:pointer">Draft</button>':'')
+      +(MD.onClock?'<button onclick="mdQueueDraft(\''+pid+'\')" style="flex:none;background:'+(ready?'var(--green)':'var(--accent-bright)')+';border:none;color:#0d0817;font-size:10px;font-weight:800;padding:5px 12px;border-radius:100px;cursor:pointer">'+(AU.active?'Nominate':'Draft')+'</button>':'')
       +'<span style="display:flex;flex-direction:column;margin-left:2px">'
       +'<span onclick="mdQueueMove(\''+pid+'\',-1)" style="cursor:pointer;color:var(--muted);font-size:9px;line-height:1.1;padding:1px 3px">&#9650;</span>'
       +'<span onclick="mdQueueMove(\''+pid+'\',1)" style="cursor:pointer;color:var(--muted);font-size:9px;line-height:1.1;padding:1px 3px">&#9660;</span></span>'
@@ -9594,6 +9895,10 @@ function mdRenderQueue(){
   }).join('');
 }
 function mdUserPick(p){
+  // turn guard: a second fast click (two draft circles, or the same one
+  // twice) lands after the turn advanced - without this it booked an extra
+  // pick under YOUR slot at the BOT's pick index
+  if(!MD.onClock)return;
   mdStopClock();
   // hard guard: if this exact player object is no longer in the pool (already
   // drafted, stale reference), swap to best available instead of duplicating
@@ -9610,7 +9915,7 @@ function mdUserPick(p){
   MD.onClock=false;
   var round=Math.floor(MD.pickIdx/MD.teams)+1;
   var pickNo=(MD.pickIdx%MD.teams)+1;
-  // if this player sat in one of Sage's risk lanes for THIS pick, record which
+  // if this player sat in one of Mac's risk lanes for THIS pick, record which
   // lane the drafter chose - the tendency analysis reads it from history later
   var _lane=null;
   try{
@@ -9621,8 +9926,8 @@ function mdUserPick(p){
   MD.picks.push({slot:MD.mySlot,round:round,pickNo:pickNo,p:p,mine:true,lane:_lane});
   MD.myOveralls.push({p:p,overall:MD.pickIdx+1});
   try{sndImpact();}catch(_){}
-  // Sage's take on EVERY pick. Rule one: never call his own recommendation a
-  // reach - if he told you to take him, agreeing with Sage is always a good pick.
+  // Mac's take on EVERY pick. Rule one: never call his own recommendation a
+  // reach - if he told you to take him, agreeing with Mac is always a good pick.
   try{
     var rk=MD.initialRanks&&MD.initialRanks[p.id];
     var overall=MD.pickIdx+1;
@@ -9654,7 +9959,7 @@ function mdUserPick(p){
     }
     take+=noteBit;
     var sg=document.getElementById('md-sage');
-    if(sg){sg.style.display='block';sg.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Sage on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>';}
+    if(sg){sg.style.display='block';sg.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Mac on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>';}
   }catch(_){}
   // Advance first, then render - same rule as the bot path: the board's
   // ON THE CLOCK box reads MD.order[MD.pickIdx] and must see the NEXT picker.
@@ -9711,6 +10016,75 @@ function mdBackToSetup(){
   var pk=document.getElementById('md-player-peek');if(pk)pk.style.display='none';
   var sg=document.getElementById('md-sage');if(sg)sg.style.display='none';
   try{mdShowSection('solo');}catch(_){}
+}
+// ── Adaptive room + self reads (display layer ONLY - the bots' real picking
+// lives in mdAdvance and none of this feeds back into it) ───────────────────
+// A run is live when 3+ of one position went inside the last five picks.
+function mdRunRead(){
+  var c={};
+  (MD.picks||[]).slice(-5).forEach(function(pk){
+    var ps=pk&&pk.p&&pk.p.pos;if(!ps||ps==='K'||ps==='DEF')return;
+    c[ps]=(c[ps]||0)+1;
+  });
+  var best=null;
+  Object.keys(c).forEach(function(ps){if(c[ps]>=3&&(!best||c[ps]>c[best]))best=ps;});
+  return best?{pos:best,count:c[best]}:null;
+}
+// Archetype-aware survival read for a position across the seats that pick
+// between now and your next turn. Heuristic (declared, advice-only): a seat
+// that NEEDS the position (open starter shape) and whose archetype LEANS
+// toward it takes the top of that position ~70% of the time - the lean's
+// +340..380dv mid-round nudge is ~9 picks, enough to clear any within-turn
+// value gap, minus ~30% for jitter and rescues; need without lean ~35% (the
+// seat splits across the 2-3 positions it still needs); a seat leaning AWAY
+// (negative posAdj) halves its need chance; no need at all ~5%. P(the top
+// player at the position survives) = product of (1 - p_seat).
+function mdThreatRead(pos){
+  var out={gone:0,threats:[]};
+  if(!MD.order||MD.pickIdx>=MD.order.length)return out;
+  var survive=1,found=false;
+  // on your clock order[pickIdx] IS you - the read covers the seats after
+  var qi0=MD.pickIdx+(MD.order[MD.pickIdx]===MD.mySlot?1:0);
+  for(var qi=qi0;qi<MD.order.length;qi++){
+    var slot=MD.order[qi];
+    if(slot===MD.mySlot){found=true;break;}
+    var bot=MD.bots&&MD.bots[slot];if(!bot)continue;
+    var ros=MD.aiRosters[slot]||{};
+    var need=pos==='QB'?(ros.QB||0)<(MD.sf?2:1)
+      :pos==='TE'?(ros.TE||0)<1
+      :(ros[pos]||0)<2;
+    var lean=((bot.posAdj&&bot.posAdj[pos])||0)>0||((bot.eliteAdj&&bot.eliteAdj[pos])||0)>0
+      ||(bot.hero&&pos==='RB'&&!(ros.RB>0));
+    var fade=((bot.posAdj&&bot.posAdj[pos])||0)<0;
+    var p=need&&lean?0.7:need?(fade?0.17:0.35):(lean?0.2:0.05);
+    survive*=(1-p);
+    if(p>=0.35)out.threats.push({name:bot.name,profiled:!!bot.profiled});
+  }
+  if(!found)return {gone:0,threats:[]}; // no next pick (draft ending): no read
+  out.gone=1-survive;
+  return out;
+}
+// Your drafting DNA from the saved mocks. Guards: 3+ finished drafts AND 3+
+// picks at a position before any coaching - short history stays silent.
+function mdMyTendencies(){
+  try{
+    var hist=JSON.parse(localStorage.getItem('tm_mock_history')||'[]');
+    if(hist.length<3)return null;
+    var agg={};
+    hist.forEach(function(h){
+      (h.picksAll||[]).forEach(function(pk){
+        if(!pk.me||pk.adp==null||pk.delta==null)return;
+        (agg[pk.pos]=agg[pk.pos]||[]).push(pk.delta); // delta = pick# - ADP; negative = early
+      });
+    });
+    var out={drafts:hist.length,pos:{}};
+    Object.keys(agg).forEach(function(ps){
+      if(agg[ps].length<3)return;
+      var m=agg[ps].reduce(function(a,b){return a+b;},0)/agg[ps].length;
+      out.pos[ps]={mean:m,n:agg[ps].length};
+    });
+    return out;
+  }catch(_){return null;}
 }
 function mdRenderDraftBar(){
   var bar=document.getElementById('md-draftbar');
@@ -9800,6 +10174,40 @@ function mdRenderDraftBar(){
       else _av+=' · won\'t make it back to you';
     }
   }
+  // ROOM READ (advice layer): ADP says who the MARKET takes; the seats
+  // between you and your next pick say who THIS ROOM takes. Speaks only when
+  // it changes the decision - a live run at his position, an archetype read
+  // that flips an optimistic ADP call (top-2 at the position only: the
+  // threats eat the top first), or your own repeated habit. Names are cited
+  // only for seats whose name the user (or their league) actually set.
+  var _room=[];
+  try{
+    var _run=mdRunRead();
+    if(_run&&_run.pos===p.pos)_room.push('<span style="color:var(--yellow);font-weight:700">'+_run.count+' of the last 5 picks were '+_run.pos+'s - the run is on.</span>');
+    var _top2=MD.pool.filter(function(x){return x.pos===p.pos;}).slice(0,2).indexOf(p)>=0;
+    if(_top2&&p.adp&&_av.indexOf('won\'t make it back')<0){
+      var _t=mdThreatRead(p.pos);
+      if(_t.gone>=0.65){
+        var _nm2=_t.threats.filter(function(x){return x.profiled;}).slice(0,2).map(function(x){return x.name;});
+        _room.push(_nm2.length>=2
+          ?_nm2.join(' and ')+' both still need a '+p.pos+' and lean that way - he won\'t survive the turn.'
+          :_nm2.length===1
+          ?_nm2[0]+' still needs a '+p.pos+' and leans that way - do not count on him coming back.'
+          :_t.threats.length+' seats before your next pick still need a '+p.pos+' - the ADP read is optimistic here.');
+      }
+    }
+    // your own history, once per draft, only when the habit is repeating NOW:
+    // you average 6+ picks early at this position and this pick would again
+    // be 4+ picks ahead of his market slot
+    if(!MD._histSaid&&p.adp){
+      var _td=mdMyTendencies();
+      var _tp=_td&&_td.pos[p.pos];
+      if(_tp&&_tp.mean<=-6&&(+p.adp-(MD.pickIdx+1))>=4){
+        _room.push('In your last '+_td.drafts+' mocks you took '+p.pos+'s '+Math.round(-_tp.mean)+' picks early on average - the board says he lasts this time.');
+        MD._histSaid=1;
+      }
+    }
+  }catch(_){}
   // Riser history: when the selected player is a riser, say what players who
   // made the same jump actually returned - his real bucket, real numbers,
   // seasons and sample size on the record. No bucket cleared n=15, no line.
@@ -9828,10 +10236,11 @@ function mdRenderDraftBar(){
     +'<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover;cursor:pointer;flex:none'+(p.pos==='DEF'?';object-fit:contain':'')+'" title="View player card" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')" onerror="this.style.display=\'none\'">'
     +'<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="cursor:pointer" onclick="openPlayerCard(\''+p.id+'\',\''+_nmE+'\')">'+p.name+'</span>'+mdRowTagsHtml(p)+'</div>'
     +'<div style="font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_meta.join(' · ')+'</div></div>'
-    +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+p.id+'\')" title="Sage weighs this exact pick against your roster">Ask Sage</button>'
+    +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+p.id+'\')" title="Mac weighs this exact pick against your roster">Ask Mac</button>'
     +'<button class="btn-sm" onclick="MD.selChoice=null;mdShowChoices(MD.curRound||1)">Cancel</button>'
     +'<button class="btn-load" style="width:auto;padding:9px 22px" onclick="mdConfirmDraft()">'+(AU.active?'Nominate ':'Draft ')+p.name.split(' ').slice(-1)[0]+'</button></div>'
     +(_av?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)">'+_av+'</div>':'')
+    +(_room.length?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)"><span style="font-size:9.5px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-right:6px">Room read</span>'+_room.join(' ')+'</div>':'')
     +(_rh?'<div style="margin-top:7px;font-size:11px;color:var(--muted2)">'+_rh+'</div>':'')
     +_narHtml
     +mdProsConsHtml(p,2) // the two strongest each way; the card has the rest
@@ -10036,11 +10445,29 @@ function auStart(){
   AU.active=true;
   AU.budgets={};AU.slotsLeft={};AU.bots={};AU.sold=[];AU.lot=null;AU.nomTurn=0;
   var AU_ARCHS=['balanced','stars','enforcer','value','balanced','balanced'];
+  // Snake personality -> auction bidding style. The auction room speaks four
+  // money dialects (balanced/stars/enforcer/value); each drafting personality
+  // maps to the one its money would follow live (market heuristic, declared -
+  // there is no auction-archetype dataset to fit):
+  //   zerorb/lateqb/valuestrict -> value   (fade the expensive tier, shop discounts)
+  //   herorb/earlyqb/tehunter   -> stars   (pay up for the one elite anchor, scraps after)
+  //   hype                      -> enforcer (runs prices up, chases the shiny lots)
+  //   robustrb/bpa/homer        -> balanced (spends with the room's rhythm)
+  var AU_ARCH_OF={zerorb:'value',lateqb:'value',valuestrict:'value',
+    herorb:'stars',earlyqb:'stars',tehunter:'stars',hype:'enforcer',
+    robustrb:'balanced',bpa:'balanced',homer:'balanced'};
+  var _profsAU={};try{_profsAU=mdEffectiveProfiles(MD.teams,MD.mySlot);}catch(_){}
   for(var s=1;s<=MD.teams;s++){
     AU.budgets[s]=MD.budget;
     AU.slotsLeft[s]=MD.rounds;
     MD.aiRosters[s]=MD.aiRosters[s]||{QB:0,RB:0,WR:0,TE:0,K:0,DEF:0,list:[]};
-    if(s!==MD.mySlot)AU.bots[s]={k:AU_ARCHS[Math.floor(Math.random()*AU_ARCHS.length)],name:(MD.bots[s]&&MD.bots[s].name)||('Team '+s)};
+    if(s!==MD.mySlot){
+      // a PROFILED seat bids its mapped style (MD.bots already carries the
+      // profile's archetype + name from _startMockDraftRun); random seats
+      // draw from the room's normal style mix
+      var _pk2=_profsAU[s]&&_profsAU[s].arch?AU_ARCH_OF[_profsAU[s].arch]:null;
+      AU.bots[s]={k:_pk2||AU_ARCHS[Math.floor(Math.random()*AU_ARCHS.length)],name:(MD.bots[s]&&MD.bots[s].name)||('Team '+s)};
+    }
   }
   auPoolInit();
   // the elite line for the stars archetype: top-12 by room value
@@ -10050,6 +10477,8 @@ function auStart(){
   var g=document.getElementById('md-draftboard');if(g)g.style.display='none';
   var q=document.getElementById('md-queue-wrap');if(q)q.style.display='none';
   var w=document.getElementById('au-wrap');if(w)w.style.display='block';
+  // a sale is a sale - mdUndo refuses in auctions, so don't show a dead button
+  var _ub=document.getElementById('md-undo-btn');if(_ub)_ub.style.display='none';
   auRenderBudgets();
   auAdvance();
 }
@@ -10114,7 +10543,7 @@ function auOpenLot(slot,p){
   // supports and what most live rooms actually do.
   AU.lot={p:p,bid:1,holder:slot,going:0,myMax:0};
   // autopilot plays the user like a balanced manager: a standing limit bid at
-  // Sage's personal ceiling, cooled by the same pace brake the bots use (this
+  // Mac's personal ceiling, cooled by the same pace brake the bots use (this
   // is also how the calibration harness drives the user's seat)
   if(MD.autoPilot&&AU.slotsLeft[MD.mySlot]>0){
     var _w=auMyWorth(p).worth;
@@ -10133,11 +10562,16 @@ function auOpenLot(slot,p){
   auRenderLot();auRenderBudgets();
   AU.stepT=setTimeout(auBidStep,700);
 }
-// one beat of the room bidding. Bots outbid +$1 while the price is under
-// their max; the enforcer pushes OTHER people's lots to ~90% of value even
-// without need, betting on not winning. Two quiet beats end the lot.
-function auBidStep(){
-  var lot=AU.lot;if(!lot)return;
+// One decision beat of room bidding. Bots outbid +$1 while the price is
+// under their max; the enforcer pushes OTHER people's lots to ~90% of value
+// even without need, betting on not winning. Two quiet beats end the lot.
+// Shared VERBATIM by the clocked path (auBidStep: render + setTimeout
+// pacing) and the instant path (auSimLot): the decision logic lives only
+// here, so a simmed lot is statistically identical to a clocked one - same
+// bot maxes, same inflation, same jump bids, same user proxy - only the
+// waiting removed. Returns 'bid', 'quiet', or 'sold'.
+function _auBidOnce(){
+  var lot=AU.lot;if(!lot)return 'sold';
   var next=lot.bid+1;
   var cands=[];
   for(var s=1;s<=MD.teams;s++){
@@ -10155,7 +10589,7 @@ function auBidStep(){
   // the user's limit bid works like a proxy: auto +$1 while under the cap
   if(lot.holder!==MD.mySlot&&lot.myMax>=next&&AU.slotsLeft[MD.mySlot]>0){
     var myCap=AU.budgets[MD.mySlot]-(AU.slotsLeft[MD.mySlot]-1);
-    if(next<=myCap){lot.bid=next;lot.holder=MD.mySlot;lot.going=0;auRenderLot();AU.stepT=setTimeout(auBidStep,700);return;}
+    if(next<=myCap){lot.bid=next;lot.holder=MD.mySlot;lot.going=0;return 'bid';}
   }
   if(cands.length){
     cands.sort(function(a,b){return b.mx-a.mx;});
@@ -10168,13 +10602,50 @@ function auBidStep(){
     var wSpare=(AU.budgets[w.s]-AU.slotsLeft[w.s])/Math.max(1,AU.slotsLeft[w.s]);
     var jump=Math.random()<0.4?Math.ceil(Math.random()*Math.min(5,1+wSpare/8)):0;
     lot.bid=Math.min(w.mx,next+jump);lot.holder=w.s;lot.going=0;
-    auRenderLot();
-    AU.stepT=setTimeout(auBidStep,700);
-  }else{
-    lot.going++;
-    if(lot.going>=3){auSell();return;}
-    auRenderLot();
-    AU.stepT=setTimeout(auBidStep,900);
+    return 'bid';
+  }
+  lot.going++;
+  if(lot.going>=3){auSell();return 'sold';}
+  return 'quiet';
+}
+function auBidStep(){
+  if(!AU.lot)return;
+  var r=_auBidOnce();
+  if(r==='sold')return;
+  auRenderLot();
+  AU.stepT=setTimeout(auBidStep,r==='quiet'?900:700);
+}
+// "Sim this lot": the user sits this one out and the room finishes it NOW -
+// the exact same decision beat as the clock path, minus the waits. A
+// standing max bid stays live as the proxy (the button label says so), and
+// the sale is final like any other - the house has no auction undo. The
+// guard is unreachable headroom (bids only climb toward hard budget caps,
+// ~600 beats worst case at $300 budgets); if it ever trips, the lot falls
+// back to the clocked path instead of stalling.
+function auSimLot(){
+  if(!AU.active||!AU.lot)return;
+  if(AU.stepT)clearTimeout(AU.stepT);
+  var guard=0;
+  while(AU.lot&&guard++<2000){if(_auBidOnce()==='sold')break;}
+  if(AU.lot){AU.stepT=setTimeout(auBidStep,700);return;}
+  auRenderLot(); // clean card while the room takes its normal beat to the next lot
+}
+// "Sim to my turn": consecutive instant lots until it is YOUR nomination or
+// a player from your queue hits the block - whichever comes first.
+function auSimToMyTurn(){
+  if(!AU.active||!AU.lot)return;
+  var guard=0;
+  while(AU.active&&guard++<400){
+    if(!AU.lot)break;
+    if((MD.queue||[]).indexOf(AU.lot.p.id)>=0)break; // a lot you queued: yours to fight
+    if(AU.stepT)clearTimeout(AU.stepT);
+    var g2=0;
+    while(AU.lot&&g2++<2000){if(_auBidOnce()==='sold')break;}
+    if(AU.lot){AU.stepT=setTimeout(auBidStep,700);return;} // guard tripped: back to the clock
+    if(!AU.active)break;                 // that was the last lot
+    if(AU.stepT)clearTimeout(AU.stepT);  // the pending between-lots beat
+    auAdvance();                         // open the next nomination now
+    if(AU.nominator===MD.mySlot)break;   // your nomination: the room is yours
   }
 }
 function auUserBid(inc){
@@ -10215,7 +10686,7 @@ function auSell(){
   if(MD.onClock)mdShowChoices(1);
   AU.stepT=setTimeout(auAdvance,600);
 }
-// Sage's read on the block: personal ceiling = room value x live inflation,
+// Mac's read on the block: personal ceiling = room value x live inflation,
 // bumped when it fills an open starter slot, capped by the budget law.
 function auMyWorth(p){
   var ros={};MD.mine.forEach(function(x){ros[x.pos]=(ros[x.pos]||0)+1;});
@@ -10278,9 +10749,16 @@ function auRenderLot(){
       +'<button class="btn-sm" onclick="auUserBid(null)">Bid</button>'
       +'<span style="flex:1"></span>'
       +'<input type="number" id="au-max" class="tm-input" style="flex:0 1 90px;padding:7px 10px;font-size:13px" placeholder="Max $" value="'+(lot.myMax||'')+'">'
-      +'<button class="btn-sm" title="Limit bid: Sage bids +$1 for you up to this number, like a real auction proxy" onclick="auSetMax()">Set max</button>'
+      +'<button class="btn-sm" title="Limit bid: Mac bids +$1 for you up to this number, like a real auction proxy" onclick="auSetMax()">Set max</button>'
+      // not your guy? skip the theater: the bots resolve the lot instantly
+      // with the same logic, and a standing max keeps proxy-bidding for you
+      +'<button class="btn-sm" title="'+(lot.myMax>0?'Resolve this lot instantly - your $'+lot.myMax+' max keeps bidding for you':'Not your guy? The room finishes this lot instantly - you sit it out')+'" onclick="auSimLot()">'+(lot.myMax>0?'Sim (keeps your $'+lot.myMax+' max)':'Sim')+'</button>'
+      +'<button class="btn-sm" title="Simulate every lot until your nomination - or until someone nominates a player from your queue" onclick="auSimToMyTurn()">Sim to my turn</button>'
       +'</div>'
-      :(mine?'<div style="margin-top:9px;font-size:11.5px;color:var(--green)">The bid is yours - hold or wait it out.</div>':''));
+      :(mine
+        ?'<div style="margin-top:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:11.5px;color:var(--green)">The bid is yours - hold or wait it out.</span>'
+        +'<button class="btn-sm" title="Skip the going-once theater: resolve this lot instantly with the same logic" onclick="auSimLot()">Sim</button></div>'
+        :''));
 }
 function auRenderBudgets(){
   var box=document.getElementById('au-budgets');if(!box)return;
@@ -10311,6 +10789,8 @@ function auFinish(){
   AU.active=false;AU.lot=null;
   if(AU.stepT)clearTimeout(AU.stepT);
   MD.onClock=false;
+  // clear the frozen last-lot card - the sold list below is the record
+  var _lb=document.getElementById('au-lot');if(_lb)_lb.innerHTML='';
   MD.pickIdx=MD.order.length; // mdFinish treats the draft as complete
   mdFinish();
 }
@@ -10333,12 +10813,21 @@ function mdConfirmDraft(){
 function mdUndo(){
   if(MP.active)return; // live rooms: picks are final, like a real draft
   if(AU.active)return; // auction: a sale is a sale - money moved, no undo
+  if(MD.pickIdx>=MD.order.length)return; // draft graded and saved: no rewind
   if(!MD.picks||!MD.picks.some(function(pk){return pk.mine;}))return;
   mdStopClock();
   var undone=0;
   while(MD.picks.length){
     var pk=MD.picks.pop();
     MD.pool.push(pk.p);undone++;
+    // bot bookkeeping must rewind too: leaving the popped player counted in
+    // aiRosters made bots skip positions they no longer owned (a phantom QB1
+    // meant that seat never drafted a real one)
+    if(!pk.mine&&MD.aiRosters[pk.slot]){
+      var _ur=MD.aiRosters[pk.slot];
+      _ur[pk.p.pos]=Math.max(0,(_ur[pk.p.pos]||0)-1);
+      var _ui=_ur.list.indexOf(pk.p);if(_ui>=0)_ur.list.splice(_ui,1);
+    }
     if(pk.mine){
       MD.mine.pop();MD.myOveralls.pop();
       break;
@@ -10399,6 +10888,14 @@ function mdApplyEdit(pk,cand){
   if(pk.mine){
     var mi=MD.mine.indexOf(pk.p); if(mi>=0)MD.mine[mi]=cand;
     var mo=MD.myOveralls.find(function(x){return x.p===pk.p;}); if(mo)mo.p=cand;
+  }else if(MD.aiRosters[pk.slot]){
+    // keep the bot's own books straight: swap the position counts and the
+    // roster list, or the seat drafts the rest of the room around a player
+    // it no longer owns
+    var _er=MD.aiRosters[pk.slot];
+    _er[pk.p.pos]=Math.max(0,(_er[pk.p.pos]||0)-1);
+    _er[cand.pos]=(_er[cand.pos]||0)+1;
+    var _ei=_er.list.indexOf(pk.p);if(_ei>=0)_er.list[_ei]=cand;
   }
   pk.p=cand;
   mdRenderBoard();
@@ -10571,7 +11068,7 @@ function mdRenderBoard(){
 
 // ── PUBLIC MULTIPLAYER DRAFT ROOMS (beta) ───────────────────────────────────────
 // The room state lives on the server; the DRAFT UI is the exact same board,
-// Sage box, available-players grid and draft bar as the solo mock. MP.active
+// Mac box, available-players grid and draft bar as the solo mock. MP.active
 // flips the shared MD engine into "server owns the truth" mode.
 var MP={code:null,seat:null,isHost:false,myName:'',lobbySig:'',timer:null,tick:null,active:false,deadline:0,wasMy:false,lastSig:'',myPickCount:0};
 function _mpCid(){
@@ -10717,13 +11214,13 @@ async function mpBoardPick(p){
   var d=null;try{d=await r.json();}catch(_){}
   if(!r.ok){alert((d&&d.error)||'Pick did not go through - it may not be your turn anymore.');mpPoll();return;}
   try{sndImpact();}catch(_){}
-  // Sage's take, same rule as solo: agreeing with his rec is never a reach
+  // Mac's take, same rule as solo: agreeing with his rec is never a reach
   try{
     var sg=document.getElementById('md-sage');
     var take=(MD.lastRec&&MD.lastRec.id===p.id)
       ?('Exactly what I wanted. '+(MD.lastRecWhy||''))
       :('Noted. I leaned '+(MD.lastRec?MD.lastRec.name:'elsewhere')+', but '+p.name+' is your call to make - live drafts are won on conviction.');
-    if(sg){sg.style.display='block';sg.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Sage on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>';}
+    if(sg){sg.style.display='block';sg.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Mac on your pick</div><div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+take+'</div>';}
   }catch(_){}
   MD.onClock=false;
   var ch=document.getElementById('md-choices');if(ch)ch.innerHTML='';
@@ -10976,7 +11473,7 @@ async function ldPoll(){
       recEl.style.display='block';
       recEl.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start">'
         +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+rec.id+'.jpg" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-bright)" onerror="this.style.display=\'none\'">'
-        +'<div><div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em">Sage says take</div>'
+        +'<div><div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em">Mac says take</div>'
         +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700">'+rec.name+' <span style="font-size:11px;color:var(--muted);font-weight:400">'+rec.pos+' · '+(rec.team||'FA')+'</span></div>'
         +'<div style="font-size:12px;color:var(--muted2);line-height:1.55;margin-top:3px">'+needTxt+'. '+(note?note.note.split(';')[0].trim()+'.':'')+'</div></div></div>';
     }
@@ -11038,6 +11535,14 @@ function mdRestoreSettings(){
     // Josh Allen at 1.04). If anything non-default came back, open the panel.
     var _cust=MD_TOGGLE_KEYS.some(function(id){var e=document.getElementById(id);return e&&e.checked;});
     if(_cust){var ft=document.getElementById('md-finetune');if(ft)ft.open=true;}
+    // same rule for saved drafter personalities: they reshape the whole room,
+    // so the profiles panel opens whenever any seat carries one
+    try{
+      var _pfR=mdGetProfiles();
+      if(_mdFz26On()||Object.keys(_pfR).some(function(k){return _pfR[k]&&_pfR[k].arch;})){
+        var pd=document.getElementById('md-profiles');if(pd)pd.open=true;
+      }
+    }catch(_){}
     // Mode select mirrors the real app mode - but a programmatic .value never
     // fires the inline onchange, so without a league the restored value and
     // leagueMode can drift apart. Fire the real sync so badge/boards/KTC agree.
@@ -11051,6 +11556,13 @@ function mdPrefillFromLeague(){
     window._mdSettingsWired=1;
     MD_SETTING_KEYS.concat(MD_TOGGLE_KEYS).forEach(function(id){
       var e=document.getElementById(id);if(e)e.addEventListener('change',mdSaveSettings);
+    });
+    // the profiles panel marks YOUR seat, so it follows the seat select
+    // (teams changes reach it through mdSyncSlots)
+    var _slp=document.getElementById('md-slot');
+    if(_slp)_slp.addEventListener('change',function(){
+      try{_mdFz26SeatMoved(parseInt(_slp.value,10));}catch(_){}
+      try{mdRenderProfiles();}catch(_){}
     });
   }
   // saved league-tendency context comes back every visit
@@ -11092,12 +11604,18 @@ function mdPrefillFromLeague(){
 function mdSaveHistory(mode){
   try{
     var hist=JSON.parse(localStorage.getItem('tm_mock_history')||'[]');
-    var stratLabel=mode==='friends'?'Live draft with friends':((MD_STRATS[MD.strat]||{}).name||MD.strat);
+    // 'Best available' is the label whenever no strategy was chosen - the
+    // user-facing strategy picker is gone; MD.strat simply defaults to 'bpa'
+    var stratLabel=mode==='friends'?'Live draft with friends':((MD_STRATS[MD.strat]||{}).name||'Best available');
     // Every pick keeps its decision context - ADP and tier AT THE TIME, the
-    // overall number, the reach/value delta, and Sage's lane if one was
+    // overall number, the reach/value delta, and Mac's lane if one was
     // chosen. This detail is what the tendency-coaching layer (how do YOU
     // draft: where you reach, where you find value) will read later.
+    // seat names ride along so the history modal can say WHO made each pick -
+    // with league profiles these are the real managers' names
+    var _botNames={};Object.keys(MD.bots||{}).forEach(function(bs2){_botNames[bs2]=MD.bots[bs2].name;});
     hist.unshift({ts:Date.now(),mode:mode||'solo',teams:MD.teams,slot:MD.mySlot,strat:stratLabel,
+      bots:_botNames,
       set:{rounds:MD.rounds,scoring:MD.scoring,sf:!!MD.sf,sixPt:MD.sixPt||0,tep:!!MD.tep,
         ctx:((document.getElementById('md-context')||{}).value||'').slice(0,300)},
       roster:MD.mine.map(function(p){return p.pos+' '+p.name;}),
@@ -11231,7 +11749,8 @@ function mdViewHistory(i){
     rows+='<div style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:12px'+(pk.me?';color:var(--accent-bright);font-weight:700':'')+'">'
       +'<span style="width:34px;color:var(--muted);font-size:10.5px">'+pk.r+'.'+(pk.n<10?'0':'')+pk.n+'</span>'
       +'<span style="width:30px;font-size:9.5px;font-weight:800;color:'+(pc[pk.pos]||'var(--muted)')+'">'+pk.pos+'</span>'
-      +'<span>'+pk.nm+(pk.me?' - YOU':'')+'</span></div>';
+      +'<span>'+pk.nm+(pk.pr!=null?' <span style="color:var(--muted)">$'+pk.pr+'</span>':'')
+      +(pk.me?' - YOU':(h.bots&&h.bots[pk.s]?' <span style="color:var(--muted)">- '+h.bots[pk.s]+'</span>':''))+'</span></div>';
   });
   m.innerHTML='<div class="cm-card" style="max-width:420px;max-height:80vh;overflow-y:auto">'
     +'<button class="cm-x" onclick="document.getElementById(\'md-hist-modal\').remove()">&times;</button>'
@@ -11268,7 +11787,7 @@ function mdRenderHistory(){
 }
 function mdFinish(){
   mdSaveHistory(MD.mode==='auction'?'auction':undefined);
-  document.getElementById('md-status').textContent='Draft complete. Sage grades your board:';
+  document.getElementById('md-status').textContent='Draft complete. Mac grades your board:';
   var pos={QB:0,RB:0,WR:0,TE:0};MD.mine.forEach(function(p){pos[p.pos]++;});
   var sage=document.getElementById('md-sage');
   sage.style.display='block';
@@ -11342,7 +11861,7 @@ function mdFinish(){
     if(myRank&&T>1){
       var rn=(MD.bots&&MD.bots[rival.slot]&&MD.bots[rival.slot].name)||('Team '+rival.slot);
       var rTop=(MD.picks||[]).filter(function(pk){return pk.slot===rival.slot;}).sort(function(a,b){return (b.p.dv||0)-(a.p.dv||0);}).slice(0,2).map(function(pk){return pk.p.name;});
-      // The human drafts with Sage's help, so "you rank 1st" is nearly always
+      // The human drafts with Mac's help, so "you rank 1st" is nearly always
       // true and reads as flattery. Top-2 gets a modest line; only a real
       // spread gets the ordinal.
       if(myRank<=2)standLine='On paper your board holds up with the best in the room. The team to watch is '+rn+(rTop.length?', built around '+rTop.join(' and '):'')+'.';
@@ -11372,7 +11891,7 @@ function mdFinish(){
         +'</div>';
     }
   }catch(_){}
-  // Sage's one-liner on EVERY player you walked away with - each tied to the
+  // Mac's one-liner on EVERY player you walked away with - each tied to the
   // roster you actually built: his role on YOUR team, how the pick fit the
   // build, and the market value, not a generic career recap.
   var perPick='';
@@ -11414,19 +11933,19 @@ function mdFinish(){
           +'<div style="font-size:12px;line-height:1.5;color:var(--muted2)"><strong style="color:var(--text);cursor:pointer" onclick="openPlayerCard(\''+e.p.id+'\',\''+_eN+'\')">'+e.p.name+'</strong> <span style="font-size:9.5px;font-weight:700;color:'+pc+'">'+e.p.pos+'</span><br>'+line+'</div></div>';
       }).join('');
     perPick='<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">'
-      +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Sage on every pick</div>'
+      +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Mac on every pick</div>'
       +picksHtml
       +'</div>'
       +'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
       +'<button class="btn-load" style="width:auto;padding:9px 20px" onclick="mdDownloadRoster(0)">Download my roster</button>'
-      +'<button class="btn-sm" onclick="switchScreen(\'sage\');setTimeout(function(){var i=document.getElementById(\'sage-chat-input\');if(i){i.value=\'How did I do in my last mock draft?\';i.focus();}},300)">Ask Sage about this draft</button>'
+      +'<button class="btn-sm" onclick="switchScreen(\'sage\');setTimeout(function(){var i=document.getElementById(\'sage-chat-input\');if(i){i.value=\'How did I do in my last mock draft?\';i.focus();}},300)">Ask Mac about this draft</button>'
       +'</div>';
   }
-  sage.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Sage\'s verdict · '+MD_STRATS[MD.strat].name+'</div>'
+  sage.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac\'s verdict · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
     +'<div style="font-size:13px;color:var(--muted2);line-height:1.7">'+pos.QB+' QB / '+pos.RB+' RB / '+pos.WR+' WR / '+pos.TE+' TE across '+MD.mine.length+' picks. '+takes+'Run it back from another slot and watch the board shift.</div>'
     +valHtml+rivalHtml+perPick;
   document.getElementById('md-choices').innerHTML='';
-  // Hand the draft to Ask Sage: a compact summary he can grade in chat
+  // Hand the draft to Ask Mac: a compact summary he can grade in chat
   try{
     localStorage.setItem('tm_last_mock',JSON.stringify({
       ts:Date.now(),teams:MD.teams,slot:MD.mySlot,rounds:MD.rounds,grade:letter,
@@ -11436,7 +11955,7 @@ function mdFinish(){
   }catch(_){}
 }
 
-// ── ASK SAGE: START/SIT ──────────────────────────────────────────────────────
+// ── ASK MAC: START/SIT ──────────────────────────────────────────────────────
 function addAskSageInput(){
   var box=document.getElementById('asksage-inputs');
   if(!box||box.children.length>=6)return;
@@ -11447,7 +11966,7 @@ function addAskSageInput(){
   box.appendChild(div);
 }
 
-// Autocomplete for Ask Sage inputs: your roster first, then the full player pool
+// Autocomplete for Ask Mac inputs: your roster first, then the full player pool
 document.addEventListener('input',function(e){
   if(!e.target.classList||!e.target.classList.contains('asksage-input'))return;
   sageAc(e.target);
@@ -11770,7 +12289,7 @@ checkShareParam();
         if(window._isPro||tries>=10){
           setTimeout(function(){
             alert(window._isPro
-              ? "You're Pro. Unlimited Sage is unlocked - thank you for backing Mac Draft."
+              ? "You're Pro. Unlimited Mac is unlocked - thank you for backing Mac Draft."
               : "Payment received. Pro unlocks in a few seconds - no need to do anything.");
           },250);
           return;
@@ -12727,7 +13246,7 @@ function loadAroundTheLeague(){
   }).catch(function(){});
 }
 
-// Comments on Sage debate posts. Stored locally until the community database is restored;
+// Comments on Mac debate posts. Stored locally until the community database is restored;
 // once Supabase is back these migrate to shared storage.
 function getSageComments(i){try{return JSON.parse(localStorage.getItem('tm_sagec_'+i)||'[]');}catch(e){return[];}}
 function renderSageComments(i){
@@ -12757,7 +13276,7 @@ function postSageComment(i){
   renderSageComments(i);
 }
 
-// Debate starters posted by Sage (clearly labeled as the site's AI - not fake users).
+// Debate starters posted by Mac (clearly labeled as the site's AI - not fake users).
 // Real 2026 trade debates with no consensus answer, designed to pull opinions.
 function renderSageDebates(){
   var debates=[
@@ -12766,12 +13285,12 @@ function renderSageDebates(){
     {give:'Christian McCaffrey',get:'Jahmyr Gibbs',q:'CMC is coming off 2,126 scrimmage yards, but he turns 31 this season and just carried a 413 touch workload. Gibbs is 24 and scored 18 times. Straight swap: do you take the proven monster or the younger engine?'},
     {give:'Patrick Mahomes',get:'Caleb Williams',q:'Mahomes is coming off a torn ACL at 31. Caleb just won the NFC North at 24. Is this even a debate anymore?'}
   ];
-  var html='<div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Sage\'s debate starters - vote and argue below</div>';
+  var html='<div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Mac\'s debate starters - vote and argue below</div>';
   debates.forEach(function(d,i){
     html+='<div class="comm-card">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
       +'<div style="width:26px;height:26px;border-radius:8px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--accent-bright)">S</div>'
-      +'<div><div style="font-size:12px;font-weight:700;color:var(--text)">Sage <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);margin-left:4px">SITE AI</span></div>'
+      +'<div><div style="font-size:12px;font-weight:700;color:var(--text)">Mac <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:100px;background:var(--accent-dim);color:var(--accent-bright);margin-left:4px">SITE AI</span></div>'
       +'<div style="font-size:10px;color:var(--muted)">Debate starter</div></div></div>'
       +'<div class="comm-give-get"><div class="comm-chips"><span class="comm-chip">'+d.give+'</span></div><div class="comm-arrow">⇄</div><div class="comm-chips"><span class="comm-chip">'+d.get+'</span></div></div>'
       +'<div style="font-size:12px;color:var(--muted2);line-height:1.6">'+d.q+'</div>'

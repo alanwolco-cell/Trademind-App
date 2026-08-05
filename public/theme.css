@@ -504,3 +504,10 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .mdb-cell.mdb-pk{display:flex;align-items:center;gap:7px}
 .mdb-face{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;background:var(--surface3);border:1px solid rgba(255,255,255,.07)}
 .mdb-namewrap{min-width:0;flex:1}
+
+/* ── League drafter profiles (panel injected by app.js, sibling of the
+   fine-tune details): buttons read the LIVE tokens, so they sit as quiet
+   white pills on the light setup sheet (the :has() token flip supplies the
+   values) and as quiet dark pills over the board - no home.css involved. */
+#md-profiles .btn-sm{background:var(--surface);border:1px solid var(--border2);color:var(--muted2)}
+#md-profiles .btn-sm:hover{color:var(--text);border-color:var(--border2);background:var(--surface)}

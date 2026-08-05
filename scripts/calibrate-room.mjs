@@ -16,6 +16,11 @@
 //   (f) no single 1QB bot drafts his QB2 before round 8
 //   (g) archetypes measurably diverge (zerorb < bpa < robustrb on early RBs;
 //       earlyqb takes his QB1 clearly before lateqb)
+//   (h) league drafter profiles bind: a room with 11 saved profiles seats
+//       exactly those names and archetypes (snake AND auction, where the
+//       personality maps to its bidding style), and in the same rooms the
+//       zerorb-profiled seats draft measurably fewer early RBs than the
+//       robustrb-profiled ones
 //
 // The sandbox rewrites every relative /api/* fetch to the production host, so
 // the engine drafts off the same ADP/value feeds users get.
@@ -66,7 +71,15 @@ const sandbox = {
   navigator: { userAgent: 'calibrate', clipboard: {} },
   location: { search: '', href: BASE + '/', pathname: '/', hash: '', origin: BASE },
   history: { pushState() { }, replaceState() { } },
-  localStorage: { getItem: () => null, setItem() { }, removeItem() { } },
+  // functional localStorage: the profile invariant (h) seeds tm_md_profiles
+  // through the same read path the app uses; everything else that touches
+  // storage in a draft run only writes (settings/context), never reads back
+  localStorage: {
+    _s: {},
+    getItem(k) { return k in this._s ? this._s[k] : null; },
+    setItem(k, v) { this._s[k] = String(v); },
+    removeItem(k) { delete this._s[k]; }
+  },
   sessionStorage: { getItem: () => null, setItem() { }, removeItem() { } },
   alert() { }, confirm: () => true, prompt: () => null,
   requestAnimationFrame: fn => { fn(); return 0; }, cancelAnimationFrame() { },
@@ -144,7 +157,7 @@ await presetAav();
 async function runRoom(cfg) {
   values['md-teams'] = String(cfg.teams);
   values['md-rounds'] = String(cfg.rounds);
-  values['md-slot'] = String(1 + Math.floor(Math.random() * cfg.teams));
+  values['md-slot'] = String(cfg.slot || 1 + Math.floor(Math.random() * cfg.teams));
   values['md-scoring'] = String(cfg.scoring);
   values['md-format'] = cfg.sf ? 'sf' : '1qb';
   values['md-dtype'] = cfg.auction ? 'auction' : 'snake';
@@ -387,6 +400,68 @@ for (const f of FORMATS) {
     catch (e) { console.error(`room error (auction #${i}):`, e.message); totalFails++; break; }
   }
   if (rooms.length) totalFails += checkAuction('Auction PPR $200', rooms);
+}
+// ── (h) league drafter profiles bind, snake and auction ─────────────────────
+{
+  // 11 fixed profiles on a 12-seat room (user in seat 1): 2-6 zerorb,
+  // 7 bpa control, 8-12 robustrb - names P2..P12
+  const PROF = {};
+  for (let s = 2; s <= 12; s++) PROF[s] = { name: 'P' + s, arch: s <= 6 ? 'zerorb' : s === 7 ? 'bpa' : 'robustrb' };
+  sandbox.localStorage.setItem('tm_md_profiles', JSON.stringify(PROF));
+  const N = Math.max(12, Math.round(ROOMS / 6));
+  const res = [];
+  // snake: identity + same-room divergence
+  let idBad = 0; const idEx = []; let zerorbRb = [], robustRb = [];
+  const snakeRooms = [];
+  for (let i = 0; i < N; i++) {
+    try { snakeRooms.push(await runRoom({ teams: 12, rounds: 15, scoring: 1, sf: false, slot: 1 })); }
+    catch (e) { console.error(`room error (profiles snake #${i}):`, e.message); totalFails++; break; }
+  }
+  snakeRooms.forEach(r => {
+    for (let s = 2; s <= 12; s++) {
+      const b = r.bots[s];
+      if (!b || b.name !== 'P' + s || b.arch !== PROF[s].arch) {
+        idBad++; if (idEx.length < 3) idEx.push(`seat ${s}: ${b && b.name}/${b && b.arch}`);
+      }
+    }
+    const perSlot = {};
+    r.picks.forEach(pk => {
+      if (pk.mine || pk.p.pos !== 'RB' || pk.round > 6) return;
+      perSlot[pk.slot] = (perSlot[pk.slot] || 0) + 1;
+    });
+    for (let s = 2; s <= 12; s++) {
+      const n = perSlot[s] || 0;
+      if (PROF[s].arch === 'zerorb') zerorbRb.push(n);
+      else if (PROF[s].arch === 'robustrb') robustRb.push(n);
+    }
+  });
+  res.push(['(h1) profiled seats carry exactly their names + archetypes', snakeRooms.length > 0 && idBad === 0,
+    `${idBad} mismatches over ${snakeRooms.length} rooms${idEx.length ? ' e.g. ' + idEx.join('; ') : ''}`]);
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  const zAvg = avg(zerorbRb), rAvg = avg(robustRb);
+  res.push(['(h2) same-room divergence: zerorb profile drafts fewer early RBs than robustrb', zAvg != null && rAvg != null && zAvg < rAvg - 0.4,
+    `RBs by R6: zerorb ${zAvg && zAvg.toFixed(2)} vs robustrb ${rAvg && rAvg.toFixed(2)}`]);
+  // auction: the profile's name seats the budget bar and its personality maps
+  // to the documented bidding style (zerorb->value, bpa/robustrb->balanced)
+  const AU_MAP = { zerorb: 'value', bpa: 'balanced', robustrb: 'balanced' };
+  let auBad = 0; const auEx = []; let auRooms = 0;
+  for (let i = 0; i < Math.max(6, Math.round(N / 3)); i++) {
+    let r;
+    try { r = await runRoom({ teams: 12, rounds: 16, scoring: 1, sf: false, auction: true, budget: 200, slot: 1 }); }
+    catch (e) { console.error(`room error (profiles auction #${i}):`, e.message); totalFails++; break; }
+    auRooms++;
+    for (let s = 2; s <= 12; s++) {
+      const b = r.bots[s];
+      if (!b || b.name !== 'P' + s || b.k !== AU_MAP[PROF[s].arch]) {
+        auBad++; if (auEx.length < 3) auEx.push(`seat ${s}: ${b && b.name}/${b && b.k}`);
+      }
+    }
+  }
+  res.push(['(h3) auction seats keep profile names + mapped bidding styles', auRooms > 0 && auBad === 0,
+    `${auBad} mismatches over ${auRooms} rooms${auEx.length ? ' e.g. ' + auEx.join('; ') : ''}`]);
+  sandbox.localStorage.removeItem('tm_md_profiles'); // never leak into other checks
+  console.log(`\n=== League drafter profiles (${snakeRooms.length} snake + ${auRooms} auction rooms) ===`);
+  res.forEach(([label, ok, detail]) => { if (!ok) totalFails++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}\n      ${detail}`); });
 }
 console.log(`\n${totalFails === 0 ? 'ALL GREEN' : totalFails + ' FAILURE(S)'} — engine values ${totalFails === 0 ? 'hold up against' : 'need another look vs'} live boards.`);
 process.exit(totalFails === 0 ? 0 : 1);
