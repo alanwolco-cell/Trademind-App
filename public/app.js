@@ -8636,11 +8636,21 @@ async function _startMockDraftRun(){
   // De-dupe by name: the source data can carry two Sleeper IDs for one player
   // (an old entry + the current one), which let the same name get drafted twice.
   // Pool is sorted by value, so we keep the higher-valued (real) one.
-  (function(){var seen={};MD.pool=MD.pool.filter(function(p){
-    var k=(p.name||'').toLowerCase().replace(/[^a-z]/g,'');
-    if(!k||p.pos==='DEF')return true;
-    if(seen[k])return false;seen[k]=1;return true;
-  });})();
+  // ...but "higher-valued" is not enough when the two entries are DIFFERENT
+  // PEOPLE who share a name: Sleeper carries a retired WR "Kenneth Walker"
+  // (no team) alongside the KC running back, and the wrong one was surviving
+  // and showing up labelled WR. A player with no NFL team cannot be drafted,
+  // so he loses every tie - and among real players the higher value wins.
+  (function(){
+    MD.pool=MD.pool.filter(function(p){
+      return p.pos==='DEF'||p.team||(p.adp&&p.adp<400);   // teamless ghosts out
+    });
+    var seen={};MD.pool=MD.pool.filter(function(p){
+      var k=(p.name||'').toLowerCase().replace(/[^a-z]/g,'');
+      if(!k||p.pos==='DEF')return true;
+      if(seen[k])return false;seen[k]=1;return true;
+    });
+  })();
   // Replacement level per position for THIS room: the player still on the
   // board after every starter slot in the league is filled. The pick bar
   // turns the gap to this line into a VORP read - in words, never a number.

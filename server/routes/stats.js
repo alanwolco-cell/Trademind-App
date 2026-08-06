@@ -295,65 +295,12 @@ router.get('/adp', async (req, res) => {
         ok = true;
       } catch (se) { /* retry */ }
     }
-    // CONSENSUS: Sleeper alone is one room's opinion - its ADP comes from
-    // Sleeper's own drafts, which skew best-ball/dynasty and drift from home
-    // redraft leagues (8/2026: Garrett Wilson 40.9 there vs 28.2 across 4,622
-    // real FFC drafts). Industry practice is a consensus, so we blend the two
-    // 50/50 by name; players only one source knows keep that source's number.
-    if (ok) {
-      try {
-        const fr = await fetch('https://fantasyfootballcalculator.com/api/v1/adp/' + fmt + '?teams=12&year=2026');
-        if (fr.ok) {
-          const fraw = await fr.json();
-          const fmap = {};
-          (fraw.players || []).forEach(p => { if (p.name && p.adp != null) fmap[norm(p.name)] = Number(p.adp); });
-          let blended = 0;
-          const idByKey = {};
-          Object.keys(players).forEach(k => { if (players[k]._id) idByKey[k] = players[k]._id; });
-          Object.keys(players).forEach(k => {
-            const f = fmap[k];
-            if (f == null || !(f > 0)) return;
-            const merged = +(((players[k].adp + f) / 2)).toFixed(1);
-            players[k].adp = merged;
-            const pid = idByKey[k];
-            if (pid && byId[pid] != null) byId[pid] = merged;
-            blended++;
-          });
-          // third opinion: ESPN's own board (same kona view the AAV endpoint
-          // uses). Three sources beat two - one platform's quirk stops being
-          // the number a user drafts against.
-          const espn = {};
-          try {
-            const er = await fetch('https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leaguedefaults/3?view=kona_player_info',
-              { headers: { 'x-fantasy-filter': JSON.stringify({ players: { limit: 300, sortDraftRanks: { sortPriority: 100, sortAsc: true, value: 'PPR' } } }) } });
-            if (er.ok) {
-              const eraw = await er.json();
-              (eraw.players || []).forEach(row => {
-                const pl = row.player || {}, own = pl.ownership || {};
-                const a = Number(own.averageDraftPosition) || 0;
-                if (pl.fullName && a > 0 && a <= 300) espn[norm(pl.fullName)] = a;
-              });
-            }
-          } catch (ee) { /* two sources is still a consensus */ }
-          let three = 0;
-          Object.keys(players).forEach(k => {
-            const e = espn[k];
-            if (e == null) return;
-            // players[k].adp already holds the Sleeper+FFC midpoint (or the raw
-            // Sleeper number when FFC didn't know him) - fold ESPN in by count
-            const hadFfc = fmap[k] != null;
-            const merged = hadFfc
-              ? +(((players[k].adp * 2 + e) / 3)).toFixed(1)   // 3-way mean
-              : +(((players[k].adp + e) / 2)).toFixed(1);      // 2-way mean
-            players[k].adp = merged;
-            const pid = idByKey[k];
-            if (pid && byId[pid] != null) byId[pid] = merged;
-            three++;
-          });
-          if (blended >= 60 || three >= 60) { source = 'consensus'; consensusN = Math.max(blended, three); }
-        }
-      } catch (ce) { /* Sleeper-only stays perfectly usable */ }
-    }
+    // OWNER'S CALL (8/2026): ship SLEEPER'S OWN ADP, unblended. A 3-source
+    // consensus (Sleeper + FFC + ESPN) was live briefly and measured more
+    // "accurate" against real home-league drafts, but the owner's league lives
+    // on Sleeper and expects Sleeper's numbers to match what they see there.
+    // The blend code was removed rather than flag-guarded - one source, no
+    // ambiguity about which number a user is looking at.
     if (!ok) {
       source = 'ffc';
       const r = await fetch('https://fantasyfootballcalculator.com/api/v1/adp/' + fmt + '?teams=12&year=2026');
