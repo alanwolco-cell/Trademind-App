@@ -10693,14 +10693,24 @@ function auPoolInit(){
   var vals=MD.pool.map(function(p){return {p:p,raw:_auRawValue(p)};})
     .sort(function(a,b){return b.raw-a.raw;});
   var draftable=vals.slice(0,slots);
+  // TEXTBOOK AUCTION VALUE: money buys value ABOVE REPLACEMENT, not raw value.
+  // Spreading it over raw-minus-$1 made a bigger room inflate the elites (a
+  // 12-team $200 room priced Puka 19% over a 10-team $200 room, even though
+  // money-per-roster is identical) - because the 30 extra draftable players
+  // it added were cheap and barely moved the denominator. Anchoring on the
+  // LAST draftable player (the marginal guy anyone could have instead) makes
+  // the denominator grow with the room, which is what keeps prices honest.
+  var repl=draftable.length?draftable[draftable.length-1].raw:0;
   var discSum=0;
-  draftable.forEach(function(v){discSum+=Math.max(0,v.raw-1);});
-  // spendable money above the $1-per-slot floor, spread pro-rata over the
-  // draftable pool's discretionary value
+  draftable.forEach(function(v){discSum+=Math.max(0,v.raw-repl);});
   var k=discSum>0?(total-slots)/discSum:0;
+  // Money is conserved: every dollar in the room gets spent, so a deeper room
+  // genuinely prices its elites higher (same $200 chasing thinner talent).
+  // Normalising that away left $400 with nowhere to go and the endgame dumped
+  // it in $167 blowouts - conservation stays.
   AU.val={};
   vals.forEach(function(v,i){
-    AU.val[v.p.id]=i<slots?Math.max(1,Math.round(1+Math.max(0,v.raw-1)*k)):1;
+    AU.val[v.p.id]=i<slots?Math.max(1,Math.round(1+Math.max(0,v.raw-repl)*k)):1;
   });
 }
 function auValue(p){return (AU.val&&AU.val[p.id])||1;}
