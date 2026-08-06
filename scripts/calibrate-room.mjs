@@ -553,10 +553,10 @@ for (const f of FORMATS) {
     `n=${ratios.length}, mean ${mean.toFixed(3)}`]);
   res2.push(['(j2) p95 <= 1.15 (the hard cap holds)', ratios.length > 0 && p95 <= 1.15 + 1e-9,
     `p95 ${p95.toFixed(3)}`]);
-  // the owner's dollar sanity ($63 -> $74-75, never $81+) translated to
-  // ratio space on each room's TOP RB, because this 10-team half-PPR board
-  // normalizes its top stickers below the $60s: median 1.10-1.25, max < 1.19
-  res2.push(['(j3) each room\'s top RB: median ratio 1.10-1.25, never >= 1.19 ($75 on a $63)', topRatios.length > 0 && tMed >= 1.10 && tMed <= 1.25 && tMax < 1.19,
+  // Owner's dollar sanity, restated for the current pricing: with the 1.15
+  // banded ceiling AND the concave value curve (the top no longer hoards the
+  // room's surplus), a room's TOP RB lands near his value, not above it.
+  res2.push(['(j3) top RB: median near value, never at the ceiling', topRatios.length > 0 && tMed >= 1.00 && tMed <= 1.15 && tMax <= 1.15,
     `n=${topRatios.length}, median ${tMed.toFixed(3)}, max ${tMax.toFixed(3)}`]);
   res2.push(['(j4) budgets stay legal under the premium', negB2 === 0,
     `${negB2} negative budgets; avg unspent $${(leftovers2.reduce((a, b) => a + b, 0) / (leftovers2.length || 1)).toFixed(1)} of $2000`]);

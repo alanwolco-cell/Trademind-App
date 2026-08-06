@@ -10707,8 +10707,16 @@ function auPoolInit(){
   // LAST draftable player (the marginal guy anyone could have instead) makes
   // the denominator grow with the room, which is what keeps prices honest.
   var repl=draftable.length?draftable[draftable.length-1].raw:0;
+  // CONCAVITY: a straight pro-rata split hands the surplus to the very top,
+  // because two thirds of the draftable pool sits pinned at the $1 floor and
+  // cannot absorb a cent. That priced the #1 player at 36% of a manager's
+  // whole budget (real auctions land at 30-32%) and made $80 sales normal.
+  // Spreading on a compressed curve (exponent < 1) keeps every dollar in the
+  // room - money is still conserved - but moves it off the elites and into
+  // the middle rounds, which is where a real room's money actually goes.
+  var VAL_CURVE=0.86;
   var discSum=0;
-  draftable.forEach(function(v){discSum+=Math.max(0,v.raw-repl);});
+  draftable.forEach(function(v){discSum+=Math.pow(Math.max(0,v.raw-repl),VAL_CURVE);});
   var k=discSum>0?(total-slots)/discSum:0;
   // Money is conserved: every dollar in the room gets spent, so a deeper room
   // genuinely prices its elites higher (same $200 chasing thinner talent).
@@ -10716,7 +10724,7 @@ function auPoolInit(){
   // it in $167 blowouts - conservation stays.
   AU.val={};
   vals.forEach(function(v,i){
-    AU.val[v.p.id]=i<slots?Math.max(1,Math.round(1+Math.max(0,v.raw-repl)*k)):1;
+    AU.val[v.p.id]=i<slots?Math.max(1,Math.round(1+Math.pow(Math.max(0,v.raw-repl),VAL_CURVE)*k)):1;
   });
 }
 function auValue(p){return (AU.val&&AU.val[p.id])||1;}
