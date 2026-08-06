@@ -7905,6 +7905,7 @@ var AU_BID_CAP=1.15;         /* Measured, not guessed (8/2026): at 1.20 the elit
                                 the $1 endgame intact. Below 1.15 the mean stops moving (1.10
                                 gives the same 1.071x) - so 1.15 is exactly where the ceiling
                                 stops touching normal sales and only clips bidding wars. */
+var AU_CAP_SPREAD=0.13;      // each lot's ceiling lives in [cap-spread, cap] so prices spread naturally
 var FZ26_BID_CAP=AU_BID_CAP; // fz26 uses the same ceiling (kept as its own name for the premium's docs)
 var FZ26_CAP_FLOOR=5;        // stickers under $5 are endgame money-dumps, not market prices - exempt from the ceiling
 function _mdFz26On(){try{return localStorage.getItem('tm_md_fantazy26')==='1';}catch(_){return false;}}
@@ -10865,7 +10866,19 @@ function auBotMax(slot,p){
   // endgame blowout) can stack past it - and now it governs EVERY room, not
   // just fz26 (owner: elites were closing at 1.25-1.34x; ceiling is 1.20x).
   // Sub-$5 closers stay exempt: those are money-dumps, not market prices.
-  if(auValue(p)>=FZ26_CAP_FLOOR)v=Math.min(v,Math.floor(auValue(p)*AU_BID_CAP)); // floor: round() re-broke the ratio by half a dollar
+  if(auValue(p)>=FZ26_CAP_FLOOR){
+    // A ceiling should be a BOUNDARY, not the price-setter. With one hard
+    // number, ~half of elite sales landed on exactly that ratio - identical
+    // prices every room, which reads as artificial. So each LOT draws its own
+    // ceiling from a band under the max (deterministic per lot+seed, so it
+    // never wobbles mid-bidding): most lots close below the cap, a genuinely
+    // contested one can still ride it to the top.
+    var _lid=(p.id||'')+'|'+(MD.seed||0);
+    var _h=0;for(var _i=0;_i<_lid.length;_i++)_h=(_h*31+_lid.charCodeAt(_i))|0;
+    var _band=AU_BID_CAP-AU_CAP_SPREAD;                     // low end of the band
+    var _lotCap=_band+(Math.abs(_h)%1000)/1000*AU_CAP_SPREAD;
+    v=Math.min(v,Math.floor(auValue(p)*_lotCap));
+  }
   return Math.max(need>0?1:0,Math.min(Math.round(v),cap));
 }
 // nomination strategy: mostly nominate the best player you DON'T want so the

@@ -520,7 +520,7 @@ for (const f of FORMATS) {
 // ── (j) FZ26 auction RB market: elite RBs sell at the owner's premium ──────
 // (Bijan $63 AAV -> $74-75 = ~1.18x) inside the hard 1.25x ceiling, and the
 // room's money math stays legal. Targets: elite RB (AAV>=40) mean ratio in
-// [1.08, 1.16], p95 <= 1.15 (cap), and the concrete sanity: an AAV $60-65
+// [1.03, 1.14], p95 <= 1.15 (cap), and the concrete sanity: an AAV $60-65
 // elite typically $70-77, NEVER > $81.
 {
   sandbox.localStorage.setItem('tm_md_fantazy26', '1'); // bucket self-seeds v2 at read
@@ -549,7 +549,7 @@ for (const f of FORMATS) {
   const tMed = topRatios.length ? topRatios[Math.floor(topRatios.length / 2)] : 0;
   const tMax = topRatios.length ? topRatios[topRatios.length - 1] : 0;
   const res2 = [];
-  res2.push(['(j1) elite RB mean ratio in [1.08, 1.16]', ratios.length > 0 && mean >= 1.12 && mean <= 1.20,
+  res2.push(['(j1) elite RB mean ratio in [1.03, 1.14]', ratios.length > 0 && mean >= 1.03 && mean <= 1.14,
     `n=${ratios.length}, mean ${mean.toFixed(3)}`]);
   res2.push(['(j2) p95 <= 1.15 (the hard cap holds)', ratios.length > 0 && p95 <= 1.15 + 1e-9,
     `p95 ${p95.toFixed(3)}`]);
