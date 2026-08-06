@@ -8693,6 +8693,15 @@ async function _startMockDraftRun(){
   mdRenderBoard();
   document.getElementById('md-setup').style.display='none';
   var _bd=document.getElementById('md-board');_bd.style.display='block';_bd.dataset.live='1';
+  // Room toolbar, pinned at the top of every room: restarting or walking out
+  // were buried at the bottom of the page (and a bare glyph on phones).
+  if(!document.getElementById('md-roombar')&&_bd.insertAdjacentHTML){
+    _bd.insertAdjacentHTML('afterbegin',
+      '<div id="md-roombar">'
+      +'<button class="md-rb-btn" onclick="mdRestartDraft()" title="Same settings, fresh room">&#8635; Restart draft</button>'
+      +'<button class="md-rb-btn" onclick="mdBackToSetup()" title="Change settings and start over">&larr; New draft</button>'
+      +'</div>');
+  }
   // inside a live room the section chips (Solo mock / With friends / Live
   // assist / History) are noise - you are already in the room. Back to setup
   // (mdBackToSetup / mdShowSection) brings them back.
@@ -13555,6 +13564,37 @@ try{
   tabbarSync(_initScr?_initScr.replace('screen-',''):'home');
 }catch(_){}
 
+// A tab left open across a deploy runs OLD code against NEW data - which is
+// exactly what "the site is glitchy sometimes" turns out to be (a friend saw
+// $82 auction prices the ceiling had already killed). Every time the tab comes
+// back to the front, ask the server what the current build is; if it moved,
+// say so and offer a reload. Never reloads on its own - a draft is in flight.
+(function versionWatch(){
+  var mine=null;
+  try{
+    var sc=document.querySelector('script[src*="app.js?v="]');
+    mine=sc?(sc.getAttribute('src').split('v=')[1]||'').replace(/[^0-9]/g,''):null;
+  }catch(_){}
+  if(!mine)return;
+  var shown=false;
+  function check(){
+    if(shown||document.hidden)return;
+    fetch('/?vcheck='+Date.now(),{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+      var m=t.match(/app\.js\?v=(\d+)/);
+      if(!m||m[1]===mine)return;
+      shown=true;
+      var bar=document.createElement('div');
+      bar.id='tm-newver';
+      bar.innerHTML='<span>A newer version of Mac Draft is live.</span>'
+        +'<button onclick="location.reload(true)">Reload</button>'
+        +'<button class="x" onclick="this.parentElement.remove()" aria-label="Dismiss">&times;</button>';
+      document.body.appendChild(bar);
+    }).catch(function(){});
+  }
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(check,400);});
+  setTimeout(check,60000);          // and once a minute into a long session
+  setInterval(check,15*60*1000);    // then every 15 minutes
+})();
 // ── Auto-restore session from localStorage ───────────────────────────────────
 (function restoreSession(){
   // signed-out visitors need the pill state painted too (shows Sign in button)

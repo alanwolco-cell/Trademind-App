@@ -769,3 +769,18 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .au-fpos{font-size:10px;font-weight:800;margin-left:6px;letter-spacing:.04em}
 .au-fwho{color:var(--muted);font-size:12.5px;white-space:nowrap;max-width:42%;overflow:hidden;text-overflow:ellipsis}
 .au-restart{margin-left:6px;font-size:19px;line-height:1}
+
+/* Room toolbar: restart / leave, pinned where you can actually find them */
+#md-roombar{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+.md-rb-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--muted2);
+  border-radius:100px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;
+  min-height:40px;transition:color .15s,border-color .15s,background .15s}
+.md-rb-btn:hover{color:var(--text);border-color:var(--accent-bright);background:var(--surface3)}
+/* "there is a newer build" notice - never auto-reloads mid-draft */
+#tm-newver{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(74px + env(safe-area-inset-bottom,0px));
+  z-index:9998;display:flex;align-items:center;gap:12px;background:var(--surface3);
+  border:1px solid var(--accent-bright);border-radius:14px;padding:11px 14px;font-size:13.5px;
+  color:var(--text);box-shadow:0 10px 34px rgba(5,4,12,.5);max-width:92vw}
+#tm-newver button{background:var(--accent-bright);color:#0d0817;border:none;border-radius:100px;
+  padding:8px 15px;font-weight:800;font-size:13px;cursor:pointer}
+#tm-newver button.x{background:none;color:var(--muted);font-size:18px;padding:2px 6px}
