@@ -8642,13 +8642,34 @@ async function _startMockDraftRun(){
   // and showing up labelled WR. A player with no NFL team cannot be drafted,
   // so he loses every tie - and among real players the higher value wins.
   (function(){
+    // The board carries retired namesakes (Sleeper keeps every player ever:
+    // a WR "Kenneth Walker" with no team sits beside the KC running back) and
+    // the name-keyed ADP lookup happily hands the ghost the real player's
+    // number. Two guards, in order:
+    //  1. POSITION MUST MATCH THE MARKET. If the ADP feed prices this name at
+    //     a position, an entry claiming a different one is not that player.
+    //  2. Among what's left, a real NFL team beats "FA", then value breaks ties.
+    var mkt=window._adp||{};
     MD.pool=MD.pool.filter(function(p){
-      return p.pos==='DEF'||p.team||(p.adp&&p.adp<400);   // teamless ghosts out
+      if(p.pos==='DEF')return true;
+      var k=_mdNormName(p.name);
+      var m=mkt[k]||mkt[k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'')];
+      return !(m&&m.pos&&m.pos!==p.pos);
     });
-    var seen={};MD.pool=MD.pool.filter(function(p){
+    var best={};
+    MD.pool.forEach(function(p){
+      if(p.pos==='DEF')return;
       var k=(p.name||'').toLowerCase().replace(/[^a-z]/g,'');
-      if(!k||p.pos==='DEF')return true;
-      if(seen[k])return false;seen[k]=1;return true;
+      if(!k)return;
+      var cur=best[k];
+      if(!cur){best[k]=p;return;}
+      var rank=function(x){return ((x.team&&x.team!=='FA')?2:0)+((x.dv||0)/1e6);};
+      if(rank(p)>rank(cur))best[k]=p;
+    });
+    MD.pool=MD.pool.filter(function(p){
+      if(p.pos==='DEF')return true;
+      var k=(p.name||'').toLowerCase().replace(/[^a-z]/g,'');
+      return !k||best[k]===p;
     });
   })();
   // Replacement level per position for THIS room: the player still on the
