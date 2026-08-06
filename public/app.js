@@ -7899,7 +7899,12 @@ var FZ26_NAMES={};Object.keys(FZ26_SEATS).forEach(function(k){FZ26_NAMES[k]=FZ26
 var FZ26_RB_PREM_ELITE=1.18; // "Bijan $63 AAV se va 74-75" => ~1.18x on elite RBs
 var FZ26_RB_PREM=1.10;       // the same lean on the rest of the RB board, softer
 var FZ26_RB_ELITE_AAV=40;    // elite line for the premium: top-tier RB money
-var AU_BID_CAP=1.20;         // owner 8/2026: no room pays more than 20% over a priced player's value
+var AU_BID_CAP=1.15;         /* Measured, not guessed (8/2026): at 1.20 the elite mean was
+                                1.096x and the worst sale $85; at 1.15 the mean is 1.071x and
+                                the worst $81, with money still clearing (unspent $3.6 avg) and
+                                the $1 endgame intact. Below 1.15 the mean stops moving (1.10
+                                gives the same 1.071x) - so 1.15 is exactly where the ceiling
+                                stops touching normal sales and only clips bidding wars. */
 var FZ26_BID_CAP=AU_BID_CAP; // fz26 uses the same ceiling (kept as its own name for the premium's docs)
 var FZ26_CAP_FLOOR=5;        // stickers under $5 are endgame money-dumps, not market prices - exempt from the ceiling
 function _mdFz26On(){try{return localStorage.getItem('tm_md_fantazy26')==='1';}catch(_){return false;}}

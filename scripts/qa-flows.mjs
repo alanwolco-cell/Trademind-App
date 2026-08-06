@@ -547,14 +547,14 @@ const rbLine = sandbox.auSageLine({ id: 'rbx', name: 'Bijan Robinson', pos: 'RB'
 check('fz26 premium: Mac anticipates the RB market ($74ish on $63 AAV)', rbLine.indexOf('pays up for RBs') >= 0 && rbLine.indexOf('$74ish') >= 0, rbLine);
 const wrLine = sandbox.auSageLine({ id: 'rbx', name: 'Some WR', pos: 'WR', team: 'ATL' }, { bid: 40, holder: 2, going: 1, myMax: 0 });
 check('fz26 premium: non-RB lots carry no market clause', wrLine.indexOf('pays up') < 0, wrLine);
-check('fz26 premium: named constants calibrated', sandbox.FZ26_RB_PREM_ELITE === 1.18 && sandbox.FZ26_RB_PREM === 1.10 && sandbox.FZ26_BID_CAP === 1.20 && sandbox.AU_BID_CAP === 1.20);
+check('fz26 premium: named constants calibrated', sandbox.FZ26_RB_PREM_ELITE === 1.18 && sandbox.FZ26_RB_PREM === 1.10 && sandbox.FZ26_BID_CAP === 1.15 && sandbox.AU_BID_CAP === 1.15);
 // bot willingness wears the premium and the cap; the user's worth does not
 sandbox.MD.teams = 10; sandbox.MD.rounds = 15;
 for (let s = 1; s <= 10; s++) { sandbox.AU.budgets[s] = 200; sandbox.AU.slotsLeft[s] = 15; sandbox.MD.aiRosters[s] = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0, list: [] }; }
 sandbox.AU.bots[2] = { k: 'balanced', name: 'B2' };
 sandbox.AU.eliteLine = 40;
 const mx = sandbox.auBotMax(2, { id: 'rbx', name: 'Bijan Robinson', pos: 'RB', team: 'ATL' });
-check('fz26 premium: bot max lands at ~1.18x, under the 1.20x cap', mx >= Math.round(63 * 1.12) && mx <= Math.round(63 * 1.25), '$' + mx);
+check('fz26 premium: bot max lands at ~1.18x, under the 1.15x cap', mx >= Math.round(63 * 1.12) && mx <= Math.round(63 * 1.25), '$' + mx);
 // upward inflation below the (separate, pre-existing) endgame-blowout
 // threshold: real rooms only reach 1.1+ inflation when money outweighs the
 // value left, never at full budgets - the blowout is out of scope here

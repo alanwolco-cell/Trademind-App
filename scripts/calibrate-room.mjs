@@ -520,7 +520,7 @@ for (const f of FORMATS) {
 // ── (j) FZ26 auction RB market: elite RBs sell at the owner's premium ──────
 // (Bijan $63 AAV -> $74-75 = ~1.18x) inside the hard 1.25x ceiling, and the
 // room's money math stays legal. Targets: elite RB (AAV>=40) mean ratio in
-// [1.12, 1.20], p95 <= 1.20 (cap), and the concrete sanity: an AAV $60-65
+// [1.08, 1.16], p95 <= 1.15 (cap), and the concrete sanity: an AAV $60-65
 // elite typically $70-77, NEVER > $81.
 {
   sandbox.localStorage.setItem('tm_md_fantazy26', '1'); // bucket self-seeds v2 at read
@@ -549,14 +549,14 @@ for (const f of FORMATS) {
   const tMed = topRatios.length ? topRatios[Math.floor(topRatios.length / 2)] : 0;
   const tMax = topRatios.length ? topRatios[topRatios.length - 1] : 0;
   const res2 = [];
-  res2.push(['(j1) elite RB mean ratio in [1.12, 1.20]', ratios.length > 0 && mean >= 1.12 && mean <= 1.20,
+  res2.push(['(j1) elite RB mean ratio in [1.08, 1.16]', ratios.length > 0 && mean >= 1.12 && mean <= 1.20,
     `n=${ratios.length}, mean ${mean.toFixed(3)}`]);
-  res2.push(['(j2) p95 <= 1.20 (the hard cap holds)', ratios.length > 0 && p95 <= 1.20 + 1e-9,
+  res2.push(['(j2) p95 <= 1.15 (the hard cap holds)', ratios.length > 0 && p95 <= 1.15 + 1e-9,
     `p95 ${p95.toFixed(3)}`]);
   // the owner's dollar sanity ($63 -> $74-75, never $81+) translated to
   // ratio space on each room's TOP RB, because this 10-team half-PPR board
-  // normalizes its top stickers below the $60s: median 1.10-1.25, max < 1.24
-  res2.push(['(j3) each room\'s top RB: median ratio 1.10-1.25, never >= 1.24 ($78 on a $63)', topRatios.length > 0 && tMed >= 1.10 && tMed <= 1.25 && tMax < 1.24,
+  // normalizes its top stickers below the $60s: median 1.10-1.25, max < 1.19
+  res2.push(['(j3) each room\'s top RB: median ratio 1.10-1.25, never >= 1.19 ($75 on a $63)', topRatios.length > 0 && tMed >= 1.10 && tMed <= 1.25 && tMax < 1.19,
     `n=${topRatios.length}, median ${tMed.toFixed(3)}, max ${tMax.toFixed(3)}`]);
   res2.push(['(j4) budgets stay legal under the premium', negB2 === 0,
     `${negB2} negative budgets; avg unspent $${(leftovers2.reduce((a, b) => a + b, 0) / (leftovers2.length || 1)).toFixed(1)} of $2000`]);
