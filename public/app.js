@@ -8556,6 +8556,12 @@ async function _startMockDraftRun(){
         // in R9-11 (2026 projections) - so anything that needs point VALUE
         // (VORP words, tiers) reads projections, never dv gaps.
         dv=11000-adp*40;
+        // The linear board goes NEGATIVE past pick 275 (an ADP of 400 scored
+        // -5000), which sank real players below kickers and made them
+        // undraftable at any depth. Beyond the linear range, decay gently but
+        // stay positive so the deep tail keeps its order. Untouched for every
+        // pick a real draft actually reaches.
+        if(dv<200)dv=Math.max(20,200-(adp-270)*1.2);
         // 6pt passing TDs re-price QBs one by one: the bonus lives in the
         // passing TDs, so high-passTD pocket QBs rise most while runners -
         // whose rushing TDs were already worth 6 - move least
