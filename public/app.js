@@ -8802,6 +8802,9 @@ function mdAdvance(){
   var pickNo=(MD.pickIdx%MD.teams)+1;
   if(slot===MD.mySlot){
     MD.onClock=true;MD.curRound=round;
+    // same courtesy the auction gets: you should never miss your turn because
+    // you looked away (the bots move fast between your picks)
+    try{if(round>1)sndYourTurn();}catch(_){}
     document.getElementById('md-status').innerHTML='<span style="color:var(--muted)">R'+round+'.'+pickNo+'</span><span style="color:var(--accent-bright);font-weight:700">You are on the clock</span><span id="md-clk"></span>';
     mdRenderBoard(); // the ON THE CLOCK box must agree with the header (says YOU now)
     mdShowChoices(round);
