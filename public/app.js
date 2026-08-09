@@ -8541,7 +8541,7 @@ async function _startMockDraftRun(){
     var ids=window._adpById;if(ids&&ids[p.id]!=null)return ids[p.id];
     var m=window._adp;if(!m)return null;
     var k=p.name.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
-    var e=m[k]||m[k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'')];return e?e.adp:null;};
+    var e=_mdByName(m,p.name);return e?e.adp:null;};
   MD.pool=Object.values(allPlayers).filter(function(p){
       return ['QB','RB','WR','TE'].indexOf(p.pos)>=0&&((ktcById[p.id]||0)>0||adpOf(p)!=null);
     })
@@ -8659,7 +8659,7 @@ async function _startMockDraftRun(){
     MD.pool=MD.pool.filter(function(p){
       if(p.pos==='DEF')return true;
       var k=_mdNormName(p.name);
-      var m=mkt[k]||mkt[k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'')];
+      var m=_mdByName(mkt,p.name);
       return !(m&&m.pos&&m.pos!==p.pos);
     });
     var best={};
@@ -10726,6 +10726,27 @@ async function mdLoadAav(){
 // Static fallback fit (the 8/2026 derivation) so the room still prices when
 // the feed is down - the UI then says the values are derived, not live.
 var AU_FIT_FALLBACK={a:4.133,b:-0.0294};
+// Name lookups that survive "III" / "Jr.": the feeds disagree about suffixes
+// (ESPN writes "James Cook III", Sleeper writes "James Cook"), and stripping
+// only OUR side silently missed real players. Build the suffix-free index of
+// a map once, then look up both spellings. Used by every name-keyed feed.
+function _mdSuffixIndex(map){
+  if(!map)return null;
+  if(map.__sfx)return map.__sfx;
+  var idx={},ks=Object.keys(map);
+  for(var i=0;i<ks.length;i++){
+    var b=ks[i].replace(/\s+(jr|sr|ii|iii|iv|v)$/,'');
+    if(b!==ks[i]&&!map[b]&&!idx[b])idx[b]=map[ks[i]];
+  }
+  try{Object.defineProperty(map,'__sfx',{value:idx,enumerable:false});}catch(_){map.__sfx=idx;}
+  return idx;
+}
+function _mdByName(map,name){
+  if(!map)return null;
+  var k=_mdNormName(name), b=k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'');
+  var sfx=_mdSuffixIndex(map);
+  return map[k]||map[b]||(sfx&&(sfx[k]||sfx[b]))||null;
+}
 function _auRawValue(p){
   var d=window._mdAav;
   var fit=(d&&d.fit)||AU_FIT_FALLBACK;
