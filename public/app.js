@@ -10731,8 +10731,21 @@ function _auRawValue(p){
   var fit=(d&&d.fit)||AU_FIT_FALLBACK;
   if(d){
     var k=_mdNormName(p.name);
-    // suffix insurance: ESPN says "Marvin Harrison Jr.", Sleeper may not
-    var e=d.players[k]||d.players[k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'')];
+    // Suffix insurance, BOTH directions. Stripping only our side missed the
+    // common case: ESPN writes "James Cook III" while Sleeper writes "James
+    // Cook", so four top-60 players were silently falling back to the curve
+    // instead of using their real market price. Build a suffix-free index of
+    // the price map once and look the player up there too.
+    if(!d._sfx){
+      d._sfx={};
+      var _sk=Object.keys(d.players);
+      for(var _i=0;_i<_sk.length;_i++){
+        var _b=_sk[_i].replace(/\s+(jr|sr|ii|iii|iv|v)$/,'');
+        if(_b!==_sk[_i]&&!d.players[_b]&&!d._sfx[_b])d._sfx[_b]=d.players[_sk[_i]];
+      }
+    }
+    var _kb=k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'');
+    var e=d.players[k]||d.players[_kb]||d._sfx[k]||d._sfx[_kb];
     // live ESPN price when we have it and the room is PPR (ESPN's scoring);
     // other scorings re-derive from the format's own ADP via the curve
     if(e&&e.pos===p.pos&&MD.scoring>=1)return e.aav;
