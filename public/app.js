@@ -13696,9 +13696,18 @@ try{
   }catch(_){}
   if(!mine)return;
   var shown=false;
+  var lastCheck=0;
   function check(){
     if(shown||document.hidden)return;
-    fetch('/?vcheck='+Date.now(),{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+    // never hammer: at most one check every 5 minutes no matter how often the
+    // tab is switched, and never mid-pick (a re-render during your turn is
+    // exactly the kind of "glitch" this was meant to prevent)
+    var now=Date.now();
+    if(now-lastCheck<300000)return;
+    if(typeof MD!=='undefined'&&MD&&MD.onClock)return;
+    if(typeof AU!=='undefined'&&AU&&AU.lot)return;
+    lastCheck=now;
+    fetch('/?vcheck='+now,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
       var m=t.match(/app\.js\?v=(\d+)/);
       if(!m||m[1]===mine)return;
       shown=true;
