@@ -9825,6 +9825,15 @@ function mdFilterChoices(){
   var bd=document.getElementById('md-board');
   if(bd&&bd.dataset.live==='1')mdShowChoices(MD.curRound||1);
 }
+// Coalesced repaint: a burst (Sim resolving ten lots in under a second, a
+// fast bot run) would otherwise rebuild 200 rows ten times over. Collapse the
+// burst into one paint on the next frame - the user sees the same final list,
+// the phone does a tenth of the work.
+var _mdPaintT=null;
+function mdShowChoicesSoon(round){
+  if(_mdPaintT)clearTimeout(_mdPaintT);
+  _mdPaintT=setTimeout(function(){_mdPaintT=null;try{mdShowChoices(round);}catch(_){}},90);
+}
 function mdShowChoices(round){
   var q=((document.getElementById('md-avail-search')||{}).value||'').toLowerCase().trim();
   var pf=MD.posFilter||'';
@@ -10043,7 +10052,7 @@ function mdShowChoices(round){
     // auction rows read like a price list, not a scouting table: face, name,
     // pos, AAV - the ADP/bye/proj/tag layers are snake's shopping detail
     var _lite=AU.active&&!isTaken;
-    d.innerHTML='<img src="'+mdFaceUrl(p)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
+    d.innerHTML='<img src="'+mdFaceUrl(p)+'" loading="lazy" decoding="async" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
       +'<div style="min-width:0;flex:1"><div style="font-size:'+(AU.active?'13px':'12px')+';font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ MAC</span>':'')+'</div>'
       +'<div style="font-size:'+(AU.active?'12px':'10px')+';color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
       +(isTaken?' · <span style="white-space:nowrap">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' · '+en.by+'</span>'
@@ -11653,7 +11662,7 @@ function auSell(){
   }catch(_){}
   // the research table is the auction's whole left brain - it must stay
   // painted at all times (MD.onClock is a snake concept and is never true here)
-  mdShowChoices(1);
+  mdShowChoicesSoon(1);
   AU.phaseEnd=Date.now()+AU_PACE.NEXT_LOT;AU.stepT=setTimeout(auAdvance,_auDelay(AU_PACE.NEXT_LOT));
 }
 // Mac's read on the block: personal ceiling = room value x live inflation,
