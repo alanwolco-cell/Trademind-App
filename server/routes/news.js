@@ -25,7 +25,7 @@ async function fetchRotoNews() {
   let fresh = [];
   try {
     const r = await fetch('https://www.rotowire.com/rss/news.php?sport=NFL', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (TradeMind)' }, redirect: 'follow'
+      headers: { 'User-Agent': 'Mozilla/5.0 (MacDraft)' }, redirect: 'follow'
     });
     if (r.ok) {
       const xml = await r.text();
@@ -73,7 +73,13 @@ router.get('/player/:espnId', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
-    const headers = { 'User-Agent': 'TradeMind/1.0', 'Accept': 'application/json' };
+// ESPN's public JSON APIs (site.api / site.web.api) answer 200 to a request
+// with NO User-Agent and 403 to one that sends any UA at all - verified
+// 8/2026 against both the athlete and league news endpoints. We were sending
+// "TradeMind/1.0", so the Fantasy Wire article list and the player card's
+// ESPN news were quietly returning nothing. Send no UA to those hosts; the
+// RSS host (www.espn.com) is happy either way and keeps its header.
+    const headers = { 'Accept': 'application/json' };
     const [playerRes, newsRes, listRes, gnewsRes] = await Promise.all([
       fetch(`https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${espnId}`, { headers }),
       fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/athletes/${espnId}/news?limit=3`, { headers }).catch(() => null),
@@ -81,7 +87,7 @@ router.get('/player/:espnId', async (req, res) => {
       // news list is always populated, so we filter it to this player below.
       fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=50`, { headers }).catch(() => null),
       // Google News: broad, always-populated per-player coverage from every outlet.
-      rwName ? fetch('https://news.google.com/rss/search?q=' + encodeURIComponent('"' + rwName + '" NFL') + '&hl=en-US&gl=US&ceid=US:en', { headers: { 'User-Agent': 'Mozilla/5.0 (TradeMind)' } }).catch(() => null) : Promise.resolve(null),
+      rwName ? fetch('https://news.google.com/rss/search?q=' + encodeURIComponent('"' + rwName + '" NFL') + '&hl=en-US&gl=US&ceid=US:en', { headers: { 'User-Agent': 'Mozilla/5.0 (MacDraft)' } }).catch(() => null) : Promise.resolve(null),
     ]);
     if (!playerRes.ok) throw new Error(`ESPN returned ${playerRes.status}`);
     const d = await playerRes.json();
@@ -203,7 +209,7 @@ router.get('/nfl', async (req, res) => {
   try {
     const [espnRaw, trendAdd, trendDrop, rw] = await Promise.all([
       fetch('https://www.espn.com/espn/rss/nfl/news', {
-        headers: { 'User-Agent': 'TradeMind/1.0' }
+        headers: { 'User-Agent': 'MacDraft/1.0' }
       }).then(r => r.text()).catch(() => ''),
       fetch('https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=10')
         .then(r => r.json()).catch(() => []),
@@ -248,7 +254,7 @@ async function ogImage(url) {
   try {
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 2500);
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (TradeMind)' }, signal: ctrl.signal, redirect: 'follow' });
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (MacDraft)' }, signal: ctrl.signal, redirect: 'follow' });
     clearTimeout(to);
     if (r.ok) {
       const html = (await r.text()).slice(0, 60000);
@@ -265,7 +271,7 @@ router.get('/articles', async (req, res) => {
     const cached = artCache.get('articles');
     if (cached) return res.json(cached);
     const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=12', {
-      headers: { 'User-Agent': 'TradeMind/1.0', 'Accept': 'application/json' }
+      headers: { 'Accept': 'application/json' }   // no UA: ESPN 403s any UA here
     });
     if (!r.ok) throw new Error('ESPN ' + r.status);
     const d = await r.json();
@@ -329,7 +335,7 @@ router.get('/articles', async (req, res) => {
     // Merge in Yahoo Sports NFL stories for source variety
     try {
       const yr = await fetch('https://sports.yahoo.com/nfl/rss/', {
-        headers: { 'User-Agent': 'Mozilla/5.0 (TradeMind)' }, redirect: 'follow'
+        headers: { 'User-Agent': 'Mozilla/5.0 (MacDraft)' }, redirect: 'follow'
       });
       if (yr.ok) {
         const xml = await yr.text();
@@ -411,7 +417,7 @@ router.get('/tweet/:id', async (req, res) => {
     const hit = tweetCache.get(id);
     if (hit) { res.set('Cache-Control', 'public, max-age=1800, s-maxage=3600'); return res.json(hit); }
     const r = await fetch('https://cdn.syndication.twimg.com/tweet-result?id=' + id + '&token=' + tweetToken(id), {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TradeMind/1.0)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MacDraft/1.0)' }
     });
     if (!r.ok) throw new Error('syndication ' + r.status);
     const d = await r.json();

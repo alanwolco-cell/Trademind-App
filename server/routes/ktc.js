@@ -41,7 +41,7 @@ router.get('/rankings', async (req, res) => {
     }
 
     const r = await fetch(FC_URL, {
-      headers: { 'User-Agent': 'TradeMind/1.0', 'Accept': 'application/json' }
+      headers: { 'User-Agent': 'MacDraft/1.0', 'Accept': 'application/json' }
     });
     if (!r.ok) throw new Error(`FantasyCalc returned ${r.status}`);
     const players = await r.json();
@@ -127,7 +127,7 @@ router.get('/snapshot', async (req, res) => {
     const snaps = await readSnapshots();
     if (snaps.days.some(d => d.date === today)) return res.json({ ok: true, skipped: 'already snapshotted today', days: snaps.days.length });
     const r = await fetch('https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=1&ppr=1', {
-      headers: { 'User-Agent': 'TradeMind/1.0', 'Accept': 'application/json' }
+      headers: { 'User-Agent': 'MacDraft/1.0', 'Accept': 'application/json' }
     });
     if (!r.ok) throw new Error('FantasyCalc ' + r.status);
     const players = await r.json();

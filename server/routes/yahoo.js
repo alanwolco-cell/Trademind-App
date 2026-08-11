@@ -72,7 +72,7 @@ function popupReply(res, payload) {
     'if(window.opener){window.opener.postMessage({type:"trademind-yahoo",payload:p},"*");' +
     'document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster imported. You can close this window.";' +
     'setTimeout(function(){window.close();},1200);}' +
-    'else{document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster loaded. Open TradeMind and try the Yahoo login again.";}' +
+    'else{document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster loaded. Open Mac Draft and try the Yahoo login again.";}' +
     '</script></body></html>'
   );
 }
