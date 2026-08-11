@@ -26,39 +26,86 @@ function getStripe() {
 //    anyone who knew your handle read your plan, open your Stripe billing
 //    portal, or cancel the subscription you were paying for. The username is
 //    still recorded alongside the record, but only as a support label.
-const ENT_PATH = 'entitlements/pro.json';
+// Vive en Postgres (macdraft.suscripciones), NO en Blob.
+//
+// Antes esto era entitlements/pro.json escrito con access:'public' y
+// addRandomSuffix:false. Verificado el 6 de agosto de 2026: ese archivo
+// respondia 200 a un GET sin ninguna credencial, en una ruta fija y
+// adivinable. Lo unico que lo protegia era que nadie supiera el hostname del
+// store. La lista de quien paga, con sus customer y subscription de Stripe,
+// no puede depender de eso.
+//
+// La forma en memoria { byAcct, byUser, byCustomer } se conserva IGUAL, asi
+// que los 12 puntos que la consultan siguen funcionando sin cambios. Lo unico
+// que cambia es de donde sale y a donde va.
+const TABLA = 'suscripciones';
+const ESQUEMA = 'macdraft';
+const datos = require('../lib/datos');
 let _ent = null, _entTs = 0;
+
+// Fila de Postgres -> la forma que el resto del archivo espera.
+function aRegistro(f) {
+  return {
+    status: f.estado,
+    customer: f.stripe_customer_id || undefined,
+    sub: f.stripe_sub_id || undefined,
+    username: f.username || undefined,
+    updated: f.actualizado ? Date.parse(f.actualizado) : undefined,
+  };
+}
 
 async function loadEnt() {
   if (_ent && Date.now() - _entTs < 30000) return _ent;
-  let data = { byAcct: {}, byCustomer: {} };
+
+  const data = { byAcct: {}, byCustomer: {}, byUser: {} };
   try {
-    const { list } = require('@vercel/blob');
-    const { blobs } = await list({ prefix: ENT_PATH, limit: 1 });
-    if (blobs.length) {
-      const j = await (await fetch(blobs[0].url + '?t=' + Date.now())).json();
-      if (j && typeof j === 'object') data = j;
+    const filas = await datos.seleccionar(TABLA, 'select=*', ESQUEMA);
+    for (const f of filas || []) {
+      const rec = aRegistro(f);
+      data.byAcct[f.acct_id] = rec;
+      if (f.stripe_customer_id) data.byCustomer[f.stripe_customer_id] = rec.username || f.acct_id;
     }
-  } catch (_) { if (_ent) return _ent; }
-  data.byAcct = data.byAcct || {};
-  data.byCustomer = data.byCustomer || {};
-  data.byUser = data.byUser || {};
-  // Backfill the username index for anyone who subscribed before it existed,
-  // so their plan reaches their phone without them having to do anything.
+  } catch (err) {
+    // Si la base no responde se sirve lo ultimo que se leyo, aunque este
+    // vencido: es mejor que decirle a alguien que pago que no tiene Pro.
+    console.error('[billing] loadEnt:', err.message);
+    if (_ent) return _ent;
+    return data;
+  }
+
+  // Indice por nombre, igual que antes: el plan sigue al manager a cualquier
+  // dispositivo. Se deriva de byAcct, no se guarda aparte.
   for (const acct in data.byAcct) {
     const u = String((data.byAcct[acct] || {}).username || '').trim().toLowerCase();
     if (u && !data.byUser[u]) data.byUser[u] = acct;
   }
+
   _ent = data; _entTs = Date.now();
   return _ent;
 }
 
 async function saveEnt(e) {
+  // La cache se actualiza primero: si la escritura falla, el proceso que acaba
+  // de cobrar sigue viendo el estado correcto en vez de un valor viejo.
   _ent = e; _entTs = Date.now();
+
+  const filas = Object.entries(e.byAcct || {}).map(([acct_id, r]) => ({
+    acct_id,
+    username: r.username ? String(r.username).trim().toLowerCase() : null,
+    stripe_customer_id: r.customer || null,
+    stripe_sub_id: r.sub || null,
+    estado: r.status || 'inactiva',
+    actualizado: new Date(r.updated || Date.now()).toISOString(),
+  }));
+  if (!filas.length) return;
+
   try {
-    const { put } = require('@vercel/blob');
-    await put(ENT_PATH, JSON.stringify(e), { access: 'public', addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 0 });
-  } catch (err) { console.error('[billing] saveEnt:', err.message); }
+    await datos.guardar(TABLA, filas, ESQUEMA, 'acct_id');
+  } catch (err) {
+    // Un fallo aca significa que un pago no quedo registrado. Se grita fuerte:
+    // es el unico error de este archivo que cuesta plata.
+    console.error('[billing] saveEnt FALLO, la suscripcion no se guardo:', err.message);
+  }
 }
 
 // Who gets Pro, and why it is keyed on the Sleeper name.
