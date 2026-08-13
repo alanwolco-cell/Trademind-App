@@ -5436,7 +5436,256 @@ function getMyBuildPhase(mySum){
   return {phase:phase,avgAge:Math.round(avgAge*10)/10,avgKtc:Math.round(avgKtc),leagueRank:leagueRank,totalTeams:totalTeams};
 }
 
+
+// ═══ TARGET A PLAYER — you name the prize, we price it ═══════════════════════
+// The Ideas tab answers "who should I trade for?". This answers the question a
+// manager actually walks in with: "I want THAT guy - what does it cost me?"
+// Pick a rival, pick one or more of his players, and the board comes back with
+// three real packages built out of your own roster and picks.
+var TGT = { rosterId: null, targets: [] };
+
+// The acquiring side pays. Nobody sells their starter at sticker price, and a
+// package of parts is worth less to the receiver than one clean piece (he has
+// roster spots to fill and only so many starting slots). Both are documented
+// market behaviour, not invented numbers:
+//   PREMIUM  - the "trade tax" every buyer pays to pry a player loose.
+//   PARTS    - each extra piece beyond the first is discounted on their side.
+var TGT_PREMIUM = 1.08;
+var TGT_PARTS_DISCOUNT = 0.06;   // per extra piece, capped below
+
+function _tgtVal(p){ return p.pick ? getKtcValue(p.name, null) : (ktcById[p.id] || 0); }
+
+// what a package is WORTH TO THEM: raw value minus the friction of extra parts
+function _tgtPkgWorth(pkg){
+  var raw = pkg.reduce(function(s,p){ return s + _tgtVal(p); }, 0);
+  var extra = Math.max(0, pkg.length - 1);
+  return raw * (1 - Math.min(0.18, extra * TGT_PARTS_DISCOUNT));
+}
+
+function _tgtMyAssets(){
+  var mine = leagueRosters.find(function(r){ return r.owner_id === userId; });
+  if(!mine) return [];
+  var excl = (window._ideaExclude || []).map(function(n){ return String(n).toLowerCase(); });
+  var out = [];
+  (mine.players || []).forEach(function(pid){
+    var ap = allPlayers[pid]; if(!ap || !ap.name) return;
+    if(excl.indexOf(ap.name.toLowerCase()) >= 0) return;      // "won't trade" list is law
+    var v = ktcById[pid] || 0; if(v <= 0) return;
+    out.push({ id: pid, name: ap.name, pos: ap.pos, team: ap.team, v: v });
+  });
+  try{
+    buildPicksForRoster(mine, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
+      var v = getKtcValue(pk.name, null);
+      if(v > 0) out.push({ id: null, pick: true, name: pk.name, pos: 'PK', team: '', v: v });
+    });
+  }catch(_){}
+  return out.sort(function(a,b){ return b.v - a.v; });
+}
+
+// Their roster needs, so the package leans on positions they are thin at - a
+// deal is likelier when the parts actually help the guy accepting it.
+function _tgtTheirNeed(rosterId){
+  var r = leagueRosters.find(function(x){ return x.roster_id === rosterId; });
+  var have = { QB:0, RB:0, WR:0, TE:0 };
+  ((r && r.players) || []).forEach(function(pid){
+    var ap = allPlayers[pid]; if(!ap) return;
+    if(have[ap.pos] != null && (ktcById[pid] || 0) > 2500) have[ap.pos]++;
+  });
+  var want = { QB: leagueFormat.hasSuperFlex ? 2 : 1, RB: 2, WR: 3, TE: 1 };
+  var need = {};
+  Object.keys(want).forEach(function(k){ need[k] = Math.max(0, want[k] - have[k]); });
+  return need;
+}
+
+function tgtRenderPanel(){
+  var host = document.getElementById('tgt-panel');
+  if(!host) return;
+  if(!leagueRosters.length || !userId){
+    host.innerHTML = '<div class="ideas-empty">Connect a league and this turns into a shopping list: pick anyone on a rival roster and see the price.</div>';
+    return;
+  }
+  var others = leagueRosters.filter(function(r){ return r.owner_id !== userId; });
+  var opts = '<option value="">Whose player do you want?</option>' + others.map(function(r){
+    return '<option value="' + r.roster_id + '"' + (TGT.rosterId === r.roster_id ? ' selected' : '') + '>' +
+      String(getRosterName(r.roster_id)).replace(/</g,'&lt;') + '</option>';
+  }).join('');
+  var html = '<div class="tgt-row"><select class="opp-select" id="tgt-team" style="min-width:220px" onchange="tgtPickTeam(this.value)">' + opts + '</select>' +
+    '<span class="tgt-hint" id="tgt-hint">Pick a manager, then tap the players you want.</span></div>' +
+    '<div id="tgt-roster" class="tgt-roster"></div>' +
+    '<div id="tgt-out"></div>';
+  host.innerHTML = html;
+  if(TGT.rosterId) tgtPickTeam(TGT.rosterId, true);
+}
+
+function tgtPickTeam(rid, keep){
+  rid = parseInt(rid, 10);
+  if(!keep) TGT.targets = [];
+  TGT.rosterId = rid || null;
+  var box = document.getElementById('tgt-roster');
+  var out = document.getElementById('tgt-out');
+  if(out) out.innerHTML = '';
+  if(!box) return;
+  if(!TGT.rosterId){ box.innerHTML = ''; return; }
+  var r = leagueRosters.find(function(x){ return x.roster_id === TGT.rosterId; });
+  var list = ((r && r.players) || []).map(function(pid){
+    var ap = allPlayers[pid] || {};
+    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', team: ap.team || '', v: ktcById[pid] || 0 };
+  }).filter(function(p){ return p.v > 0; }).sort(function(a,b){ return b.v - a.v; });
+  if(!list.length){ box.innerHTML = '<div class="ideas-empty">No valued players on that roster yet.</div>'; return; }
+  var pc = { QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)' };
+  box.innerHTML = list.map(function(p){
+    var on = TGT.targets.indexOf(p.id) >= 0;
+    return '<button class="tgt-chip' + (on ? ' on' : '') + '" onclick="tgtToggle(\'' + p.id + '\')">' +
+      '<span class="tgt-pos" style="color:' + (pc[p.pos] || 'var(--muted)') + '">' + p.pos + '</span>' +
+      '<span class="tgt-nm">' + String(p.name).replace(/</g,'&lt;') + '</span></button>';
+  }).join('');
+  tgtBuild();
+}
+
+function tgtToggle(pid){
+  var i = TGT.targets.indexOf(pid);
+  if(i >= 0) TGT.targets.splice(i, 1); else TGT.targets.push(pid);
+  tgtPickTeam(TGT.rosterId, true);
+}
+
+function tgtClear(){ TGT.targets = []; tgtPickTeam(TGT.rosterId, true); }
+
+// The search: every combination of up to four of your assets, scored on how
+// cleanly it clears their ask. Exhaustive at this size (a roster is ~25 assets),
+// so there is no "close enough" - if a package exists, it is found.
+function _tgtSearch(assets, ask, need){
+  var best = { cheap: null, fair: null, closer: null };
+  var MAXN = 4;
+  var idx = assets.slice(0, 26);
+  function consider(pkg){
+    var worth = _tgtPkgWorth(pkg);
+    if(worth < ask * 0.98) return;                       // does not get it done
+    var over = worth - ask;
+    // a package that fills their holes is worth more than the raw number says
+    var fit = pkg.reduce(function(s,p){ return s + ((need[p.pos] || 0) > 0 ? 1 : 0); }, 0);
+    var cost = pkg.reduce(function(s,p){ return s + p.v; }, 0);   // what it costs YOU
+    if(!best.cheap || cost < best.cheap.cost || (cost === best.cheap.cost && fit > best.cheap.fit))
+      best.cheap = { pkg: pkg.slice(), cost: cost, worth: worth, over: over, fit: fit };
+    var fairScore = Math.abs(worth - ask) - fit * 60;
+    if(!best.fair || fairScore < best.fair.score)
+      best.fair = { pkg: pkg.slice(), cost: cost, worth: worth, over: over, fit: fit, score: fairScore };
+    if(worth >= ask * 1.12 && worth <= ask * 1.35){
+      var cScore = cost - fit * 80;
+      if(!best.closer || cScore < best.closer.score)
+        best.closer = { pkg: pkg.slice(), cost: cost, worth: worth, over: over, fit: fit, score: cScore };
+    }
+  }
+  (function rec(start, pkg){
+    if(pkg.length){ consider(pkg); }
+    if(pkg.length >= MAXN) return;
+    for(var i = start; i < idx.length; i++){ pkg.push(idx[i]); rec(i + 1, pkg); pkg.pop(); }
+  })(0, []);
+  return best;
+}
+
+function tgtBuild(){
+  var out = document.getElementById('tgt-out');
+  var hint = document.getElementById('tgt-hint');
+  if(!out) return;
+  if(!TGT.targets.length){
+    out.innerHTML = '';
+    if(hint) hint.textContent = 'Pick a manager, then tap the players you want.';
+    return;
+  }
+  var got = TGT.targets.map(function(pid){
+    var ap = allPlayers[pid] || {};
+    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', v: ktcById[pid] || 0 };
+  });
+  var targetVal = got.reduce(function(s,p){ return s + p.v; }, 0);
+  var ask = targetVal * TGT_PREMIUM;
+  if(hint) hint.innerHTML = 'Going after <b>' + got.map(function(p){ return String(p.name).replace(/</g,'&lt;'); }).join(' + ') +
+    '</b> &middot; <span onclick="tgtClear()" style="color:var(--accent-bright);cursor:pointer">clear</span>';
+
+  var assets = _tgtMyAssets();
+  if(!assets.length){ out.innerHTML = '<div class="ideas-empty">No tradeable assets on your roster yet.</div>'; return; }
+  var need = _tgtTheirNeed(TGT.rosterId);
+  var best = _tgtSearch(assets, ask, need);
+
+  var cards = [];
+  var seen = {};
+  [['cheap','The cheapest that works','What they would probably take, and not a dollar more.'],
+   ['fair','The even one','Both sides look at this and see a fair deal.'],
+   ['closer','The closer','Clearly good for them. Use it when you actually want the guy.']]
+  .forEach(function(t){
+    var b = best[t[0]]; if(!b) return;
+    var key = b.pkg.map(function(p){ return p.id || p.name; }).sort().join('|');
+    if(seen[key]) return; seen[key] = 1;
+    cards.push({ kind: t[0], title: t[1], sub: t[2], b: b });
+  });
+
+  if(!cards.length){
+    out.innerHTML = '<div class="ideas-empty">Your roster does not have enough to get there - even everything tradeable falls short of what ' +
+      String(getRosterName(TGT.rosterId)).replace(/</g,'&lt;') + ' would want for that. Aim smaller, or add a piece to your roster first.</div>';
+    return;
+  }
+  var pc = { QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)', PK:'var(--accent-bright)' };
+  out.innerHTML = '<div class="tgt-ask">You are asking for <b>' + (targetVal>=1000?(targetVal/1000).toFixed(1)+'k':targetVal) + '</b> of value. Here is what it takes.</div>' +
+    cards.map(function(c, i){
+      var b = c.b;
+      var pieces = b.pkg.map(function(p){
+        return '<span class="tgt-piece"><span class="tgt-pos" style="color:' + (pc[p.pos] || 'var(--muted)') + '">' + p.pos + '</span>' +
+          String(p.name).replace(/</g,'&lt;') + '</span>';
+      }).join('');
+      var edge = b.worth - ask;
+      var read = edge < ask * 0.03 ? 'Right at their line - expect a counter.'
+        : edge < ask * 0.12 ? 'A little over their line. This is the one that usually gets a yes.'
+        : 'Comfortably over. Hard for them to say no.';
+      var fitTxt = b.fit ? ' It also fills a hole on their roster, which matters more than the numbers.' : '';
+      return '<div class="tgt-card">' +
+        '<div class="tgt-card-h"><span class="tgt-kind">' + c.title + '</span>' +
+          '<button class="btn-sm" onclick="tgtLoad(' + i + ')">Open in the analyzer &rarr;</button></div>' +
+        '<div class="tgt-sub">' + c.sub + '</div>' +
+        '<div class="tgt-pieces">' + pieces + '</div>' +
+        '<div class="tgt-read">' + read + fitTxt + '</div>' +
+      '</div>';
+    }).join('');
+  window._tgtCards = cards;
+}
+
+// Hand the package to the real analyzer, which owns the verdict.
+function tgtLoad(i){
+  var c = (window._tgtCards || [])[i]; if(!c) return;
+  try{
+    switchScreen('analyze'); showAnalyzeTab('analyzer');
+    setTimeout(function(){
+      try{
+        ['give-players','get-players'].forEach(function(cid){
+          var c=document.getElementById(cid); if(!c) return;
+          c.querySelectorAll('input').forEach(function(i,ix){ if(ix){ var r=i.closest('.player-row'); if(r) r.remove(); } else { i.value=''; delete i.dataset.playerId; } });
+        });
+        c.b.pkg.forEach(function(p, n){ _tgtFill('give', n, p.name, p.id, p.pos); });
+        TGT.targets.forEach(function(pid, n){
+          var ap = allPlayers[pid] || {};
+          _tgtFill('get', n, ap.name || pid, pid, ap.pos || '');
+        });
+        updateKtcLive();
+        var an = document.getElementById('analyzer');
+        if(an && an.scrollIntoView) an.scrollIntoView({ behavior:'smooth', block:'start' });
+      }catch(_){}
+    }, 120);
+  }catch(_){}
+}
+function _tgtFill(side, n, name, pid, pos){
+  var cid = side + '-players';
+  var host = document.getElementById(cid); if(!host) return;
+  var rows = host.querySelectorAll('input');
+  while(rows.length <= n){ addRow(cid, side); rows = host.querySelectorAll('input'); }
+  var inp = rows[n]; if(!inp) return;
+  inp.value = name;
+  if(pid) inp.dataset.playerId = pid;
+  if(pos) inp.dataset.pos = pos;
+  // the row's own pos tag + avatar come from the app's normal selection path
+  try{ var tag = inp.closest('.player-row').querySelector('.pos-tag');
+       if(tag && pos){ tag.textContent = pos; tag.style.visibility = 'visible'; } }catch(_){}
+}
+
 function generateTradeIdeas(){
+  try{tgtRenderPanel();}catch(_){}   // the shopping list rides along with the ideas
   // header: which league these ideas are for + in-place switcher
   try{
     var ih=document.getElementById('ideas-header');
