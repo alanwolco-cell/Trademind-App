@@ -5198,10 +5198,53 @@ function switchScreen(name,_noPush){
     if(anchor){setTimeout(function(){anchor.scrollIntoView({behavior:"auto",block:"start"});},0);}
   }
 }
+// Tab-level history sync: tab changes inside a screen push a descriptive hash
+// (for example /research#tab-market) so the browser back button walks tabs
+// instead of leaving the site. Restores triggered by popstate run with
+// _tabRestoring set, so they never push again and cannot loop.
+var _TAB_DEFAULTS={analyze:'analyzer',league:'tab-roster-grade',research:'tab-buysell',community:'trades',mock:'solo'};
+function _tabPush(token,scr){
+  if(window._tabRestoring)return;
+  if((window.location.pathname.replace('/','')||'home')!==scr)return;
+  var cur=window.location.hash.slice(1);
+  if(cur===token)return;
+  // default tab on a fresh screen entry: the screen entry already covers it
+  if(!cur&&_TAB_DEFAULTS[scr]===token)return;
+  try{history.pushState({screen:scr,tab:token},'',window.location.pathname+window.location.search+'#'+token);}catch(_){}
+}
+function _applyTabHash(){
+  var scr=window.location.pathname.replace('/','')||'home';
+  if(!(scr in _TAB_DEFAULTS))return;
+  var token=window.location.hash.slice(1)||_TAB_DEFAULTS[scr];
+  window._tabRestoring=true;
+  try{
+    if(scr==='analyze'){showAnalyzeTab(token==='ideas'?'ideas':'analyzer');}
+    else if(scr==='league'||scr==='research'){
+      if(document.getElementById(token)){
+        var screen=document.getElementById('screen-'+scr);
+        var btn=null;
+        if(screen){
+          var btns=screen.querySelectorAll('.inner-tab');
+          for(var i=0;i<btns.length;i++){if((btns[i].getAttribute('onclick')||'').indexOf("'"+token+"'")>=0){btn=btns[i];break;}}
+        }
+        if(btn){if(!btn.classList.contains('active'))btn.click();}
+        else{switchInnerTab(null,token,'screen-'+scr);}
+      }
+    }
+    else if(scr==='community'){
+      if(['trades','mine','forum','news','learn','feedback'].indexOf(token)>=0&&activeCommunityTab!==token)switchCommunityTab(token);
+    }
+    else if(scr==='mock'){
+      if(['solo','friends','live','history'].indexOf(token)>=0&&window._mdSection!==token)mdShowSection(token);
+    }
+  }catch(_){}
+  window._tabRestoring=false;
+}
 window.addEventListener('popstate',function(e){
   var name=(e.state&&e.state.screen)||(window.location.pathname.replace('/',''))||'home';
   if(_VALID_SCREENS.indexOf(name)===-1)name='home';
   switchScreen(name,true);
+  _applyTabHash();
 });
 
 async function syncRoster(){
@@ -5239,6 +5282,8 @@ function switchInnerTab(el,id,screenId){
   var content=document.getElementById(id);
   if(content)content.classList.add("active");
   _revealSafety(content);
+  if(screenId==='screen-league')_tabPush(id,'league');
+  else if(screenId==='screen-research')_tabPush(id,'research');
 }
 
 // Safety net: if the scroll-reveal observer hasn't fired for now-visible cards
@@ -10103,6 +10148,7 @@ function mdShowSection(sec){
   if(sec==='history'){try{mdRenderHistory();}catch(_){}}
   if(sec==='friends'){var mn=document.getElementById('mp-name');if(mn&&!mn.value)mn.value=localStorage.getItem('tm_username')||'';}
   window._mdSection=sec;
+  _tabPush(sec,'mock');
 }
 // Clock sounds: a soft low tap at every 10-second mark, an insistent brighter
 // tick each second inside the final 10. Different voices so your ears know
@@ -13447,6 +13493,7 @@ checkShareParam();
   var name=(_VALID_SCREENS.indexOf(p)!==-1)?p:'home';
   history.replaceState({screen:name},'',window.location.href);
   switchScreen(name,true); // always run: home must deactivate the default tool screen
+  try{_applyTabHash();}catch(_){} // deep links like /research#tab-market open on the right tab
 })();
 
 // A friend opened a /mock?room=CODE invite link: jump to the friends section and
@@ -13506,6 +13553,7 @@ function showAnalyzeTab(tab){
   // work with zero setup - this is the core "drop a trade, get an answer" flow.
   if(tab==='analyzer')_warmAnalyzerData();
   if(tab==='ideas')renderIdeasTab();
+  _tabPush(tab==='ideas'?'ideas':'analyzer','analyze');
 }
 function _warmAnalyzerData(){
   if(Object.keys(allPlayers).length<100&&!window._acLoading){
@@ -13607,8 +13655,10 @@ document.addEventListener('visibilitychange',function(){
 
 // Patch switchScreen to update nav-item-btn active states
 var _origSwitchScreen=switchScreen;
-switchScreen=function(name){
-  _origSwitchScreen(name);
+// _noPush must pass through: popstate restores call switchScreen(name,true),
+// and dropping the flag here made every back press push a new history entry.
+switchScreen=function(name,_noPush){
+  _origSwitchScreen(name,_noPush);
   _revealSafety(document.getElementById('screen-'+name));
   document.querySelectorAll('.nav-item-btn').forEach(function(b){
     b.classList.toggle('active',b.dataset.screen===name);
@@ -13835,6 +13885,7 @@ function switchCommunityTab(tab){
   // The News wire polls for fresh drops while it is open and stops when you
   // leave the tab, so a backgrounded Community tab never keeps fetching.
   _newsPollControl(tab==='news');
+  _tabPush(tab,'community');
 }
 // News used to be its own top-level screen reached from the "More" menu. With
 // "More" gone, it lives as a tab inside Community. Its markup still ships in the

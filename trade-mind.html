@@ -1001,6 +1001,7 @@ async function loadLeague(lid,name,rosters,season){
   document.getElementById("league-name").textContent=name||"League";
   document.getElementById("league-meta").textContent=(rosters||"?")+" teams - "+season+" - "+myRoster.length+" players, "+myPicks.length+" picks";
   setStatus("");
+  _navPush("builder");
 }
 
 function po(pos){ return {QB:0,RB:1,WR:2,TE:3}[pos]!==undefined?{QB:0,RB:1,WR:2,TE:3}[pos]:9; }
@@ -1011,6 +1012,7 @@ function resetAll(){
   document.getElementById("league-panel").style.display="block";
   document.getElementById("login-panel").style.display="block";
   leagueId=null; myRoster=[]; oppRoster=[]; myPicks=[]; oppPicks=[];
+  _navPush("");
 }
 
 function loadOppRoster(){
@@ -1348,6 +1350,7 @@ function runAnalysis(){
   lastResult={give:give,get:get,profile:p.name,acc:acc,ktcGap:hasKtc?ktcGap:null,giveKtc:giveKtc,getKtc:getKtc,headline:headline,timestamp:Date.now(),leagueId:leagueId};
   var panel=document.getElementById("result-panel");
   panel.classList.add("visible");
+  _navPush("result");
   panel.scrollIntoView({behavior:"smooth",block:"start"});
   document.getElementById("verdict-headline").textContent=headline;
   document.getElementById("verdict-body").innerHTML=bodyText;
@@ -1547,6 +1550,49 @@ function checkShareParam(){
   }catch(e){}
 }
 
+// History sync: every internal view change pushes a descriptive hash so the
+// browser back button walks views instead of leaving the site. Restores run
+// with _navRestoring set, so they never push again and cannot loop.
+function _navPush(token){
+  if(window._navRestoring)return;
+  var cur=window.location.hash.slice(1);
+  if(cur===token)return;
+  if(!cur&&!token)return;
+  try{history.pushState(null,'',token?'#'+token:window.location.pathname+window.location.search);}catch(_){}
+}
+function _navToken(){
+  // token for the analyzer tab's current sub-view
+  var bp=document.getElementById('builder-panel');
+  var rp=document.getElementById('result-panel');
+  if(bp&&bp.style.display==='block')return (rp&&rp.classList.contains('visible'))?'result':'builder';
+  return '';
+}
+function _applyView(){
+  var h=window.location.hash.slice(1);
+  window._navRestoring=true;
+  try{
+    var tabId=h==='history'?'tab-history':h==='leaderboard'?'tab-leaderboard':'tab-analyzer';
+    var order={'tab-analyzer':0,'tab-history':1,'tab-leaderboard':2};
+    var tabs=document.querySelectorAll('.tab');
+    var activeContent=document.querySelector('.tab-content.active');
+    if(!activeContent||activeContent.id!==tabId)switchTab(tabs[order[tabId]],tabId);
+    if(tabId==='tab-analyzer'){
+      // builder and result views only make sense while a league is loaded
+      var builder=(h==='builder'||h==='result')&&!!leagueId;
+      var bp=document.getElementById('builder-panel');
+      var lp=document.getElementById('login-panel');
+      var gp=document.getElementById('league-panel');
+      var rp=document.getElementById('result-panel');
+      if(bp)bp.style.display=builder?'block':'none';
+      if(lp)lp.style.display=builder?'none':'block';
+      if(gp)gp.style.display=builder?'none':(gp.querySelector('.league-card')?'block':'none');
+      if(rp)rp.classList.toggle('visible',h==='result'&&builder);
+    }
+  }catch(_){}
+  window._navRestoring=false;
+}
+window.addEventListener('popstate',_applyView);
+
 function switchTab(el,id){
   document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
   document.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active");});
@@ -1555,6 +1601,7 @@ function switchTab(el,id){
   if(content)content.classList.add("active");
   if(id==="tab-history")renderHistory();
   if(id==="tab-leaderboard")renderLeaderboard();
+  _navPush(id==="tab-history"?"history":id==="tab-leaderboard"?"leaderboard":_navToken());
 }
 
 function showTab(name){
@@ -1568,10 +1615,12 @@ function showTab(name){
   contents.forEach(function(cv,i){cv.classList.toggle("active",i===idx);});
   if(name==="history")renderHistory();
   if(name==="leaderboard")renderLeaderboard();
+  _navPush(name==="history"?"history":name==="leaderboard"?"leaderboard":_navToken());
 }
 
 function newTrade(){
   document.getElementById("result-panel").classList.remove("visible");
+  _navPush("builder");
   document.getElementById("builder-panel").scrollIntoView({behavior:"smooth"});
   document.querySelectorAll("#give-players input,#get-players input").forEach(function(i){i.value="";});
   answers.fill(null);currentQ=0;
@@ -1590,6 +1639,10 @@ function newTrade(){
 
 renderHistory();
 checkShareParam();
+// Deep link support: opening the page with #history or #leaderboard lands on
+// that tab. Builder or result hashes fall back to the start view because no
+// league is loaded yet.
+if(window.location.hash)_applyView();
 </script>
 
 </body>
