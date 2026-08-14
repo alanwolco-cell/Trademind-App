@@ -1103,7 +1103,8 @@ function getKtcValue(name, sleeperId){
   // through to the substring matcher and hit FantasyCalc's "2026 pick 1.01" -
   // every round-1 pick was priced as the 1.01, round 2 as the 1.02, and so on.
   if(/round\s*\d|pick/i.test(name)){
-    var pm=norm.match(/(\d{4})\s*round\s*(\d)/)||norm.match(/(\d{4})\s*(\d)(?:st|nd|rd|th)/);
+    // two digits: "2027 Round 10" used to capture the 1 and get priced as a first
+    var pm=norm.match(/(\d{4})\s*round\s*(\d{1,2})/)||norm.match(/(\d{4})\s*(\d{1,2})(?:st|nd|rd|th)/);
     if(pm){
       var pYr=pm[1],pRd=pm[2];
       var ck=pYr+':'+pRd;
@@ -3714,7 +3715,8 @@ function _inferFromHistoryRaw(roster,rosterId,s){
 function renderLeagueTrades(){
   renderLeaguePersonalities();
   // a report built for a different league must not stay on screen after a switch
-  if(typeof LX !== 'undefined' && LX && LX.built && LX.lid !== leagueId){
+  if(typeof LX !== 'undefined' && LX && LX.built &&
+     (LX.lid !== leagueId || LX.mode !== (typeof leagueMode !== 'undefined' ? leagueMode : ''))){
     LX.built = false; LX.teams = null; LX.deals = null; LX.open = {};
     var _lxo = document.getElementById('lx-out');
     if(_lxo) _lxo.innerHTML = '';
@@ -6055,10 +6057,12 @@ function _lxLeavesShort(t, out, incoming){
   Object.keys(t.req).forEach(function(ps){
     var need = t.req[ps];
     var before = (t.inv[ps] || []).filter(function(p){ return p.v >= LX_BAR; }).length;
-    if(before < need) return;                       // already short, the deal is not the cause
     var after = (t.inv[ps] || []).filter(function(p){ return !gone[p.id] && p.v >= LX_BAR; }).length
       + incoming.filter(function(p){ return !p.pick && p.pos === ps && p.v >= LX_BAR; }).length;
-    if(after < need) short.push(ps);
+    // Flag it when the deal takes them below the line OR digs an existing hole
+    // deeper. "Not the cause" is not the same as "not worse", and skipping the
+    // already-short case stayed quiet exactly where the roster was most fragile.
+    if(after < need && after < before) short.push(ps);
   });
   return short;
 }
@@ -6163,7 +6167,7 @@ function lxRun(){
       LX.teams = lxBuildTeams();
       LX.deals = lxBuildDeals(LX.teams);
       LX.built = true;
-      LX.lid = leagueId;
+      LX.lid = leagueId; LX.mode = (typeof leagueMode !== 'undefined' ? leagueMode : '');
       lxRender();
     }catch(e){
       host.innerHTML = '<div class="empty-state">Could not build the report: ' + _lxEsc(e && e.message) + '</div>';
@@ -6272,6 +6276,17 @@ var OFR = { rid: null, want: [], give: [] };
 // who would pay you least, which is backwards: what matters when you are the
 // one being asked is how readily they close deals and how badly they need help
 // this season.
+// ONE builder for your side of the desk. This existed twice, and when an index
+// was added to the pick ids in one copy and not the other, the chips you clicked
+// stopped matching the pool they were resolved against: your own picks silently
+// vanished from the ask. Two functions that must agree is a bug waiting to happen,
+// so there is now only one. The index keeps two picks of the same name apart.
+function _ofrMyAssets(){
+  return _tgtMyAssets().map(function(a, i){
+    return { id: a.id || ('pk:' + i + ':' + a.name), name: a.name, pos: a.pos, v: a.v, pick: !!a.pick };
+  });
+}
+
 function _ofrAskPremium(rosterId){
   var base = { mult: 1.08, why: '', who: '' };
   try{
@@ -6321,7 +6336,7 @@ function ofrPickTeam(rid, keep){
   if(!body) return;
   if(!OFR.rid){ body.innerHTML = ''; return; }
 
-  var mineAssets = _tgtMyAssets().map(function(a){ return { id: a.id || ('pk:' + a.name), name: a.name, pos: a.pos, v: a.v, pick: !!a.pick }; });
+  var mineAssets = _ofrMyAssets();
   var theirR = leagueRosters.find(function(x){ return x.roster_id === OFR.rid; });
   var theirs = ((theirR && theirR.players) || []).map(function(pid){
     var ap = allPlayers[pid] || {};
@@ -6358,7 +6373,7 @@ function ofrEvaluate(){
     if(hint) hint.textContent = 'Tick whoever they asked for. Add their offer if they already made one.';
     return;
   }
-  var mineAssets = _tgtMyAssets().map(function(a, i){ return { id: a.id || ('pk:' + i + ':' + a.name), name: a.name, pos: a.pos, v: a.v, pick: !!a.pick }; });
+  var mineAssets = _ofrMyAssets();
   var theirR = leagueRosters.find(function(x){ return x.roster_id === OFR.rid; });
   var theirs = ((theirR && theirR.players) || []).map(function(pid){
     var ap = allPlayers[pid] || {};
@@ -6442,14 +6457,11 @@ function ofrEvaluate(){
   var askedFor = {}; want.forEach(function(p){ askedFor[p.id] = 1; });
   var pool = mineAssets.filter(function(a){ return !askedFor[a.id]; }).sort(function(a, b){ return b.v - a.v; });
   var alt = _tgtSearch(pool, theirBar, _tgtTheirNeed(OFR.rid));
-  var wantIds = {}; want.forEach(function(p){ wantIds[p.id] = 1; });
   var options = [];
   [['Cheapest way to say yes', alt.cheap], ['The clean version', alt.fair]].forEach(function(pair){
     if(!pair[1]) return;
     var cost = pair[1].pkg.reduce(function(s, p){ return s + p.v; }, 0);
     if(cost >= wantVal * 0.99) return;                 // not actually cheaper
-    var same = pair[1].pkg.every(function(p){ return wantIds[p.id]; }) && pair[1].pkg.length === want.length;
-    if(same) return;
     var ok2 = pair[1].pkg.map(function(p){ return p.id; }).sort().join('|');
     if(options.some(function(o){ return o.key === ok2; })) return;
     options.push({ label: pair[0], pkg: pair[1].pkg, cost: cost, key: ok2 });
