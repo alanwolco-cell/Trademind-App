@@ -1246,6 +1246,15 @@ async function loadLeague(lid,name,rosters,season){
     var drs=await sleeperGet("/league/"+lid+"/drafts").catch(function(){return [];});
     window._doneDraftSeasons={};
     (drs||[]).forEach(function(d){if(d&&d.status==='complete'&&d.season)window._doneDraftSeasons[parseInt(d.season)]=1;});
+    // How many rounds THIS league's rookie draft actually has. We were assuming
+    // four for everyone, so a league with five or six rounds simply never saw
+    // its later picks - they existed on Sleeper and not here.
+    var _rr=0;
+    (drs||[]).forEach(function(d){
+      var n=d&&d.settings&&parseInt(d.settings.rounds);
+      if(n>0&&n<=10&&n>_rr)_rr=n;
+    });
+    window._draftRounds=_rr||0;
   }catch(_){window._doneDraftSeasons={};}
 
   if(rawPlayers){
@@ -2724,10 +2733,21 @@ function buildPicksForRoster(rosterObj,tradedPicks,season){
   var rid=rosterObj.roster_id;
   var picks=[];
   var curYear=parseInt(season)||2026;
-  // Own picks: rounds 1-4 for next 2 seasons unless traded away
-  for(var yr=curYear;yr<=curYear+1;yr++){
+  // How far out and how deep this league actually trades. Both used to be
+  // hardcoded (two seasons, four rounds) and dynasty rosters lost real assets
+  // because of it: Sleeper carries three future drafts by default, and plenty
+  // of leagues run five- or six-round rookie drafts. Take the league's own
+  // numbers, and widen to whatever its traded-pick ledger proves it uses.
+  var maxRnd=Math.max(4, parseInt(window._draftRounds)||0);
+  var lastYr=curYear+2;
+  (tradedPicks||[]).forEach(function(p){
+    var y=parseInt(p.season), r=parseInt(p.round);
+    if(y>lastYr&&y<=curYear+6)lastYr=y;
+    if(r>maxRnd&&r<=10)maxRnd=r;
+  });
+  for(var yr=curYear;yr<=lastYr;yr++){
     if(window._doneDraftSeasons&&window._doneDraftSeasons[yr])continue; // that draft already happened
-    for(var rnd=1;rnd<=4;rnd++){
+    for(var rnd=1;rnd<=maxRnd;rnd++){
       // Check if this pick has been traded away
       var traded=tradedPicks.find(function(p){
         return p.roster_id===rid&&parseInt(p.season)===yr&&p.round===rnd&&p.owner_id!==rid;
