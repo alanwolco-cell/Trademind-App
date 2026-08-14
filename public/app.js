@@ -5453,6 +5453,29 @@ var TGT = { rosterId: null, targets: [] };
 var TGT_PREMIUM = 1.08;
 var TGT_PARTS_DISCOUNT = 0.06;   // per extra piece, capped below
 
+// ...but a flat premium prices every manager the same, and they are not. The
+// app already reads each rival - archetype, two seasons of their real trades,
+// their record - into an attachment score (how hard they cling to their own
+// players) and an acceptance lean. A hoarder with one trade in two years does
+// not sell at the same number as someone who flips his roster every August.
+// Attachment carries the move; acceptance nudges it. Bounds are deliberate:
+// never below sticker (nobody gifts a starter) and never past a quarter over
+// (past that you are not negotiating, you are overpaying).
+function _tgtPremiumFor(rosterId){
+  var base = { mult: TGT_PREMIUM, why: '', who: '' };
+  try{
+    var r = leagueRosters.find(function(x){ return x.roster_id === rosterId; });
+    if(!r) return base;
+    var prof = inferOppProfileFromHistory(r, rosterId);
+    if(!prof || !prof.boosts) return base;
+    var st = (typeof tradeStats !== 'undefined' && tradeStats) ? tradeStats[rosterId] : null;
+    var attach = 46 + (prof.boosts.attachment || 0) + (st ? (st.tradeCount <= 1 ? 12 : st.tradeCount >= 5 ? -8 : 0) : 0);
+    var mult = TGT_PREMIUM + (attach - 46) * 0.0030 - (prof.boosts.acceptance || 0) * 0.0015;
+    mult = Math.max(1.02, Math.min(1.24, mult));
+    return { mult: mult, why: prof.why || '', who: prof.name || '' };
+  }catch(_){ return base; }
+}
+
 function _tgtVal(p){ return p.pick ? getKtcValue(p.name, null) : (ktcById[p.id] || 0); }
 
 // what a package is WORTH TO THEM: raw value minus the friction of extra parts
@@ -5583,6 +5606,38 @@ function _tgtSearch(assets, ask, need){
   return best;
 }
 
+
+// What the deal does to YOUR starting lineup. A package that "wins on value"
+// while leaving you one injury from starting nobody at receiver is not a win,
+// and the tool should say so before you send it.
+function _tgtRosterAfter(pkg, targets){
+  try{
+    var mine = leagueRosters.find(function(r){ return r.owner_id === userId; });
+    if(!mine) return null;
+    var gone = {}; pkg.forEach(function(p){ if(p.id) gone[p.id] = 1; });
+    var startable = { QB:0, RB:0, WR:0, TE:0 }, before = { QB:0, RB:0, WR:0, TE:0 };
+    // "startable" = the tier a real lineup leans on, not every warm body
+    var BAR = 2200;
+    (mine.players || []).forEach(function(pid){
+      var ap = allPlayers[pid]; if(!ap || before[ap.pos] == null) return;
+      if((ktcById[pid] || 0) < BAR) return;
+      before[ap.pos]++;
+      if(!gone[pid]) startable[ap.pos]++;
+    });
+    (targets || []).forEach(function(pid){
+      var ap = allPlayers[pid]; if(!ap || startable[ap.pos] == null) return;
+      if((ktcById[pid] || 0) >= BAR) startable[ap.pos]++;
+    });
+    var lf = (typeof leagueFormat !== 'undefined' && leagueFormat) ? leagueFormat : {};
+    var req = { QB: lf.hasSuperFlex ? 2 : (lf.numQBs || 1), RB: lf.numRBs || 2, WR: lf.numWRs || 2, TE: lf.numTEs || 1 };
+    var holes = [], thin = [];
+    ['QB','RB','WR','TE'].forEach(function(ps){
+      if(startable[ps] < req[ps]) holes.push({ pos: ps, have: startable[ps], need: req[ps] });
+      else if(startable[ps] === req[ps] && before[ps] > req[ps]) thin.push(ps);
+    });
+    return { holes: holes, thin: thin, after: startable };
+  }catch(_){ return null; }
+}
 function tgtBuild(){
   var out = document.getElementById('tgt-out');
   var hint = document.getElementById('tgt-hint');
@@ -5597,7 +5652,8 @@ function tgtBuild(){
     return { id: pid, name: ap.name || pid, pos: ap.pos || '?', v: ktcById[pid] || 0 };
   });
   var targetVal = got.reduce(function(s,p){ return s + p.v; }, 0);
-  var ask = targetVal * TGT_PREMIUM;
+  var prem = _tgtPremiumFor(TGT.rosterId);
+  var ask = targetVal * prem.mult;
   if(hint) hint.innerHTML = 'Going after <b>' + got.map(function(p){ return String(p.name).replace(/</g,'&lt;'); }).join(' + ') +
     '</b> &middot; <span onclick="tgtClear()" style="color:var(--accent-bright);cursor:pointer">clear</span>';
 
@@ -5624,7 +5680,14 @@ function tgtBuild(){
     return;
   }
   var pc = { QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)', PK:'var(--accent-bright)' };
-  out.innerHTML = '<div class="tgt-ask">You are asking for <b>' + (targetVal>=1000?(targetVal/1000).toFixed(1)+'k':targetVal) + '</b> of value. Here is what it takes.</div>' +
+  var whoLine = '';
+  if(prem.mult >= TGT_PREMIUM + 0.03)
+    whoLine = '<div class="tgt-who tgt-who-hard">' + String(getRosterName(TGT.rosterId)).replace(/</g,'&lt;') + ' holds on tight' +
+      (prem.why ? ' - ' + String(prem.why).replace(/</g,'&lt;') : '') + '. Expect to pay over the odds.</div>';
+  else if(prem.mult <= TGT_PREMIUM - 0.03)
+    whoLine = '<div class="tgt-who tgt-who-soft">' + String(getRosterName(TGT.rosterId)).replace(/</g,'&lt;') + ' deals often' +
+      (prem.why ? ' - ' + String(prem.why).replace(/</g,'&lt;') : '') + '. You will not need to overpay here.</div>';
+  out.innerHTML = whoLine + '<div class="tgt-ask">You are asking for <b>' + (targetVal>=1000?(targetVal/1000).toFixed(1)+'k':targetVal) + '</b> of value. Here is what it takes.</div>' +
     cards.map(function(c, i){
       var b = c.b;
       var pieces = b.pkg.map(function(p){
@@ -5636,12 +5699,21 @@ function tgtBuild(){
         : edge < ask * 0.12 ? 'A little over their line. This is the one that usually gets a yes.'
         : 'Comfortably over. Hard for them to say no.';
       var fitTxt = b.fit ? ' It also fills a hole on their roster, which matters more than the numbers.' : '';
+      var health = _tgtRosterAfter(b.pkg, TGT.targets);
+      var warn = '';
+      if(health && health.holes.length){
+        warn = '<div class="tgt-warn">After this you would start ' +
+          health.holes.map(function(h){ return h.have + ' ' + h.pos + (h.have === 1 ? '' : 's') + ' where your lineup needs ' + h.need; }).join(' and ') +
+          '. The value works; your Sunday might not.</div>';
+      } else if(health && health.thin.length){
+        warn = '<div class="tgt-thin">Leaves you exactly at the limit at ' + health.thin.join(' and ') + ' - no cover for a bye or an injury.</div>';
+      }
       return '<div class="tgt-card">' +
         '<div class="tgt-card-h"><span class="tgt-kind">' + c.title + '</span>' +
           '<button class="btn-sm" onclick="tgtLoad(' + i + ')">Open in the analyzer &rarr;</button></div>' +
         '<div class="tgt-sub">' + c.sub + '</div>' +
         '<div class="tgt-pieces">' + pieces + '</div>' +
-        '<div class="tgt-read">' + read + fitTxt + '</div>' +
+        '<div class="tgt-read">' + read + fitTxt + '</div>' + warn +
       '</div>';
     }).join('');
   window._tgtCards = cards;

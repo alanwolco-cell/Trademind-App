@@ -812,3 +812,8 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   .tgt-chip{font-size:13px;min-height:40px}
   .tgt-card-h{flex-direction:column;align-items:flex-start}
 }
+.tgt-who{font-size:12.5px;line-height:1.5;padding:9px 12px;border-radius:9px;margin-bottom:10px}
+.tgt-who-hard{background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.28);color:var(--text)}
+.tgt-who-soft{background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.28);color:var(--text)}
+.tgt-warn{margin-top:8px;font-size:12.5px;line-height:1.5;color:#f87171;border-top:1px solid var(--border);padding-top:8px}
+.tgt-thin{margin-top:8px;font-size:12.5px;line-height:1.5;color:var(--yellow);border-top:1px solid var(--border);padding-top:8px}
