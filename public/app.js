@@ -5532,7 +5532,11 @@ function _tgtMyAssets(){
   try{
     buildPicksForRoster(mine, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
       var v = getKtcValue(pk.name, null);
-      if(v > 0) out.push({ id: null, pick: true, name: pk.name, pos: 'PK', team: '', v: v });
+      // Keep `name` exactly as the valuation parser expects, and carry a separate
+      // label for the screen: four chips all reading "2027 Round 3 (via trade)"
+      // are impossible to tell apart, and they are four different picks.
+      if(v > 0) out.push({ id: null, pick: true, name: pk.name, pos: 'PK', team: '', v: v,
+        from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
     });
   }catch(_){}
   return out.sort(function(a,b){ return b.v - a.v; });
@@ -6283,7 +6287,7 @@ var OFR = { rid: null, want: [], give: [] };
 // so there is now only one. The index keeps two picks of the same name apart.
 function _ofrMyAssets(){
   return _tgtMyAssets().map(function(a, i){
-    return { id: a.id || ('pk:' + i + ':' + a.name), name: a.name, pos: a.pos, v: a.v, pick: !!a.pick };
+    return { id: a.id || ('pk:' + i + ':' + a.name), name: a.name, disp: a.disp || a.name, from: a.from || '', team: a.team || '', pos: a.pos, v: a.v, pick: !!a.pick };
   });
 }
 
@@ -6317,14 +6321,61 @@ function ofrRender(){
   if(OFR.rid) ofrPickTeam(OFR.rid, true);
 }
 
+// Grouped by position, best first inside each group, with a face on every row.
+// A single value-sorted wrap of text chips mixed quarterbacks, backs and draft
+// picks together, so finding one name meant reading all thirty of them.
+var OFR_GROUPS = [['QB','Quarterbacks'],['RB','Running backs'],['WR','Receivers'],['TE','Tight ends'],['PK','Draft picks']];
+
+function _ofrFace(p){
+  if(p.pick){
+    var rd = (p.name.match(/round\s*(\d{1,2})/i) || [])[1] || '?';
+    var yr = (p.name.match(/(\d{4})/) || [])[1] || '';
+    return '<span class="ofr-pk"><b>' + rd + '</b><i>' + yr.slice(2) + '</i></span>';
+  }
+  return '<img class="ofr-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="">';
+}
+
+function _ofrCard(p, side){
+  var on = OFR[side].indexOf(p.id) >= 0;
+  var meta = p.pick ? (p.from ? 'from ' + p.from : 'your own pick')
+    : ((p.pos || '') + (p.team && p.team !== 'FA' ? ' · ' + p.team : ''));
+  return '<button class="ofr-card' + (on ? ' on' : '') + '" onclick="ofrToggle(\'' + side + '\',\'' + p.id + '\')">'
+    + _ofrFace(p)
+    + '<span class="ofr-txt"><span class="ofr-nm">' + _lxEsc(p.disp || p.name) + '</span>'
+    + '<span class="ofr-meta"><span class="ofr-pos ofr-' + (p.pick ? 'PK' : (p.pos || 'PK')) + '">' + _lxEsc(meta) + '</span>'
+    + '<span class="ofr-val">' + (p.v ? Math.round(p.v).toLocaleString() : '') + '</span></span></span>'
+    + '<span class="ofr-tick"></span></button>';
+}
+
 function _ofrList(players, side){
-  var pc = { QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)' };
-  return players.map(function(p){
-    var on = OFR[side].indexOf(p.id) >= 0;
-    return '<button class="tgt-chip' + (on ? ' on' : '') + '" onclick="ofrToggle(\'' + side + '\',\'' + p.id + '\')">'
-      + '<span class="tgt-pos" style="color:' + (pc[p.pos] || 'var(--muted)') + '">' + (p.pos || 'PK') + '</span>'
-      + '<span class="tgt-nm">' + _lxEsc(p.name) + '</span></button>';
-  }).join('');
+  var q = ((OFR.q && OFR.q[side]) || '').toLowerCase().trim();
+  var shown = q ? players.filter(function(p){ return String(p.disp || p.name).toLowerCase().indexOf(q) >= 0; }) : players;
+  var out = '<div class="ofr-search"><input type="text" placeholder="Filter by name..." value="' + _lxEsc(q)
+    + '" oninput="ofrFilter(\'' + side + '\', this.value)"></div>';
+  if(!shown.length) return out + '<div class="ofr-empty">Nobody matches that.</div>';
+  var seen = {};
+  OFR_GROUPS.forEach(function(g){
+    var inG = shown.filter(function(p){ return (p.pick ? 'PK' : p.pos) === g[0]; })
+                   .sort(function(a, b){ return b.v - a.v; });
+    inG.forEach(function(p){ seen[p.id] = 1; });
+    if(!inG.length) return;
+    out += '<div class="ofr-grp">' + g[1] + ' <span>' + inG.length + '</span></div>'
+      + '<div class="ofr-grid">' + inG.map(function(p){ return _ofrCard(p, side); }).join('') + '</div>';
+  });
+  var rest = shown.filter(function(p){ return !seen[p.id]; }).sort(function(a, b){ return b.v - a.v; });
+  if(rest.length) out += '<div class="ofr-grp">Other <span>' + rest.length + '</span></div>'
+    + '<div class="ofr-grid">' + rest.map(function(p){ return _ofrCard(p, side); }).join('') + '</div>';
+  return out;
+}
+
+function ofrFilter(side, txt){
+  if(!OFR.q) OFR.q = { want: '', give: '' };
+  OFR.q[side] = txt || '';
+  var host = document.getElementById('ofr-list-' + side);
+  if(!host) return;
+  host.innerHTML = _ofrList(side === 'want' ? (OFR._mine || []) : (OFR._theirs || []), side);
+  var inp = host.querySelector('.ofr-search input');
+  if(inp){ inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(_){} }
 }
 
 function ofrPickTeam(rid, keep){
@@ -6345,23 +6396,58 @@ function ofrPickTeam(rid, keep){
   try{
     buildPicksForRoster(theirR, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
       var v = getKtcValue(pk.name, null);
-      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true });
+      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true,
+        from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
     });
   }catch(_){}
 
-  body.innerHTML = '<div class="ofr-col"><div class="ofr-lbl">What they want from you</div><div class="tgt-roster">' + _ofrList(mineAssets, 'want') + '</div></div>'
-    + '<div class="ofr-col"><div class="ofr-lbl">What they are offering <span class="lx-dim">(leave empty to ask what you should demand)</span></div><div class="tgt-roster">' + _ofrList(theirs, 'give') + '</div></div>';
+  // kept so the filter can re-render without rebuilding rosters and re-pricing picks
+  OFR._mine = mineAssets; OFR._theirs = theirs;
+  if(!OFR.q) OFR.q = { want: '', give: '' };
+  body.innerHTML = '<div class="ofr-col"><div class="ofr-lbl">What they want from you</div>'
+      + '<div id="ofr-list-want">' + _ofrList(mineAssets, 'want') + '</div></div>'
+    + '<div class="ofr-col"><div class="ofr-lbl">What they are offering <span class="lx-dim">(leave this empty to ask what you should be demanding)</span></div>'
+      + '<div id="ofr-list-give">' + _ofrList(theirs, 'give') + '</div></div>';
   ofrEvaluate();
 }
 
 function ofrToggle(side, pid){
   var i = OFR[side].indexOf(pid);
   if(i >= 0) OFR[side].splice(i, 1); else OFR[side].push(pid);
-  ofrPickTeam(OFR.rid, true);
+  // repaint just the column that changed, keeping the filter and scroll position
+  var host = document.getElementById('ofr-list-' + side);
+  if(host) host.innerHTML = _ofrList(side === 'want' ? (OFR._mine || []) : (OFR._theirs || []), side);
+  else { ofrPickTeam(OFR.rid, true); return; }
+  ofrEvaluate();
 }
 
 function _ofrResolve(ids, pool){
   return ids.map(function(id){ return pool.find(function(p){ return p.id === id; }); }).filter(Boolean);
+}
+
+// The players you tick are candidates, not a fixed package: he wants all of
+// them, so the real question is which ones you actually have to part with.
+// Exhaustive over subsets, capped because 2^n gets away from you fast; past the
+// cap the most valuable pieces are the ones worth deciding about anyway.
+function _ofrSubsets(items){
+  var pool = items.slice().sort(function(a, b){ return b.v - a.v; }).slice(0, 12);
+  var out = [];
+  var n = pool.length, total = 1 << n;
+  for(var m = 1; m < total; m++){
+    var set = [], val = 0;
+    for(var i = 0; i < n; i++) if(m & (1 << i)){ set.push(pool[i]); val += pool[i].v; }
+    out.push({ set: set, val: val });
+  }
+  return out;
+}
+// The least you can hand over and still deserve what they put on the table.
+function _ofrLeanest(want, bar){
+  var best = null;
+  _ofrSubsets(want).forEach(function(c){
+    if(c.val < bar) return;
+    if(!best || c.val < best.val || (c.val === best.val && c.set.length < best.set.length)) best = c;
+  });
+  return best;
 }
 
 function ofrEvaluate(){
@@ -6382,7 +6468,8 @@ function ofrEvaluate(){
   try{
     buildPicksForRoster(theirR, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
       var v = getKtcValue(pk.name, null);
-      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true });
+      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true,
+        from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
     });
   }catch(_){}
 
@@ -6428,6 +6515,18 @@ function ofrEvaluate(){
     } else {
       h += '<div class="lx-none">Nothing on their roster covers that ask on its own. Either they add a pick, or you are better off keeping your guy.</div>';
     }
+    if(want.length > 1){
+      // he wants every one of them, so each smaller combination is its own deal
+      var combos = _ofrSubsets(want).filter(function(c){ return c.set.length < want.length; })
+        .sort(function(a, b){ return b.val - a.val; }).slice(0, 3);
+      if(combos.length){
+        h += '<div class="ofr-sec">Or send fewer of them</div>';
+        h += '<div class="ofr-combos">' + combos.map(function(c){
+          return '<div class="ofr-combo"><span>' + c.set.map(function(p){ return _lxEsc(p.disp || p.name); }).join(' + ')
+            + '</span><b>ask ' + Math.round(c.val * prem).toLocaleString() + '</b></div>';
+        }).join('') + '</div>';
+      }
+    }
     out.innerHTML = h;
     return;
   }
@@ -6447,6 +6546,31 @@ function ofrEvaluate(){
     + ' against a fair ask of ' + Math.round(fairAsk).toLocaleString()
     + ' for ' + want.map(function(p){ return _lxEsc(p.name); }).join(' + ') + '.</div>';
   if(why) h += '<div class="ofr-why">' + _lxEsc(why) + '</div>';
+
+  // Which of the players they asked for do you actually have to include? They
+  // want all of them, but their own offer only buys so much.
+  var theirBarPre = giveVal / prem;
+  var lean = _ofrLeanest(want, theirBarPre);
+  if(lean && lean.set.length < want.length){
+    var keptIds = {}; lean.set.forEach(function(p){ keptIds[p.id] = 1; });
+    var spared = want.filter(function(p){ return !keptIds[p.id]; });
+    // The leanest package is the least THEY would accept, which is not the same
+    // as a good deal for you: if it still costs more than they are putting up,
+    // say so rather than dressing up a loss as a saving.
+    var stillDown = lean.val - giveVal;
+    h += '<div class="ofr-sec">You do not have to send all of them</div>';
+    h += '<div class="lx-deal lx-deal-me"><div class="lx-deal-t">'
+      + (stillDown > 0 ? 'The least they would take, though it still costs you'
+                       : 'This much already earns their offer') + '</div>'
+      + '<div class="lx-deal-b"><span class="lx-out">' + lean.set.map(_lxNm).join(' + ') + '</span>'
+      + '<span class="lx-arrow">&rarr;</span><span class="lx-in">' + give.map(_lxNm).join(' + ') + '</span></div>'
+      + '<div class="lx-deal-w">Keep ' + spared.map(function(p){ return _lxEsc(p.disp || p.name); }).join(' and ')
+      + '. They want ' + (spared.length > 1 ? 'them' : 'him') + ', so ' + (spared.length > 1 ? 'they are' : 'he is')
+      + ' your leverage for the next ask, not filler for this one.'
+      + (stillDown > 0 ? ' Even trimmed this far you are handing over about ' + Math.round(stillDown).toLocaleString()
+          + ' more than they are, so ask them to add before you send it.' : '')
+      + '</div></div>';
+  }
 
   // The counter: keep what they are giving, find the cheapest thing of yours
   // that still clears their bar. This is the "it feels like a lot" answer.
