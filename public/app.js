@@ -6547,6 +6547,9 @@ function ofrEvaluate(){
     + ' for ' + want.map(function(p){ return _lxEsc(p.name); }).join(' + ') + '.</div>';
   if(why) h += '<div class="ofr-why">' + _lxEsc(why) + '</div>';
 
+  var _mineB = leagueRosters.find(function(r){ return r.owner_id === userId; });
+  var myNeedB = _mineB ? _tgtTheirNeed(_mineB.roster_id) : {};
+
   // Which of the players they asked for do you actually have to include? They
   // want all of them, but their own offer only buys so much.
   var theirBarPre = giveVal / prem;
@@ -6570,6 +6573,56 @@ function ofrEvaluate(){
       + (stillDown > 0 ? ' Even trimmed this far you are handing over about ' + Math.round(stillDown).toLocaleString()
           + ' more than they are, so ask them to add before you send it.' : '')
       + '</div></div>';
+  }
+
+  // Better versions of the SAME trade. The offer on the table is a starting
+  // point, not the only shape the deal can take: the gap can be closed by them
+  // adding, or by swapping what comes back for pieces that cost them the same
+  // but actually fit your roster.
+  var better = [];
+  var alreadyGiven = {}; give.forEach(function(p){ alreadyGiven[p.id] = 1; });
+  var theirRest = theirs.filter(function(p){ return !alreadyGiven[p.id]; })
+                        .sort(function(a, b){ return b.v - a.v; });
+  var gap = fairAsk - giveVal;
+  if(gap > 0 && theirRest.length){
+    // the smallest thing they can add that makes it fair, so you ask for one
+    // named player instead of "this is light, add something"
+    var addOn = null;
+    theirRest.forEach(function(p){
+      if(p.v >= gap && (!addOn || p.v < addOn.v)) addOn = p;
+    });
+    if(!addOn){
+      var pairFix = _tgtSearch(theirRest, gap, myNeedB);
+      if(pairFix && pairFix.cheap) better.push({ t: 'Ask them to add', pkg: give.concat(pairFix.cheap.pkg) });
+    } else {
+      better.push({ t: 'Ask them to add ' + _lxEsc(addOn.disp || addOn.name), pkg: give.concat([addOn]) });
+    }
+  }
+  // Same outlay for them, better fit for you. "Better" has to be earned on both
+  // counts: it must be worth at least as much AND plug more of your holes than
+  // what is already on the table. Without the second test this happily offered
+  // two draft picks worth less than the original and called it an upgrade.
+  if(theirRest.length){
+    var swap = _tgtSearch(theirRest, giveVal, myNeedB);
+    if(swap && swap.fair){
+      var swapVal = swap.fair.pkg.reduce(function(a, p){ return a + p.v; }, 0);
+      var sameIds = swap.fair.pkg.map(function(p){ return p.id; }).sort().join('|');
+      var giveIds = give.map(function(p){ return p.id; }).sort().join('|');
+      var fitOf = function(pkg){ return pkg.reduce(function(a, p){ return a + ((myNeedB[p.pos] || 0) > 0 ? 1 : 0); }, 0); };
+      if(sameIds !== giveIds && swapVal >= giveVal && fitOf(swap.fair.pkg) > fitOf(give))
+        better.push({ t: 'Costs them about the same, fills a hole you actually have', pkg: swap.fair.pkg });
+    }
+  }
+  if(better.length){
+    h += '<div class="ofr-sec">Better versions of this trade</div>';
+    better.slice(0, 3).forEach(function(b){
+      var tot = b.pkg.reduce(function(a, p){ return a + p.v; }, 0);
+      h += '<div class="lx-deal"><div class="lx-deal-t">' + b.t + '</div><div class="lx-deal-b">'
+        + '<span class="lx-out">' + want.map(_lxNm).join(' + ') + '</span><span class="lx-arrow">&rarr;</span>'
+        + '<span class="lx-in">' + b.pkg.map(_lxNm).join(' + ') + '</span></div>'
+        + '<div class="lx-deal-w">' + Math.round(tot).toLocaleString() + ' back against a fair ask of '
+        + Math.round(fairAsk).toLocaleString() + '.</div></div>';
+    });
   }
 
   // The counter: keep what they are giving, find the cheapest thing of yours
