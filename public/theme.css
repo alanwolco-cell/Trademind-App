@@ -817,3 +817,52 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .tgt-who-soft{background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.28);color:var(--text)}
 .tgt-warn{margin-top:8px;font-size:12.5px;line-height:1.5;color:#f87171;border-top:1px solid var(--border);padding-top:8px}
 .tgt-thin{margin-top:8px;font-size:12.5px;line-height:1.5;color:var(--yellow);border-top:1px solid var(--border);padding-top:8px}
+
+/* ===== League X-Ray: the whole league read at once ===== */
+.lx-sec{font-family:var(--font-head);font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.08em;margin:20px 0 10px}
+.lx-sec:first-child{margin-top:8px}
+.lx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.lx-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px}
+.lx-card.lx-me{border-color:var(--accent-bright)}
+.lx-head{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
+.lx-nm{font-weight:800;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lx-you{font-size:9px;color:var(--accent-bright);font-weight:800;letter-spacing:.06em}
+.lx-badge{flex-shrink:0;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;border:1px solid}
+.lx-contend{color:var(--green);border-color:var(--green);background:rgba(52,211,153,.10)}
+.lx-fringe{color:var(--accent-bright);border-color:var(--accent-bright);background:rgba(129,140,248,.10)}
+.lx-rebuild{color:#fbbf24;border-color:#fbbf24;background:rgba(251,191,36,.10)}
+.lx-why{font-size:11.5px;color:var(--muted);margin:6px 0 9px;line-height:1.45}
+.lx-line{font-size:12.5px;color:var(--text);line-height:1.5;margin-bottom:4px}
+.lx-line b{color:var(--muted);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-right:5px}
+.lx-dim{color:var(--muted);font-size:11.5px}
+.lx-more{font-size:11px;font-weight:700;color:var(--accent-bright);cursor:pointer;margin-top:8px;text-align:right}
+.lx-pos{font-size:9px;font-weight:800;letter-spacing:.04em;vertical-align:middle}
+.lx-QB{color:var(--pos-qb)}.lx-RB{color:var(--pos-rb)}.lx-WR{color:var(--pos-wr)}.lx-TE{color:var(--pos-te)}
+.lx-deal{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--border2);
+  border-radius:var(--radius);padding:11px 13px;margin-bottom:8px}
+.lx-deal-me{border-left-color:var(--accent-bright)}
+.lx-deal-t{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px}
+.lx-deal-b{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13px;line-height:1.5}
+.lx-out{color:#f87171}.lx-in{color:var(--green)}
+.lx-arrow{color:var(--muted);flex-shrink:0}
+.lx-deal-w{font-size:11.5px;color:var(--muted);margin-top:6px}
+.lx-none{font-size:12.5px;color:var(--muted);padding:12px 2px;line-height:1.5}
+.lx-foot{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* ===== Offer desk ===== */
+.ofr-col{margin-bottom:14px}
+.ofr-lbl{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.ofr-verdict{font-size:14px;font-weight:700;line-height:1.45;padding:11px 13px;border-radius:var(--radius);
+  border:1px solid var(--border);margin-bottom:9px}
+.ofr-good{color:var(--green);border-color:var(--green);background:rgba(52,211,153,.08)}
+.ofr-bad{color:#f87171;border-color:#f87171;background:rgba(248,113,113,.08)}
+.ofr-neutral{color:var(--text);border-color:var(--border2);background:var(--surface3)}
+.ofr-math{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:8px}
+.ofr-why{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px;font-style:italic}
+.ofr-sec{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px}
+@media(max-width:640px){
+  .lx-grid{grid-template-columns:1fr}
+  .lx-deal-b{font-size:12.5px;gap:6px}
+}

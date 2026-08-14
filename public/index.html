@@ -663,6 +663,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="tgt-tagline">Name the player you want off a rival roster. We will tell you what it costs.</div>
           <div id="tgt-panel"></div>
         </div>
+        <!-- They messaged you. Work out the answer before you reply. -->
+        <div class="tgt-block">
+          <div class="tgt-title">They messaged you</div>
+          <div class="tgt-tagline">Tick who they asked for. If they already named a price, tick that too and we will tell you whether it is fair and what to send back.</div>
+          <div id="ofr-panel"></div>
+        </div>
         <div id="ideas-list-tab"><div class="ideas-empty">Load your league first, then come back here for ideas.</div></div>
       </div>
     </div>
@@ -690,6 +696,16 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
     <!-- LEAGUE TRADES TAB -->
     <div id="tab-league-trades" class="tab-content">
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <div>
+            <div style="font-size:14px;font-weight:600">Full league analysis</div>
+            <div style="font-size:12px;color:var(--muted)">Every roster read at once: who is contending, who is selling, what each one is short of and the trades that actually make sense right now.</div>
+          </div>
+          <button class="btn-load" style="width:auto;padding:10px 22px;flex-shrink:0" onclick="lxRun()">Run full analysis</button>
+        </div>
+        <div id="lx-out"></div>
+      </div>
       <div class="card" style="margin-bottom:12px">
         <div style="font-size:14px;font-weight:600;margin-bottom:4px">League personalities</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:1rem">Every manager classified by their roster shape and trade behavior. Screenshot it, post it in the group chat, start the argument.</div>
@@ -1672,7 +1688,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026081303"></script>
+<script src="/app.js?v=2026081304"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

@@ -135,6 +135,9 @@ let leagueTrades=[];      // all completed trade transactions this season
 let tradeStats={};        // per-roster behavioral stats computed from leagueTrades
 let leagueDraftId=null;
 let ktcValues={};     // byName: {name: value}
+let _pickValCache={};  // generic round-N pick value, memoised: the lookup below scans every
+                       // key in ktcValues and gets called tens of thousands of times per
+                       // trade search, which was freezing the UI for over a second
 let ktcById={};       // byId: {sleeperId: value}
 let ktcFull={};       // byId: {sleeperId: {value, overallRank, positionRank, trend30Day, espnId, ...}}
 let leagueFormat={totalTeams:12,ppr:1,hasSuperFlex:false,has2QB:false,flexCount:1,recFlexCount:0,numQBs:1,numRBs:2,numWRs:2,numTEs:1,benchSpots:6,scoringLabel:'PPR',formatLabel:'Standard'};
@@ -495,7 +498,7 @@ async function fetchKtcValues(numQbs, pprVal, isDynasty, _retryReq){
     // stale response so dynasty values can't overwrite the redraft ones you switched to.
     if(_req!==_ktcReq)return;
     // Reset so stale dynasty values don't bleed into redraft or vice versa
-    ktcById={}; ktcValues={}; ktcFull={};
+    ktcById={}; ktcValues={}; ktcFull={}; _pickValCache={};
     Object.assign(ktcById, data.byId);
     if(data.byName) Object.assign(ktcValues, data.byName);
     if(data.byIdFull) Object.assign(ktcFull, data.byIdFull);
@@ -1103,13 +1106,15 @@ function getKtcValue(name, sleeperId){
     var pm=norm.match(/(\d{4})\s*round\s*(\d)/)||norm.match(/(\d{4})\s*(\d)(?:st|nd|rd|th)/);
     if(pm){
       var pYr=pm[1],pRd=pm[2];
+      var ck=pYr+':'+pRd;
+      if(_pickValCache[ck]!==undefined) return _pickValCache[ck];
       // market value of a generic round-N pick = the average of that round's slots
       var slotKeys=Object.keys(ktcValues).filter(function(k){return k.indexOf(pYr+' pick '+pRd+'.')===0;});
-      if(slotKeys.length){var pSum=0;slotKeys.forEach(function(k){pSum+=ktcValues[k];});return Math.round(pSum/slotKeys.length);}
+      if(slotKeys.length){var pSum=0;slotKeys.forEach(function(k){pSum+=ktcValues[k];});return (_pickValCache[ck]=Math.round(pSum/slotKeys.length));}
       // that year missing from the feed: same round from any listed year, discounted for distance
       var anyYear=Object.keys(ktcValues).filter(function(k){return /^\d{4} pick \d\./.test(k)&&k.indexOf(' pick '+pRd+'.')>0;});
-      if(anyYear.length){var aSum=0;anyYear.forEach(function(k){aSum+=ktcValues[k];});return Math.round((aSum/anyYear.length)*0.85);}
-      return 0;   // no pick market at all (redraft): a pick is worth nothing here
+      if(anyYear.length){var aSum=0;anyYear.forEach(function(k){aSum+=ktcValues[k];});return (_pickValCache[ck]=Math.round((aSum/anyYear.length)*0.85));}
+      return (_pickValCache[ck]=0);   // no pick market at all (redraft): a pick is worth nothing here
     }
   }
   // 5. First+last name partial match (avoids false positives from single last name)
@@ -3708,6 +3713,12 @@ function _inferFromHistoryRaw(roster,rosterId,s){
 
 function renderLeagueTrades(){
   renderLeaguePersonalities();
+  // a report built for a different league must not stay on screen after a switch
+  if(typeof LX !== 'undefined' && LX && LX.built && LX.lid !== leagueId){
+    LX.built = false; LX.teams = null; LX.deals = null; LX.open = {};
+    var _lxo = document.getElementById('lx-out');
+    if(_lxo) _lxo.innerHTML = '';
+  }
   var el=document.getElementById("league-trades-list");
   if(!el)return;
   if(!leagueTrades.length){
@@ -5648,8 +5659,7 @@ function _tgtRosterAfter(pkg, targets){
       var ap = allPlayers[pid]; if(!ap || startable[ap.pos] == null) return;
       if((ktcById[pid] || 0) >= BAR) startable[ap.pos]++;
     });
-    var lf = (typeof leagueFormat !== 'undefined' && leagueFormat) ? leagueFormat : {};
-    var req = { QB: lf.hasSuperFlex ? 2 : (lf.numQBs || 1), RB: lf.numRBs || 2, WR: lf.numWRs || 2, TE: lf.numTEs || 1 };
+    var req = _lxReq();          // one definition of "a starter", flex included
     var holes = [], thin = [];
     ['QB','RB','WR','TE'].forEach(function(ps){
       if(startable[ps] < req[ps]) holes.push({ pos: ps, have: startable[ps], need: req[ps] });
@@ -5776,8 +5786,703 @@ function _tgtFill(side, n, name, pid, pos){
        if(tag && pos){ tag.textContent = pos; tag.style.visibility = 'visible'; } }catch(_){}
 }
 
+/* ============================================================================
+   LEAGUE X-RAY
+   Reads every roster in the league at once and answers the three things that
+   actually get asked in a group chat:
+     1. who is contending, who is tearing it down, and what does each one want
+     2. "they want my guy - what do I ask for?"
+     3. "they sent me this and it feels like a lot - what do I send back?"
+   Everything here leans on values, ages and trade history already loaded for
+   the league, so it costs one button press and no network calls.
+   ========================================================================== */
+
+var LX = { teams: null, deals: null, open: {}, built: false };
+
+// A player only counts as a real starter above this value. Same bar the trade
+// builder uses for roster health, kept identical on purpose so the two tools
+// never disagree about whether you have a hole.
+var LX_BAR = 2200;
+// Dynasty "prime" runs about 24-27, so 26 is the pivot where a roster stops
+// reading as building and starts reading as win-now. Span is the spread that
+// turns an age gap into a full -1..1 signal.
+var LX_AGE_PIVOT = 26.0, LX_AGE_SPAN = 2.5;
+
+// How many startable players this league actually makes you field. Flex slots
+// were missing here, which quietly mislabelled every flex starter as a spare
+// part: in a 1QB/2RB/3WR/1TE/2FLEX league the real answer is nine starters and
+// this used to return seven, so your RB3 and WR4 were offered as free currency.
+// Flex has no position of its own, so it is spread over the spots that fill it:
+// the receiver-only flex goes to WR, and the open flex alternates WR then RB,
+// which is how flex is started in PPR far more often than not.
+function _lxReq(){
+  var lf = (typeof leagueFormat !== 'undefined' && leagueFormat) ? leagueFormat : {};
+  var req = { QB: lf.hasSuperFlex ? 2 : (lf.numQBs || 1), RB: lf.numRBs || 2, WR: lf.numWRs || 2, TE: lf.numTEs || 1 };
+  req.WR += (lf.recFlexCount || 0);
+  var flex = lf.flexCount || 0;
+  for(var i = 0; i < flex; i++){ if(i % 2 === 0) req.WR++; else req.RB++; }
+  return req;
+}
+
+// Age of the VALUE on a roster, not of the roster. A 22-year-old last man on
+// the bench should not make a win-now team read as young.
+function _lxCoreAge(r){
+  var tot = 0, sum = 0;
+  ((r && r.players) || []).forEach(function(pid){
+    var ap = allPlayers[pid]; if(!ap || !ap.age) return;
+    var v = ktcById[pid] || 0; if(v < 1000) return;
+    tot += v; sum += v * ap.age;
+  });
+  return tot > 0 ? (sum / tot) : null;
+}
+
+function _lxInventory(r){
+  var inv = { QB: [], RB: [], WR: [], TE: [] };
+  ((r && r.players) || []).forEach(function(pid){
+    var ap = allPlayers[pid]; if(!ap || !inv[ap.pos]) return;
+    var v = ktcById[pid] || 0; if(v <= 0) return;
+    inv[ap.pos].push({ id: pid, name: ap.name, pos: ap.pos, team: ap.team, age: ap.age || null, v: v });
+  });
+  Object.keys(inv).forEach(function(k){ inv[k].sort(function(a,b){ return b.v - a.v; }); });
+  return inv;
+}
+
+// Strength = what the required starters are worth. Bench depth is nice but it
+// is not what wins the week, and counting it makes hoarders look like champs.
+function _lxStrength(inv, req){
+  var s = 0;
+  Object.keys(req).forEach(function(ps){
+    (inv[ps] || []).slice(0, req[ps]).forEach(function(p){ s += p.v; });
+  });
+  return s;
+}
+
+function _lxPickBal(rid){
+  var s = (typeof tradeStats !== 'undefined' && tradeStats) ? tradeStats[rid] : null;
+  if(!s) return 0;
+  return (s.picksReceived || 0) - (s.picksGiven || 0);
+}
+
+function _lxClamp(x){ return Math.max(-1, Math.min(1, x)); }
+
+// Holes, thin spots and genuine surplus, measured against what the league
+// actually starts. Surplus is the trade currency: anything above the required
+// starters plus one body of insurance is a player you can afford to move.
+function _lxShape(inv, req){
+  var holes = [], thin = [], surplus = [];
+  Object.keys(req).forEach(function(ps){
+    var list = (inv[ps] || []).filter(function(p){ return p.v >= LX_BAR; });
+    var need = req[ps];
+    if(list.length < need) holes.push({ pos: ps, have: list.length, need: need });
+    else if(list.length === need) thin.push(ps);
+    // keep starters + one insurance body, everything past that is movable
+    list.slice(need + 1).forEach(function(p){ surplus.push(p); });
+  });
+  surplus.sort(function(a,b){ return b.v - a.v; });
+  return { holes: holes, thin: thin, surplus: surplus };
+}
+
+// What a team is shopping for, once you know where it sits in its window.
+function _lxAppetite(win){
+  // the bounds and the label must say the same thing: they used to disagree, so
+  // a 25-year-old collected the rebuild bonus on a card promising "24 and under"
+  if(win === 'contend') return { lo: 25, hi: 30, label: 'proven producers, 25 to 30', wantsPicks: false, sellsPicks: true,
+    gives: 'picks and unproven youth', wants: 'anyone who starts for them this year' };
+  if(win === 'rebuild') return { lo: 21, hi: 24, label: 'players 24 and under, plus picks', wantsPicks: true, sellsPicks: false,
+    gives: 'veterans on the wrong side of the curve', wants: 'young pieces and draft capital' };
+  return { lo: 24, hi: 27, label: 'prime-age players, 24 to 27', wantsPicks: false, sellsPicks: false,
+    gives: 'whoever is blocked on their depth chart', wants: 'a clean upgrade at a starting spot' };
+}
+
+function _lxTeam(r, medStrength){
+  var rid = r.roster_id;
+  var inv = _lxInventory(r);
+  var req = _lxReq();
+  var strength = _lxStrength(inv, req);
+  var coreAge = _lxCoreAge(r);
+  var rec = rosterRecord(rid);
+  var pickBal = _lxPickBal(rid);
+
+  // Four independent reads on the same question, each scaled to -1..1.
+  var recTerm = (rec.games >= 3 && rec.pct != null) ? _lxClamp((rec.pct - 0.5) * 2) : null;
+  var strTerm = medStrength > 0 ? _lxClamp((strength - medStrength) / medStrength) : 0;
+  var ageTerm = coreAge != null ? _lxClamp((coreAge - LX_AGE_PIVOT) / LX_AGE_SPAN) : 0;
+  var pickTerm = _lxClamp(-pickBal / 3);
+
+  // Record is the most honest signal when it exists, so it carries the most
+  // weight. With no games played its share is spread over the other three.
+  var w = { rec: 0.30, str: 0.30, age: 0.22, pick: 0.18 };
+  var score, parts = [];
+  if(recTerm == null){
+    var k = 1 / (w.str + w.age + w.pick);
+    score = (strTerm * w.str + ageTerm * w.age + pickTerm * w.pick) * k;
+  } else {
+    score = recTerm * w.rec + strTerm * w.str + ageTerm * w.age + pickTerm * w.pick;
+  }
+  var win = score >= 0.22 ? 'contend' : (score <= -0.22 ? 'rebuild' : 'fringe');
+
+  if(recTerm != null) parts.push(rec.wins + '-' + rec.losses + (rec.ties ? '-' + rec.ties : '') + ' record');
+  parts.push(strTerm >= 0.12 ? 'a top-heavy starting lineup' : (strTerm <= -0.12 ? 'a starting lineup below league average' : 'a middle-of-the-pack lineup'));
+  if(coreAge != null) parts.push('core age ' + coreAge.toFixed(1));
+  if(pickBal >= 2) parts.push('has been stockpiling picks');
+  else if(pickBal <= -2) parts.push('has been spending picks');
+
+  var shape = _lxShape(inv, req);
+  var prof = null;
+  try{ prof = inferOppProfileFromHistory(r, rid); }catch(_){}
+  var prem = 1.08;
+  try{ prem = _tgtPremiumFor(rid).mult; }catch(_){}
+
+  return {
+    rid: rid, name: getRosterName(rid), isMe: r.owner_id === userId, raw: r,
+    inv: inv, req: req, strength: strength, coreAge: coreAge, rec: rec,
+    pickBal: pickBal, score: score, win: win, why: parts.join(', '),
+    holes: shape.holes, thin: shape.thin, surplus: shape.surplus, noGames: recTerm == null,
+    appetite: _lxAppetite(win), prof: prof, prem: prem
+  };
+}
+
+function lxBuildTeams(){
+  if(!leagueRosters.length) return [];
+  var req = _lxReq();
+  // two passes: strength is only meaningful against the rest of the league
+  var raw = leagueRosters.map(function(r){ return _lxStrength(_lxInventory(r), req); }).sort(function(a,b){ return a - b; });
+  var med = raw.length ? raw[Math.floor(raw.length / 2)] : 0;
+  return leagueRosters.map(function(r){ return _lxTeam(r, med); });
+}
+
+/* --- the deal engine ------------------------------------------------------
+   A trade happens when BOTH managers think they came out ahead, not when a
+   spreadsheet says the values match. So every asset is re-priced through the
+   eyes of the team receiving it: a hole at the position is worth a premium, a
+   position they are already stacked at is worth a discount, and age either
+   fits their window or it does not. On top of that each manager overrates
+   their own guys by exactly the amount the personality model says they do.
+   A deal is only reported when both sides clear their own bar.
+--------------------------------------------------------------------------- */
+
+// How much team t values an incoming asset above or below its market number.
+// What an asset is worth to a team relative to its market price. The question
+// that decides it is whether the player would crack their starting lineup:
+// a body who rides the bench is worth less than market to ANYONE, which is why
+// a positional shortage must not make a team's own backup expensive to trade.
+// Only once a player actually starts do holes, depth and age come into play.
+function _lxFit(t, a){
+  // Memoised per team for the life of one report. What an asset is worth to a
+  // team cannot change while the board is being built, and the search asks the
+  // same question hundreds of thousands of times: 382,800 calls on a 12-team
+  // league, each rebuilding a filtered array, which cost seconds of wall clock.
+  var fc = t._fit || (t._fit = {});
+  var ck = a.id || a.name;
+  if(fc[ck] !== undefined) return fc[ck];
+  if(a.pick) return (fc[ck] = 1 + (t.appetite.wantsPicks ? 0.12 : (t.appetite.sellsPicks ? -0.10 : 0)));
+  var m = 1;
+  // Peers are counted the same way holes are (above the starter bar), because
+  // measuring the two over different populations paid a hole premium to a
+  // player who does not actually fix the hole: a 2,150 QB beating a 2,100
+  // incumbent still leaves a superflex team short.
+  var peers = (t.inv[a.pos] || []).filter(function(p){ return p.id !== a.id && p.v >= LX_BAR; });
+  var need = t.req[a.pos] || 1;
+  var incumbent = peers.length >= need ? peers[need - 1].v : 0;   // worst starter they would bench
+  var stacked = peers.length > need + 1;
+  if(a.v < LX_BAR || a.v <= incumbent){
+    m -= 0.12;                                                    // depth piece, not a starter
+    if(stacked) m -= 0.06;                                        // and they are already deep there
+  } else {
+    // Reaching here means the player would crack their lineup, so the old
+    // discount for a stacked position was pointed the wrong way: it marked
+    // down precisely the upgrade a deep team would pay up for.
+    var hole = t.holes.some(function(h){ return h.pos === a.pos; });
+    var thin = t.thin.indexOf(a.pos) >= 0;
+    m += hole ? 0.15 : (thin ? 0.06 : 0.02);
+  }
+  if(a.age){
+    if(a.age >= t.appetite.lo && a.age <= t.appetite.hi) m += 0.07;
+    else if(a.age < t.appetite.lo - 3 || a.age > t.appetite.hi + 3) m -= 0.07;
+  }
+  return (fc[ck] = m);
+}
+
+function _lxWorthTo(t, pkg){
+  return pkg.reduce(function(s, a){ return s + a.v * _lxFit(t, a); }, 0);
+}
+// What it costs a manager to give something up. The same fit lens applies to
+// the giver: your fourth receiver is cheap to lose when you are short at back,
+// and the guy plugging your only hole is expensive. Without this the two sides
+// are priced on different scales and no trade can ever clear - which is
+// exactly what happened the first time this ran. Friction on top is the
+// manager's attachment to their own roster, at half the negotiating premium:
+// prying a player loose in a targeted ask costs more than a mutual swap.
+function _lxCostTo(t, pkg){
+  return pkg.reduce(function(s, a){ return s + a.v * _lxFit(t, a); }, 0) * (1 + (t.prem - 1) * 0.5);
+}
+
+// What a team can realistically put on the table. Strict surplus (two spare
+// starters at a position) is too rare to build a board on - plenty of real
+// rosters have none, and requiring it left every team with nothing to offer.
+// The honest currency is anyone who is not a required starter, plus draft
+// capital, which in dynasty is what most deals actually move.
+function _lxMovable(t){
+  var out = [];
+  Object.keys(t.req).forEach(function(ps){
+    (t.inv[ps] || []).slice(t.req[ps]).forEach(function(p){ if(p.v > 0) out.push(p); });
+  });
+  // a rebuilder will listen on any aging starter, not just the bench
+  if(t.win === 'rebuild'){
+    Object.keys(t.req).forEach(function(ps){
+      (t.inv[ps] || []).slice(0, t.req[ps]).forEach(function(p){
+        if(p.age && p.age >= 28 && out.indexOf(p) < 0) out.push(p);
+      });
+    });
+  }
+  try{
+    buildPicksForRoster(t.raw, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
+      var v = getKtcValue(pk.name, null);
+      if(v > 0) out.push({ id: 'pk:' + t.rid + ':' + pk.name, pick: true, name: pk.name, pos: 'PK', team: '', age: null, v: v });
+    });
+  }catch(_){}
+  out.sort(function(a, b){ return b.v - a.v; });
+  return out.slice(0, 10);
+}
+
+// Does this deal drop a side below the starters its league requires? A team
+// tearing it down will happily sell an aging starter, so this is not a reason
+// to hide the deal - but it IS a reason to say so out loud instead of quietly
+// recommending a lineup the manager cannot fill.
+function _lxLeavesShort(t, out, incoming){
+  var gone = {}; out.forEach(function(p){ if(p.id) gone[p.id] = 1; });
+  var short = [];
+  Object.keys(t.req).forEach(function(ps){
+    var need = t.req[ps];
+    var before = (t.inv[ps] || []).filter(function(p){ return p.v >= LX_BAR; }).length;
+    if(before < need) return;                       // already short, the deal is not the cause
+    var after = (t.inv[ps] || []).filter(function(p){ return !gone[p.id] && p.v >= LX_BAR; }).length
+      + incoming.filter(function(p){ return !p.pick && p.pos === ps && p.v >= LX_BAR; }).length;
+    if(after < need) short.push(ps);
+  });
+  return short;
+}
+
+function _lxPairDeals(A, B){
+  var best = null;
+  // cached per team: this used to be rebuilt once per PAIR, so a 12-team league
+  // recomputed every roster's movable list (and re-priced its picks) 132 times
+  var aList = A._mov || (A._mov = _lxMovable(A));
+  var bList = B._mov || (B._mov = _lxMovable(B));
+  if(!aList.length || !bList.length) return [];
+
+  function tryDeal(give, get){
+    // give = leaves A, get = leaves B
+    var aGain = _lxWorthTo(A, get) - _lxCostTo(A, give);
+    var bGain = _lxWorthTo(B, give) - _lxCostTo(B, get);
+    // a floor, not just "above zero": clearing an 8,000-value package by three
+    // points is noise, and the board tells the reader both sides come out ahead
+    var tot = 0;
+    for(var fi = 0; fi < give.length; fi++) tot += give[fi].v;
+    for(var gi = 0; gi < get.length; gi++) tot += get[gi].v;
+    var floor = Math.max(1, tot) * 0.015;
+    if(aGain <= floor || bGain <= floor) return;
+    // both sides ahead: the tighter the two gains, the likelier it gets signed
+    var raw = Math.max(1, give.reduce(function(s,p){ return s + p.v; }, 0));
+    var fair = Math.min(aGain, bGain) / raw;
+    var lopsided = Math.abs(aGain - bGain) / raw;
+    var score = fair - lopsided * 0.5;
+    // a deal that fixes an actual hole on either side is the kind that gets
+    // sent, not the kind that just balances on a calculator
+    var fixes = 0;
+    get.forEach(function(p){ if(A.holes.some(function(h){ return h.pos === p.pos; })) fixes++; });
+    give.forEach(function(p){ if(B.holes.some(function(h){ return h.pos === p.pos; })) fixes++; });
+    score += fixes * 0.05;
+    // applied to BOTH sides: which team is A and which is B is just roster order
+    try{
+      if(A.prof && A.prof.name === profiles.star_hoarder.name) score -= 0.04;
+      if(B.prof && B.prof.name === profiles.star_hoarder.name) score -= 0.04;
+    }catch(_){}
+    // only the leader is kept. Collecting every survivor and sorting at the end
+    // allocated a large array per pair and the churn showed up as GC jitter.
+    if(!best || score > best.score)
+      best = { a: A, b: B, give: give.slice(), get: get.slice(), aGain: aGain, bGain: bGain, fixes: fixes, score: score };
+  }
+
+  for(var i = 0; i < aList.length; i++){
+    for(var j = 0; j < bList.length; j++){
+      tryDeal([aList[i]], [bList[j]]);
+      for(var k = j + 1; k < bList.length; k++) tryDeal([aList[i]], [bList[j], bList[k]]);
+      for(var m = i + 1; m < aList.length; m++) tryDeal([aList[i], aList[m]], [bList[j]]);
+    }
+  }
+  // one headline deal per pair keeps the board readable. The lineup check only
+  // runs on that survivor: doing it inside tryDeal ran it across every one of
+  // the tens of thousands of candidates and cost seconds of wall clock.
+  if(!best) return [];
+  best.aShort = _lxLeavesShort(best.a, best.give, best.get);
+  best.bShort = _lxLeavesShort(best.b, best.get, best.give);
+  return [best];
+}
+
+function lxBuildDeals(teams){
+  var out = [];
+  for(var i = 0; i < teams.length; i++)
+    for(var j = i + 1; j < teams.length; j++)
+      out = out.concat(_lxPairDeals(teams[i], teams[j]));
+  out.sort(function(a, b){
+    var am = (a.a.isMe || a.b.isMe) ? 1 : 0, bm = (b.a.isMe || b.b.isMe) ? 1 : 0;
+    if(am !== bm) return bm - am;           // deals you can actually make come first
+    return b.score - a.score;
+  });
+  return out;
+}
+
+/* --- rendering ---------------------------------------------------------- */
+
+// Escapes for ANY position, attributes included. Team names come from Sleeper
+// and are whatever a manager typed. Only escaping "<" happens to be enough in a
+// text node, but it makes the helper a trap: the first time someone drops one
+// of these into a title= or an onclick, a team named with a stray quote turns
+// into a live hole. Ampersand must go first or the other entities get mangled.
+function _lxEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function _lxNm(p){ return _lxEsc(p.name) + (p.pos && p.pos !== 'PK' ? ' <span class="lx-pos lx-' + p.pos + '">' + p.pos + '</span>' : ''); }
+var LX_WIN = { contend: ['Contending', 'lx-contend'], fringe: ['On the fence', 'lx-fringe'], rebuild: ['Rebuilding', 'lx-rebuild'] };
+
+function lxRun(){
+  var host = document.getElementById('lx-out');
+  if(!host) return;
+  if(leagueRosters.length < 2){
+    host.innerHTML = '<div class="empty-state">' + (leagueRosters.length
+      ? 'This league only has your roster loaded, so there is nobody to compare you against or trade with.'
+      : 'Connect a league first and this reads every roster in it.') + '</div>';
+    return;
+  }
+  host.innerHTML = '<div class="empty-state">Reading every roster...</div>';
+  setTimeout(function(){
+    try{
+      LX.teams = lxBuildTeams();
+      LX.deals = lxBuildDeals(LX.teams);
+      LX.built = true;
+      LX.lid = leagueId;
+      lxRender();
+    }catch(e){
+      host.innerHTML = '<div class="empty-state">Could not build the report: ' + _lxEsc(e && e.message) + '</div>';
+    }
+  }, 30);
+}
+
+function lxToggle(rid){ LX.open[rid] = !LX.open[rid]; lxRender(); }
+
+function lxRender(){
+  var host = document.getElementById('lx-out');
+  if(!host || !LX.built) return;
+  var teams = LX.teams.slice().sort(function(a, b){ return b.score - a.score; });
+  var h = '';
+
+  // --- who is who
+  h += '<div class="lx-sec">Where every team actually sits</div>';
+  h += '<div class="lx-grid">';
+  teams.forEach(function(t){
+    var wl = LX_WIN[t.win];
+    var open = !!LX.open[t.rid];
+    h += '<div class="lx-card' + (t.isMe ? ' lx-me' : '') + '">';
+    h += '<div class="lx-head" onclick="lxToggle(' + t.rid + ')">';
+    h += '<div class="lx-nm">' + _lxEsc(t.name) + (t.isMe ? ' <span class="lx-you">YOU</span>' : '') + '</div>';
+    h += '<span class="lx-badge ' + wl[1] + '">' + wl[0] + '</span></div>';
+    h += '<div class="lx-why">' + _lxEsc(t.why) + (t.noGames ? ' <i>(no games played yet, so this reads the roster, not results)</i>' : '') + '</div>';
+
+    var needTxt = t.holes.length
+      ? t.holes.map(function(x){ return x.pos + ' (' + x.have + ' of ' + x.need + ')'; }).join(', ')
+      : (t.thin.length ? 'nothing urgent, thin at ' + t.thin.join(' and ') : 'no holes to fill');
+    h += '<div class="lx-line"><b>Needs</b> ' + _lxEsc(needTxt) + '</div>';
+    h += '<div class="lx-line"><b>Shopping for</b> ' + _lxEsc(t.appetite.label) + '</div>';
+    h += '<div class="lx-line"><b>Picks</b> ' + (t.appetite.wantsPicks ? 'wants them, will sell you a veteran to get them'
+      : (t.appetite.sellsPicks ? 'will trade them away for help right now' : 'no strong lean either way')) + '</div>';
+
+    if(open){
+      if(t.surplus.length)
+        h += '<div class="lx-line"><b>Can afford to move</b> ' + t.surplus.slice(0, 4).map(_lxNm).join(', ') + '</div>';
+      if(t.prof)
+        h += '<div class="lx-line"><b>' + _lxEsc(t.prof.name) + '</b> ' + _lxEsc(t.prof.why || t.prof.descR || t.prof.desc || '') + '</div>';
+      var _pt = t.prem >= 1.15 ? 'They hold their players tightly, so expect to overpay to pry anyone loose.'
+        : (t.prem <= 1.05 ? 'They deal readily, so a fair offer has a real chance.'
+        : 'Expect to pay a modest premium over market to get a deal done.');
+      h += '<div class="lx-line lx-dim">' + _pt + '</div>';
+    }
+    h += '<div class="lx-more" onclick="lxToggle(' + t.rid + ')">' + (open ? 'Less' : 'More') + '</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+
+  // --- the trade board
+  var mine = LX.deals.filter(function(d){ return d.a.isMe || d.b.isMe; });
+  var rest = LX.deals.filter(function(d){ return !d.a.isMe && !d.b.isMe; });
+
+  function dealRow(d){
+    // always show it from the reader's side when they are in it
+    var them = d.b.isMe ? d.a : d.b;
+    var iGive = d.b.isMe ? d.get : d.give, iGet = d.b.isMe ? d.give : d.get;
+    var involved = d.a.isMe || d.b.isMe;
+    var why = [];
+    if(d.fixes) why.push('fills a real hole');
+    if(them.appetite.wantsPicks && iGive.some(function(p){ return p.pick; })) why.push('they are collecting picks');
+    if(them.win === 'contend') why.push('they are pushing for this year');
+    else if(them.win === 'rebuild') why.push('they are tearing it down');
+    return '<div class="lx-deal' + (involved ? ' lx-deal-me' : '') + '">'
+      + '<div class="lx-deal-t">' + (involved ? 'You' : _lxEsc(d.a.name)) + ' <span class="lx-arrow">&harr;</span> ' + _lxEsc(involved ? them.name : d.b.name) + '</div>'
+      + '<div class="lx-deal-b"><span class="lx-out">' + (involved ? iGive : d.give).map(_lxNm).join(' + ') + '</span>'
+      + '<span class="lx-arrow">&rarr;</span>'
+      + '<span class="lx-in">' + (involved ? iGet : d.get).map(_lxNm).join(' + ') + '</span></div>'
+      + (why.length ? '<div class="lx-deal-w">' + _lxEsc(why.join(', ')) + '</div>' : '')
+      + (function(){
+          var w = [];
+          if(d.aShort && d.aShort.length) w.push((d.a.isMe ? 'you' : d.a.name) + ' would be left short at ' + d.aShort.join(' and '));
+          if(d.bShort && d.bShort.length) w.push((d.b.isMe ? 'you' : d.b.name) + ' would be left short at ' + d.bShort.join(' and '));
+          return w.length ? '<div class="tgt-warn">' + _lxEsc(w.join('; ')) + '</div>' : '';
+        })()
+      + '</div>';
+  }
+
+  h += '<div class="lx-sec">Trades that make sense for you</div>';
+  if(mine.length > 1) h += '<div class="lx-none" style="padding:0 2px 8px">These are alternatives, not a plan. Several of them move the same player, so you can only do one of those.</div>';
+  h += mine.length ? mine.slice(0, 8).map(dealRow).join('')
+    : '<div class="lx-none">Nothing clean right now. Your roster shape does not line up with what anyone is short of.</div>';
+
+  h += '<div class="lx-sec">Deals brewing elsewhere in the league</div>';
+  h += rest.length ? rest.slice(0, 8).map(dealRow).join('')
+    : '<div class="lx-none">No obvious matches between the other teams.</div>';
+  h += '<div class="lx-foot">Every deal above clears by a real margin for both sides, counting what each manager needs, the ages they are shopping for and how much they overrate their own players. These are conversation starters priced off dynasty values, not guarantees anyone says yes.</div>';
+
+  host.innerHTML = h;
+}
+
+/* ============================================================================
+   THE OFFER DESK
+   Two questions, one panel. Pick the manager, tick what they want from you,
+   and if they already named their price tick that too.
+     - nothing on their side  -> what should I be asking for?
+     - something on their side -> is this fair, and what do I counter with?
+   ========================================================================== */
+
+var OFR = { rid: null, want: [], give: [] };
+
+// What THEY will pay for YOUR player. This is the opposite question to
+// _tgtPremiumFor, which measures how tightly a manager holds their own roster.
+// Reusing that number here priced the league's most eager trader as the one
+// who would pay you least, which is backwards: what matters when you are the
+// one being asked is how readily they close deals and how badly they need help
+// this season.
+function _ofrAskPremium(rosterId){
+  var base = { mult: 1.08, why: '', who: '' };
+  try{
+    var r = leagueRosters.find(function(x){ return x.roster_id === rosterId; });
+    if(!r) return base;
+    var prof = inferOppProfileFromHistory(r, rosterId);
+    if(!prof || !prof.boosts) return base;
+    var mult = 1.08 + (prof.boosts.acceptance || 0) * 0.0018 + (prof.boosts.winNow || 0) * 0.0015;
+    mult = Math.max(1.02, Math.min(1.24, mult));
+    return { mult: mult, why: prof.why || '', who: prof.name || '' };
+  }catch(_){ return base; }
+}
+
+function ofrRender(){
+  var host = document.getElementById('ofr-panel');
+  if(!host) return;
+  if(!leagueRosters.length || !userId){
+    host.innerHTML = '<div class="ideas-empty">Connect a league and this turns into your negotiating desk.</div>';
+    return;
+  }
+  var others = leagueRosters.filter(function(r){ return r.owner_id !== userId; });
+  var opts = '<option value="">Who is asking?</option>' + others.map(function(r){
+    return '<option value="' + r.roster_id + '"' + (OFR.rid === r.roster_id ? ' selected' : '') + '>' + _lxEsc(getRosterName(r.roster_id)) + '</option>';
+  }).join('');
+  host.innerHTML = '<div class="tgt-row"><select class="opp-select" id="ofr-team" style="min-width:220px" onchange="ofrPickTeam(this.value)">' + opts + '</select>'
+    + '<span class="tgt-hint" id="ofr-hint">Pick the manager who messaged you.</span></div>'
+    + '<div id="ofr-body"></div><div id="ofr-out"></div>';
+  if(OFR.rid) ofrPickTeam(OFR.rid, true);
+}
+
+function _ofrList(players, side){
+  var pc = { QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)' };
+  return players.map(function(p){
+    var on = OFR[side].indexOf(p.id) >= 0;
+    return '<button class="tgt-chip' + (on ? ' on' : '') + '" onclick="ofrToggle(\'' + side + '\',\'' + p.id + '\')">'
+      + '<span class="tgt-pos" style="color:' + (pc[p.pos] || 'var(--muted)') + '">' + (p.pos || 'PK') + '</span>'
+      + '<span class="tgt-nm">' + _lxEsc(p.name) + '</span></button>';
+  }).join('');
+}
+
+function ofrPickTeam(rid, keep){
+  rid = parseInt(rid, 10);
+  if(!keep){ OFR.want = []; OFR.give = []; }
+  OFR.rid = rid || null;
+  var body = document.getElementById('ofr-body'), out = document.getElementById('ofr-out');
+  if(out) out.innerHTML = '';
+  if(!body) return;
+  if(!OFR.rid){ body.innerHTML = ''; return; }
+
+  var mineAssets = _tgtMyAssets().map(function(a){ return { id: a.id || ('pk:' + a.name), name: a.name, pos: a.pos, v: a.v, pick: !!a.pick }; });
+  var theirR = leagueRosters.find(function(x){ return x.roster_id === OFR.rid; });
+  var theirs = ((theirR && theirR.players) || []).map(function(pid){
+    var ap = allPlayers[pid] || {};
+    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', v: ktcById[pid] || 0 };
+  }).filter(function(p){ return p.v > 0; }).sort(function(a, b){ return b.v - a.v; });
+  try{
+    buildPicksForRoster(theirR, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
+      var v = getKtcValue(pk.name, null);
+      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true });
+    });
+  }catch(_){}
+
+  body.innerHTML = '<div class="ofr-col"><div class="ofr-lbl">What they want from you</div><div class="tgt-roster">' + _ofrList(mineAssets, 'want') + '</div></div>'
+    + '<div class="ofr-col"><div class="ofr-lbl">What they are offering <span class="lx-dim">(leave empty to ask what you should demand)</span></div><div class="tgt-roster">' + _ofrList(theirs, 'give') + '</div></div>';
+  ofrEvaluate();
+}
+
+function ofrToggle(side, pid){
+  var i = OFR[side].indexOf(pid);
+  if(i >= 0) OFR[side].splice(i, 1); else OFR[side].push(pid);
+  ofrPickTeam(OFR.rid, true);
+}
+
+function _ofrResolve(ids, pool){
+  return ids.map(function(id){ return pool.find(function(p){ return p.id === id; }); }).filter(Boolean);
+}
+
+function ofrEvaluate(){
+  var out = document.getElementById('ofr-out');
+  var hint = document.getElementById('ofr-hint');
+  if(!out) return;
+  if(!OFR.rid || !OFR.want.length){
+    out.innerHTML = '';
+    if(hint) hint.textContent = 'Tick whoever they asked for. Add their offer if they already made one.';
+    return;
+  }
+  var mineAssets = _tgtMyAssets().map(function(a, i){ return { id: a.id || ('pk:' + i + ':' + a.name), name: a.name, pos: a.pos, v: a.v, pick: !!a.pick }; });
+  var theirR = leagueRosters.find(function(x){ return x.roster_id === OFR.rid; });
+  var theirs = ((theirR && theirR.players) || []).map(function(pid){
+    var ap = allPlayers[pid] || {};
+    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', v: ktcById[pid] || 0 };
+  }).filter(function(p){ return p.v > 0; });
+  try{
+    buildPicksForRoster(theirR, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
+      var v = getKtcValue(pk.name, null);
+      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true });
+    });
+  }catch(_){}
+
+  var want = _ofrResolve(OFR.want, mineAssets);
+  var give = _ofrResolve(OFR.give, theirs);
+  if(!want.length){ out.innerHTML = ''; return; }
+
+  var wantVal = want.reduce(function(s, p){ return s + p.v; }, 0);
+  var prem = 1.08, who = '', why = '';
+  try{ var pr = _ofrAskPremium(OFR.rid); prem = pr.mult; who = pr.who; why = pr.why; }catch(_){}
+  if(hint) hint.innerHTML = 'They want <b>' + want.map(function(p){ return _lxEsc(p.name); }).join(' + ') + '</b>';
+
+  var h = '';
+  // What YOU should be getting back. They are prying your guy loose, so the
+  // premium runs the other way here: they pay it, not you.
+  var fairAsk = wantVal * prem;
+
+  if(!give.length){
+    h += '<div class="ofr-verdict ofr-neutral">Ask for about ' + Math.round(fairAsk).toLocaleString() + ' in value back'
+      + (who ? ' - you are dealing with ' + _lxEsc(who) : '') + '.</div>';
+    if(why) h += '<div class="ofr-why">' + _lxEsc(why) + '</div>';
+    // the package comes TO you, so the tiebreak is which of their players fills
+    // YOUR holes. Ranking it by their needs demanded the guys they least want
+    // to send, which is the wrong end of the negotiation.
+    var _mine = leagueRosters.find(function(r){ return r.owner_id === userId; });
+    var myNeed = _mine ? _tgtTheirNeed(_mine.roster_id) : {};
+    var found = _tgtSearch(theirs.slice().sort(function(a,b){ return b.v - a.v; }), fairAsk, myNeed);
+    var picked = [], seenPkg = {};
+    function _key(r){ return r.pkg.map(function(p){ return p.id; }).sort().join('|'); }
+    [['What to ask for', found.fair], ['The lighter version they are likelier to accept', found.cheap]].forEach(function(pair){
+      if(!pair[1]) return;
+      var k = _key(pair[1]);
+      if(seenPkg[k]) return;                 // same package under two labels helps nobody
+      seenPkg[k] = 1; picked.push(pair);
+    });
+    if(picked.length){
+      h += '<div class="ofr-sec">Off their roster, this is what clears that bar</div>';
+      picked.forEach(function(pair){
+        h += '<div class="lx-deal"><div class="lx-deal-t">' + pair[0] + '</div><div class="lx-deal-b">'
+          + '<span class="lx-out">' + want.map(_lxNm).join(' + ') + '</span><span class="lx-arrow">&rarr;</span>'
+          + '<span class="lx-in">' + pair[1].pkg.map(_lxNm).join(' + ') + '</span></div></div>';
+      });
+    } else {
+      h += '<div class="lx-none">Nothing on their roster covers that ask on its own. Either they add a pick, or you are better off keeping your guy.</div>';
+    }
+    out.innerHTML = h;
+    return;
+  }
+
+  // They named a price. Judge it, then find a cheaper way to say yes.
+  var giveVal = give.reduce(function(s, p){ return s + p.v; }, 0);
+  var edge = giveVal - fairAsk;
+  var pct = fairAsk > 0 ? (edge / fairAsk) : 0;
+  var cls = pct >= 0.05 ? 'ofr-good' : (pct <= -0.12 ? 'ofr-bad' : 'ofr-neutral');
+  var verdict = pct >= 0.15 ? 'Take it. They are paying over the odds.'
+    : pct >= 0.05 ? 'Good offer. You come out ahead.'
+    : pct >= -0.05 ? 'Basically fair. It comes down to whether you want the pieces.'
+    : pct >= -0.12 ? 'Light. Close enough to counter rather than decline.'
+    : 'They are asking too much. Do not send this back as is.';
+  h += '<div class="ofr-verdict ' + cls + '">' + verdict + '</div>';
+  h += '<div class="ofr-math">They are offering about ' + Math.round(giveVal).toLocaleString()
+    + ' against a fair ask of ' + Math.round(fairAsk).toLocaleString()
+    + ' for ' + want.map(function(p){ return _lxEsc(p.name); }).join(' + ') + '.</div>';
+  if(why) h += '<div class="ofr-why">' + _lxEsc(why) + '</div>';
+
+  // The counter: keep what they are giving, find the cheapest thing of yours
+  // that still clears their bar. This is the "it feels like a lot" answer.
+  var theirBar = giveVal / prem;
+  // "send this instead" has to mean instead: a counter that still ships the
+  // player they asked for is not a counter, and the line claiming it keeps
+  // those players would be a lie.
+  var askedFor = {}; want.forEach(function(p){ askedFor[p.id] = 1; });
+  var pool = mineAssets.filter(function(a){ return !askedFor[a.id]; }).sort(function(a, b){ return b.v - a.v; });
+  var alt = _tgtSearch(pool, theirBar, _tgtTheirNeed(OFR.rid));
+  var wantIds = {}; want.forEach(function(p){ wantIds[p.id] = 1; });
+  var options = [];
+  [['Cheapest way to say yes', alt.cheap], ['The clean version', alt.fair]].forEach(function(pair){
+    if(!pair[1]) return;
+    var cost = pair[1].pkg.reduce(function(s, p){ return s + p.v; }, 0);
+    if(cost >= wantVal * 0.99) return;                 // not actually cheaper
+    var same = pair[1].pkg.every(function(p){ return wantIds[p.id]; }) && pair[1].pkg.length === want.length;
+    if(same) return;
+    var ok2 = pair[1].pkg.map(function(p){ return p.id; }).sort().join('|');
+    if(options.some(function(o){ return o.key === ok2; })) return;
+    options.push({ label: pair[0], pkg: pair[1].pkg, cost: cost, key: ok2 });
+  });
+  if(options.length){
+    h += '<div class="ofr-sec">Send this instead and keep everything they offered</div>';
+    options.forEach(function(o){
+      h += '<div class="lx-deal"><div class="lx-deal-t">' + o.label + ' - saves you about ' + Math.round(wantVal - o.cost).toLocaleString() + ' in value</div>'
+        + '<div class="lx-deal-b"><span class="lx-out">' + o.pkg.map(_lxNm).join(' + ') + '</span>'
+        + '<span class="lx-arrow">&rarr;</span><span class="lx-in">' + give.map(_lxNm).join(' + ') + '</span></div></div>';
+    });
+  } else if(pct < -0.05){
+    h += '<div class="lx-none">There is no cheaper package of yours that still gets it done. Counter by asking them to add, not by swapping your side.</div>';
+  }
+
+  // Does the deal leave you able to field a lineup
+  try{
+    var health = _tgtRosterAfter(want, give.filter(function(p){ return !p.pick; }).map(function(p){ return p.id; }));
+    if(health && health.holes.length){
+      h += '<div class="tgt-warn">Careful: sending what they asked for leaves you short at '
+        + health.holes.map(function(x){ return x.pos + ' (' + x.have + ' of ' + x.need + ')'; }).join(', ')
+        + (options.length ? '. The counter above keeps those players.' : '.') + '</div>';
+    } else if(health && health.thin.length){
+      h += '<div class="tgt-thin">Sending what they asked for leaves you with no cover at ' + health.thin.join(' and ') + '.</div>';
+    }
+  }catch(_){}
+
+  out.innerHTML = h;
+}
+
 function generateTradeIdeas(){
-  try{tgtRenderPanel();}catch(_){}   // the shopping list rides along with the ideas
+  try{tgtRenderPanel();}catch(_){}
+  try{ofrRender();}catch(_){}   // the shopping list rides along with the ideas
   // header: which league these ideas are for + in-place switcher
   try{
     var ih=document.getElementById('ideas-header');
