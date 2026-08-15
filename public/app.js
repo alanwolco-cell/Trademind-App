@@ -135,6 +135,8 @@ let leagueTrades=[];      // all completed trade transactions this season
 let tradeStats={};        // per-roster behavioral stats computed from leagueTrades
 let leagueDraftId=null;
 let ktcValues={};     // byName: {name: value}
+let _ktcStamp=0;       // bumped when a new set of values actually lands, so any
+                       // cached view of them knows to rebuild
 let _pickValCache={};  // generic round-N pick value, memoised: the lookup below scans every
                        // key in ktcValues and gets called tens of thousands of times per
                        // trade search, which was freezing the UI for over a second
@@ -502,6 +504,7 @@ async function fetchKtcValues(numQbs, pprVal, isDynasty, _retryReq){
     Object.assign(ktcById, data.byId);
     if(data.byName) Object.assign(ktcValues, data.byName);
     if(data.byIdFull) Object.assign(ktcFull, data.byIdFull);
+    _ktcStamp++;
     // Tier cutoffs as PERCENTILES of the live value pool, not absolute
     // FantasyCalc numbers - the scale drifts with the market, so a fixed
     // 7000 meant 8 players one month and 20 the next. Elite = top 5%,
@@ -5599,7 +5602,7 @@ function tgtPickTeam(rid, keep){
   // a rival's draft capital was simply not targetable
   var list = _pkTheirAssets(TGT.rosterId);
   if(!list.length){ box.innerHTML = '<div class="ideas-empty">No valued assets on that roster yet.</div>'; return; }
-  pkInit('tgt', list, TGT.targets, "tgtToggle('%')");
+  pkInit('tgt', function(){ return _pkTheirAssets(TGT.rosterId); }, TGT.targets, "tgtToggle('%')");
   box.innerHTML = '<div id="pk-tgt">' + pkHtml('tgt') + '</div>';
   tgtBuild();
 }
@@ -5688,7 +5691,7 @@ function tgtBuild(){
   }
   // resolve against the list the cards were built from: draft picks are not in
   // allPlayers, so looking them up there priced them at zero
-  var _src = (PK['tgt'] && PK['tgt'].list) || [];
+  var _src = ((pkFresh('tgt')) || {}).list || [];
   var got = TGT.targets.map(function(pid){
     var f = _src.find(function(x){ return x.id === pid; });
     if(f) return f;
@@ -6375,9 +6378,24 @@ var PK_GROUPS = [['QB','Quarterbacks'],['RB','Running backs'],['WR','Receivers']
 
 // `sel` is held by reference: the toggles splice and push the same array, so
 // the picker always paints the live selection without being handed it again.
-function pkInit(key, list, sel, tpl){
+// `src` is a function, not a list: a snapshot goes stale the moment the user
+// switches league or flips dynasty/redraft, and then the cards show old prices
+// while the evaluation runs on new ones.
+function _pkStamp(){ return String(typeof leagueId !== 'undefined' ? leagueId : '') + ':' + _ktcStamp; }
+function pkInit(key, src, sel, tpl){
   var prev = PK[key] || {};
-  PK[key] = { list: list || [], sel: sel || [], tpl: tpl, q: prev.q || '', pos: prev.pos || 'ALL' };
+  var fn = (typeof src === 'function') ? src : function(){ return src || []; };
+  PK[key] = { src: fn, list: fn() || [], stamp: _pkStamp(), sel: sel || [], tpl: tpl,
+              q: prev.q || '', pos: prev.pos || 'ALL' };
+}
+function pkFresh(key){
+  var st = PK[key];
+  if(!st) return null;
+  if(st.stamp !== _pkStamp() && st.src){
+    try{ st.list = st.src() || []; }catch(_){ st.list = []; }
+    st.stamp = _pkStamp();
+  }
+  return st;
 }
 
 function _pkFace(p){
@@ -6402,7 +6420,7 @@ function _pkCard(p, st){
 }
 
 function pkHtml(key){
-  var st = PK[key];
+  var st = pkFresh(key);
   if(!st) return '';
   var posOf = function(p){ return p.pick ? 'PK' : (p.pos || 'PK'); };
   // only offer position filters the list actually contains
@@ -6490,8 +6508,8 @@ function ofrPickTeam(rid, keep){
 
   // both sides built by the same helpers the evaluation uses, so the ids on the
   // cards you click can never drift from the ids it resolves against
-  pkInit('ofr-want', _ofrMyAssets(), OFR.want, "ofrToggle('want','%')");
-  pkInit('ofr-give', _pkTheirAssets(OFR.rid), OFR.give, "ofrToggle('give','%')");
+  pkInit('ofr-want', function(){ return _ofrMyAssets(); }, OFR.want, "ofrToggle('want','%')");
+  pkInit('ofr-give', function(){ return _pkTheirAssets(OFR.rid); }, OFR.give, "ofrToggle('give','%')");
 
   body.innerHTML = '<div class="ofr-col"><div class="ofr-lbl">What they want from you</div>'
       + '<div id="pk-ofr-want">' + pkHtml('ofr-want') + '</div></div>'
