@@ -250,6 +250,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div class="inner-tab-bar" id="analyze-tab-bar">
       <div class="inner-tab active" id="atab-analyzer" onclick="showAnalyzeTab('analyzer')">Trade Analyzer</div>
       <div class="inner-tab" id="atab-ideas" onclick="showAnalyzeTab('ideas')">Trade Ideas</div>
+      <div class="inner-tab" id="atab-desk" onclick="showAnalyzeTab('desk')">Trade Desk</div>
     </div>
     <div id="tab-analyzer" class="tab-content active">
       <div class="analyzer-grid">
@@ -657,6 +658,18 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           </div>
           <button class="ideas-refresh" style="align-self:flex-start" onclick="applyIdeaFilters()">Apply filters</button>
         </div>
+        <div id="ideas-list-tab"><div class="ideas-empty">Load your league first, then come back here for ideas.</div></div>
+      </div>
+    </div>
+
+    <div id="tab-desk" class="tab-content" style="display:none">
+      <div class="ideas-card">
+        <div class="ideas-header">
+          <div>
+            <div class="ideas-title">Trade Desk</div>
+            <div class="ideas-sub">Go after someone, or work out what to reply when they come to you.</div>
+          </div>
+        </div>
         <!-- Target a player: you name the prize, the board prices it -->
         <div class="tgt-block">
           <div class="tgt-title">Go get someone</div>
@@ -669,7 +682,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="tgt-tagline">Tick who they asked for. If they already named a price, tick that too and we will tell you whether it is fair and what to send back.</div>
           <div id="ofr-panel"></div>
         </div>
-        <div id="ideas-list-tab"><div class="ideas-empty">Load your league first, then come back here for ideas.</div></div>
       </div>
     </div>
 
@@ -1688,7 +1700,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026081307"></script>
+<script src="/app.js?v=2026081308"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

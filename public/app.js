@@ -5586,29 +5586,23 @@ function tgtPickTeam(rid, keep){
   if(out) out.innerHTML = '';
   if(!box) return;
   if(!TGT.rosterId){ box.innerHTML = ''; return; }
-  var r = leagueRosters.find(function(x){ return x.roster_id === TGT.rosterId; });
-  var list = ((r && r.players) || []).map(function(pid){
-    var ap = allPlayers[pid] || {};
-    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', team: ap.team || '', v: ktcById[pid] || 0 };
-  }).filter(function(p){ return p.v > 0; }).sort(function(a,b){ return b.v - a.v; });
-  if(!list.length){ box.innerHTML = '<div class="ideas-empty">No valued players on that roster yet.</div>'; return; }
-  var pc = { QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)' };
-  box.innerHTML = list.map(function(p){
-    var on = TGT.targets.indexOf(p.id) >= 0;
-    return '<button class="tgt-chip' + (on ? ' on' : '') + '" onclick="tgtToggle(\'' + p.id + '\')">' +
-      '<span class="tgt-pos" style="color:' + (pc[p.pos] || 'var(--muted)') + '">' + p.pos + '</span>' +
-      '<span class="tgt-nm">' + String(p.name).replace(/</g,'&lt;') + '</span></button>';
-  }).join('');
+  // their picks belong here too: this list used to be roster players only, so
+  // a rival's draft capital was simply not targetable
+  var list = _pkTheirAssets(TGT.rosterId);
+  if(!list.length){ box.innerHTML = '<div class="ideas-empty">No valued assets on that roster yet.</div>'; return; }
+  pkInit('tgt', list, TGT.targets, "tgtToggle('%')");
+  box.innerHTML = '<div id="pk-tgt">' + pkHtml('tgt') + '</div>';
   tgtBuild();
 }
 
 function tgtToggle(pid){
   var i = TGT.targets.indexOf(pid);
   if(i >= 0) TGT.targets.splice(i, 1); else TGT.targets.push(pid);
-  tgtPickTeam(TGT.rosterId, true);
+  pkPaint('tgt');
+  tgtBuild();
 }
 
-function tgtClear(){ TGT.targets = []; tgtPickTeam(TGT.rosterId, true); }
+function tgtClear(){ TGT.targets.length = 0; pkPaint('tgt'); tgtBuild(); }
 
 // The search: every combination of up to four of your assets, scored on how
 // cleanly it clears their ask. Exhaustive at this size (a roster is ~25 assets),
@@ -5683,14 +5677,19 @@ function tgtBuild(){
     if(hint) hint.textContent = 'Pick a manager, then tap the players you want.';
     return;
   }
+  // resolve against the list the cards were built from: draft picks are not in
+  // allPlayers, so looking them up there priced them at zero
+  var _src = (PK['tgt'] && PK['tgt'].list) || [];
   var got = TGT.targets.map(function(pid){
+    var f = _src.find(function(x){ return x.id === pid; });
+    if(f) return f;
     var ap = allPlayers[pid] || {};
     return { id: pid, name: ap.name || pid, pos: ap.pos || '?', v: ktcById[pid] || 0 };
   });
   var targetVal = got.reduce(function(s,p){ return s + p.v; }, 0);
   var prem = _tgtPremiumFor(TGT.rosterId);
   var ask = targetVal * prem.mult;
-  if(hint) hint.innerHTML = 'Going after <b>' + got.map(function(p){ return String(p.name).replace(/</g,'&lt;'); }).join(' + ') +
+  if(hint) hint.innerHTML = 'Going after <b>' + got.map(function(p){ return _lxEsc(p.disp || p.name); }).join(' + ') +
     '</b> &middot; <span onclick="tgtClear()" style="color:var(--accent-bright);cursor:pointer">clear</span>';
 
   var assets = _tgtMyAssets();
@@ -6044,7 +6043,8 @@ function _lxMovable(t){
   try{
     buildPicksForRoster(t.raw, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
       var v = getKtcValue(pk.name, null);
-      if(v > 0) out.push({ id: 'pk:' + t.rid + ':' + pk.name, pick: true, name: pk.name, pos: 'PK', team: '', age: null, v: v });
+      if(v > 0) out.push({ id: 'pk:' + t.rid + ':' + pk.name, pick: true, name: pk.name, pos: 'PK', team: '', age: null, v: v,
+        from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
     });
   }catch(_){}
   out.sort(function(a, b){ return b.v - a.v; });
@@ -6148,6 +6148,39 @@ function lxBuildDeals(teams){
 // text node, but it makes the helper a trap: the first time someone drops one
 // of these into a title= or an onclick, a team named with a stray quote turns
 // into a live hole. Ampersand must go first or the other entities get mangled.
+/* A trade reads as two columns, the way every fantasy app shows one. Running
+   both sides together as "A + B + C -> D + E" on one line meant parsing arrows
+   and plus signs to work out who was going where. Faces make it scannable at a
+   glance, which is the whole point of a suggestion you are meant to judge fast. */
+function _dlFace(p){
+  if(p.pick){
+    var rd = (String(p.name).match(/round\s*(\d{1,2})/i) || [])[1] || '?';
+    var yr = (String(p.name).match(/(\d{4})/) || [])[1] || '';
+    return '<span class="dl-pk"><b>' + rd + '</b><i>' + yr.slice(2) + '</i></span>';
+  }
+  return '<img class="dl-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="" loading="lazy">';
+}
+// "Emeka Egbuka" -> "E. Egbuka", so two columns fit side by side on a phone
+function _dlName(p){
+  if(p.pick) return _lxEsc(p.disp || p.name);
+  var parts = String(p.name || '').trim().split(/\s+/);
+  return _lxEsc(parts.length > 1 ? (parts[0].charAt(0) + '. ' + parts.slice(1).join(' ')) : (parts[0] || ''));
+}
+function _dlRow(p){
+  var sub = p.pick ? (p.from ? 'via ' + p.from : 'own pick')
+    : ((p.pos || '') + (p.team && p.team !== 'FA' ? ' - ' + p.team : ''));
+  return '<div class="dl-row">' + _dlFace(p)
+    + '<span class="dl-txt"><span class="dl-nm">' + _dlName(p) + '</span>'
+    + '<span class="dl-sub ofr-' + (p.pick ? 'PK' : (p.pos || 'PK')) + '">' + _lxEsc(sub) + '</span></span></div>';
+}
+function _dlSides(outP, inP, outLbl, inLbl){
+  return '<div class="dl-cols">'
+    + '<div class="dl-side"><div class="dl-hd dl-out">' + (outLbl || 'You send') + '</div>'
+      + (outP || []).map(_dlRow).join('') + '</div>'
+    + '<div class="dl-side"><div class="dl-hd dl-in">' + (inLbl || 'You get') + '</div>'
+      + (inP || []).map(_dlRow).join('') + '</div></div>';
+}
+
 function _lxEsc(s){
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -6238,9 +6271,8 @@ function lxRender(){
     else if(them.win === 'rebuild') why.push('they are tearing it down');
     return '<div class="lx-deal' + (involved ? ' lx-deal-me' : '') + '">'
       + '<div class="lx-deal-t">' + (involved ? 'You' : _lxEsc(d.a.name)) + ' <span class="lx-arrow">&harr;</span> ' + _lxEsc(involved ? them.name : d.b.name) + '</div>'
-      + '<div class="lx-deal-b"><span class="lx-out">' + (involved ? iGive : d.give).map(_lxNm).join(' + ') + '</span>'
-      + '<span class="lx-arrow">&rarr;</span>'
-      + '<span class="lx-in">' + (involved ? iGet : d.get).map(_lxNm).join(' + ') + '</span></div>'
+      + _dlSides(involved ? iGive : d.give, involved ? iGet : d.get,
+          involved ? 'You send' : _lxEsc(d.a.name) + ' sends', involved ? 'You get' : _lxEsc(d.b.name) + ' sends')
       + (why.length ? '<div class="lx-deal-w">' + _lxEsc(why.join(', ')) + '</div>' : '')
       + (function(){
           var w = [];
@@ -6321,61 +6353,119 @@ function ofrRender(){
   if(OFR.rid) ofrPickTeam(OFR.rid, true);
 }
 
-// Grouped by position, best first inside each group, with a face on every row.
-// A single value-sorted wrap of text chips mixed quarterbacks, backs and draft
-// picks together, so finding one name meant reading all thirty of them.
-var OFR_GROUPS = [['QB','Quarterbacks'],['RB','Running backs'],['WR','Receivers'],['TE','Tight ends'],['PK','Draft picks']];
+/* ============================================================================
+   SHARED ASSET PICKER
+   Every place you tick players and picks draws from this one grid. There used
+   to be three separate list builders and they had drifted badly: the targeted
+   builder still rendered bare text chips with no faces, and it never listed a
+   rival's draft picks at all, so you could not go after them. One component,
+   one behaviour, one place to fix.
+   ========================================================================== */
+var PK = {};
+var PK_GROUPS = [['QB','Quarterbacks'],['RB','Running backs'],['WR','Receivers'],['TE','Tight ends'],['PK','Draft picks']];
 
-function _ofrFace(p){
-  if(p.pick){
-    var rd = (p.name.match(/round\s*(\d{1,2})/i) || [])[1] || '?';
-    var yr = (p.name.match(/(\d{4})/) || [])[1] || '';
-    return '<span class="ofr-pk"><b>' + rd + '</b><i>' + yr.slice(2) + '</i></span>';
-  }
-  return '<img class="ofr-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="">';
+// `sel` is held by reference: the toggles splice and push the same array, so
+// the picker always paints the live selection without being handed it again.
+function pkInit(key, list, sel, tpl){
+  var prev = PK[key] || {};
+  PK[key] = { list: list || [], sel: sel || [], tpl: tpl, q: prev.q || '', pos: prev.pos || 'ALL' };
 }
 
-function _ofrCard(p, side){
-  var on = OFR[side].indexOf(p.id) >= 0;
-  var meta = p.pick ? (p.from ? 'from ' + p.from : 'your own pick')
+function _pkFace(p){
+  if(p.pick){
+    var rd = (String(p.name).match(/round\s*(\d{1,2})/i) || [])[1] || '?';
+    var yr = (String(p.name).match(/(\d{4})/) || [])[1] || '';
+    return '<span class="ofr-pk"><b>' + rd + '</b><i>' + yr.slice(2) + '</i></span>';
+  }
+  return '<img class="ofr-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="" loading="lazy">';
+}
+
+function _pkCard(p, st){
+  var on = st.sel.indexOf(p.id) >= 0;
+  var meta = p.pick ? (p.from ? 'from ' + p.from : 'their own pick')
     : ((p.pos || '') + (p.team && p.team !== 'FA' ? ' · ' + p.team : ''));
-  return '<button class="ofr-card' + (on ? ' on' : '') + '" onclick="ofrToggle(\'' + side + '\',\'' + p.id + '\')">'
-    + _ofrFace(p)
+  return '<button class="ofr-card' + (on ? ' on' : '') + '" onclick="' + st.tpl.replace('%', p.id) + '">'
+    + _pkFace(p)
     + '<span class="ofr-txt"><span class="ofr-nm">' + _lxEsc(p.disp || p.name) + '</span>'
     + '<span class="ofr-meta"><span class="ofr-pos ofr-' + (p.pick ? 'PK' : (p.pos || 'PK')) + '">' + _lxEsc(meta) + '</span>'
     + '<span class="ofr-val">' + (p.v ? Math.round(p.v).toLocaleString() : '') + '</span></span></span>'
     + '<span class="ofr-tick"></span></button>';
 }
 
-function _ofrList(players, side){
-  var q = ((OFR.q && OFR.q[side]) || '').toLowerCase().trim();
-  var shown = q ? players.filter(function(p){ return String(p.disp || p.name).toLowerCase().indexOf(q) >= 0; }) : players;
-  var out = '<div class="ofr-search"><input type="text" placeholder="Filter by name..." value="' + _lxEsc(q)
-    + '" oninput="ofrFilter(\'' + side + '\', this.value)"></div>';
+function pkHtml(key){
+  var st = PK[key];
+  if(!st) return '';
+  var posOf = function(p){ return p.pick ? 'PK' : (p.pos || 'PK'); };
+  // only offer position filters the list actually contains
+  var have = {}; st.list.forEach(function(p){ have[posOf(p)] = (have[posOf(p)] || 0) + 1; });
+  var tabs = '<button class="pk-f' + (st.pos === 'ALL' ? ' on' : '') + '" onclick="pkPos(\'' + key + '\',\'ALL\')">All <span>' + st.list.length + '</span></button>';
+  PK_GROUPS.forEach(function(g){
+    if(!have[g[0]]) return;
+    tabs += '<button class="pk-f pk-' + g[0] + (st.pos === g[0] ? ' on' : '') + '" onclick="pkPos(\'' + key + '\',\'' + g[0] + '\')">'
+      + g[0] + ' <span>' + have[g[0]] + '</span></button>';
+  });
+
+  var q = String(st.q || '').toLowerCase().trim();
+  var shown = st.list.filter(function(p){
+    if(st.pos !== 'ALL' && posOf(p) !== st.pos) return false;
+    if(q && String(p.disp || p.name).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+
+  var out = '<div class="pk-bar">' + tabs + '</div>'
+    + '<div class="ofr-search"><input type="text" placeholder="Filter by name..." value="' + _lxEsc(st.q)
+    + '" oninput="pkQ(\'' + key + '\', this.value)"></div>';
   if(!shown.length) return out + '<div class="ofr-empty">Nobody matches that.</div>';
+
+  // when a single position is selected the group headers are just noise
+  if(st.pos !== 'ALL'){
+    return out + '<div class="ofr-grid">' + shown.sort(function(a, b){ return b.v - a.v; })
+      .map(function(p){ return _pkCard(p, st); }).join('') + '</div>';
+  }
   var seen = {};
-  OFR_GROUPS.forEach(function(g){
-    var inG = shown.filter(function(p){ return (p.pick ? 'PK' : p.pos) === g[0]; })
-                   .sort(function(a, b){ return b.v - a.v; });
+  PK_GROUPS.forEach(function(g){
+    var inG = shown.filter(function(p){ return posOf(p) === g[0]; }).sort(function(a, b){ return b.v - a.v; });
     inG.forEach(function(p){ seen[p.id] = 1; });
     if(!inG.length) return;
     out += '<div class="ofr-grp">' + g[1] + ' <span>' + inG.length + '</span></div>'
-      + '<div class="ofr-grid">' + inG.map(function(p){ return _ofrCard(p, side); }).join('') + '</div>';
+      + '<div class="ofr-grid">' + inG.map(function(p){ return _pkCard(p, st); }).join('') + '</div>';
   });
   var rest = shown.filter(function(p){ return !seen[p.id]; }).sort(function(a, b){ return b.v - a.v; });
   if(rest.length) out += '<div class="ofr-grp">Other <span>' + rest.length + '</span></div>'
-    + '<div class="ofr-grid">' + rest.map(function(p){ return _ofrCard(p, side); }).join('') + '</div>';
+    + '<div class="ofr-grid">' + rest.map(function(p){ return _pkCard(p, st); }).join('') + '</div>';
   return out;
 }
 
-function ofrFilter(side, txt){
-  if(!OFR.q) OFR.q = { want: '', give: '' };
-  OFR.q[side] = txt || '';
-  var host = document.getElementById('ofr-list-' + side);
-  if(!host) return;
-  host.innerHTML = _ofrList(side === 'want' ? (OFR._mine || []) : (OFR._theirs || []), side);
-  var inp = host.querySelector('.ofr-search input');
+function pkPaint(key){
+  var el = document.getElementById('pk-' + key);
+  if(el) el.innerHTML = pkHtml(key);
+}
+function pkQ(key, v){
+  if(!PK[key]) return;
+  PK[key].q = v || '';
+  pkPaint(key);
+  var el = document.getElementById('pk-' + key);
+  var inp = el && el.querySelector('.ofr-search input');
   if(inp){ inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(_){} }
+}
+function pkPos(key, v){ if(PK[key]){ PK[key].pos = v; pkPaint(key); } }
+
+// Every rival asset you could ask for: their roster AND their draft picks.
+// Leaving picks out meant a whole class of target was simply unreachable.
+function _pkTheirAssets(rosterId){
+  var r = leagueRosters.find(function(x){ return x.roster_id === rosterId; });
+  var out = ((r && r.players) || []).map(function(pid){
+    var ap = allPlayers[pid] || {};
+    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', team: ap.team || '', v: ktcById[pid] || 0 };
+  }).filter(function(p){ return p.v > 0; });
+  try{
+    buildPicksForRoster(r, leaguePicks, ACTIVE_SEASON).forEach(function(pk, i){
+      var v = getKtcValue(pk.name, null);
+      if(v > 0) out.push({ id: 'pk:' + i + ':' + pk.name, name: pk.name, pos: 'PK', team: '', v: v, pick: true,
+        from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
+    });
+  }catch(_){}
+  return out.sort(function(a, b){ return b.v - a.v; });
 }
 
 function ofrPickTeam(rid, keep){
@@ -6387,37 +6477,22 @@ function ofrPickTeam(rid, keep){
   if(!body) return;
   if(!OFR.rid){ body.innerHTML = ''; return; }
 
-  var mineAssets = _ofrMyAssets();
-  var theirR = leagueRosters.find(function(x){ return x.roster_id === OFR.rid; });
-  var theirs = ((theirR && theirR.players) || []).map(function(pid){
-    var ap = allPlayers[pid] || {};
-    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', v: ktcById[pid] || 0 };
-  }).filter(function(p){ return p.v > 0; }).sort(function(a, b){ return b.v - a.v; });
-  try{
-    buildPicksForRoster(theirR, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
-      var v = getKtcValue(pk.name, null);
-      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true,
-        from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
-    });
-  }catch(_){}
+  // both sides built by the same helpers the evaluation uses, so the ids on the
+  // cards you click can never drift from the ids it resolves against
+  pkInit('ofr-want', _ofrMyAssets(), OFR.want, "ofrToggle('want','%')");
+  pkInit('ofr-give', _pkTheirAssets(OFR.rid), OFR.give, "ofrToggle('give','%')");
 
-  // kept so the filter can re-render without rebuilding rosters and re-pricing picks
-  OFR._mine = mineAssets; OFR._theirs = theirs;
-  if(!OFR.q) OFR.q = { want: '', give: '' };
   body.innerHTML = '<div class="ofr-col"><div class="ofr-lbl">What they want from you</div>'
-      + '<div id="ofr-list-want">' + _ofrList(mineAssets, 'want') + '</div></div>'
+      + '<div id="pk-ofr-want">' + pkHtml('ofr-want') + '</div></div>'
     + '<div class="ofr-col"><div class="ofr-lbl">What they are offering <span class="lx-dim">(leave this empty to ask what you should be demanding)</span></div>'
-      + '<div id="ofr-list-give">' + _ofrList(theirs, 'give') + '</div></div>';
+      + '<div id="pk-ofr-give">' + pkHtml('ofr-give') + '</div></div>';
   ofrEvaluate();
 }
 
 function ofrToggle(side, pid){
   var i = OFR[side].indexOf(pid);
   if(i >= 0) OFR[side].splice(i, 1); else OFR[side].push(pid);
-  // repaint just the column that changed, keeping the filter and scroll position
-  var host = document.getElementById('ofr-list-' + side);
-  if(host) host.innerHTML = _ofrList(side === 'want' ? (OFR._mine || []) : (OFR._theirs || []), side);
-  else { ofrPickTeam(OFR.rid, true); return; }
+  pkPaint('ofr-' + side);          // only the column that changed
   ofrEvaluate();
 }
 
@@ -6460,18 +6535,7 @@ function ofrEvaluate(){
     return;
   }
   var mineAssets = _ofrMyAssets();
-  var theirR = leagueRosters.find(function(x){ return x.roster_id === OFR.rid; });
-  var theirs = ((theirR && theirR.players) || []).map(function(pid){
-    var ap = allPlayers[pid] || {};
-    return { id: pid, name: ap.name || pid, pos: ap.pos || '?', v: ktcById[pid] || 0 };
-  }).filter(function(p){ return p.v > 0; });
-  try{
-    buildPicksForRoster(theirR, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
-      var v = getKtcValue(pk.name, null);
-      if(v > 0) theirs.push({ id: 'pk:' + theirs.length + ':' + pk.name, name: pk.name, pos: 'PK', v: v, pick: true,
-        from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
-    });
-  }catch(_){}
+  var theirs = _pkTheirAssets(OFR.rid);
 
   var want = _ofrResolve(OFR.want, mineAssets);
   var give = _ofrResolve(OFR.give, theirs);
@@ -6508,9 +6572,8 @@ function ofrEvaluate(){
     if(picked.length){
       h += '<div class="ofr-sec">Off their roster, this is what clears that bar</div>';
       picked.forEach(function(pair){
-        h += '<div class="lx-deal"><div class="lx-deal-t">' + pair[0] + '</div><div class="lx-deal-b">'
-          + '<span class="lx-out">' + want.map(_lxNm).join(' + ') + '</span><span class="lx-arrow">&rarr;</span>'
-          + '<span class="lx-in">' + pair[1].pkg.map(_lxNm).join(' + ') + '</span></div></div>';
+        h += '<div class="lx-deal"><div class="lx-deal-t">' + pair[0] + '</div>'
+          + _dlSides(want, pair[1].pkg) + '</div>';
       });
     } else {
       h += '<div class="lx-none">Nothing on their roster covers that ask on its own. Either they add a pick, or you are better off keeping your guy.</div>';
@@ -6565,8 +6628,7 @@ function ofrEvaluate(){
     h += '<div class="lx-deal lx-deal-me"><div class="lx-deal-t">'
       + (stillDown > 0 ? 'The least they would take, though it still costs you'
                        : 'This much already earns their offer') + '</div>'
-      + '<div class="lx-deal-b"><span class="lx-out">' + lean.set.map(_lxNm).join(' + ') + '</span>'
-      + '<span class="lx-arrow">&rarr;</span><span class="lx-in">' + give.map(_lxNm).join(' + ') + '</span></div>'
+      + _dlSides(lean.set, give)
       + '<div class="lx-deal-w">Keep ' + spared.map(function(p){ return _lxEsc(p.disp || p.name); }).join(' and ')
       + '. They want ' + (spared.length > 1 ? 'them' : 'him') + ', so ' + (spared.length > 1 ? 'they are' : 'he is')
       + ' your leverage for the next ask, not filler for this one.'
@@ -6617,9 +6679,8 @@ function ofrEvaluate(){
     h += '<div class="ofr-sec">Better versions of this trade</div>';
     better.slice(0, 3).forEach(function(b){
       var tot = b.pkg.reduce(function(a, p){ return a + p.v; }, 0);
-      h += '<div class="lx-deal"><div class="lx-deal-t">' + b.t + '</div><div class="lx-deal-b">'
-        + '<span class="lx-out">' + want.map(_lxNm).join(' + ') + '</span><span class="lx-arrow">&rarr;</span>'
-        + '<span class="lx-in">' + b.pkg.map(_lxNm).join(' + ') + '</span></div>'
+      h += '<div class="lx-deal"><div class="lx-deal-t">' + b.t + '</div>'
+        + _dlSides(want, b.pkg)
         + '<div class="lx-deal-w">' + Math.round(tot).toLocaleString() + ' back against a fair ask of '
         + Math.round(fairAsk).toLocaleString() + '.</div></div>';
     });
@@ -6647,8 +6708,7 @@ function ofrEvaluate(){
     h += '<div class="ofr-sec">Send this instead and keep everything they offered</div>';
     options.forEach(function(o){
       h += '<div class="lx-deal"><div class="lx-deal-t">' + o.label + ' - saves you about ' + Math.round(wantVal - o.cost).toLocaleString() + ' in value</div>'
-        + '<div class="lx-deal-b"><span class="lx-out">' + o.pkg.map(_lxNm).join(' + ') + '</span>'
-        + '<span class="lx-arrow">&rarr;</span><span class="lx-in">' + give.map(_lxNm).join(' + ') + '</span></div></div>';
+        + _dlSides(o.pkg, give) + '</div>';
     });
   } else if(pct < -0.05){
     h += '<div class="lx-none">There is no cheaper package of yours that still gets it done. Counter by asking them to add, not by swapping your side.</div>';
@@ -14778,17 +14838,19 @@ function toggleUserDropdown(){
 }
 
 function showAnalyzeTab(tab){
-  // tab = 'analyzer' | 'ideas'
-  document.getElementById('tab-analyzer').style.display=tab==='analyzer'?'block':'none';
-  document.getElementById('tab-ideas').style.display=tab==='ideas'?'block':'none';
-  document.getElementById('atab-analyzer').classList.toggle('active',tab==='analyzer');
-  document.getElementById('atab-ideas').classList.toggle('active',tab==='ideas');
+  // tab = 'analyzer' | 'ideas' | 'desk'
+  ['analyzer','ideas','desk'].forEach(function(t){
+    var pane=document.getElementById('tab-'+t), btn=document.getElementById('atab-'+t);
+    if(pane)pane.style.display=(tab===t?'block':'none');
+    if(btn)btn.classList.toggle('active',tab===t);
+  });
   // First-time visitors have no league, so the player DB + values were never
   // loaded. Warm them the moment the analyzer opens so search and the verdict
   // work with zero setup - this is the core "drop a trade, get an answer" flow.
   if(tab==='analyzer')_warmAnalyzerData();
   if(tab==='ideas')renderIdeasTab();
-  _tabPush(tab==='ideas'?'ideas':'analyzer','analyze');
+  if(tab==='desk'){ _warmAnalyzerData(); try{tgtRenderPanel();}catch(_){} try{ofrRender();}catch(_){} }
+  _tabPush(tab==='analyzer'?'analyzer':tab,'analyze');
 }
 function _warmAnalyzerData(){
   if(Object.keys(allPlayers).length<100&&!window._acLoading){
