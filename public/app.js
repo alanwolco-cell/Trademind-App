@@ -505,6 +505,10 @@ async function fetchKtcValues(numQbs, pprVal, isDynasty, _retryReq){
     if(data.byName) Object.assign(ktcValues, data.byName);
     if(data.byIdFull) Object.assign(ktcFull, data.byIdFull);
     _ktcStamp++;
+    // a desk opened before values landed shows an empty roster and never
+    // recovers on its own, because its early return skipped building a picker
+    try{ if(TGT.rosterId && document.getElementById('tgt-roster')) tgtPickTeam(TGT.rosterId, true); }catch(_){}
+    try{ if(OFR.rid && document.getElementById('ofr-body')) ofrPickTeam(OFR.rid, true); }catch(_){}
     // Tier cutoffs as PERCENTILES of the live value pool, not absolute
     // FantasyCalc numbers - the scale drifts with the market, so a fixed
     // 7000 meant 8 players one month and 20 the next. Elite = top 5%,
@@ -2980,6 +2984,25 @@ function resetTradeWorkspace(){
   var rp=document.getElementById('result-panel'); if(rp)rp.classList.remove('visible');
   _lastTradeSig='';
   try{ renderTradeBoards(); }catch(_){}
+  // The desk is part of the workspace. Leaving TGT/OFR alone meant a league
+  // switch kept the previous league's roster id and ticked ids, and since a
+  // roster_id is just a small integer it could land on YOUR OWN roster: the
+  // panel then offered to trade your players for your players.
+  try{
+    TGT.rosterId = null; TGT.targets.length = 0;
+    OFR.rid = null; OFR.want.length = 0; OFR.give.length = 0;
+    if(OFR.q){ OFR.q.want = ''; OFR.q.give = ''; }
+    PK = {};
+    // and wipe what is on screen: clearing the state alone left the previous
+    // league's headline and its whole proposal sitting there as if still live
+    ['tgt-roster','tgt-out','ofr-body','ofr-out'].forEach(function(id){
+      var el = document.getElementById(id); if(el) el.innerHTML = '';
+    });
+    var th = document.getElementById('tgt-hint');
+    if(th) th.innerHTML = 'Pick a manager, then tap the players you want.';
+    var oh = document.getElementById('ofr-hint');
+    if(oh) oh.innerHTML = 'Pick the manager who messaged you.';
+  }catch(_){}
 }
 
 // ── ROSTER BOARD BUILDER ─────────────────────────────────────────────────────
@@ -5579,7 +5602,7 @@ function tgtRenderPanel(){
   var others = leagueRosters.filter(function(r){ return r.owner_id !== userId; });
   var opts = '<option value="">Whose player do you want?</option>' + others.map(function(r){
     return '<option value="' + r.roster_id + '"' + (TGT.rosterId === r.roster_id ? ' selected' : '') + '>' +
-      String(getRosterName(r.roster_id)).replace(/</g,'&lt;') + '</option>';
+      _lxEsc(getRosterName(r.roster_id)) + '</option>';
   }).join('');
   var html = '<div class="tgt-row"><select class="opp-select" id="tgt-team" style="min-width:220px" onchange="tgtPickTeam(this.value)">' + opts + '</select>' +
     '<span class="tgt-hint" id="tgt-hint">Pick a manager, then tap the players you want.</span></div>' +
@@ -5591,27 +5614,38 @@ function tgtRenderPanel(){
 
 function tgtPickTeam(rid, keep){
   rid = parseInt(rid, 10);
-  if(!keep) TGT.targets = [];
+  if(!keep) TGT.targets.length = 0;      // mutate: pkInit holds this array by reference
   TGT.rosterId = rid || null;
   var box = document.getElementById('tgt-roster');
   var out = document.getElementById('tgt-out');
   if(out) out.innerHTML = '';
   if(!box) return;
-  if(!TGT.rosterId){ box.innerHTML = ''; return; }
+  if(!TGT.rosterId){ box.innerHTML = ''; TGT.targets.length = 0; tgtBuild(); return; }
   // their picks belong here too: this list used to be roster players only, so
   // a rival's draft capital was simply not targetable
   var list = _pkTheirAssets(TGT.rosterId);
-  if(!list.length){ box.innerHTML = '<div class="ideas-empty">No valued assets on that roster yet.</div>'; return; }
+  if(!list.length){
+    // values may simply not have landed yet, so say so rather than looking broken
+    box.innerHTML = '<div class="ideas-empty">' + (Object.keys(ktcById).length
+      ? 'No valued assets on that roster yet.'
+      : 'Loading player values...') + '</div>';
+    TGT.targets.length = 0; tgtBuild(); return;
+  }
   pkInit('tgt', function(){ return _pkTheirAssets(TGT.rosterId); }, TGT.targets, "tgtToggle('%')");
   box.innerHTML = '<div id="pk-tgt">' + pkHtml('tgt') + '</div>';
   tgtBuild();
 }
 
+var _tgtTimer = null;
+function tgtBuildSoon(){
+  if(_tgtTimer) clearTimeout(_tgtTimer);
+  _tgtTimer = setTimeout(function(){ _tgtTimer = null; try{ tgtBuild(); }catch(_){} }, 110);
+}
 function tgtToggle(pid){
   var i = TGT.targets.indexOf(pid);
   if(i >= 0) TGT.targets.splice(i, 1); else TGT.targets.push(pid);
   pkPaint('tgt');
-  tgtBuild();
+  tgtBuildSoon();
 }
 
 function tgtClear(){ TGT.targets.length = 0; pkPaint('tgt'); tgtBuild(); }
@@ -5716,30 +5750,32 @@ function tgtBuild(){
    ['closer','The closer','Clearly good for them. Use it when you actually want the guy.']]
   .forEach(function(t){
     var b = best[t[0]]; if(!b) return;
-    var key = b.pkg.map(function(p){ return p.id || p.name; }).sort().join('|');
+    // picks from _tgtMyAssets carry id:null, so two "2027 Round 1 (via trade)"
+    // from different original owners collapsed into one and a card was dropped
+    var key = b.pkg.map(function(p){ return p.id || p.key || p.name; }).sort().join('|');
     if(seen[key]) return; seen[key] = 1;
     cards.push({ kind: t[0], title: t[1], sub: t[2], b: b });
   });
 
   if(!cards.length){
     out.innerHTML = '<div class="ideas-empty">Your roster does not have enough to get there - even everything tradeable falls short of what ' +
-      String(getRosterName(TGT.rosterId)).replace(/</g,'&lt;') + ' would want for that. Aim smaller, or add a piece to your roster first.</div>';
+      _lxEsc(getRosterName(TGT.rosterId)) + ' would want for that. Aim smaller, or add a piece to your roster first.</div>';
     return;
   }
   var pc = { QB:'var(--pos-qb)', RB:'var(--pos-rb)', WR:'var(--pos-wr)', TE:'var(--pos-te)', PK:'var(--accent-bright)' };
   var whoLine = '';
   if(prem.mult >= TGT_PREMIUM + 0.03)
-    whoLine = '<div class="tgt-who tgt-who-hard">' + String(getRosterName(TGT.rosterId)).replace(/</g,'&lt;') + ' holds on tight' +
-      (prem.why ? ' - ' + String(prem.why).replace(/</g,'&lt;') : '') + '. Expect to pay over the odds.</div>';
+    whoLine = '<div class="tgt-who tgt-who-hard">' + _lxEsc(getRosterName(TGT.rosterId)) + ' holds on tight' +
+      (prem.why ? ' - ' + _lxEsc(prem.why) : '') + '. Expect to pay over the odds.</div>';
   else if(prem.mult <= TGT_PREMIUM - 0.03)
-    whoLine = '<div class="tgt-who tgt-who-soft">' + String(getRosterName(TGT.rosterId)).replace(/</g,'&lt;') + ' deals often' +
-      (prem.why ? ' - ' + String(prem.why).replace(/</g,'&lt;') : '') + '. You will not need to overpay here.</div>';
+    whoLine = '<div class="tgt-who tgt-who-soft">' + _lxEsc(getRosterName(TGT.rosterId)) + ' deals often' +
+      (prem.why ? ' - ' + _lxEsc(prem.why) : '') + '. You will not need to overpay here.</div>';
   out.innerHTML = whoLine + '<div class="tgt-ask">You are asking for <b>' + (targetVal>=1000?(targetVal/1000).toFixed(1)+'k':targetVal) + '</b> of value. Here is what it takes.</div>' +
     cards.map(function(c, i){
       var b = c.b;
       var pieces = b.pkg.map(function(p){
         return '<span class="tgt-piece"><span class="tgt-pos" style="color:' + (pc[p.pos] || 'var(--muted)') + '">' + p.pos + '</span>' +
-          String(p.name).replace(/</g,'&lt;') + '</span>';
+          _lxEsc(p.name) + '</span>';
       }).join('');
       var edge = b.worth - ask;
       var read = edge < ask * 0.03 ? 'Right at their line - expect a counter.'
@@ -6183,7 +6219,7 @@ function _dlRow(p){
     : ((p.pos || '') + (p.team && p.team !== 'FA' ? ' - ' + p.team : ''));
   return '<div class="dl-row">' + _dlFace(p)
     + '<span class="dl-txt"><span class="dl-nm">' + _dlName(p) + '</span>'
-    + '<span class="dl-sub ofr-' + (p.pick ? 'PK' : (p.pos || 'PK')) + '">' + _lxEsc(sub) + '</span></span></div>';
+    + '<span class="dl-sub ofr-' + (p.pick ? 'PK' : (p.pos || 'NA')) + '">' + _lxEsc(sub || '-') + '</span></span></div>';
 }
 function _dlSides(outP, inP, outLbl, inLbl){
   return '<div class="dl-cols">'
@@ -6394,6 +6430,13 @@ function pkFresh(key){
   if(st.stamp !== _pkStamp() && st.src){
     try{ st.list = st.src() || []; }catch(_){ st.list = []; }
     st.stamp = _pkStamp();
+    // Drop selections that no longer exist. A pick worth nothing in redraft
+    // leaves the list entirely; leaving its id in `sel` kept it counted as
+    // ticked while contributing zero, which is the silent-wrong-answer case.
+    if(st.sel && st.sel.length){
+      var live = {}; st.list.forEach(function(p){ live[p.id] = 1; });
+      for(var i = st.sel.length - 1; i >= 0; i--) if(!live[st.sel[i]]) st.sel.splice(i, 1);
+    }
   }
   return st;
 }
@@ -6414,7 +6457,7 @@ function _pkCard(p, st){
   return '<button class="ofr-card' + (on ? ' on' : '') + '" onclick="' + st.tpl.replace('%', p.id) + '">'
     + _pkFace(p)
     + '<span class="ofr-txt"><span class="ofr-nm">' + _lxEsc(p.disp || p.name) + '</span>'
-    + '<span class="ofr-meta"><span class="ofr-pos ofr-' + (p.pick ? 'PK' : (p.pos || 'PK')) + '">' + _lxEsc(meta) + '</span>'
+    + '<span class="ofr-meta"><span class="ofr-pos ofr-' + (p.pick ? 'PK' : (p.pos || 'NA')) + '">' + _lxEsc(meta || '-') + '</span>'
     + '<span class="ofr-val">' + (p.v ? Math.round(p.v).toLocaleString() : '') + '</span></span></span>'
     + '<span class="ofr-tick"></span></button>';
 }
@@ -6469,11 +6512,16 @@ function pkPaint(key){
 }
 function pkQ(key, v){
   if(!PK[key]) return;
+  var el0 = document.getElementById('pk-' + key);
+  var old = el0 && el0.querySelector('.ofr-search input');
+  // the repaint destroys the input, so carry the caret across rather than
+  // slamming it to the end - editing the middle of a filter was unusable
+  var caret = old && old.selectionStart != null ? old.selectionStart : (v || '').length;
   PK[key].q = v || '';
   pkPaint(key);
   var el = document.getElementById('pk-' + key);
   var inp = el && el.querySelector('.ofr-search input');
-  if(inp){ inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(_){} }
+  if(inp){ inp.focus(); try{ inp.setSelectionRange(caret, caret); }catch(_){} }
 }
 function pkPos(key, v){ if(PK[key]){ PK[key].pos = v; pkPaint(key); } }
 
@@ -6499,7 +6547,7 @@ function _pkTheirAssets(rosterId){
 
 function ofrPickTeam(rid, keep){
   rid = parseInt(rid, 10);
-  if(!keep){ OFR.want = []; OFR.give = []; }
+  if(!keep){ OFR.want.length = 0; OFR.give.length = 0; }
   OFR.rid = rid || null;
   var body = document.getElementById('ofr-body'), out = document.getElementById('ofr-out');
   if(out) out.innerHTML = '';
@@ -6518,11 +6566,20 @@ function ofrPickTeam(rid, keep){
   ofrEvaluate();
 }
 
+var _ofrTimer = null;
+// The search behind ofrEvaluate enumerates every package of up to four assets,
+// which is ~100ms here and several times that on a phone. Ticking three players
+// used to pay that on every single tap; now the cards respond instantly and the
+// analysis runs once, when you stop.
+function ofrEvaluateSoon(){
+  if(_ofrTimer) clearTimeout(_ofrTimer);
+  _ofrTimer = setTimeout(function(){ _ofrTimer = null; try{ ofrEvaluate(); }catch(_){} }, 110);
+}
 function ofrToggle(side, pid){
   var i = OFR[side].indexOf(pid);
   if(i >= 0) OFR[side].splice(i, 1); else OFR[side].push(pid);
   pkPaint('ofr-' + side);          // only the column that changed
-  ofrEvaluate();
+  ofrEvaluateSoon();
 }
 
 function _ofrResolve(ids, pool){
