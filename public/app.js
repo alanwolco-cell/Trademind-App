@@ -2183,6 +2183,7 @@ var MAC_NAV={
   home:{label:'Home',go:function(){switchScreen('home');}},
   analyze:{label:'Open the Trade Analyzer',go:function(){switchScreen('analyze');try{showAnalyzeTab('analyzer');}catch(_){}}},
   ideas:{label:'See Trade Ideas',go:function(){switchScreen('analyze');try{showAnalyzeTab('ideas');}catch(_){}}},
+  desk:{label:'Open the Trade Desk',go:function(){switchScreen('analyze');try{showAnalyzeTab('desk');}catch(_){}}},
   league:{label:'Open My League',go:function(){switchScreen('league');}},
   research:{label:'Open Research',go:function(){switchScreen('research');}},
   draft:{label:'Open the Draft room',go:function(){switchScreen('mock');try{mdRenderStrats();}catch(_){}}},
@@ -5251,7 +5252,9 @@ function _applyTabHash(){
   var token=window.location.hash.slice(1)||_TAB_DEFAULTS[scr];
   window._tabRestoring=true;
   try{
-    if(scr==='analyze'){showAnalyzeTab(token==='ideas'?'ideas':'analyzer');}
+    // every analyze sub-tab must be restorable, or back-navigation lands on a
+    // screen that disagrees with the address bar
+    if(scr==='analyze'){showAnalyzeTab(token==='ideas'||token==='desk'?token:'analyzer');}
     else if(scr==='league'||scr==='research'){
       if(document.getElementById(token)){
         var screen=document.getElementById('screen-'+scr);
