@@ -5538,7 +5538,13 @@ function _tgtMyAssets(){
       // Keep `name` exactly as the valuation parser expects, and carry a separate
       // label for the screen: four chips all reading "2027 Round 3 (via trade)"
       // are impossible to tell apart, and they are four different picks.
+      // Key derived from the pick itself, never from its index. Index-based ids
+      // shifted the moment any player above it was filtered out (a value drops
+      // to 0, or the feed reloads), and a ticked pick silently stopped matching.
+      // season+round+original owner is unique: buildPicksForRoster already
+      // dedupes on exactly that triple.
       if(v > 0) out.push({ id: null, pick: true, name: pk.name, pos: 'PK', team: '', v: v,
+        key: 'pk:' + pk.season + ':' + pk.round + ':' + (pk.ownerRosterId || 'own'),
         from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
     });
   }catch(_){}
@@ -6322,7 +6328,7 @@ var OFR = { rid: null, want: [], give: [] };
 // so there is now only one. The index keeps two picks of the same name apart.
 function _ofrMyAssets(){
   return _tgtMyAssets().map(function(a, i){
-    return { id: a.id || ('pk:' + i + ':' + a.name), name: a.name, disp: a.disp || a.name, from: a.from || '', team: a.team || '', pos: a.pos, v: a.v, pick: !!a.pick };
+    return { id: a.id || a.key || ('pk:' + a.name), name: a.name, disp: a.disp || a.name, from: a.from || '', team: a.team || '', pos: a.pos, v: a.v, pick: !!a.pick };
   });
 }
 
@@ -6462,9 +6468,11 @@ function _pkTheirAssets(rosterId){
     return { id: pid, name: ap.name || pid, pos: ap.pos || '?', team: ap.team || '', v: ktcById[pid] || 0 };
   }).filter(function(p){ return p.v > 0; });
   try{
-    buildPicksForRoster(r, leaguePicks, ACTIVE_SEASON).forEach(function(pk, i){
+    buildPicksForRoster(r, leaguePicks, ACTIVE_SEASON).forEach(function(pk){
       var v = getKtcValue(pk.name, null);
-      if(v > 0) out.push({ id: 'pk:' + i + ':' + pk.name, name: pk.name, pos: 'PK', team: '', v: v, pick: true,
+      // stable key, not a position in the list - see _tgtMyAssets for why
+      if(v > 0) out.push({ id: 'pk:' + pk.season + ':' + pk.round + ':' + (pk.ownerRosterId || 'own'),
+        name: pk.name, pos: 'PK', team: '', v: v, pick: true,
         from: pk.ownerName || '', disp: pk.season + ' R' + pk.round });
     });
   }catch(_){}
