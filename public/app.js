@@ -11248,6 +11248,7 @@ function mdSetPosFilter(btn){
 // inside mdShowChoices only runs on the clock (so a filter click can never
 // overwrite his pick reaction or the end-of-draft grade).
 function mdFilterChoices(){
+  MD.avShown=25; // cambiar de filtro o buscar empieza la lista de nuevo
   var bd=document.getElementById('md-board');
   if(bd&&bd.dataset.live==='1')mdShowChoices(MD.curRound||1);
 }
@@ -11260,6 +11261,43 @@ function mdShowChoicesSoon(round){
   if(_mdPaintT)clearTimeout(_mdPaintT);
   _mdPaintT=setTimeout(function(){_mdPaintT=null;try{mdShowChoices(round);}catch(_){}},90);
 }
+// El juego de columnas del tablero, calculado para ESTE ancho. Una sola
+// fuente de verdad: la cabecera y las filas lo consumen igual, asi que no
+// pueden descuadrarse. En el telefono el ADP y el bye bajan a la linea del
+// nombre en vez de pelear por 40px que le hacen falta al nombre.
+function mdBoardCols(pf,proj){
+  var phone=window.innerWidth<=700;
+  // iPhone SE y compania: a 320px la columna de proyeccion se come justo los
+  // 44px que necesita "Christian McCaffrey" para caber en un renglon, asi que
+  // el numero baja a la linea del nombre
+  var narrow=window.innerWidth<=340;
+  // En el telefono el numero de ranking se va: con el ADP en la linea del
+  // nombre es informacion repetida, y esos 27px son la diferencia entre que
+  // "Christian McCaffrey" quepa en un renglon o parta la fila en dos.
+  var cols=phone?[{k:'who',l:'Jugador',w:'minmax(0,1fr)'}]
+                :[{k:'rk',l:'',w:'30px'},{k:'who',l:'Jugador',w:'minmax(0,1fr)'}];
+  // En el telefono el precio (o el ADP) viaja en la linea del nombre, no como
+  // columna: repetirlo en las dos partes era ruido y le robaba ancho al nombre.
+  if(!phone)cols.push(AU.active?{k:'aav',l:'AAV',w:'54px'}:{k:'adp',l:'ADP',w:'54px'});
+  if(!narrow)cols.push({k:'proj',l:'Proy',w:phone?'38px':'54px',sort:proj?'proj':null});
+  if(!phone){
+    cols.push({k:'bye',l:'Bye',w:'40px'});
+    if(proj&&pf)mdSplitCols(pf).forEach(function(c){cols.push({k:c.k,l:c.l,w:'52px',sort:c.k});});
+  }
+  cols.push({k:'q',l:'',w:phone?'28px':'28px'});
+  cols.push({k:'go',l:'',w:phone?'34px':'32px'});
+  return cols;
+}
+// El tablero se redibuja al girar el telefono: el juego de columnas depende
+// del ancho, y una plantilla vieja dejaria la cabecera corrida.
+var _mdColsW=window.innerWidth;
+window.addEventListener('resize',function(){
+  var w=window.innerWidth;
+  if((w<=700)===(_mdColsW<=700)&&(w<=340)===(_mdColsW<=340))return; // solo al cruzar un corte
+  _mdColsW=w;
+  var bd=document.getElementById('md-board');
+  if(bd&&bd.dataset.live==='1')mdShowChoicesSoon(MD.curRound||1);
+});
 function mdShowChoices(round){
   var q=((document.getElementById('md-avail-search')||{}).value||'').toLowerCase().trim();
   var pf=MD.posFilter||'';
@@ -11397,106 +11435,128 @@ function mdShowChoices(round){
   }
   var box=document.getElementById('md-choices');
   box.innerHTML='';
-  // Table mode: a position filter + loaded projections turns the card grid
-  // into single-column rows so PROJ and the splits line up like Stacked's
-  // table. The "All" grid keeps its cards and shows PROJ inline.
-  var tbl=!!(_proj&&pf);
-  box.style.gridTemplateColumns=tbl?'1fr':'repeat(auto-fill,minmax(min(100%,270px),1fr))';
-  // auction list stays LIGHT (owner: face, name, pos, AAV - period): the
-  // full projection table belongs to snake's shopping flow, not a bid war
-  var _cols=tbl?(AU.active?[{k:'aav',l:'AAV'}]:[{k:'proj',l:'Proj'}].concat(mdSplitCols(pf))):[];
-  if(tbl){
-    var hd=document.createElement('div');
-    hd.className='md-tbl-head';
-    hd.innerHTML='<span style="flex:1">Player</span>'
-      +'<span class="md-ch-stats">'+_cols.map(function(c){
-        var on=MD.availSort&&MD.availSort.k===c.k;
-        return '<span class="md-ch-stat'+(on?' on':'')+'" onclick="mdSortCols(\''+c.k+'\')" title="Sort by projected '+c.l+'">'+c.l+(on?(MD.availSort.d<0?' &#9662;':' &#9652;'):'')+'</span>';
-      }).join('')+'</span>'
-      +'<span style="width:20px;flex:none"></span><span style="width:26px;flex:none"></span>';
-    box.appendChild(hd);
-  }
+  // ── El tablero (patron pplfantasy) ───────────────────────────────────────
+  // Una sola columna, un jugador por linea, y la cabecera comparte la MISMA
+  // plantilla de rejilla que las filas: por eso los numeros siempre caen
+  // debajo de su rotulo. La plantilla se calcula aqui, para este ancho, asi
+  // que cabecera y filas no pueden discrepar - que era exactamente el bug que
+  // dejaba las columnas de stats en cero al filtrar por posicion en el movil.
+  var _phone=window.innerWidth<=700;
+  var _narrow=window.innerWidth<=340;
+  var _cols=mdBoardCols(pf,_proj);
+  box.style.display='block';
+  box.style.gridTemplateColumns='';
+  box.style.setProperty('--md-cols',_cols.map(function(c){return c.w;}).join(' '));
+  var _hd=document.createElement('div');
+  _hd.className='md-bd-head';
+  _hd.innerHTML=_cols.map(function(c){
+    if(!c.l)return '<span></span>';
+    if(!c.sort)return '<span'+(c.k==='who'?' class="md-bd-hl"':'')+'>'+c.l+'</span>';
+    var on=MD.availSort&&MD.availSort.k===c.sort;
+    return '<span class="md-bd-sort'+(on?' on':'')+'" onclick="mdSortCols(\''+c.sort+'\')" title="Sort by '+c.l+'">'
+      +c.l+(on?(MD.availSort.d<0?' &#9662;':' &#9652;'):'')+'</span>';
+  }).join('');
+  box.appendChild(_hd);
+
+  // Se dibujan 25 y el resto entra con un boton. El buscador y los filtros de
+  // posicion siguen mirando la lista completa, asi que nadie queda escondido.
+  var _limit=MD.avShown||25;
+  var _total=entries.length;
   var _lastTier=null;
-  entries.forEach(function(en){
+  entries.slice(0,_limit).forEach(function(en){
     var p=en.p,isTaken=!!en.by;
-    // Tier separators, position view only: "— Tier 3 WR —" between blocks so
-    // the cliffs are visible while you shop a position. When the tier is down
-    // to its last man (or two), the separator says so in red - and the
-    // hairlines shimmer once with the brand gradient (theme.css .md-tier-sep).
-    // A column sort breaks tier order, so the separators sit that view out.
+    // Separadores de tier (solo en vista de posicion y sin orden por columna,
+    // que rompe el orden de tiers): marcan donde de verdad hay un salto.
     if(pf&&!MD.availSort&&MD.tierOf&&MD.tierOf[p.id]&&MD.tierOf[p.id]!==_lastTier){
       var _tn2=MD.tierOf[p.id];
+      var _left=MD.pool.filter(function(x){return !taken[x.id]&&x.pos===pf&&MD.tierOf[x.id]===_tn2;}).length;
       var sep=document.createElement('div');
-      sep.className='md-tier-sep';
-      sep.innerHTML='<span class="sep-line"></span>Tier '+_tn2+' '+pf
-        +'<span class="sep-line"></span>';
+      sep.className='md-bd-tier';
+      sep.innerHTML='<span>Tier '+_tn2+' '+pf+'</span>'
+        +'<i class="'+(_left<=2?'thin':'')+'">'+(_left===1?'ultimo':'quedan '+_left)+'</i>';
       box.appendChild(sep);
       _lastTier=_tn2;
     }
-    // TAP MODEL: the card body (face, name, anywhere) opens the player card.
-    // Drafting happens ONLY through the select circle on the right (and the
-    // Draft button), so a stray tap can never draft anyone by accident.
     var isSel=!isTaken&&MD.selChoice===p;
     var inQ=!isTaken&&(MD.queue||[]).indexOf(p.id)>=0;
     var _pv=mdProjPts(p.id);
     var _bw=window._mdByes&&p.team?window._mdByes[p.team]:null;
-    // bye conflict: 2+ of YOUR picks already sit on this week - the BYE turns
-    // red before you make it three
+    // choque de bye: 2 de tus picks ya en esa semana - el BYE se pone rojo
+    // antes de que hagas el tercero
     var _bwN=0;
     if(_bw&&!isTaken)(MD.mine||[]).forEach(function(x){if(x.team&&window._mdByes[x.team]===_bw)_bwN++;});
     var _bwHot=!isTaken&&_bw&&_bwN>=2;
-    // overlay tags + market mover arrow (30-day trend, redraft dataset only,
-    // extremes only - same |250| line trendLabel calls "fast")
-    var _tagsHtml=isTaken?'':mdRowTagsHtml(p,!tbl);
-    var _mvHtml='';
-    if(tbl&&!isTaken&&window._ktcIsDyn===false){
-      var _t30=(ktcFull[p.id]||{}).trend30Day||0;
-      if(_t30>250)_mvHtml=' <span title="Rising fast in market" style="color:var(--green);font-weight:800">&#8593;</span>';
-      else if(_t30<-250)_mvHtml=' <span title="Falling fast in market" style="color:var(--red);font-weight:800">&#8595;</span>';
+    var _rk=(MD.initialRanks&&MD.initialRanks[p.id])||null;
+    var _esc=p.name.replace(/"/g,'&quot;');
+
+    // La linea de abajo del nombre. En el telefono se lleva el ADP y el bye,
+    // que alli no caben como columna sin comerse el nombre.
+    var meta='<b class="md-bd-pos pos-'+p.pos+'">'+p.pos+'</b> &middot; '+(p.team||'FA');
+    if(isTaken){
+      meta+=' &middot; <span class="md-bd-by">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' '+en.by+'</span>';
+    }else if(_phone){
+      if(AU.active)meta+=' &middot; <b>$'+auValue(p)+'</b>';
+      else if(p.adp)meta+=' &middot; <b>ADP&nbsp;'+(+p.adp).toFixed(1)+'</b>';
+      else if(_rk)meta+=' &middot; #'+_rk;
+      if(_narrow&&_pv!=null)meta+=' &middot; <b>'+_mdFmtStat(_pv)+'</b>';
+      // El bye solo aparece en el telefono cuando es un choque de verdad: en
+      // 157px de linea, un bye que no molesta a nadie parte la fila en dos.
+      if(_bwHot)meta+=' &middot; <span class="hot" title="Ya tienes '+_bwN+' picks en este bye">BYE&nbsp;'+_bw+'</span>';
     }
+
     var d=document.createElement('div');
-    // styling lives in theme.css: the pos-XX class carries the edge colour,
-    // md-ch-rec marks Mac's pick, md-ch-on the selected row, md-ch-taken a
-    // drafted player shown in place
-    d.className='md-ch-row pos-'+p.pos+(!isTaken&&p===rec?' md-ch-rec':'')+(isSel?' md-ch-on':'')+(isTaken?' md-ch-taken':'');
-    // in table mode every row carries the stat columns; the "All" grid keeps
-    // its cards and rides PROJ on the meta line instead
-    var statsHtml=tbl
-      ?'<span class="md-ch-stats">'+_cols.map(function(c){
-          return '<span class="md-ch-stat'+(c.k==='proj'?' md-ch-proj':'')+'">'+_mdFmtStat(_mdStat(p,c.k))+'</span>';
-        }).join('')+'</span>'
-      :'';
-    var ctrlHtml=isTaken
-      ?'<span style="flex-shrink:0;width:20px"></span><span style="flex-shrink:0;width:26px"></span>'
-      :'<span class="md-ch-q" title="'+(inQ?'Remove from queue':'Add to queue')+'" onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid '+(inQ?'var(--accent-bright);color:var(--accent-bright)':'var(--border);color:var(--muted)')+';display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer">'+(inQ?'&minus;':'+')+'</span>'
-      // the nominate arrow only exists on YOUR nomination turn - during someone
-      // else's lot there is nothing to nominate and the purple invites a
-      // click that does nothing
-      +((AU.active&&AU.nominator!==MD.mySlot)?''
-        :('<span class="md-ch-sel" title="'+(AU.active?'Nominate ':'Draft ')+p.name.replace(/"/g,"&quot;")+'" onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:2px solid var(--accent-bright);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer" onmouseover="this.style.background=\'var(--accent-dim)\'" onmouseout="this.style.background=\'transparent\'">'
-          +'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--accent-bright)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>'));
-    // auction rows read like a price list, not a scouting table: face, name,
-    // pos, AAV - the ADP/bye/proj/tag layers are snake's shopping detail
-    var _lite=AU.active&&!isTaken;
-    d.innerHTML='<img src="'+mdFaceUrl(p)+'" loading="lazy" decoding="async" style="width:34px;height:34px;border-radius:50%;object-fit:cover'+(p.pos==='DEF'?';object-fit:contain;background:var(--surface3);padding:3px':'')+'" onerror="this.style.visibility=\'hidden\'">'
-      +'<div style="min-width:0;flex:1"><div style="font-size:'+(AU.active?'13px':'12px')+';font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+_mvHtml+(!isTaken&&p===rec?' <span style="font-size:9px;color:var(--accent-bright)">◄ MAC</span>':'')+'</div>'
-      +'<div style="font-size:'+(AU.active?'12px':'10px')+';color:var(--muted)">'+mdPosTag(p.pos)+' · '+teamLogo(p.team,12)+(p.team||'FA')
-      +(isTaken?' · <span style="white-space:nowrap">R'+en.round+'.'+(en.pickNo<10?'0':'')+en.pickNo+' · '+en.by+'</span>'
-        :_lite?''
-        :(p.adp?' · <span title="Average draft position in real mock drafts" style="color:var(--muted2);font-weight:700;white-space:nowrap">ADP&nbsp;'+(+p.adp).toFixed(1)+'</span>':(MD.initialRanks&&MD.initialRanks[p.id]?' · <span title="Overall rank by market value" style="white-space:nowrap">#'+MD.initialRanks[p.id]+'</span>':'')))
-      +(_bw&&!_lite?' · <span title="'+(_bwHot?'You already have '+_bwN+' players on this bye':'Bye week')+'" style="white-space:nowrap'+(_bwHot?';color:var(--red);font-weight:700':'')+'">BYE&nbsp;'+_bw+'</span>':'')
-      +(!tbl&&_lite?' · <span title="Auction value for this room" style="color:var(--text);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums">$'+auValue(p)+'</span>':'')
-      +(!tbl&&!_lite&&_pv!=null?' · <span title="Projected season points" style="color:var(--muted2);font-weight:700;white-space:nowrap">PROJ&nbsp;'+_mdFmtStat(_pv)+'</span>':'')
-      +(_lite?'':_tagsHtml)
-      +'</div></div>'
-      +statsHtml
-      +ctrlHtml;
+    d.className='md-bd-row pos-'+p.pos+(!isTaken&&p===rec?' is-rec':'')+(isSel?' is-on':'')+(isTaken?' is-taken':'');
+    d.innerHTML=_cols.map(function(c){
+      switch(c.k){
+        case 'rk':
+          return '<span class="md-bd-rk">'+(_rk||'')+'</span>';
+        case 'who':
+          return '<span class="md-bd-who">'
+            +'<img class="md-bd-face" src="'+mdFaceUrl(p)+'" loading="lazy" decoding="async" alt=""'
+            +(p.pos==='DEF'?' style="object-fit:contain;background:var(--surface3);padding:2px"':'')
+            +' onerror="this.style.visibility=\'hidden\'">'
+            +'<span class="md-bd-txt">'
+            +'<span class="md-bd-name">'+p.name
+            +(!isTaken&&p===rec?' <i class="md-bd-mac">MAC</i>':'')+'</span>'
+            +'<span class="md-bd-meta">'+meta+(isTaken?'':mdRowTagsHtml(p,true))+'</span>'
+            +'</span></span>';
+        case 'adp':
+          return '<span class="md-bd-c">'+(p.adp?(+p.adp).toFixed(1):(_rk?'#'+_rk:'&ndash;'))+'</span>';
+        case 'aav':
+          return '<span class="md-bd-c strong">$'+auValue(p)+'</span>';
+        case 'proj':
+          return '<span class="md-bd-c strong">'+(_pv!=null?_mdFmtStat(_pv):'&ndash;')+'</span>';
+        case 'bye':
+          return '<span class="md-bd-c'+(_bwHot?' hot':'')+'"'
+            +(_bwHot?' title="Ya tienes '+_bwN+' picks en este bye"':'')+'>'+(_bw||'&ndash;')+'</span>';
+        case 'q':
+          if(isTaken)return '<span></span>';
+          return '<button class="md-bd-q'+(inQ?' on':'')+'" title="'+(inQ?'Quitar de la cola':'Agregar a la cola')+'"'
+            +' onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')">'+(inQ?'&minus;':'+')+'</button>';
+        case 'go':
+          // la flecha de nominar solo existe en TU turno de nominar: en el lote
+          // de otro no hay nada que nominar y el morado invita a un click muerto
+          if(isTaken||(AU.active&&AU.nominator!==MD.mySlot))return '<span></span>';
+          return '<button class="md-bd-go" title="'+(AU.active?'Nominar ':'Draftear ')+_esc+'"'
+            +' onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))">'
+            +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>';
+        default:
+          return '<span class="md-bd-c">'+_mdFmtStat(_mdStat(p,c.k))+'</span>';
+      }
+    }).join('');
     d.addEventListener('click',function(){
-      if(p.pos==='DEF')return; // no player card for team units
+      if(p.pos==='DEF')return; // los equipos de defensa no tienen ficha
       openPlayerCard(p.id,p.name);
     });
     box.appendChild(d);
   });
+  if(_total>_limit){
+    var more=document.createElement('button');
+    more.className='md-bd-more';
+    more.textContent='Ver '+Math.min(25,_total-_limit)+' mas';
+    more.onclick=function(){MD.avShown=_limit+25;mdShowChoices(MD.curRound||1);};
+    box.appendChild(more);
+  }
   mdRenderDraftBar();
 }
 // The Draft screen shows ONE thing at a time: solo setup, friends rooms,
@@ -12522,14 +12582,20 @@ function auSetRTab(t){
 // the lineup shape as an ordered slot list (QB, RB, RB, WR, WR, TE, FLEX, K,
 // DEF, BN...) - the connected league's shape when it drives the room. Shared
 // by the roster strip, the Rosters table and the Board placeholders.
-function _mdLineupOrder(){
+// La forma de la alineacion: la del formato de la liga conectada cuando manda
+// la liga, la estandar si no. Una sola fuente de verdad para el orden de los
+// puestos, los contadores de necesidad y el panel del roster.
+function _mdLineupSlots(){
   var lf=(localStorage.getItem('tm_mock_uselg')!=='0'&&window.leagueFormat)?window.leagueFormat:null;
-  var slots={
+  return {
     QB:lf?((lf.numQBs||1)+(lf.hasSuperFlex?1:0)):(MD.sf?2:1),
     RB:lf?(lf.numRBs||2):2,WR:lf?(lf.numWRs||2):2,TE:lf?(lf.numTEs||1):1,
     FLEX:lf?((lf.flexCount||0)+(lf.recFlexCount||0)):1,
     K:MD.noK?0:1,DEF:MD.noD?0:1
   };
+}
+function _mdLineupOrder(){
+  var slots=_mdLineupSlots();
   var ord=[];
   ['QB','RB','WR','TE'].forEach(function(ps){for(var i=0;i<(slots[ps]||0);i++)ord.push(ps);});
   for(var f=0;f<(slots.FLEX||0);f++)ord.push('FLEX');
@@ -13437,13 +13503,7 @@ function mdRenderMine(){
   try{
     var needsEl=document.getElementById('md-needs');
     if(needsEl){
-      var lf=(localStorage.getItem('tm_mock_uselg')!=='0'&&window.leagueFormat)?window.leagueFormat:null;
-      var slots={
-        QB:lf?((lf.numQBs||1)+(lf.hasSuperFlex?1:0)):(MD.sf?2:1),
-        RB:lf?(lf.numRBs||2):2,WR:lf?(lf.numWRs||2):2,TE:lf?(lf.numTEs||1):1,
-        FLEX:lf?((lf.flexCount||0)+(lf.recFlexCount||0)):1,
-        K:MD.noK?0:1,DEF:MD.noD?0:1
-      };
+      var slots=_mdLineupSlots();
       var have={QB:0,RB:0,WR:0,TE:0,K:0,DEF:0};
       MD.mine.forEach(function(p){if(have[p.pos]!=null)have[p.pos]++;});
       var flexFill=0;
@@ -13502,10 +13562,84 @@ function mdRenderMine(){
       }catch(_){}
     }
   }catch(_){}
+  try{mdRenderRoster();}catch(_){}
   var _mdMine=document.getElementById('md-mine');if(_mdMine)_mdMine.innerHTML=['QB','RB','WR','TE','K','DEF'].filter(function(pos){return byPos[pos]&&byPos[pos].length;}).map(function(pos){
     return '<div style="margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:var(--muted);margin-right:6px">'+pos+'</span>'
       +byPos[pos].map(function(p){var _e=p.name.replace(/'/g,"\\'");return '<span onclick="openPlayerCard(\''+p.id+'\',\''+_e+'\')" title="View player card" style="display:inline-flex;align-items:center;gap:6px;background:var(--surface3);border-radius:100px;padding:3px 12px 3px 3px;font-size:12px;font-weight:600;color:var(--text);margin:2px;cursor:pointer"><img src="'+mdFaceUrl(p)+'" style="width:24px;height:24px;border-radius:50%;object-fit:'+(p.pos==='DEF'?'contain':'cover')+'" onerror="this.style.visibility=\'hidden\'">'+p.name+'</span>';}).join('')+'</div>';
   }).join('');
+}
+// ── El panel del roster ─────────────────────────────────────────────────────
+// Dos piezas, en el orden en que se preguntan: la barra de necesidades ("que
+// me falta") y debajo la alineacion tipo Sleeper ("como voy"), con los puestos
+// vacios visibles, que es lo que hace que un hueco se vea sin contar nada.
+// En pantalla ancha vive pegado a la derecha de la lista; en el telefono es
+// una barra fija abajo que muestra solo las necesidades y se abre de un toque.
+function mdRenderRoster(){
+  var el=document.getElementById('md-roster');if(!el)return;
+  var slots=_mdLineupSlots();
+  var have={QB:0,RB:0,WR:0,TE:0,K:0,DEF:0};
+  (MD.mine||[]).forEach(function(p){if(have[p.pos]!=null)have[p.pos]++;});
+  var flexFill=0;
+  ['RB','WR','TE'].forEach(function(ps){
+    var ov=have[ps]-slots[ps];
+    if(ov>0)flexFill=Math.min(slots.FLEX,flexFill+ov);
+  });
+  var order=['QB','RB','WR','TE','FLEX','K','DEF'].filter(function(ps){return slots[ps]>0;});
+  var needs=order.map(function(ps){
+    var h=ps==='FLEX'?flexFill:Math.min(have[ps],slots[ps]);
+    var full=h>=slots[ps];
+    var click=ps==='FLEX'?'':' onclick="mdNeedsFilter(\''+ps+'\')" title="Ver '+ps+'s disponibles"';
+    return '<div class="mdr-need'+(full?' full':'')+(click?' go':'')+'"'+click+'>'
+      +'<b class="pos-'+ps+'">'+ps+'</b>'
+      +'<span class="mdr-bar"><i style="width:'+Math.round(h/slots[ps]*100)+'%"></i></span>'
+      +'<span class="mdr-n">'+h+'/'+slots[ps]+'</span></div>';
+  }).join('');
+
+  var assigned=_auSlotAssign((MD.picks||[]).filter(function(pk){return pk.mine;}));
+  var picksLeft=Math.max(0,(MD.rounds||15)-(MD.mine||[]).length);
+  var rows='',benchOpen=false,firstEmpty=true;
+  assigned.forEach(function(o){
+    if(o.l==='BN'&&!benchOpen){benchOpen=true;rows+='<div class="mdr-div">Banca</div>';}
+    if(!o.pk){
+      // solo el primer hueco explica que hacer; repetirlo en nueve lineas es ruido
+      var hint=firstEmpty?(picksLeft===1?'Te queda 1 pick':'Te quedan '+picksLeft+' picks')
+        :(o.l==='FLEX'?'RB, WR o TE':'');
+      firstEmpty=false;
+      rows+='<div class="mdr-slot empty"><span class="mdr-tag">'+o.l+'</span>'
+        +'<span class="mdr-who"><span class="mdr-name">Vacio</span>'
+        +(hint?'<span class="mdr-meta">'+hint+'</span>':'')+'</span></div>';
+      return;
+    }
+    var pl=o.pk.p;
+    var bye=window._mdByes&&pl.team?window._mdByes[pl.team]:null;
+    var pv=mdProjPts(pl.id);
+    var _e=pl.name.replace(/'/g,"\\'");
+    rows+='<div class="mdr-slot filled" onclick="openPlayerCard(\''+pl.id+'\',\''+_e+'\')" title="Ver ficha de '+pl.name.replace(/"/g,'&quot;')+'">'
+      +'<span class="mdr-tag on">'+o.l+'</span>'
+      +'<img class="mdr-face" src="'+mdFaceUrl(pl)+'" loading="lazy" alt="" onerror="this.style.visibility=\'hidden\'">'
+      +'<span class="mdr-who"><span class="mdr-name">'+pl.name+'</span>'
+      +'<span class="mdr-meta"><b class="pos-'+pl.pos+'">'+pl.pos+'</b> &middot; '+(pl.team||'FA')
+      +(bye?' &middot; Bye '+bye:'')+(o.pk.grade?' &middot; '+o.pk.grade:'')+'</span></span>'
+      +(pv!=null?'<span class="mdr-proj">'+Math.round(pv)+'</span>':'')
+      +'</div>';
+  });
+
+  var tot=0;(MD.mine||[]).forEach(function(p){var v=mdProjPts(p.id);if(v!=null)tot+=v;});
+  el.innerHTML='<button class="mdr-head" onclick="mdRosterToggle()" aria-expanded="'+(el.classList.contains('open')?'true':'false')+'">'
+      +'<b>Mi equipo</b>'
+      +'<span class="mdr-count">'+(MD.mine||[]).length+' de '+(MD.rounds||15)
+      +(tot?' &middot; Proy '+Math.round(tot).toLocaleString('en-US'):'')+'</span>'
+      +'<i class="mdr-chev" aria-hidden="true"></i></button>'
+    +'<div class="mdr-needs">'+needs+'</div>'
+    +'<div class="mdr-slots">'+rows+'</div>';
+}
+// Solo hace algo en el telefono, donde el panel esta colapsado a la barra de
+// necesidades; en pantalla ancha esta siempre abierto y el boton no aparece.
+function mdRosterToggle(){
+  var el=document.getElementById('md-roster');if(!el)return;
+  el.classList.toggle('open');
+  var b=el.querySelector('.mdr-head');
+  if(b)b.setAttribute('aria-expanded',el.classList.contains('open')?'true':'false');
 }
 function mdRenderLog(){
   var _mdLog=document.getElementById('md-log');if(_mdLog)_mdLog.innerHTML=MD.log.slice(0,50).map(function(l){return '<div style="padding:2px 0">'+l+'</div>';}).join('');

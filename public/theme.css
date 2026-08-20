@@ -945,3 +945,251 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   .dl-nm{font-size:12px}
 }
 .ofr-NA{color:var(--muted)}
+
+/* ── El tablero de disponibles (patron pplfantasy) ───────────────────────────
+   Una columna, un jugador por linea. La clave: .md-bd-head y .md-bd-row usan
+   la MISMA variable --md-cols, que app.js calcula para el ancho actual. Por
+   eso el rotulo y el numero siempre estan en la misma columna, en cualquier
+   pantalla. Las filas se comportan como tabla (sin radio, hairline abajo,
+   franja alterna) y el borde izquierdo lleva el color de la posicion, igual
+   que en el resto del sistema. */
+#md-choices{--md-cols:30px minmax(0,1fr) 54px 54px 40px 28px 32px}
+.md-bd-head{
+  display:grid;grid-template-columns:var(--md-cols);column-gap:8px;align-items:end;
+  position:sticky;top:0;z-index:3;
+  padding:8px 9px 6px;background:var(--surface);
+  border:1px solid var(--border);border-bottom-color:var(--border2);
+  /* el mismo borde de 3px que las filas, en transparente: si no, la cabecera
+     queda corrida 2px y las columnas dejan de cuadrar */
+  border-left:3px solid transparent;
+  border-radius:10px 10px 0 0;
+  font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);
+}
+.md-bd-head>span{text-align:right;white-space:nowrap;overflow:hidden}
+.md-bd-head>span.md-bd-hl{text-align:left}
+.md-bd-sort{cursor:pointer}
+.md-bd-sort:hover,.md-bd-sort.on{color:var(--accent-bright)}
+
+.md-bd-row{
+  display:grid;grid-template-columns:var(--md-cols);column-gap:8px;align-items:center;
+  min-width:0;padding:7px 9px;cursor:pointer;
+  border:1px solid var(--border);border-top:0;
+  border-left:3px solid var(--pos,var(--border));
+  background:var(--surface);min-height:52px;
+  transition:background .14s var(--ap-ease,ease),transform .14s var(--ap-ease,ease);
+}
+.md-bd-row:nth-of-type(even){background:var(--surface2)}
+.md-bd-row:last-child{border-radius:0 0 10px 10px}
+@media(hover:hover){.md-bd-row:hover{background:var(--accent-dim);transform:translateX(2px)}}
+.md-bd-row.is-rec{
+  background:linear-gradient(100deg,rgba(155,114,232,.14) 0%,rgba(0,0,0,0) 62%),var(--surface2);
+  border-color:rgba(155,114,232,.4);
+}
+.md-bd-row.is-on{outline:2px solid var(--accent-bright);outline-offset:-2px}
+.md-bd-row.is-taken{opacity:.5;cursor:default}
+.md-bd-row.is-taken .md-bd-name{text-decoration:line-through;font-weight:500;color:var(--muted2)}
+.md-bd-row.is-taken .md-bd-face{filter:grayscale(1)}
+
+.md-bd-rk{font-size:11px;font-weight:700;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.md-bd-who{display:flex;align-items:center;gap:8px;min-width:0}
+.md-bd-face{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;background:var(--surface3)}
+.md-bd-txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.md-bd-name{
+  font-family:var(--font-head);font-size:14.5px;font-weight:600;letter-spacing:-.01em;color:var(--text);
+  overflow-wrap:anywhere;
+}
+.md-bd-mac{
+  font-style:normal;font-size:9px;font-weight:700;letter-spacing:.08em;
+  color:var(--accent-bright);background:var(--accent-dim);border-radius:4px;padding:1px 5px;
+  vertical-align:1px;white-space:nowrap;
+}
+.md-bd-meta{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
+.md-bd-meta b{font-weight:700;color:var(--muted2)}
+.md-bd-meta .hot{color:var(--red);font-weight:700}
+.md-bd-meta .md-bd-by{white-space:nowrap}
+.md-bd-pos{font-weight:700}
+.md-bd-pos.pos-QB{color:var(--pos-qb)} .md-bd-pos.pos-RB{color:var(--pos-rb)}
+.md-bd-pos.pos-WR{color:var(--pos-wr)} .md-bd-pos.pos-TE{color:var(--pos-te)}
+.md-bd-pos.pos-K{color:var(--pos-k)}   .md-bd-pos.pos-DEF{color:var(--pos-def)}
+
+.md-bd-c{
+  align-self:stretch;display:flex;align-items:center;justify-content:flex-end;
+  border-left:1px solid var(--border);padding-left:7px;
+  font-size:12px;color:var(--muted2);font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.md-bd-c.strong{color:var(--text);font-weight:700}
+.md-bd-c.hot{color:var(--red);font-weight:700}
+
+.md-bd-q,.md-bd-go{
+  justify-self:end;align-self:stretch;min-height:34px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:8px;cursor:pointer;padding:0;background:none;
+}
+.md-bd-q{width:28px;border:1px solid var(--border);color:var(--muted);font-size:15px;font-weight:700;line-height:1}
+.md-bd-q:hover{border-color:var(--accent-bright);color:var(--accent-bright)}
+.md-bd-q.on{border-color:var(--accent-bright);color:var(--accent-bright);background:var(--accent-dim)}
+.md-bd-go{width:32px;border:2px solid var(--accent-bright);color:var(--accent-bright)}
+.md-bd-go svg{width:13px;height:13px}
+.md-bd-go:hover{background:var(--accent-dim)}
+.md-bd-q:focus-visible,.md-bd-go:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px}
+
+/* separador de tier: la barra de acento y el contador de cuantos quedan, que
+   es la unica razon por la que un tier importa mientras drafteas */
+.md-bd-tier{
+  display:flex;align-items:center;gap:9px;
+  padding:13px 9px 6px;background:var(--bg);
+  font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);
+  border-left:1px solid var(--border);border-right:1px solid var(--border);
+}
+.md-bd-tier::before{content:'';width:20px;height:3px;border-radius:2px;background:var(--tm-grad);flex:none}
+.md-bd-tier i{
+  font-style:normal;margin-left:auto;font-size:9.5px;letter-spacing:.05em;
+  color:var(--accent-bright);background:var(--accent-dim);border-radius:5px;padding:2px 8px;
+}
+.md-bd-tier i.thin{color:var(--red);background:rgba(255,69,58,.12)}
+
+.md-bd-more{
+  display:block;width:100%;margin-top:10px;padding:12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  color:var(--muted2);font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;
+}
+.md-bd-more:hover{border-color:var(--accent-bright);color:var(--accent-bright)}
+
+@media(max-width:700px){
+  #md-choices{--md-cols:minmax(0,1fr) 38px 28px 34px}
+  .md-bd-head{padding:7px 6px 6px;font-size:9px;letter-spacing:.07em;column-gap:5px}
+  .md-bd-row{padding:7px 6px;min-height:56px;column-gap:5px}
+  .md-bd-face{width:22px;height:22px}
+  .md-bd-who{gap:6px}
+  .md-bd-mac{font-size:8.5px;padding:1px 4px}
+  .md-bd-name{font-size:13px}
+  .md-bd-meta{font-size:10px}
+  .md-bd-c{font-size:11.5px;padding-left:5px}
+  .md-bd-q{width:28px;min-height:42px}
+  .md-bd-go{width:34px;min-height:42px}
+  .md-bd-tier{padding:12px 6px 6px}
+}
+
+/* ── El panel del roster ─────────────────────────────────────────────────────
+   Barra de necesidades arriba ("que me falta"), alineacion tipo Sleeper abajo
+   ("como voy") con los puestos vacios visibles. En pantalla ancha es un rail
+   pegado junto a la lista; en el telefono es una barra fija abajo que muestra
+   solo las necesidades y se abre de un toque. */
+.md-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+/* sin esto la pista crece al min-content de la lista de filtros y toda la
+   columna se sale del telefono por la derecha */
+.md-cols>*{min-width:0}
+@media(max-width:1080px){.md-cols{grid-template-columns:minmax(0,1fr)}}
+#md-roster{
+  position:sticky;top:78px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;align-self:start;
+}
+.mdr-head{
+  display:flex;align-items:baseline;gap:9px;width:100%;
+  padding:12px 14px;background:var(--surface2);border:0;border-bottom:1px solid var(--border);
+  font-family:var(--font-body);text-align:left;cursor:default;color:var(--text);
+}
+.mdr-head b{font-family:var(--font-head);font-weight:700;font-size:14px;letter-spacing:-.01em}
+.mdr-count{margin-left:auto;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mdr-chev{display:none}
+
+.mdr-needs{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.mdr-need{display:flex;align-items:center;gap:9px;font-size:12.5px}
+.mdr-need.go{cursor:pointer}
+.mdr-need.go:hover b{color:var(--accent-bright)}
+.mdr-need>b{flex:none;width:34px;font-family:var(--font-head);font-weight:700;font-size:11.5px;color:var(--muted2)}
+.mdr-need>b.pos-QB{color:var(--pos-qb)} .mdr-need>b.pos-RB{color:var(--pos-rb)}
+.mdr-need>b.pos-WR{color:var(--pos-wr)} .mdr-need>b.pos-TE{color:var(--pos-te)}
+.mdr-need>b.pos-K{color:var(--pos-k)}   .mdr-need>b.pos-DEF{color:var(--pos-def)}
+.mdr-need>b.pos-FLEX{color:var(--accent-bright)}
+.mdr-bar{flex:1;height:7px;border-radius:100px;background:var(--surface3);overflow:hidden}
+.mdr-bar>i{display:block;height:100%;border-radius:100px;background:var(--accent-bright);transition:width .28s var(--ap-ease,ease)}
+.mdr-need.full .mdr-bar>i{background:var(--green)}
+.mdr-n{flex:none;min-width:28px;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.mdr-slots{border-top:1px solid var(--border)}
+.mdr-slot{
+  display:flex;align-items:center;gap:9px;padding:7px 12px;min-height:50px;
+  border-bottom:1px solid var(--border);
+}
+.mdr-slot:last-child{border-bottom:0}
+.mdr-slot.filled{cursor:pointer}
+@media(hover:hover){.mdr-slot.filled:hover{background:var(--accent-dim)}}
+.mdr-slot.empty{background:repeating-linear-gradient(135deg,transparent 0 7px,rgba(255,255,255,.022) 7px 14px)}
+.mdr-tag{
+  flex:none;width:42px;text-align:center;padding:4px 0;border-radius:5px;
+  background:var(--surface3);color:var(--muted);
+  font-size:9.5px;font-weight:700;letter-spacing:.06em;
+}
+.mdr-tag.on{background:var(--accent-dim);color:var(--accent-bright)}
+.mdr-face{width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none;background:var(--surface3)}
+.mdr-who{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25}
+.mdr-name{font-family:var(--font-head);font-size:13.5px;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.mdr-slot.empty .mdr-name{color:var(--muted);font-weight:500}
+.mdr-meta{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mdr-meta b{font-weight:700}
+.mdr-meta b.pos-QB{color:var(--pos-qb)} .mdr-meta b.pos-RB{color:var(--pos-rb)}
+.mdr-meta b.pos-WR{color:var(--pos-wr)} .mdr-meta b.pos-TE{color:var(--pos-te)}
+.mdr-meta b.pos-K{color:var(--pos-k)}   .mdr-meta b.pos-DEF{color:var(--pos-def)}
+.mdr-proj{flex:none;font-size:12px;font-weight:700;color:var(--muted2);font-variant-numeric:tabular-nums}
+.mdr-div{
+  padding:6px 14px;background:var(--surface2);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+}
+
+@media(max-width:1080px) and (min-width:701px){
+  #md-roster{position:static;margin-top:14px}
+}
+/* Telefono: barra fija abajo. Colapsada muestra solo las necesidades, que es
+   la respuesta a "que me falta"; un toque abre la alineacion completa. */
+@media(max-width:700px){
+  #md-rstrip{display:none!important}   /* lo reemplaza este panel */
+  /* los contadores de la cabecera dirian lo mismo que la barra de abajo, y
+     repetir "QB 0/1 RB 0/2" dos veces en la misma pantalla es ruido */
+  #md-needs{display:none!important}
+  #md-roster{
+    /* la barra de pestanas se queda con los ultimos ~57px del viewport, mas
+       el indicador de inicio: el panel se apoya justo encima */
+    --md-bar-b:calc(62px + env(safe-area-inset-bottom,0px));
+    /* top:auto es obligatorio: el rail de escritorio fija top:78px y con top
+       y bottom a la vez el navegador ancla arriba y la barra sale volando */
+    position:fixed;top:auto;left:0;right:0;bottom:var(--md-bar-b);z-index:70;
+    border-radius:14px 14px 0 0;border-bottom:0;
+    box-shadow:0 -12px 34px -18px rgba(0,0,0,.95);
+    max-height:76vh;display:flex;flex-direction:column;
+  }
+  .mdr-head{cursor:pointer;padding:11px 14px;min-height:44px}
+  .mdr-chev{
+    display:block;flex:none;width:9px;height:9px;margin-left:2px;align-self:center;
+    border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+    transform:rotate(-135deg) translate(-2px,-2px);transition:transform .2s var(--ap-ease,ease);
+  }
+  #md-roster.open .mdr-chev{transform:rotate(45deg) translate(-1px,-1px)}
+  /* Colapsada la barra tiene que responder "que me falta" de un vistazo, y en
+     362px las barritas de progreso no caben sin cortarse: los siete puestos
+     entran como contadores, y el verde marca el que ya esta lleno. */
+  .mdr-needs{
+    flex-direction:row;flex-wrap:nowrap;justify-content:space-between;
+    gap:4px;padding:9px 12px;
+  }
+  .mdr-need{flex:1 1 0;min-width:0;gap:4px;justify-content:center;font-size:11.5px}
+  .mdr-need>b{width:auto;font-size:11px}
+  .mdr-bar{display:none}
+  .mdr-n{min-width:0;font-size:11px;color:var(--muted)}
+  .mdr-need.full .mdr-n{color:var(--green)}
+  .mdr-slots{display:none;overflow-y:auto;flex:1}
+  #md-roster.open .mdr-slots{display:block}
+  /* la lista deja sitio para la barra, si no las ultimas filas quedan debajo */
+  #md-choices{padding-bottom:160px}
+}
+
+/* iPhone SE y compania: app.js baja la proyeccion a la linea del nombre en
+   este ancho, asi que la fila se queda con los dos botones y el nombre entero */
+@media(max-width:340px){
+  #md-choices{--md-cols:minmax(0,1fr) 28px 34px}
+  .md-bd-name{font-size:12.5px}
+  .md-bd-meta{font-size:9.5px}
+}

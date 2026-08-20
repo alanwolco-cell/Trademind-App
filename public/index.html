@@ -37,18 +37,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026078546">
+<link rel="stylesheet" href="/styles.css?v=2026082005">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026078546" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026082005" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026078546">
+<link rel="stylesheet" href="/theme.css?v=2026082005">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026078546">
+<link rel="stylesheet" href="/home.css?v=2026082005">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -60,7 +60,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026078546">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026082005">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -1186,8 +1186,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
                   <input type="text" id="md-avail-search" class="tm-input" style="flex:0 1 180px;padding:7px 12px;font-size:12px" placeholder="Search..." oninput="mdFilterChoices()">
                 </div>
               </div>
-              <div id="md-choices" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:8px;margin-bottom:14px;max-height:52vh;overflow-y:auto"></div>
+              <div id="md-choices" style="display:block;margin-bottom:14px;max-height:52vh;overflow-y:auto"></div>
             </div>
+            <!-- El roster, siempre a la vista: rail pegado a la derecha en
+                 pantalla ancha, barra fija abajo en el telefono. -->
+            <aside id="md-roster"></aside>
           </div>
           <div id="md-foot" style="display:flex;gap:8px;margin-top:12px">
             <button class="btn-sm" onclick="mdRestartDraft()">Restart draft</button>
@@ -1700,7 +1703,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026081312"></script>
+<script src="/app.js?v=2026082005"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

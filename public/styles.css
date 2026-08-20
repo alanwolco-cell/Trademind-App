@@ -1985,10 +1985,3 @@ html{scroll-padding-top:76px}
   .pm-overlay{padding:0}
   .pm-card{max-width:100vw;width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
 }
-
-/* iPhone SE class: the row has ~100px left for the name, so the avatar and the
-   name step down one notch rather than let a long surname get chopped */
-@media(max-width:340px){
-  .md-ch-row>img:first-child{width:38px!important;height:38px!important}
-  .md-ch-row>div:first-of-type>div:first-of-type{font-size:14px!important}
-}
