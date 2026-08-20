@@ -1,6 +1,6 @@
 /* ── TradeMind v12 concept: APPLE BASE, ARCHIVO HEADLINES ─────────────────
    The live skin. Identical to v11 in every way except one: the headline face
-   is Archivo (a neutral editorial grotesque) rather than SF Pro, so TradeMind
+   is Familjen Grotesk (an editorial grotesque) rather than SF Pro, so Mac Draft
    keeps its own voice while the body copy, spacing, surfaces and motion go
    Apple.
 
@@ -10,14 +10,13 @@
 @import url('/v11.css?v=2026072451');
 
 html.v12{
-  /* the brand face: Archivo, a neutral editorial grotesque, everywhere a
-     headline lives. Replaces Unbounded, whose rounded geometry read as a
-     generic AI-startup logo. */
-  --font-head:'Archivo','Inter',system-ui,sans-serif;
+  /* the brand face: Familjen Grotesk, an editorial grotesque, everywhere a
+     headline lives. Replaces Archivo, que Wolco veto en agosto de 2026. */
+  --font-head:'Familjen Grotesk','Inter',system-ui,sans-serif;
   /* body/UI stays SF Pro, inherited from v11 via --font-body */
 }
 
-/* Archivo is a normal-width grotesque, so unlike Unbounded it takes the same
+/* Familjen Grotesk is a normal-width grotesque, so unlike Unbounded it takes the same
    tight tracking as SF Pro, and it carries a heavier weight without looking
    inflated - that is what gives the titles their editorial confidence. */
 html.v12 h1,
@@ -32,20 +31,21 @@ html.v12 .mkt-chart-name{
   font-weight:700;
 }
 
-/* the wordmark: Archivo at a masthead weight with a hair of positive tracking,
+/* the wordmark: Familjen Grotesk at a masthead weight with a hair of positive tracking,
    so TRADEMIND reads as a set-in-metal product name, not a logotype. */
 html.v12 .tm-wordmark{
   font-family:var(--font-head);
-  font-weight:800;
+  font-weight:700;
   letter-spacing:.04em;
   font-size:16px;
 }
 
-/* The headline block above pins every heading to 700, but the hero title is the
-   most important line on the site and carries font-weight:800 in its own markup.
-   Match that, with the tight tracking Archivo takes at display size. The hero
-   column width and headline size are set later, in the two-column block below. */
-html.v12 .hero h1{font-weight:800;letter-spacing:-.03em}
+/* El titular del hero traia font-weight:800 en su propio markup. Familjen Grotesk
+   se detiene en 700, asi que pedir 800 hace que el navegador sintetice la negrita
+   y el trazo sale sucio: se fija en 700, que es su peso mas alto real, con el
+   tracking cerrado que pide a tamano de display. El ancho de columna y el tamano
+   del titular se definen mas abajo, en el bloque de dos columnas. */
+html.v12 .hero h1{font-weight:700;letter-spacing:-.03em}
 
 /* The opening screen is one balanced composition: hero fills the viewport and
    its content sits on the vertical center (nudged up slightly - optical center),
@@ -58,7 +58,7 @@ html.v12 body.ticker-on .hero,
 html.v12 .ticker-visible .hero{min-height:calc(100svh - 142px)}
 html.v12 .hero-inner{padding-top:0;padding-bottom:0}
 
-/* Primary action buttons wear the brand's Archivo display face, not SF Pro,
+/* Primary action buttons wear the brand's Familjen Grotesk display face, not SF Pro,
    so "Analyze", "Analyze My Trade", "Load into analyzer" read branded. */
 html.v12 .btn-primary,
 html.v12 .btn-load,

@@ -34,11 +34,11 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
 <link rel="stylesheet" href="/styles.css?v=2026078546">
-<!-- v12 (Apple design, Archivo headings) is the live site. Applied by default via
+<!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
 <link rel="stylesheet" href="/v12.css?v=2026078546" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
@@ -491,7 +491,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <!-- Verdict text -->
             <div class="verdict-right">
               <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem">Mac says...</div>
-              <div class="verdict-headline" id="verdict-headline" style="font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-.03em;margin-bottom:.5rem">-</div>
+              <div class="verdict-headline" id="verdict-headline" style="font-family:var(--font-head);font-size:28px;font-weight:700;letter-spacing:-.03em;margin-bottom:.5rem">-</div>
               <div class="verdict-body" id="verdict-body" style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:.75rem">-</div>
             </div>
           </div>
@@ -1186,7 +1186,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
                   <input type="text" id="md-avail-search" class="tm-input" style="flex:0 1 180px;padding:7px 12px;font-size:12px" placeholder="Search..." oninput="mdFilterChoices()">
                 </div>
               </div>
-              <div id="md-choices" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:14px;max-height:52vh;overflow-y:auto"></div>
+              <div id="md-choices" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:8px;margin-bottom:14px;max-height:52vh;overflow-y:auto"></div>
             </div>
           </div>
           <div id="md-foot" style="display:flex;gap:8px;margin-top:12px">

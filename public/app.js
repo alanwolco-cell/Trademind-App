@@ -7795,7 +7795,7 @@ function renderOutlook(text, articles){
     html+=articles.map(function(a){
       var m=(typeof _srcMeta==='function'&&a.source)?_srcMeta(a.source):{c:'var(--muted)',label:a.source||''};
       var hl=_esc(a.headline);
-      if(a.link)hl="<a href='"+a.link+"' target='_blank' rel='noopener' style='color:var(--text);text-decoration:none'>"+hl+" ↗</a>";
+      if(a.link)hl="<a href='"+a.link+"' target='_blank' rel='noopener' style='color:var(--text);text-decoration:none'>"+hl+"</a>";
       var img=a.image?"<img src='"+a.image+"' style='width:54px;height:54px;border-radius:8px;object-fit:cover;flex-shrink:0' loading='lazy' onload=\"try{this.animate([{opacity:0},{opacity:1}],{duration:350,easing:'ease'})}catch(e){}\" onerror=\"this.style.display='none'\">":"";
       return "<div style='display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)'>"
         +img
@@ -11401,7 +11401,7 @@ function mdShowChoices(round){
   // into single-column rows so PROJ and the splits line up like Stacked's
   // table. The "All" grid keeps its cards and shows PROJ inline.
   var tbl=!!(_proj&&pf);
-  box.style.gridTemplateColumns=tbl?'1fr':'repeat(auto-fill,minmax(170px,1fr))';
+  box.style.gridTemplateColumns=tbl?'1fr':'repeat(auto-fill,minmax(min(100%,270px),1fr))';
   // auction list stays LIGHT (owner: face, name, pos, AAV - period): the
   // full projection table belongs to snake's shopping flow, not a bid war
   var _cols=tbl?(AU.active?[{k:'aav',l:'AAV'}]:[{k:'proj',l:'Proj'}].concat(mdSplitCols(pf))):[];
@@ -14800,7 +14800,7 @@ function loadHomeNews(){
       return '<a class="news-card" href="'+a.link+'" target="_blank" rel="noopener" style="flex-direction:column">'
         +'<img src="'+a.image+'" alt="" loading="lazy" style="width:100%;height:130px">'
         +'<div class="nc-body" style="padding:10px 12px"><div class="nc-h">'+a.headline.replace(/</g,'&lt;')+'</div>'
-        +'<div style="font-size:10px;font-weight:700;margin-top:4px;color:'+srcColor+'">'+srcName+' ↗</div></div></a>';
+        +'<div style="font-size:10px;font-weight:700;margin-top:4px;color:'+srcColor+'">'+srcName+'</div></div></a>';
     }).join('');
     wrap.dataset.loaded='1';
     var active=document.querySelector('.screen.active');
@@ -15678,7 +15678,7 @@ function _nativeTweetCard(d,url){
     +(d.avatar?'<img src="'+d.avatar+'" style="width:32px;height:32px;border-radius:50%" onerror="this.style.display=\'none\'">':'')
     +'<div style="min-width:0;flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(d.name||'')+'</div>'
     +'<div style="font-size:11px;color:var(--muted)">@'+(d.screen_name||'')+'</div></div>'
-    +'<a href="'+url+'" target="_blank" rel="noopener" title="Open the original post" style="font-size:11px;font-weight:800;color:var(--muted);text-decoration:none;flex-shrink:0">X ↗</a>'
+    +'<a href="'+url+'" target="_blank" rel="noopener" title="Open the original post" style="font-size:11px;font-weight:800;color:var(--muted);text-decoration:none;flex-shrink:0">X</a>'
     +'</div>'
     +'<div style="font-size:12.5px;color:var(--muted2);line-height:1.55">'+text+'</div>'
     +media
@@ -15766,7 +15766,7 @@ function _analystCardHtml(a){
     +'<div class="ac-src" style="color:'+m.c+'"><span class="ac-dot" style="background:'+m.c+'"></span>'+m.label+'</div>'
     +'<div class="ac-h">'+h+'</div>'
     +'<div class="ac-d">'+d+'</div>'
-    +'<div class="ac-f">Read the take ↗</div>'
+    +'<div class="ac-f">Read the take</div>'
     +'</a>';
 }
 function _analystSkel(n){
@@ -15836,7 +15836,7 @@ function loadNewsGrid(force){
         +(a.image?'<img src="'+a.image+'" alt="" loading="lazy" onload="try{this.animate([{opacity:0},{opacity:1}],{duration:350,easing:\'ease\'})}catch(e){}">':'<div class="nc-noimg">'+m.label+'</div>')
         +'<div class="nc-body"><div class="nc-h">'+a.headline.replace(/</g,'&lt;')+'</div>'
         +'<div class="nc-d">'+String(a.description||'').replace(/</g,'&lt;')+'</div>'
-        +'<div style="font-size:10px;font-weight:700;margin-top:4px;color:'+m.c+'">'+m.label+' ↗</div></div></a>';
+        +'<div style="font-size:10px;font-weight:700;margin-top:4px;color:'+m.c+'">'+m.label+'</div></div></a>';
     }).join('');
   }).catch(function(){_newsLoaded=false;});
 }
