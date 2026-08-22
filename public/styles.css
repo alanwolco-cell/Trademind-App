@@ -17,6 +17,12 @@
   --muted2:#c6c6ce;
   --accent:#7c5cbf;
   --accent-bright:#9b72e8;
+  /* Fondo de las superficies llenas con texto blanco, en los DOS temas. Mismo
+     tono (H=260.6) y misma saturacion (S=72%) que --accent-bright, 9.8 puntos
+     menos de luminosidad: 5.46:1 con blanco (AA) contra los 3.52:1 de #9b72e8.
+     NO usarlo como color de TEXTO sobre oscuro: ahi da 3.71:1. Para eso esta
+     --accent-bright, que se queda como esta. */
+  --accent-btn:#7c47e1;
   --accent-dim:rgba(155,114,232,0.13);
   --green:#22c55e;
   --green-dim:rgba(34,197,94,0.12);
@@ -406,8 +412,8 @@ body.ticker-on{padding-top:94px}
 .remove-btn:hover{color:var(--red)}
 
 /* PLAYER CARD MODAL */
-.pm-overlay{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
-.pm-overlay.open{opacity:1;pointer-events:all}
+.pm-overlay{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s}
+.pm-overlay.open{opacity:1;visibility:visible;pointer-events:all}
 .pm-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(12px) scale(.97);transition:transform .2s;position:relative}
 .pm-overlay.open .pm-card{transform:translateY(0) scale(1)}
 .pm-header{background:var(--surface2);padding:1.5rem;display:flex;gap:1rem;align-items:flex-end;position:relative;border-bottom:1px solid var(--border)}
@@ -1137,7 +1143,15 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 .mdb-cell.mdb-onclock{opacity:1;background:var(--accent-dim);border:1px dashed rgba(155,114,232,.6);display:flex;align-items:center;justify-content:center}
 .mdb-cell.mdb-onclock span{font-size:8px;font-weight:800;color:var(--accent-bright);letter-spacing:.06em;animation:pulse 1.2s ease-in-out infinite}
 .mdb-pickno{position:absolute;top:6px;right:8px;font-size:9px;font-weight:700;color:var(--muted)}
-.mdb-name{font-weight:700;color:var(--text);font-size:11.5px;line-height:1.25;white-space:normal;overflow:hidden;max-height:2.5em;padding-right:22px}
+/* Dos lineas y ELIPSIS, nunca un corte a mitad de palabra: con overflow
+   hidden + text-overflow clip, "Christian McCaffrey" se leia "Christi
+   McCaffre" sin ninguna senal de que faltaba texto (168 celdas cortadas en un
+   tablero de 14 equipos). El ::before flota el hueco del numero de pick solo
+   en la PRIMERA linea, que es la unica donde .mdb-pickno se superpone: asi la
+   segunda linea recupera esos 22px de ancho util. */
+.mdb-name{font-weight:700;color:var(--text);font-size:11.5px;line-height:1.25;white-space:normal;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-clamp:2;max-height:2.5em;text-overflow:ellipsis}
+.mdb-name::before{content:'';float:right;width:22px;height:1.25em}
 .mdb-sub{font-size:9px;font-weight:700;margin-top:3px;display:flex;align-items:center;gap:4px;justify-content:flex-start}
 /* Your picks: a quiet outline, not a second accent - the YOU header and the
    on-clock cell already mark the column, and purple stays on the active pick */
@@ -1205,6 +1219,17 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 #news-grid.auto-rail .news-card .nc-d{-webkit-line-clamp:3;flex:1 1 auto}
 #news-grid.auto-rail .news-card .nc-body>div:last-child{flex:0 0 auto}
 #analyst-corner.auto-rail .analyst-slot{width:340px;max-width:85vw;margin-bottom:0}
+/* Movil: el riel de 300px vive dentro de ~308px utiles y el auto-scroll lo deja
+   siempre partido por los dos lados (nunca se ve una tarjeta entera). En un
+   telefono la lista vertical gana; el carrusel se queda para desktop. */
+@media (max-width:640px){
+  #news-grid.auto-rail{display:flex;flex-direction:column;overflow-x:visible;cursor:default}
+  #news-grid.auto-rail .news-card{width:100%;height:auto;flex:0 0 auto}
+  #news-grid.auto-rail .news-card img,#news-grid.auto-rail .news-card .nc-noimg{height:170px;flex:0 0 170px}
+  #news-grid.auto-rail .news-card .nc-d{-webkit-line-clamp:2}
+  #analyst-corner.auto-rail{display:flex;flex-direction:column;overflow-x:visible;cursor:default}
+  #analyst-corner.auto-rail .analyst-slot{width:100%;max-width:100%;margin-bottom:10px}
+}
 #analyst-corner.auto-rail .twitter-tweet{margin:0!important}
 /* Auto-pulled analyst "take" cards - uniform size so the rail reads as a set */
 .analyst-card{display:flex;flex-direction:column;width:300px;max-width:85vw;height:152px;flex:0 0 auto;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;text-decoration:none;transition:border-color .15s,transform .15s}

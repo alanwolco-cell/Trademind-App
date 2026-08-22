@@ -41,7 +41,12 @@ async function pedir(ruta, opciones = {}, esquema = 'public', ms = 6000) {
       signal: ctrl.signal,
     });
     const texto = await r.text();
-    if (!r.ok) throw new Error(`supabase ${r.status}: ${texto.slice(0, 300)}`);
+    if (!r.ok) {
+      // El cuerpo de PostgREST puede traer datos de fila. Va al log, nunca al Error:
+      // el Error termina propagandose y algun handler lo devolveria al cliente.
+      console.error('[datos] supabase %d en %s: %s', r.status, ruta, texto.slice(0, 300));
+      throw new Error('supabase ' + r.status);
+    }
     return texto ? JSON.parse(texto) : null;
   } finally {
     clearTimeout(t);

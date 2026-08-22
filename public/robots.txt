@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://trademindff.com/sitemap.xml
+# Internal setup helper, not a product page.
+Disallow: /whoami
+
+Sitemap: https://macdraft.app/sitemap.xml

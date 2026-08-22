@@ -17,19 +17,59 @@ function configured() {
 
 // Live grounding: top players by market value + the NFL calendar, refreshed
 // every 2h and injected into the system prompt (behind a cache breakpoint).
-async function buildGrounding() {
-  const hit = sageCache.get('grounding');
+// fmt = { qbs: 1|2, ppr: 0|0.5|1 }. Superflex cotiza a los QB ~87% por encima
+// de 1QB, asi que una unica tabla cacheada de 1QB desalineaba el precio de cada
+// respuesta de superflex. Una entrada de cache por formato.
+// Union con Sleeper por ID, nunca por nombre. Sleeper guarda a todos los
+// jugadores de su historia, asi que 215 nombres tienen homonimo: indexando por
+// nombre gana el ultimo del objeto y un LB de Cleveland de 23 anos se hacia
+// pasar por Justin Jefferson en el contexto autoritativo de Mac.
+// Los ids sinteticos de pick (DP_*/FP_*) no tienen roster y no deben resolver.
+const PICK_ID_RE = /^(DP|FP)_/;
+function buildRosterMap(data) {
+  const map = {};
+  Object.keys(data || {}).forEach(id => {
+    const pl = data[id];
+    if (!pl || !pl.first_name || !pl.fantasy_positions) return;
+    map[String(id)] = {
+      team: pl.team || 'FA', age: pl.age || null,
+      inj: pl.injury_status || null, exp: pl.years_exp,
+      pos: pl.position || null
+    };
+  });
+  return map;
+}
+// Resuelve la linea de roster de una entrada de FantasyCalc. Devuelve null para
+// picks (correcto) y avisa fuerte si un jugador real no resuelve: eso seria un
+// agujero de datos, y taparlo cayendo al nombre reintroduce el bug de homonimos.
+function resolveRoster(rosterMap, entry) {
+  const sid = entry && entry.sid ? String(entry.sid) : '';
+  if (!sid || PICK_ID_RE.test(sid)) return null;
+  const r = rosterMap[sid];
+  if (!r) { console.warn('[sage] sin roster para sleeperId', sid, entry && entry.name); return null; }
+  return r;
+}
+
+async function buildGrounding(fmt) {
+  const qbs = (fmt && Number(fmt.qbs) === 2) ? 2 : 1;
+  const ppr = (fmt && (Number(fmt.ppr) === 0 || Number(fmt.ppr) === 0.5)) ? Number(fmt.ppr) : 1;
+  const cacheKey = 'grounding:' + qbs + ':' + ppr;
+  const hit = sageCache.get(cacheKey);
   if (hit) return hit;
   let valuesTxt = '';
   let calendarTxt = '';
   let fullList = [];
   try {
-    const r = await fetch('https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=1&ppr=1', {
+    const r = await fetch('https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=' + qbs + '&ppr=' + ppr, {
       headers: { 'User-Agent': 'Mac Draft/1.0', 'Accept': 'application/json' }
     });
     if (r.ok) {
       const players = await r.json();
-      fullList = players.filter(p => p.player && p.player.name).map(p => ({
+      // sid es la clave de union con Sleeper. FantasyCalc la trae en 475/475
+      // entradas (verificado 2026-08-22); unir por NOMBRE es lo que hacia que
+      // Mac describiera a Justin Jefferson como un linebacker de Cleveland.
+      fullList = players.filter(p => p.player && p.player.name && p.player.sleeperId).map(p => ({
+        sid: String(p.player.sleeperId),
         name: p.player.name, pos: p.player.position,
         dyn: p.value, red: p.redraftValue || 0, t30: p.trend30Day || 0
       }));
@@ -62,16 +102,7 @@ async function buildGrounding() {
         try { fs.writeFileSync('/tmp/trademind_players.json', JSON.stringify({ ts: Date.now(), data })); } catch (_) {}
       }
     }
-    if (data) {
-      Object.values(data).forEach(pl => {
-        if (!pl || !pl.first_name || !pl.fantasy_positions) return;
-        const nm = (pl.first_name + ' ' + (pl.last_name || '')).trim().toLowerCase();
-        rosterMap[nm] = {
-          team: pl.team || 'FA', age: pl.age || null,
-          inj: pl.injury_status || null, exp: pl.years_exp
-        };
-      });
-    }
+    if (data) rosterMap = buildRosterMap(data);
   } catch (_) {}
   // Positional ranks (dynasty + redraft) so tier labels like WR2/RB1 are
   // grounded in the live market, never in the model's stale memory.
@@ -95,7 +126,7 @@ async function buildGrounding() {
     }
   } catch (_) {}
   const out = { valuesTxt, calendarTxt, allPlayers: fullList, rosterMap, proj };
-  sageCache.set('grounding', out);
+  sageCache.set(cacheKey, out);
   return out;
 }
 
@@ -152,14 +183,15 @@ function namedInConvo(name, txt) {
 
 const SAGE_PERSONA = `You are Mac, the resident fantasy football brain of Mac Draft (trademindff.com), a trade advisor for dynasty and redraft leagues. You are not a calculator: a calculator compares numbers, you weigh a manager's roster, league, timing and opponent and then tell them what to do.
 ACCURACY OVER SPEED: for any question about a player's current role, depth chart, or starting job, verify with web search BEFORE answering unless the provided scout context explicitly covers it. Never name a player's competition from memory. If you realize mid-answer you are unsure, search first, answer once - never publish a correction to your own previous message.
-When the news is genuinely good for the user - a clear win, a rising player they own - you may close with "Life is good." Use it sparingly, only when it fits.
+Do not use catchphrases or signature sign-offs. End on the verdict.
 SITUATION FIRST: a player's outlook is his situation, not just his value. Before answering about any player, weigh: teammates who left or arrived (a departed WR1 means more targets for the WR2), coaching and scheme changes, depth chart role, and age. If the scout context provided does not cover the player's current situation, USE WEB SEARCH to check for offseason moves before answering - never give an outlook from the value number alone.
 
 Voice and style:
 - Sharp, confident, a little playful - like the smartest manager in the league group chat. Direct opinions, no hedging walls.
 - Never call players "pieces" or "assets". They are players.
 - SHORT answers. Two to four sentences for simple questions; a compact list only when comparing multiple players. Never write essays.
-- Plain text only: no markdown headers, no emojis, no em-dashes. Never break a line mid-sentence - use line breaks only between complete thoughts or list items.
+- Plain text only: no markdown headers, no emojis. Never break a line mid-sentence - use line breaks only between complete thoughts or list items.
+- HARD TYPOGRAPHY RULE, no exceptions: never write an em dash or an en dash. The characters are banned outright. Where you would reach for one, use a comma, a colon, a semicolon, or start a new sentence. This applies mid-sentence, in lists, and in ranges.
 - Always give a verdict. "It depends" must be followed by on what, and which way you lean.
 - Dynasty and redraft are different games. When LEAGUE CONTEXT is provided below, it is authoritative: answer in THAT format's terms only (a redraft league gets zero dynasty talk - no age curves, no "dynasty TE1", no future picks) unless the user explicitly asks about the other format. Only when no league context exists and the question is ambiguous, answer for redraft and add one line on how dynasty changes it.
 - When LEAGUE CONTEXT includes the user's window (contending, rebuilding, middle), USE IT - never ask "are you contending or rebuilding". Reference it naturally ("with where your roster sits...") so advice feels personal.
@@ -203,7 +235,7 @@ const PRO_DAILY = 25;
 const PRO_MONTHLY = 250;
 // One network/IP can't farm free questions with throwaway usernames past this.
 const IP_FREE_DAILY = 12;
-const { isPro, bindNameIfUnclaimed } = require('./billing');
+const { isPro, isPlanOwner, bindNameIfUnclaimed } = require('./billing');
 const { readAcctId } = require('../lib/identity');
 const community = require('./community'); // for referral bonuses (extends free weekly)
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -329,7 +361,9 @@ router.get('/quota', async (req, res) => {
   // Pro follows the manager's name so it works on every device they sign in
   // on; the account key still guards anything that CHANGES the plan.
   await bindNameIfUnclaimed(readAcctId(req), user);
-  const pro = await isPro(readAcctId(req), user);
+  // Mismo predicado que /chat: el contador que ve el usuario tiene que ser el que
+  // de verdad le van a aplicar, o el suscriptor ve "Pro" y recibe un 429 de free.
+  const pro = await isPlanOwner(readAcctId(req), user);
   const u = await peekUsage(user, ip, device, pro);
   // A referral boost only lands on the day it is earned, so it has to lift the
   // DAILY ceiling too - raising just the weekly one would leave the person
@@ -357,9 +391,15 @@ router.post('/chat', async (req, res) => {
     // unlimited spend surface
     const user = String((req.body || {}).user || '').trim().slice(0, 40);
     if (!user) return res.status(401).json({ error: 'Sign in with your Sleeper username to talk to Mac.' });
+    // La forma del pedido se valida ANTES de tocar el contador: si no, un tercero
+    // agota la cuota diaria de alguien mandando requests vacios.
+    const _rawMessages = (req.body || {}).messages;
+    if (!Array.isArray(_rawMessages) || !_rawMessages.length) return res.status(400).json({ error: 'missing messages' });
     const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
     const device = String((req.body || {}).device || '').slice(0, 64);
-    const pro = await isPro(readAcctId(req), user);
+    // Cada mensaje aca cuesta dinero real, asi que el plan no se concede por
+    // teclear un nombre publico: hace falta la llave de cuenta que compro el plan.
+    const pro = await isPlanOwner(readAcctId(req), user);
     const u = await checkUsage(user.toLowerCase(), ip, device, pro);
     if (pro) {
       if (u.month > PRO_MONTHLY) {
@@ -387,8 +427,7 @@ router.post('/chat', async (req, res) => {
         });
       }
     }
-    const raw = (req.body || {}).messages;
-    if (!Array.isArray(raw) || !raw.length) return res.status(400).json({ error: 'missing messages' });
+    const raw = _rawMessages;
     // Cap history and message size so a chat can't run the bill up
     const history = raw.slice(-12).map(m => ({
       role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -399,7 +438,22 @@ router.post('/chat', async (req, res) => {
 
     const Anthropic = require('@anthropic-ai/sdk');
     const client = new Anthropic();
-    const g = await buildGrounding();
+    // El formato manda: en superflex un QB de elite vale ~87% mas que en 1QB
+    // (Josh Allen: 5.695 -> 10.667, del puesto 18 al 1 del board). Cotizarlo
+    // todo con la tabla de 1QB desalineaba cada precio de una liga superflex.
+    // El formato viene como DATO, no sniffeado de prosa: el nombre de la liga
+    // ("SF Bay Dynasty") daba falsos positivos y rules nunca dice cuantos QB se
+    // arrancan. El regex queda solo como respaldo sobre rules, nunca sobre el
+    // nombre de la liga.
+    const _lcFmt = (req.body || {}).leagueContext || {};
+    const _rules = String(_lcFmt.rules || '');
+    const _fmt = {
+      qbs: (_lcFmt.superflex === true || Number(_lcFmt.qbs) === 2 || /superflex|super flex|\b2\s*qb\b/i.test(_rules)) ? 2 : 1,
+      ppr: (_lcFmt.ppr === 0 || _lcFmt.ppr === 0.5) ? _lcFmt.ppr
+         : /half[\s-]?ppr|0\.5\s*ppr/i.test(_rules) ? 0.5
+         : /\bnon[\s-]?ppr\b|\bstandard\b/i.test(_rules) ? 0 : 1
+    };
+    const g = await buildGrounding(_fmt);
 
     // Model routing: trade analysis and negotiation get the heavyweight brain,
     // casual questions run on the lighter tier (same live grounding + web search).
@@ -421,14 +475,17 @@ router.post('/chat', async (req, res) => {
     let notesTxt = '';
     const cNotes = Array.isArray((req.body || {}).playerNotes) ? req.body.playerNotes.slice(0, 8) : [];
     if (cNotes.length) {
-      notesTxt = 'Scout context for players in this conversation (July 2026 - factor this into every outlook):\n'
+      // La fecha viaja con los datos: cablearla en el prompt garantiza que un
+      // dia diga julio con notas de agosto.
+      const _asOf = String((req.body || {}).notesAsOf || '').slice(0, 20) || 'recent';
+      notesTxt = 'Scout context for players in this conversation (as of ' + _asOf + ' - factor this into every outlook):\n'
         + cNotes.map(n => `- ${String(n.name||'').slice(0,40)}: ${String(n.note||'').slice(0,300)}${n.curve?` (${String(n.curve).slice(0,80)})`:''}`).join('\n');
     }
     const projMap = g.proj || {};
     const mentionedTxt = mentioned.length
       ? 'Authoritative live data for players mentioned in this conversation (use THIS for team, age, injury, and value - your memory of rosters is outdated; never substitute a different player with a similar name):\n'
         + mentioned.map(p => {
-            const r = rmap[p.name.toLowerCase()] || {};
+            const r = resolveRoster(rmap, p) || {};
             const bits = [`${p.name} (${p.pos}${r.team ? ', ' + r.team : ''})`];
             if (r.age) bits.push(`age ${r.age}`);
             if (r.inj && r.inj !== 'Active') bits.push(`INJURY: ${r.inj}`);
@@ -444,7 +501,7 @@ router.post('/chat', async (req, res) => {
               const mates = (g.allPlayers || []).filter(q => {
                 if (q.name === p.name) return false;
                 if (!['QB', 'RB', 'WR', 'TE'].includes(q.pos)) return false;
-                const qr = rmap[q.name.toLowerCase()];
+                const qr = resolveRoster(rmap, q);
                 return qr && qr.team === r.team;
               }).slice(0, 7).map(q => `${q.name} (${q.pos})`);
               if (mates.length) bits.push(`current skill teammates on ${r.team} - his ACTUAL competition for targets/touches, use THIS not memory; anyone you recall on ${r.team} who is NOT in this list has LEFT (which frees up his targets): ${mates.join(', ')}`);
@@ -523,6 +580,7 @@ router.post('/chat', async (req, res) => {
     // One generation pass. Streams text deltas live and follows a web_search
     // pause_turn up to 4 times on the same SSE stream. Text accrues into the
     // shared `full` so the caller can tell a real answer from an empty one.
+    let _searchHits = 0;
     const runPass = async (cfg) => {
       let messages = history;
       let mdl = model;
@@ -540,7 +598,10 @@ router.post('/chat', async (req, res) => {
         stream.on('text', (t) => { full += t; send({ t }); });
         stream.on('streamEvent', (ev) => {
           if (ev.type === 'content_block_start' && ev.content_block && ev.content_block.type === 'server_tool_use') {
-            send({ status: 'Checking the latest news...' });
+            // Rotar el texto: en la peor medicion salieron 5 busquedas seguidas
+            // y el usuario vio la MISMA linea fija durante 33 segundos.
+            const steps = ['Checking the latest news...', 'Cross-checking depth charts...', 'Pulling the market read...', 'Almost there, lining up the verdict...'];
+            send({ status: steps[Math.min(steps.length - 1, _searchHits++)] });
           }
         });
         const response = await stream.finalMessage();
@@ -598,3 +659,8 @@ module.exports = router;
 // Exported so the player matcher can be exercised directly. Getting this wrong
 // is invisible in production: Mac just quietly answers without the data.
 module.exports.namedInConvo = namedInConvo;
+// Exportadas para scripts/test-grounding-join.mjs: si la union FantasyCalc <->
+// Sleeper se rompe, Mac contesta con seguridad sobre el equipo equivocado y no
+// hay ningun sintoma en logs. El test es la unica alarma.
+module.exports.buildRosterMap = buildRosterMap;
+module.exports.resolveRoster = resolveRoster;

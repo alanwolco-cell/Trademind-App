@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const { allowCron } = require('../lib/identity');
+const { currentTeam, fixTeam } = require('../lib/roster');
 const { put, list } = require('@vercel/blob');
 
 // Matchup engine built on free nflverse data:
@@ -16,6 +17,11 @@ const STATS_URL = 'https://github.com/nflverse/nflverse-data/releases/download/s
 const GAMES_URL = 'https://github.com/nflverse/nfldata/raw/master/data/games.csv';
 const TMP_FILE = path.join('/tmp', 'trademind_matchups.json');
 const BLOB_PATH = 'stats/matchups_2026.json';
+// Bump whenever the SHAPE of the dataset changes, so the first request after a
+// deploy rebuilds it once instead of serving a file keyed the old way. v2: team
+// abbreviations normalised to Sleeper's ("LA" -> "LAR"), which is what every
+// consumer - the D/ST pool, the playoff read, the vacated-target read - joins on.
+const DATA_V = 2;
 let mem = null;
 
 function csvSplit(line) {
@@ -32,6 +38,27 @@ function csvSplit(line) {
 }
 
 function norm(name) { return String(name).toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim(); }
+// Every source writes suffixes its own way: nflverse "Kenneth Walker III" and
+// "Deebo Samuel Sr", Sleeper plain "Kenneth Walker". Stripping only our side
+// missed ten of the top 150 by ADP - they came back found:false and the card
+// fell through to "no 2025 game log found". Index the map without suffixes once
+// and look up both spellings, the same way the client's _mdByName does.
+const noSuffix = (k) => k.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+function playerByName(players, nm) {
+  if (players[nm]) return nm;
+  const b = noSuffix(nm);
+  if (players[b]) return b;
+  if (!players.__sfx) {
+    const idx = {};
+    Object.keys(players).forEach((k) => {
+      const bk = noSuffix(k);
+      if (bk !== k && !players[bk] && !idx[bk]) idx[bk] = k;
+    });
+    try { Object.defineProperty(players, '__sfx', { value: idx, enumerable: false }); }
+    catch (_) { players.__sfx = idx; }
+  }
+  return players.__sfx[nm] || players.__sfx[b] || null;
+}
 
 async function buildDataset() {
   console.log('[stats] building matchup dataset from nflverse...');
@@ -48,7 +75,7 @@ async function buildDataset() {
   for (let i = 1; i < gLines.length; i++) {
     const r = csvSplit(gLines[i]);
     if (r[gi.season] !== '2026' || r[gi.game_type] !== 'REG') continue;
-    const wk = parseInt(r[gi.week]); const home = r[gi.home_team]; const away = r[gi.away_team];
+    const wk = parseInt(r[gi.week]); const home = fixTeam(r[gi.home_team]); const away = fixTeam(r[gi.away_team]);
     if (!wk || !home || !away) continue;
     (schedule[home] = schedule[home] || []).push({ week: wk, opp: away, home: true });
     (schedule[away] = schedule[away] || []).push({ week: wk, opp: home, home: false });
@@ -76,7 +103,7 @@ async function buildDataset() {
       const knm = norm(r[si.player_display_name]);
       if (!knm) continue;
       const k = (kick[knm] = kick[knm] || { g: 0, fgm: 0, fga: 0, patm: 0, fpts: 0, team: '' });
-      k.g++; k.team = r[si.team];
+      k.g++; k.team = fixTeam(r[si.team]);
       const fgm = num(r[si.fg_made]), fga = num(r[si.fg_att]), patm = num(r[si.pat_made]);
       k.fgm += fgm; k.fga += fga; k.patm += patm;
       k.fpts += fgm * 3 + num(r[si.fg_made_50_59]) * 1 + num(r[si.fg_made_60_]) * 2 + patm;
@@ -85,11 +112,14 @@ async function buildDataset() {
     if (!r[si.position] || !POS.has(r[si.position])) continue;
     const pts = parseFloat(r[si.fantasy_points_ppr]) || 0;
     const nm = norm(r[si.player_display_name]);
-    const opp = r[si.opponent_team];
+    const opp = fixTeam(r[si.opponent_team]);
     const wk = parseInt(r[si.week]);
     if (!nm || !opp || !wk) continue;
-    if (!players[nm]) players[nm] = { pos: r[si.position], team: r[si.team], games: [] };
-    players[nm].team = r[si.team]; // last team of season
+    if (!players[nm]) players[nm] = { pos: r[si.position], team: fixTeam(r[si.team]), games: [] };
+    // Last team of the season. This is HISTORY, not where he plays now: the
+    // vacated-target read depends on it differing from his current club, and
+    // /matchup overrides it with Sleeper before touching the schedule.
+    players[nm].team = fixTeam(r[si.team]);
     players[nm].games.push([wk, opp, Math.round(pts * 10) / 10]);
     const d = (defTotals[opp] = defTotals[opp] || {});
     const dp = (d[r[si.position]] = d[r[si.position]] || { pts: 0, games: new Set() });
@@ -163,7 +193,7 @@ async function buildDataset() {
     if (games) dst[team] = Math.round(pts / games * 10) / 10;
   });
 
-  const data = { built: Date.now(), season: 2025, schedule, players, adv, dst, defVsPos, defRank, teams: Object.keys(defVsPos).length };
+  const data = { v: DATA_V, built: Date.now(), season: 2025, schedule, players, adv, dst, defVsPos, defRank, teams: Object.keys(defVsPos).length };
   try { fs.writeFileSync(TMP_FILE, JSON.stringify(data)); } catch (_) {}
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     try { await put(BLOB_PATH, JSON.stringify(data), { access: 'public', addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 0 }); } catch (e) { console.error('[stats] blob save:', e.message); }
@@ -171,17 +201,27 @@ async function buildDataset() {
   return data;
 }
 
+// A cached file from before a version bump is keyed the old way, so it is not
+// usable - rebuild rather than serve it. Same check on /tmp and on Blob.
+function usable(d) { return !!(d && d.v === DATA_V && d.adv && d.dst && d.schedule); }
+
 async function getData() {
-  if (mem) return mem;
-  try { mem = JSON.parse(fs.readFileSync(TMP_FILE, 'utf8')); return mem; } catch (_) {}
+  if (usable(mem)) return mem;
+  try {
+    const d = JSON.parse(fs.readFileSync(TMP_FILE, 'utf8'));
+    if (usable(d)) { mem = d; return mem; }
+  } catch (_) {}
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     try {
       const { blobs } = await list({ prefix: BLOB_PATH, limit: 1 });
       if (blobs.length) {
         const r = await fetch(blobs[0].url);
-        mem = await r.json();
-        try { fs.writeFileSync(TMP_FILE, JSON.stringify(mem)); } catch (_) {}
-        return mem;
+        const d = await r.json();
+        if (usable(d)) {
+          mem = d;
+          try { fs.writeFileSync(TMP_FILE, JSON.stringify(mem)); } catch (_) {}
+          return mem;
+        }
       }
     } catch (_) {}
   }
@@ -196,7 +236,8 @@ router.get('/matchup', async (req, res) => {
     const data = await getData();
     const nm = norm(req.query.name || '');
     if (!nm) return res.status(400).json({ error: 'name required' });
-    let p = data.players[nm];
+    let pkey = playerByName(data.players, nm);
+    let p = pkey ? data.players[pkey] : null;
     if (!p) {
       // Loose match: first + last name
       const parts = nm.split(' ');
@@ -205,16 +246,26 @@ router.get('/matchup', async (req, res) => {
           const kp = k.split(' ');
           return kp[0] === parts[0] && kp[kp.length - 1] === parts[parts.length - 1];
         });
-        if (key) p = data.players[key];
+        if (key) { p = data.players[key]; pkey = key; }
       }
     }
     if (!p) return res.json({ found: false });
     const week = parseInt(req.query.week) || 1;
-    const sched = data.schedule[p.team] || [];
+    // p.team is where he FINISHED LAST SEASON. Reading the current schedule with
+    // it hands back his old club's opponent - that is how A.J. Brown, a Patriot,
+    // came back "faces WAS". Ask Sleeper where he plays now; an empty string
+    // means a real free agent with no game, and null means Sleeper does not know
+    // him, in which case last season's team is still the best guess we have.
+    let team = p.team;
+    try {
+      const cur = await currentTeam(pkey, p.pos);
+      if (cur !== null) team = cur;
+    } catch (_) {}
+    const sched = data.schedule[team] || [];
     const game = sched.find(g => g.week === week) || sched[0] || null;
     const opp = game ? game.opp : null;
     const out = {
-      found: true, pos: p.pos, team: p.team, week: game ? game.week : null,
+      found: true, pos: p.pos, team: team, week: game ? game.week : null,
       opp, home: game ? game.home : null,
       defAvgAllowed: opp && data.defVsPos[opp] ? data.defVsPos[opp][p.pos] : null,
       defRank: opp && data.defRank[opp] ? data.defRank[opp][p.pos] : null,

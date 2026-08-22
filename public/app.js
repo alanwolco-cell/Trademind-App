@@ -249,6 +249,21 @@ document.addEventListener('click',function(e){
   if(!e.target.closest('#nav-search-wrap')){var dd=document.getElementById('nav-search-dd');if(dd)dd.classList.remove('open');}
 });
 
+// ── Back closes the overlay ─────────────────────────────────────────────────
+// On a phone, back IS the close gesture for a sheet. Nothing here used to push
+// a history entry, so back navigated the screen underneath and left the modal
+// or the drawer hanging over a page nobody asked for. Each overlay now parks a
+// throwaway entry while it is open; the gesture pops that entry instead.
+var _overlays=[];
+function _overlayOpen(close){
+  _overlays.push(close);
+  try{history.pushState({overlay:_overlays.length},'',window.location.href);}catch(_){}
+}
+function _overlayClosed(){
+  if(!_overlays.length)return;
+  _overlays.pop();
+  if(history.state&&history.state.overlay){try{history.back();}catch(_){}}
+}
 function goHome(){
   // The wordmark is the front door: it opens the HOME page (landing only),
   // a separate page from the Analyze tool.
@@ -300,10 +315,12 @@ function openConnectModal(){
   setTimeout(function(){inp.focus();},60);
   // an account we already know: fetch its leagues right away
   if(inp.value.trim())connectModalGo();
+  _overlayOpen(function(){var el=document.getElementById('connect-modal');if(el)el.style.display='none';});
 }
 function closeConnectModal(){
   var m=document.getElementById('connect-modal');
   if(m)m.style.display='none';
+  _overlayClosed();
 }
 async function connectModalGo(){
   var inp=document.getElementById('cm-user');
@@ -558,6 +575,13 @@ function _updateOppExplainCopy(){
   b.innerHTML='These are <strong style="color:var(--text)">behavioral estimates, not probabilities</strong>. We build them from two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience and total market value - which manager archetype they fit) and their <strong style="color:var(--text)">actual trade history in this league</strong> ('+hist+').<br><strong style="color:var(--text)">Urgency</strong> - archetype baseline, '+urg+'.<br><strong style="color:var(--text)">Stubbornness</strong> - pushed higher if they barely trade, lower if they\'re a high-volume dealer.<br><strong style="color:var(--text)">Hype chaser</strong> - how much their archetype historically overvalues recent performance. Use it to decide WHICH of your players to feature in the pitch.';
 }
 function updateModeUI(){
+  // El mock arma su tablero con el ADP de redraft (mdBuildPool: dv=11000-adp*40),
+  // asi que hoy elegir Dynasty NO reordena el board. Mientras no exista un feed
+  // de ADP dynasty, el setup lo dice en vez de fingir que hace algo.
+  try{
+    var _mn=document.getElementById('md-mode-note');
+    if(_mn)_mn.style.display=(leagueMode==='dynasty')?'block':'none';
+  }catch(_){}
   try{_updateOppExplainCopy();}catch(_){}
   var badge=document.getElementById("mode-badge");
   if(badge){
@@ -664,8 +688,12 @@ function parseLeagueFormat(info){
   var scoring=info.scoring_settings||{};
   var hasSuperFlex=positions.indexOf('SUPER_FLEX')>=0;
   var has2QB=(positions.filter(function(p){return p==='QB';}).length)>=2;
-  var flexCount=positions.filter(function(p){return p==='FLEX';}).length;
-  var recFlexCount=positions.filter(function(p){return p==='REC_FLEX';}).length;
+  // Sleeper does not only call it FLEX. A league with WRRB_FLEX (Primos DLG
+  // starts QB,RB,RB,WR,WR,TE,WRRB_FLEX = 7) counted 6 starters everywhere:
+  // X-Ray strength, holes, _lxFit, _lxLeavesShort, Roster Grade and Buy/Sell all
+  // ran a man short.
+  var flexCount=positions.filter(function(p){return p==='FLEX'||p==='WRRB_FLEX';}).length;
+  var recFlexCount=positions.filter(function(p){return p==='REC_FLEX'||p==='WRT_FLEX';}).length;
   var numQBs=positions.filter(function(p){return p==='QB';}).length;
   var numRBs=positions.filter(function(p){return p==='RB';}).length;
   var numWRs=positions.filter(function(p){return p==='WR';}).length;
@@ -787,8 +815,12 @@ function playerTierLabel(ktcVal, pid){
   return{label:isR?'a matchup-based option':'a bench stash',rank:1,short:'bench'};
 }
 
+// Fecha de corte de las notas. Se manda al servidor con cada pregunta para que
+// el prompt nunca vuelva a decir una fecha distinta de la real. ACTUALIZAR ESTA
+// CONSTANTE cada vez que se toque PLAYER_NOTES.
+var PLAYER_NOTES_ASOF = '2026-08-22';
 var PLAYER_NOTES = {
-  // ── QBs ── (updated July 2026: 2025 season + 2026 offseason)
+  // ── QBs ── (2025 season + 2026 offseason; corte en PLAYER_NOTES_ASOF)
   "josh allen": {note:"~3,668 pass yds + 41 total TDs in 2025 with the fewest turnovers of his career; lost 33-30 in OT to Denver in the Divisional Round; ESPN's #1 QB entering 2026 - ahead of Mahomes for the first time since 2022", curve:"30 - peak prime; locked-in dynasty QB1"},
   "lamar jackson": {note:"injury-wrecked 2025 - hamstring in Week 4 plus toe/ankle/back; only 2,311 pass yds and career-low rushing volume; missed the final 5 games and the Wild Card loss to Cincinnati; still elite when healthy", curve:"29 - first real injury data point; buy-low if you trust the profile"},
   "patrick mahomes": {note:"tore his ACL Week 15 of 2025 - KC missed the playoffs for the first time in his starting career; had a career-high 422 rush yds before the injury; on track for Week 1 2026 and KC traded for Justin Fields as insurance", curve:"30 - buy-low window if you trust the ACL recovery"},
@@ -801,7 +833,7 @@ var PLAYER_NOTES = {
   "brock purdy": {note:"only 9 games in 2025 (2,167 yds, 20 TD) but graded 4th among QBs by PFF; 49ers won their Wild Card game; efficiency is elite - availability is now the question", curve:"26 - hold; scheme-boosted floor, health variable"},
   "cam ward": {note:"rookie year on a 3-14 Titans team: 3,169 yds, 15 TD behind an NFL-worst 55 sacks; 10 of his 15 TDs came from Week 11 on - the late-season arrow points up; TEN drafted WR Carnell Tate #4 overall to help", curve:"24 - cautious rise; supporting cast was the problem"},
   "shedeur sanders": {note:"took over mid-season in CLE - 7/10 TD-INT in 8 games with one 364-yd, 3-TD spike week; in an open camp battle under new HC Todd Monken; no first-round rookie QB was added", curve:"24 - speculative hold; no guaranteed 2026 job"},
-  // gap-fill batch (July 2026): the top of the superflex/PPR board was going
+  // gap-fill batch: the top of the superflex/PPR board was going
   // note-less in round 1, which left Mac's Take and Keep-in-mind empty
   "drake maye": {note:"year-2 leap in 2025 - among the league leaders in completion percentage and EPA, dragged New England back to relevance; adds steady if unspectacular rushing; the arrow points straight up", curve:"23 - ascending; top-5 dynasty QB trajectory", curveRed:"a top-5 upside pick THIS season; efficiency plus a stable rushing floor"},
   "justin herbert": {note:"top-10 fantasy production in most of his healthy seasons on pure arm talent; Harbaugh's run-lean shape caps the weekly ceiling more than the player does; high floor, muted spike weeks", curve:"28 - prime; value tracks the offense's pass rate", curveRed:"high-floor QB1 range; ceiling depends on pass volume, not talent"},
@@ -839,13 +871,13 @@ var PLAYER_NOTES = {
   "puka nacua": {note:"NFL-best 129 receptions and 1,715 yds (2nd in the league) with 10 TDs in 2025 - first-team All-Pro; the only long-term question is who replaces Stafford eventually", curve:"25 - top-3 dynasty WR; hold at any price"},
   "tyreek hill": {note:"dislocated his knee with ACL damage in Week 4 of 2025, then Miami released him in March 2026; still unsigned in July and may not play at all this season", curve:"31 - near-zero dynasty value; dart throw only"},
   "davante adams": {note:"789 yds but a league-leading 14 receiving TDs opposite Nacua in the Rams' NFC Championship run; still a red-zone monster at 33", curve:"33 - win-now piece only; sell in dynasty if anyone pays"},
-  "stefon diggs": {note:"bounced back with an 85-1,013-4 Pro Bowl season catching from Drake Maye in 2025 - then New England released him in March and traded for AJ Brown instead; still unsigned in July 2026", curve:"32 - productive but homeless; wait for a landing spot"},
+  "stefon diggs": {note:"bounced back with an 85-1,013-4 Pro Bowl season catching from Drake Maye in 2025 - then New England released him in March and traded for AJ Brown instead; signed with Washington for 2026", curve:"32 - new landing spot, cheap veteran WR3 price"},
   "dk metcalf": {note:"59-850-6 in 2025, then a 2-game suspension for an altercation with a fan voided $25M in guarantees; Pittsburgh reaffirmed commitment but also traded for Michael Pittman Jr - target competition rising", curve:"28 - hold with caution; leverage and target share both dented"},
   "devonta smith": {note:"77-1,008-4 in 2025 and the clear #1 in Philadelphia after the AJ Brown trade to New England; one watch-out is the Eagles spending a high pick on rookie WR Makai Lemon, so the target share won't be uncontested for long", curve:"27 - rising, but a rookie WR now shares the room"},
   "aj brown": {note:"traded to the Patriots in June 2026 after a frustrated 78-1,003-7 final season in Philly; now catching from Drake Maye - a genuine volume and QB upgrade at the cost of a new system at 29", curve:"29 - mild rise; the situation finally matches the talent again"},
   "jaylen waddle": {note:"64-910-6 as Miami's top option in 2025 after the Hill injury, then traded to Denver in March 2026; the Bo Nix pairing is decent - value flat pending role clarity", curve:"27 - hold; new team, similar profile"},
   "cooper kupp": {note:"modest 47-593 regular season as Seattle's #2, but led the Seahawks in receiving in two playoff games including the Super Bowl LX win; explicitly not retiring", curve:"33 - ring-chasing veteran; fantasy WR4/5 at best"},
-  "keenan allen": {note:"81 catches on 122 targets in 2025 (11th in the NFL in receptions) - then hit free agency at 34 and remains unsigned in July 2026", curve:"33 - end-of-career volume compiler with no team"},
+  "keenan allen": {note:"81 catches on 122 targets in 2025 (11th in the NFL in receptions) - then left the Chargers in free agency at 34 and signed with Indianapolis, where he is behind Pierce, Downs and Warren in the target order", curve:"34 - end-of-career volume compiler in a crowded room"},
   "travis hunter": {note:"two-way rookie year cut short - 28-298-1 on offense plus CB snaps in 7 games before LCL surgery; fully cleared and Jacksonville reportedly plans to 'unleash' him in 2026", curve:"23 - buy-low on generational talent; usage is the wildcard"},
   "tetairoa mcmillan": {note:"2025 Offensive Rookie of the Year - 70-1,014-7 in 17 starts for Carolina at 14.5 yds a catch; ascending with Bryce Young", curve:"23 - rising fast; top-10 dynasty WR trajectory"},
   "luther burden iii": {note:"47-652-2 as a rookie with an elite-YAC heater to close (21-324-1 over the final 4 games); DJ Moore is gone and Burden's role expands next to Odunze in a breakout Bears offense", curve:"22 - prime 2026 breakout candidate; buy now"},
@@ -1114,14 +1146,49 @@ function getKtcValue(name, sleeperId){
     var pm=norm.match(/(\d{4})\s*round\s*(\d{1,2})/)||norm.match(/(\d{4})\s*(\d{1,2})(?:st|nd|rd|th)/);
     if(pm){
       var pYr=pm[1],pRd=pm[2];
+      // A pick for a draft that already ran is not an asset. Belt and braces:
+      // the roster builders filter these out, this makes sure a hand-typed
+      // "2025 Round 1" in the analyzer can never be priced either.
+      if(parseInt(pYr)<(parseInt(ACTIVE_SEASON)||0))return 0;
       var ck=pYr+':'+pRd;
       if(_pickValCache[ck]!==undefined) return _pickValCache[ck];
       // market value of a generic round-N pick = the average of that round's slots
       var slotKeys=Object.keys(ktcValues).filter(function(k){return k.indexOf(pYr+' pick '+pRd+'.')===0;});
       if(slotKeys.length){var pSum=0;slotKeys.forEach(function(k){pSum+=ktcValues[k];});return (_pickValCache[ck]=Math.round(pSum/slotKeys.length));}
-      // that year missing from the feed: same round from any listed year, discounted for distance
-      var anyYear=Object.keys(ktcValues).filter(function(k){return /^\d{4} pick \d\./.test(k)&&k.indexOf(' pick '+pRd+'.')>0;});
-      if(anyYear.length){var aSum=0;anyYear.forEach(function(k){aSum+=ktcValues[k];});return (_pickValCache[ck]=Math.round((aSum/anyYear.length)*0.85));}
+      // Year missing from the feed. Anchor on the NEAREST year the feed does price
+      // for this round and move by real distance. The old version averaged the
+      // per-SLOT keys and applied a flat 0.85, and the slot list averages well
+      // above the round price (2026 firsts: slots average 3,211, the round key
+      // says 2,884), so a 2030 first came out at 2,730 while the 2029 it can only
+      // be worse than sat at 1,791: the further-out pick was the dearer one.
+      var _yrs=[];
+      Object.keys(ktcValues).forEach(function(k){
+        var _m=k.match(/^(\d{4}) round (\d{1,2})$/);
+        if(_m&&parseInt(_m[2])===parseInt(pRd))_yrs.push(parseInt(_m[1]));
+      });
+      if(_yrs.length){
+        var _tgtY=parseInt(pYr);
+        var _near=_yrs.reduce(function(a,b){return Math.abs(b-_tgtY)<Math.abs(a-_tgtY)?b:a;});
+        var _mult=_tmClamp(Math.pow(0.88,_tgtY-_near),0.3,1.6);
+        return (_pickValCache[ck]=Math.round(ktcValues[_near+' round '+pRd]*_mult));
+      }
+      // The feed only carries rounds 1-4. Leagues that run five- or six-round
+      // rookie drafts are real (SD DYNASTY runs five) and their later picks were
+      // priced at ZERO, so the analyzer said a 5th cost you nothing to send.
+      // Extrapolate off the deepest round the market does price.
+      var _deep=0,_base=0;
+      for(var _r=parseInt(pRd)-1;_r>=1;_r--){
+        var _c=[];
+        Object.keys(ktcValues).forEach(function(k){
+          var _m2=k.match(/^(\d{4}) round (\d{1,2})$/);
+          if(_m2&&parseInt(_m2[2])===_r)_c.push(ktcValues[k]);
+        });
+        if(_c.length){_deep=_r;_base=_c.reduce(function(a,b){return a+b;},0)/_c.length;break;}
+      }
+      if(_base>0){
+        var _fy=Math.max(0,parseInt(pYr)-(parseInt(ACTIVE_SEASON)||parseInt(pYr)));
+        return (_pickValCache[ck]=Math.max(120,Math.round(_base*Math.pow(0.72,parseInt(pRd)-_deep)*Math.pow(0.88,_fy))));
+      }
       return (_pickValCache[ck]=0);   // no pick market at all (redraft): a pick is worth nothing here
     }
   }
@@ -1257,7 +1324,7 @@ async function loadLeague(lid,name,rosters,season){
   // seasons whose draft already RAN produce no tradable picks anymore
   try{
     var drs=await sleeperGet("/league/"+lid+"/drafts").catch(function(){return [];});
-    window._doneDraftSeasons={};
+    window._doneDraftSeasons=_doneSeasonsSeed(season);
     (drs||[]).forEach(function(d){if(d&&d.status==='complete'&&d.season)window._doneDraftSeasons[parseInt(d.season)]=1;});
     // How many rounds THIS league's rookie draft actually has. We were assuming
     // four for everyone, so a league with five or six rounds simply never saw
@@ -1268,7 +1335,7 @@ async function loadLeague(lid,name,rosters,season){
       if(n>0&&n<=10&&n>_rr)_rr=n;
     });
     window._draftRounds=_rr||0;
-  }catch(_){window._doneDraftSeasons={};}
+  }catch(_){window._doneDraftSeasons=_doneSeasonsSeed(season);}
 
   if(rawPlayers){
     Object.keys(rawPlayers).forEach(function(id){
@@ -1304,7 +1371,12 @@ async function loadLeague(lid,name,rosters,season){
       // dropping it here is what stops the old league's trades from reappearing.
       if(_leagueLoadSeq!==_seq)return;
       var prevTrades=(results[0]||[]).map(function(t){t._season=prevSeason;return t;});
-      leaguePicks=leaguePicks.concat(results[1]||[]);
+      // Only picks whose draft has NOT happened. The previous season's ledger
+      // still lists its own year's picks, and merging it raw put dead picks back
+      // on rosters at full first-round money.
+      leaguePicks=leaguePicks.concat((results[1]||[]).filter(function(p){
+        return !(window._doneDraftSeasons&&window._doneDraftSeasons[parseInt(p.season)]);
+      }));
       leagueTrades=thisSeason.concat(prevTrades);
       tradeStats=computeTradeStats(leagueTrades);
     }).catch(function(){});
@@ -1339,7 +1411,7 @@ async function loadLeague(lid,name,rosters,season){
   loadLiveFeed(lid, season);
 
   // Find my roster
-  var myRosterObj=leagueRosters.find(function(r){return r.owner_id===userId;});
+  var myRosterObj=_myRosterObj();
   if(!myRosterObj){
     setStatus("Could not find your roster in this league.","var(--red)"); return;
   }
@@ -1485,7 +1557,7 @@ function finishEspnImport(){
     return {roster_id:t.id,owner_id:'espn_'+t.id,players:res.players.map(function(p){return p.id;}),settings:{}};
   });
   leagueUsers=_espnData.teams.map(function(t){return {user_id:'espn_'+t.id,display_name:t.name,metadata:{}};});
-  var mine=leagueRosters.find(function(r){return r.owner_id===userId;});
+  var mine=_myRosterObj();
   myRoster=(mine?mine.players:[]).map(function(pid){return allPlayers[pid];}).filter(Boolean).sort(function(a,b){return po(a.pos)-po(b.pos);});
   _leagueLoadSeq++;resetTradeWorkspace();  // invalidate any in-flight Sleeper background load + clear old trade
   myPicks=[];leaguePicks=[];leagueTrades=[];tradeStats={};
@@ -1565,18 +1637,33 @@ initYahooOAuth();
 
 // ── Mac AI chat (shows itself when the server has an Anthropic key) ─────────
 var _sageChat=[];
-var MAC_SUGGESTIONS=[
+// Sensibles al calendario: en pretemporada nadie tiene record, asi que "my 2-8
+// dynasty team" era la primera impresion del producto y anunciaba contenido
+// viejo. window._nflState lo llena loadNflState(); si no llego, se asume
+// pretemporada, que es lo correcto en agosto.
+var MAC_SUGGESTIONS_PRE=[
   'Should I trade Rashee Rice for Jordan Addison and a 2027 2nd?',
-  'Build a rebuild plan for my 2-8 dynasty team',
+  'Who should I take at 1.01 in my rookie draft?',
+  'Paste a league convo - Mac writes your reply',
+  'Top 3 buy-low WRs before week 1?'
+];
+var MAC_SUGGESTIONS_REG=[
+  'Should I trade Rashee Rice for Jordan Addison and a 2027 2nd?',
+  'Build a rebuild plan for my dynasty team',
   'Paste a league convo - Mac writes your reply',
   'Top 3 buy-low WRs right now?'
 ];
+function MAC_SUGGESTIONS_NOW(){
+  var st=window._nflState||{};
+  return (st.season_type&&st.season_type!=='pre')?MAC_SUGGESTIONS_REG:MAC_SUGGESTIONS_PRE;
+}
+var MAC_SUGGESTIONS=MAC_SUGGESTIONS_PRE; // compat para cualquier lector viejo
 function _sageRenderSuggestions(){
   var box=document.getElementById('sage-suggestions');
   if(!box)return;
   if(_sageChat.length){box.style.display='none';return;}
   box.style.display='flex';
-  box.innerHTML=MAC_SUGGESTIONS.map(function(q){
+  box.innerHTML=MAC_SUGGESTIONS_NOW().map(function(q){
     var isHint=q.indexOf('Paste a league convo')===0;
     if(isHint)return '<button class="sage-sugg" onclick="var i=document.getElementById(\'sage-chat-input\');if(!i.disabled){i.placeholder=\'Paste the conversation and what you want out of the trade...\';i.focus();}">'+q+'</button>';
     return '<button class="sage-sugg" onclick="var i=document.getElementById(\'sage-chat-input\');if(!i.disabled){i.value=this.textContent;i.focus();try{sageGrowInput(i);}catch(_){}}">'+q+'</button>';
@@ -2033,7 +2120,7 @@ function _youSaid(){
 function _sageLeagueCtx(){
   try{
     if(!leagueRosters||!leagueRosters.length||!Object.keys(ktcById||{}).length)return {mode:leagueMode};
-    var mine=leagueRosters.find(function(r){return r.owner_id===userId;});
+    var mine=_myRosterObj();
     var totals=leagueRosters.map(function(r){
       return {r:r,val:(r.players||[]).reduce(function(s,pid){return s+(ktcById[pid]||0);},0)};
     }).sort(function(a,b){return b.val-a.val;});
@@ -2069,7 +2156,7 @@ function _sageLeagueCtx(){
           .sort(function(a2,b2){return b2.v-a2.v;}).slice(0,10)
           .map(function(x){var pl=allPlayers[x.pid];return pl?pl.name+' ('+pl.pos+')':null;})
           .filter(Boolean);
-        if(core.length)rosters.push({team:String(tn).slice(0,28),mine:r0.owner_id===userId,core:core});
+        if(core.length)rosters.push({team:String(tn).slice(0,28),mine:_isMyRoster(r0),core:core});
       });
     }catch(_){}
     return {mode:leagueMode,keeper:!!window._isKeeper,league:leagueName||'',teams:n,record:g?(w+'-'+l):'',situation:sit,why:why,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock(),rosters:rosters};
@@ -2199,7 +2286,23 @@ var MAC_NAV={
   community:{label:'Open Community',go:function(){switchScreen('community');try{loadCommunityFeed();}catch(_){}}},
   learn:{label:'Fantasy 101',go:function(){goLearn();}}
 };
-function _sageStripNav(txt){return String(txt).replace(/\[\[go:[a-z]*\]\]/gi,'').replace(/\[\[go:[a-z]*$/i,'').replace(/[ \t]+(\n|$)/g,'$1').replace(/\s+$/,'');}
+// Higiene determinista de la salida de Mac. El prompt ya se lo pide, pero los
+// modelos meten em dashes igual (2 de 20 respuestas medidas el 2026-08-22) y
+// filtran numeros de valor que el prompt prohibe explicitamente. Esto corre
+// sobre el texto ACUMULADO en cada delta, asi que atrapa lo que llega partido
+// entre chunks del stream.
+function _sageClean(txt){
+  return String(txt)
+    // rangos numericos: guion medio a guion simple, no a coma
+    .replace(/(\d)\s*[–—]\s*(\d)/g,'$1-$2')
+    // veto duro de em/en dash en prosa
+    .replace(/\s*[–—]\s*/g,', ')
+    // fugas del modelo de valor: las dos formas que Mac produce de verdad
+    .replace(/\b(?:a\s+)?(?:30|thirty)[-\s]?day\s+(slide|drop|dip|fall|decline|rise|jump|climb|gain)\s+of\s+(?:nearly\s+|almost\s+|about\s+|roughly\s+|over\s+|around\s+)?[\d,.]+\s*(?:points?|pts)?/gi,'a sharp $1 in his 30-day trend')
+    .replace(/\b(costs?|priced at|going for)\s+(?:about\s+|around\s+|roughly\s+|nearly\s+)?[\d,]{4,}\b/gi,'$1 a premium')
+    .replace(/\b(value|price|cost)\s+(dipped|fell|slid|dropped|slipped)\s+to\s+(?:about\s+|around\s+)?[\d,]{4,}\b/gi,'$1 $2 hard');
+}
+function _sageStripNav(txt){return _sageClean(String(txt).replace(/\[\[go:[a-z]*\]\]/gi,'').replace(/\[\[go:[a-z]*$/i,'').replace(/[ \t]+(\n|$)/g,'$1').replace(/\s+$/,''));}
 function _sageNavKeys(txt){var out=[],seen={},m,re=/\[\[go:([a-z]+)\]\]/gi;while((m=re.exec(String(txt)))){var k=m[1].toLowerCase();if(MAC_NAV[k]&&!seen[k]){seen[k]=1;out.push(k);}}return out.slice(0,2);}
 function _sageRenderNav(container,txt){
   var keys=_sageNavKeys(txt);if(!keys.length||!container)return;
@@ -2239,13 +2342,20 @@ async function sageChatSend(){
   // Status line while Mac gets going, replaced by live text the moment he writes
   var typing=document.createElement('div');
   typing.className='sage-msg sage';
-  typing.innerHTML='<span class="sage-msg-tag"><img src="/sage/sage-thinking-64.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-6px;margin-right:4px" onerror="this.style.display=\'none\'">Mac</span><span class="sage-status">Reading the market...</span>';
+  // Skeleton con la forma del parrafo que viene, no una linea de texto fija: la
+  // espera medida llega a 33 s en preguntas que disparan busqueda web.
+  typing.innerHTML='<span class="sage-msg-tag"><img src="/sage/sage-thinking-64.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-6px;margin-right:4px" onerror="this.style.display=\'none\'">Mac</span>'
+    +'<span class="sage-status" style="display:block;font-size:11px;color:var(--muted);margin-bottom:7px">Reading the market...</span>'
+    +'<span class="sage-skel" style="display:block"><span class="tm-skel" style="display:block;height:11px;border-radius:6px;margin-bottom:7px;width:96%"></span>'
+    +'<span class="tm-skel" style="display:block;height:11px;border-radius:6px;margin-bottom:7px;width:88%"></span>'
+    +'<span class="tm-skel" style="display:block;height:11px;border-radius:6px;width:62%"></span></span>';
   log.appendChild(typing);log.scrollTop=log.scrollHeight;
   var statusEl=typing.querySelector('.sage-status');
   var liveText=null;var full='';
   function onDelta(t){
     if(!liveText){
       if(statusEl)statusEl.remove();
+      var _sk=typing.querySelector('.sage-skel'); if(_sk)_sk.remove();
       liveText=document.createElement('span');
       typing.appendChild(liveText);
     }
@@ -2262,13 +2372,31 @@ async function sageChatSend(){
         .replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ');
       Object.keys(PLAYER_NOTES).forEach(function(k){
         if(_noteMatches.length>=8)return;
-        if(convoTxt.indexOf(k)>=0||convoTxt.indexOf(k.split(' ').slice(-1)[0])>=0&&k.split(' ').slice(-1)[0].length>=6){
+        var nk=_mdNormName(k), parts=nk.split(' ');
+        var SFX={jr:1,sr:1,ii:1,iii:1,iv:1,v:1};
+        var last=(SFX[parts[parts.length-1]]&&parts.length>2)?parts[parts.length-2]:parts[parts.length-1];
+        var base=parts.filter(function(w){return !SFX[w];}).join(' ');
+        // Se compara normalizado de los DOS lados. Antes solo se normalizaba el
+        // texto del usuario, asi que "amon-ra st brown", "brian thomas jr",
+        // "marvin harrison jr" y "luther burden iii" no matcheaban NUNCA.
+        if(convoTxt.indexOf(base)>=0||(last.length>=5&&new RegExp('\\b'+last+'\\b').test(convoTxt))){
           var n=noteForMode(PLAYER_NOTES[k]);
           _noteMatches.push({name:k,note:n.note,curve:n.curve});
         }
       });
+      // Pregunta de rookie draft sin ningun nombre propio: la respuesta esta en
+      // nuestras propias notas de la clase 2026 y hoy no llegaba, asi que Mac
+      // se iba 37 segundos a buscar en la web y volvia sin contestar.
+      if(!_noteMatches.length&&/rookie draft|rookie pick|\b1\.0\d\b|\b(1st|first)[- ]round pick\b|2026 (rookie )?class|who (should i|do i) (take|draft)/i.test(convoTxt)){
+        var _ROOKIES_2026=['fernando mendoza','jeremiyah love','carnell tate','jordyn tyson','ty simpson','kenyon sadiq','makai lemon','kc concepcion'];
+        _ROOKIES_2026.forEach(function(k){
+          if(_noteMatches.length>=8||!PLAYER_NOTES[k])return;
+          var n=noteForMode(PLAYER_NOTES[k]);
+          _noteMatches.push({name:k,note:n.note,curve:n.curve});
+        });
+      }
     }catch(_){}
-    var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:_sageChat,playerNotes:_noteMatches,leagueContext:_sageLeagueCtx(),user:localStorage.getItem('tm_username')||'',device:_deviceId()})});
+    var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:_sageChat,playerNotes:_noteMatches,notesAsOf:PLAYER_NOTES_ASOF,leagueContext:_sageLeagueCtx(),user:localStorage.getItem('tm_username')||'',device:_deviceId()})});
     var ctype=res.headers.get('content-type')||'';
     if(ctype.indexOf('text/event-stream')<0){
       // Non-streaming fallback (errors come back as JSON)
@@ -2309,7 +2437,7 @@ async function sageChatSend(){
       }
     }
     if(full.trim()){
-      _sageChat.push({role:'assistant',content:full.replace(/\[\[go:[a-z]+\]\]/gi,'').trim()});
+      _sageChat.push({role:'assistant',content:_sageClean(full.replace(/\[\[go:[a-z]+\]\]/gi,'')).trim()});
       _sageSaveChat();
       var nb=document.getElementById('sage-new-chat');
       if(nb)nb.style.display='';
@@ -2708,6 +2836,28 @@ var _lastOppUid=null;
 // and the opponent dropdown is built from leagueUsers (user_id), so a
 // co-owned team appeared in the list and then matched no roster at all: the
 // board rendered empty with nothing explaining why. Check co_owners too.
+// ─────────────────────────────────────────────────────────────────────────────
+// THE two functions that answer "is this roster mine / which roster is mine".
+// A roster's owner_id is only its PRIMARY owner; Sleeper also has co_owners, and
+// a co-owner's id never appears in owner_id. Matching owner_id alone left every
+// co-owned team dead in the water: loadLeague bailed with "Could not find your
+// roster in this league" and the builder never opened. _rosterForUser already
+// knew this and nobody copied it into the other 19 sites, so the knowledge now
+// lives here and NOWHERE else.
+//
+// If you are about to write `leagueRosters.find(r => r.owner_id === userId)`
+// anywhere in this file: don't. Use _myRosterObj() / _isMyRoster(r).
+// scripts/qa-trades.mjs fails the build if that pattern comes back.
+// ─────────────────────────────────────────────────────────────────────────────
+function _isMyRoster(r){
+  if(!r||!userId)return false;
+  if(r.owner_id===userId)return true;
+  return Array.isArray(r.co_owners)&&r.co_owners.indexOf(userId)>=0;
+}
+function _myRosterObj(){
+  return (typeof leagueRosters!=='undefined'&&Array.isArray(leagueRosters))
+    ? (leagueRosters.find(_isMyRoster)||null) : null;
+}
 function _rosterForUser(uid){
   if(!uid||!Array.isArray(leagueRosters))return null;
   return leagueRosters.find(function(r){return r.owner_id===uid;})
@@ -2743,6 +2893,16 @@ async function loadOppRoster(){
   try{renderTradeBoards();}catch(_){}
 }
 
+// Every season BEFORE the active one is over, whatever /drafts says. Sleeper
+// mints a NEW league id each season, so /league/<2026 id>/drafts only ever
+// reports the 2026 draft: last year's completed draft is invisible from here.
+// That is how 2025 picks stayed on rosters priced like live firsts, and how the
+// League X-Ray came to recommend trading a starting RB for a 2025 1st.
+function _doneSeasonsSeed(season){
+  var out={}, cy=parseInt(season)||parseInt(ACTIVE_SEASON)||new Date().getFullYear();
+  for(var y=cy-10;y<cy;y++)out[y]=1;
+  return out;
+}
 function buildPicksForRoster(rosterObj,tradedPicks,season){
   var rid=rosterObj.roster_id;
   var picks=[];
@@ -2753,7 +2913,17 @@ function buildPicksForRoster(rosterObj,tradedPicks,season){
   // of leagues run five- or six-round rookie drafts. Take the league's own
   // numbers, and widen to whatever its traded-pick ledger proves it uses.
   var maxRnd=Math.max(4, parseInt(window._draftRounds)||0);
-  var lastYr=curYear+2;
+  // Three drafts you can still trade, not three calendar years. Sleeper always
+  // carries three future rookie drafts; the moment the current year's draft is
+  // complete, curYear+2 leaves only two pending and every roster silently lost a
+  // whole class of picks (verified: no 2029 pick existed anywhere in a league
+  // whose 2026 draft had already run).
+  var lastYr=curYear+2, _pend=0;
+  for(var _y=curYear;_y<curYear+6;_y++){
+    if(window._doneDraftSeasons&&window._doneDraftSeasons[_y])continue;
+    _pend++; lastYr=_y;
+    if(_pend>=3)break;
+  }
   (tradedPicks||[]).forEach(function(p){
     var y=parseInt(p.season), r=parseInt(p.round);
     if(y>lastYr&&y<=curYear+6)lastYr=y;
@@ -3039,6 +3209,18 @@ function _boardAssets(side){
   }
   return list;
 }
+// Which roster owns the picks shown on THIS board. Both boards used to fall back
+// to _myRosterId(), so a rival's own picks were labelled "your pick" and drawn at
+// YOUR projected slot: their 2029 first read 1.09 (my slot, 9th of 10) when their
+// own slot is 2nd of 10.
+function _boardOwnerRid(side){
+  if(side==='give')return _myRosterId();
+  try{
+    var sel=document.getElementById('opp-select');
+    var o=sel?_rosterForUser(sel.value):null;
+    return o?o.roster_id:null;
+  }catch(_){ return null; }
+}
 function renderTradeBoards(){
   var boards={give:document.getElementById('board-mine'),get:document.getElementById('board-opp')};
   if(!boards.give&&!boards.get)return;
@@ -3066,7 +3248,7 @@ function renderTradeBoards(){
       // original owner's. Falls back to "R1" when we can't estimate.
       var short,_pickNo;
       if(a.kind==='k'){
-        var _oid=(a.ownerRosterId!=null)?a.ownerRosterId:_myRosterId();
+        var _oid=(a.ownerRosterId!=null)?a.ownerRosterId:_boardOwnerRid(side);
         var _sl=null;try{_sl=estimatePickSlot(_oid);}catch(_){}
         _pickNo=_sl?(a.round+'.'+String(_sl.slot).padStart(2,'0')):('R'+a.round);
         short=(a.season||'')+'';
@@ -3085,7 +3267,7 @@ function renderTradeBoards(){
         +'<span class="bb-nm" title="'+a.name.replace(/"/g,'&quot;')+'">'+short+'</span>'
         +'<span class="bb-meta"><b style="color:'+col+'">'+(a.kind==='k'?'PICK':a.pos)+'</b>'
         +(a.kind==='p'?teamLogo(a.team,11):'')
-        +(a.kind==='k'?'<span>'+(a.via?'via '+a.via.replace(/</g,'&lt;'):'your pick')+'</span>':'')
+        +(a.kind==='k'?'<span>'+(a.via?'via '+a.via.replace(/</g,'&lt;'):(side==='give'?'your pick':'their pick'))+'</span>':'')
         +(a.kind==='p'&&allPlayers[a.id]&&allPlayers[a.id].age?'<span class="bb-age">Age '+allPlayers[a.id].age+'</span>':'')+'</span>'
         +'</button>';
     }).join('');
@@ -3196,8 +3378,11 @@ function updateKtcLive(){
   if(!live)return;
   if(!hasAny){live.style.display="none";return;}
   live.style.display="flex";
-  document.getElementById("ktc-give-live").textContent="";
-  document.getElementById("ktc-get-live").textContent="";
+  // These were blanked on purpose and the labels were left behind, so the strip
+  // read "You give:    You get:    big edge your way" with two dangling colons.
+  // Either show the number or drop the label; showing the number is the useful half.
+  document.getElementById("ktc-give-live").textContent=giveTotal?Math.round(giveTotal).toLocaleString():"-";
+  document.getElementById("ktc-get-live").textContent=getTotal?Math.round(getTotal).toLocaleString():"-";
   var gap=getTotal-giveTotal;
   var gapEl=document.getElementById("ktc-gap-live");
   if(giveTotal&&getTotal){
@@ -3452,6 +3637,27 @@ function goBackYou(qi){
 // has to beat a soft hesitation, not be vetoed by it. See tradeScore() below.
 function _tmClamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
 
+// Deterministic jitter, keyed on the trade itself.
+// ROOT CAUSE of "the same trade gives a different answer every time": it was not
+// load order, caching or shared state. runAnalysis draws six live Math.random()
+// values - acceptance twice, the three meters once each, and the headline index -
+// so pressing Analyze twice on one unchanged trade produced 5 different headlines
+// in 8 runs and stored the same deal in history at 91% once and 85% the next.
+// A rival's read is a claim about the world; a number that moves on refresh is a
+// number nobody believes. Same trade in, same numbers out, forever. (The same
+// idea already ships in renderBuySell's vary(): hash the subject, not the clock.)
+function _tmHash(s){
+  var h=2166136261;
+  s=String(s);
+  for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
+  return h>>>0;
+}
+function _tmRand(seed,salt){
+  var h=_tmHash(salt+'|'+seed);
+  h^=h>>>15; h=Math.imul(h,2246822507); h^=h>>>13;
+  return (h>>>0)/4294967296;
+}
+
 // compCONTEXTO (±20, ±16.5 redraft): strategic fit from window (Q1) x goal (Q2).
 // Dynasty semantics -> sit: 0=contending 1=building 2=rebuilding 3=unsure(window);
 // reason: 0=initiated 1=inbound 2=fill-need 3=sell-high. The window x goal matrix
@@ -3523,29 +3729,87 @@ function tradeScore(effGap,giveKtc,getKtc,youAnswers,leagueMode,hasKtc){
     return _tmBand(_tmClamp(50 + 1.5*ctxNo + 2*modFEEL, 0, 100), feel);
   }
 
-  // Dealbreaker gate (runs BEFORE the score). D1 hard fleece: a big raw value
-  // loss walks, regardless of feel or context. (feel===2 is NO LONGER a
-  // dealbreaker - it is just -12 in modFEEL.) D2-D4 need flags we do not have
-  // clean data for at this call site, so they are omitted cleanly.
-  if(effGap<=-1500){
-    return {score:12,verdict:"WALK AWAY",icon:"STOP",desc:"This is a big value loss. Walk away."};
-  }
+  // There is no dealbreaker GATE any more. The old one was an absolute cliff on
+  // an otherwise relative scale: effGap<=-1500 walked away from a 20k-for-18.5k
+  // blockbuster (a 7% loss) exactly as hard as from a 6k-for-4.5k swap (25%). It
+  // also broke two things the model promises. Monotonicity: a trade 1 point
+  // BETTER than the line scored 5.1 while the line itself scored 12, so
+  // improving the deal made the read worse. And the A/B mirror: the same trade
+  // scored 12 for one side and 80 for the other, a total of 92 instead of 100.
+  // A fleece now walks because the VALUE term saturates, which is smooth,
+  // relative to the size of the deal, and symmetric by construction.
 
   // compVALOR (±30, ±33 redraft): tanh keeps it bounded; tau adapts to deal size
   // so a 1000-gap on smalls is not read like a 1000-gap on a blockbuster.
   var base=Math.max(giveKtc,getKtc);
-  var tau=900*_tmClamp(base/5000,0.5,2);
+  // Widened from 2x to 4x. The cap meant every deal above 10k shared one tau, so
+  // a 1,500 gap on a 20k blockbuster (7.5%) read exactly like a 1,500 gap on a 5k
+  // swap (30%). This is what "relative to the size of the trade" has to mean.
+  var tau=900*_tmClamp(base/5000,0.5,4);
   var valAmp=redraft?33:30; // redraft: age does not count, so value carries more
   var compVALOR=valAmp*Math.tanh(effGap/tau);
 
   // compCONTEXTO caps at ±16.5 in redraft (age drops out, context is worth less).
   var compCTX=_tmContext(sit,reason,redraft);
 
-  // softTotal clamp is the hard ceiling/floor on sentiment - value stays in charge.
-  var softTotal=_tmClamp(compCTX+modFEEL,-26,22);
+  // Sentiment fades as the value edge saturates. This is what replaces the old
+  // hard gate: at compVALOR=0 the room for context and gut feeling is the full
+  // -26/+22, and it closes to zero as the value term reaches its bound, so a real
+  // fleece walks on the numbers alone and no answer to the three questions can
+  // argue it back. Because the fade depends only on |compVALOR|, which is odd in
+  // effGap, the A/B mirror stays exact: with neutral answers score(g)+score(-g)
+  // is always 100. (valAmp > 26 is what keeps the whole thing monotone; at 30 and
+  // 33 there is real headroom.)
+  var _soft=1-Math.min(1,Math.abs(compVALOR)/valAmp);
+  var softTotal=_tmClamp(compCTX+modFEEL,-26*_soft,22*_soft);
   return _tmBand(_tmClamp(50 + compVALOR + softTotal, 0, 100), feel);
 }
 
+// ONE definition of the effective gap, used by BOTH readouts on the screen.
+// This math lived inline inside runAnalysis only, so showYouVerdict scored the
+// same trade on the RAW gap and the two lines disagreed out loud: on a 1-for-3
+// with a +180 raw edge the badge said CLOSE, YOUR CALL while the headline said
+// NEGOTIATE FIRST. Two answers to one question is worse than either answer.
+//
+// Three fixes are folded in here, all of them from the old inline block:
+//  1. A stray brace trapped the "any league size" starting-lineup rule inside
+//     the gc!==rc branch, so a 3-for-3 paid no lineup tax at all.
+//  2. The tax fired on rc>=3 regardless of what you sent back, which would have
+//     charged a 3-for-3 for depth it does not add. It is a NET count now, which
+//     is also what keeps "same asset both sides" scoring exactly neutral.
+//  3. Roster-spot economics and lineup reality were charged in full on the same
+//     deal, taking a +180 edge to -400 and telling the side WITH the value edge
+//     that it was losing. When they point the same way the smaller one is halved.
+function _tmEffGap(giveVals,getVals,ktcGap,hasKtc,sit){
+  var out={effGap:ktcGap,note:''};
+  if(!hasKtc)return out;
+  var gc=giveVals.length||1, rc=getVals.length||1;
+  var leagueSize=(typeof leagueRosters!=='undefined'&&leagueRosters.length>=4)?leagueRosters.length:12;
+  var gv=giveVals.filter(function(v){return v>0;}).sort(function(a,b){return b-a;});
+  var tv=getVals.filter(function(v){return v>0;}).sort(function(a,b){return b-a;});
+  var needsHelp=(sit!=null&&sit>=1);
+  var anchor=gv[0]||0;
+  var bothViable=tv.length>=2&&anchor>0&&tv[1]>=anchor*0.55;
+  // Bodies that can never crack your lineup, and spots you cleared on it.
+  var extra=Math.max(0,rc-Math.max(2,gc));
+  var saved=Math.max(0,gc-Math.max(2,rc));
+  var lineup=-280*extra+150*saved;
+  var spots=0,note='';
+  if(gc!==rc){
+    if(gc>rc){
+      if(leagueSize<12){spots=300;note='In a '+leagueSize+'-team league, sending '+gc+' for the best player is the right shape: waivers replace your depth anyway and the open roster spot has value of its own.';}
+    }else{
+      if(leagueSize<12){spots=-300;note='Careful with '+gc+'-for-'+rc+' in a '+leagueSize+'-team league: depth is cheap on waivers here, so extra bodies are worth less than the sheet says. Make sure the value edge is real.';}
+      else if(needsHelp&&bothViable){spots=300;note='In a '+leagueSize+'-team league with your roster needing help, two players who can both outplay the one you send is a bet worth making: two chances to hit beats one.';}
+      else if(bothViable){note='The 2-for-1 math favors quantity when a team needs help, yours does not. From strength, take the best player, not the most players.';}
+    }
+  }
+  if((spots<0&&lineup<0)||(spots>0&&lineup>0))spots*=0.5;
+  if(extra>0)note='You are getting too many players who probably will not start for you, and you are giving away your superstar. Only the best one or two of them will ever see your lineup.';
+  out.effGap=ktcGap+spots+lineup;
+  out.note=note;
+  return out;
+}
 function showYouVerdict(){
   var icon,verdict,desc;
   // Blend the gut-check answers with whatever value is on the board so the
@@ -3556,7 +3820,12 @@ function showYouVerdict(){
   var giveKtc=giveEls.reduce(function(s,i){return s+getKtcValue(i.value.trim(),i.dataset.playerId);},0);
   var getKtc=getEls.reduce(function(s,i){return s+getKtcValue(i.value.trim(),i.dataset.playerId);},0);
   var hasKtc=giveKtc>0||getKtc>0;
-  var effGap=getKtc-giveKtc;
+  // Same roster math the headline uses. Scoring this badge on the raw gap is
+  // what made the two readouts contradict each other.
+  var effGap=_tmEffGap(
+    giveEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    getEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    getKtc-giveKtc,hasKtc,(youAnswers?youAnswers[0]:null)).effGap;
   var r=tradeScore(effGap,giveKtc,getKtc,youAnswers,leagueMode,hasKtc);
   verdict=r.verdict;desc=r.desc;icon=r.icon;
   document.getElementById("you-type").textContent=verdict;
@@ -3679,10 +3948,16 @@ function computeTradeStats(trades){
       var val=ktcById[pid]||0;
       if(stats[rid]){stats[rid].valueGiven+=val;stats[rid].playersGiven++;}
     });
-    // Draft picks
+    // Draft picks. Counting them but never PRICING them is why a rebuilder who
+    // sold veterans for 23 picks showed up as 29,020 in the red: in dynasty most
+    // deals move capital, and capital was worth zero here. The same net feeds the
+    // rival archetype read (netValue<-800 = "The Denial Manager"), so the error
+    // was propagating into the opponent profile too.
     (t.draft_picks||[]).forEach(function(pk){
-      if(stats[pk.previous_owner_id]) stats[pk.previous_owner_id].picksGiven++;
-      if(stats[pk.owner_id])          stats[pk.owner_id].picksReceived++;
+      var _pv=0;
+      try{ _pv=getKtcValue(pk.season+" Round "+pk.round,null)||0; }catch(_){}
+      if(stats[pk.previous_owner_id]){ stats[pk.previous_owner_id].picksGiven++; stats[pk.previous_owner_id].valueGiven+=_pv; }
+      if(stats[pk.owner_id]){ stats[pk.owner_id].picksReceived++; stats[pk.owner_id].valueReceived+=_pv; }
     });
   });
   return stats;
@@ -3780,7 +4055,7 @@ function renderLeagueTrades(){
     var rec=rosterRecord(r.roster_id);
     var s=tradeStats[r.roster_id]||{tradeCount:0,valueReceived:0,valueGiven:0};
     var pt=perTrade[r.roster_id]||{won:0,lost:0,even:0};
-    return {rid:r.roster_id,name:getRosterName(r.roster_id),isMe:r.owner_id===userId,rec:rec,
+    return {rid:r.roster_id,name:getRosterName(r.roster_id),isMe:_isMyRoster(r),rec:rec,
       trades:s.tradeCount,won:pt.won,lost:pt.lost,net:Math.round(s.valueReceived-s.valueGiven)};
   }).sort(function(a,b){
     if(hasGames){if(b.rec.pct!==a.rec.pct)return (b.rec.pct||0)-(a.rec.pct||0);return b.rec.fpts-a.rec.fpts;}
@@ -3791,8 +4066,13 @@ function renderLeagueTrades(){
     +"<th>#</th><th>Team</th>"+(hasGames?"<th>Record</th><th>PF</th>":"")+"<th>Trades</th><th>Trade W-L</th><th>Value +/-</th>"
     +"</tr></thead><tbody>";
   tableRows.forEach(function(row,i){
-    var netColor=row.net>=300?"var(--green)":row.net<=-300?"var(--red)":"var(--accent-bright)";
-    var netTxt=row.net>=1000?"Big wins":row.net>=300?"Ahead":row.net<=-1000?"Big losses":row.net<=-300?"Behind":"Win-win trader";
+    // Per trade, not cumulative. These thresholds were written for ONE deal and
+    // then applied to a two-season total, so in a 82-trade league the nets ran
+    // from +13,917 to -29,020 and 7 of 10 teams read "Big wins" in a zero-sum
+    // game. The middle labels were unreachable.
+    var _per=row.trades?row.net/row.trades:0;
+    var netColor=_per>=250?"var(--green)":_per<=-250?"var(--red)":"var(--accent-bright)";
+    var netTxt=_per>=800?"Big wins":_per>=250?"Ahead":_per<=-800?"Big losses":_per<=-250?"Behind":"Win-win trader";
     lbHtml+="<tr"+(row.isMe?" class='st-me'":"")+"><td class='st-num'>"+(i+1)+"</td>"
       +"<td class='st-team'>"+row.name+(row.isMe?" <span style='font-size:9px;color:var(--accent-bright);font-weight:700'>YOU</span>":"")+"</td>"
       +(hasGames?"<td class='st-num'>"+row.rec.wins+"-"+row.rec.losses+(row.rec.ties?"-"+row.rec.ties:"")+"</td><td class='st-num'>"+Math.round(row.rec.fpts).toLocaleString()+"</td>":"")
@@ -4053,18 +4333,23 @@ async function runAnalysis(){
     if(resultsEl)resultsEl.innerHTML='<div style="padding:32px;text-align:center;color:var(--muted);font-size:14px">You need players on <strong style="color:var(--text)">both sides</strong> to analyze. Fill in what you\'re giving AND what you\'re getting.</div>';
     return;
   }
-  // StoryBrand micro-moment: Mac visibly working through the steps
+  // A skeleton in the shape of the verdict, not a progress pill that lies. The
+  // six-step toast ran on a fixed timer regardless of the work, so it was still
+  // announcing "Analyzing your opponent..." over a verdict that had already
+  // finished rendering. House rule is skeletons, and a fake one is worse than an
+  // honest spinner. (There were TWO of these building the same #anz-toast: the
+  // inline block below and _anzToast(), which starts by removing the one the
+  // inline block just made. Both go.) Reuses the .tm-skel shimmer already in
+  // styles.css so there is nothing new to style.
   try{
-    var _tz=document.getElementById('anz-toast');
-    if(!_tz){_tz=document.createElement('div');_tz.id='anz-toast';
-      _tz.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:260;background:var(--surface3);border:1px solid rgba(155,114,232,.4);border-radius:100px;padding:9px 20px;font-size:12.5px;font-weight:600;color:var(--text);box-shadow:0 8px 30px rgba(5,4,12,.5);transition:opacity .3s;pointer-events:none';
-      document.body.appendChild(_tz);}
-    _tz.style.opacity='1';_tz.style.display='block';
-    var _steps=['Thinking...','Reviewing your roster...','Checking league settings...','Analyzing your opponent...','Comparing player values...','Recommendation ready.'];
-    _steps.forEach(function(s,i){setTimeout(function(){_tz.textContent=s;},i*330);});
-    setTimeout(function(){_tz.style.opacity='0';setTimeout(function(){_tz.style.display='none';},350);},_steps.length*330+700);
+    var _vb0=document.getElementById('verdict-body');
+    if(_vb0)_vb0.innerHTML='<div class="tm-skel" style="height:14px;width:92%;margin:0 0 9px"></div>'
+      +'<div class="tm-skel" style="height:14px;width:78%;margin:0 0 9px"></div>'
+      +'<div class="tm-skel" style="height:14px;width:85%;margin:0 0 16px"></div>'
+      +'<div class="tm-skel" style="height:96px;width:100%"></div>';
+    var _vh0=document.getElementById('verdict-headline');
+    if(_vh0)_vh0.innerHTML='<span class="tm-skel" style="display:block;height:28px;width:70%"></span>';
   }catch(_){}
-  _anzToast(); // staged "Mac is working" lines while the battle plays
   // Deduct BK (only if user is logged in)
   var bkOk=await chargeBK();
   if(!bkOk)return;
@@ -4087,10 +4372,13 @@ async function runAnalysis(){
   var hasKtc=giveKtc>0||getKtc>0;
   var gc=give.length||1,rc=get.length||1;
 
+  // The identity of this trade: league, counterparty, both sides. Everything
+  // that used to be random is drawn from it, so the read is stable on refresh.
+  var _tSeed=[leagueId||'',oppRosterId||'',give.slice().sort().join(','),get.slice().sort().join(',')].join('|');
   // - -- ACCEPTANCE likelihood (secondary - will THEY accept?) - --
-  var base=44+Math.floor(Math.random()*14);
+  var base=44+Math.floor(_tmRand(_tSeed,'acc-base')*14);
   var acceptBoost=hasKtc?(ktcGap>1000?12:ktcGap>0?5:ktcGap>-1000?-3:-10):(rc-gc)*5;
-  var acc=Math.min(94,Math.max(14,base+acceptBoost+p.boosts.acceptance+selfBoost+Math.floor(Math.random()*6)));
+  var acc=Math.min(94,Math.max(14,base+acceptBoost+p.boosts.acceptance+selfBoost+Math.floor(_tmRand(_tSeed,'acc-jit')*6)));
 
   // - -- TRADE VALUE for YOU (primary - should YOU do it?) - --
   // Roster-spot economics: raw value isn't the whole story once player counts differ.
@@ -4099,33 +4387,11 @@ async function runAnalysis(){
   // Big leagues (12+): if you're getting two players for one, your team needs help,
   // and BOTH incoming pieces have a real shot at outplaying the guy you send,
   // the two bites at the apple are worth more than the sheet says.
-  var _depthNote='';
-  var effGap=ktcGap;
-  if(hasKtc&&gc!==rc){
-    var leagueSize=leagueRosters.length>=4?leagueRosters.length:12;
-    var giveVals=giveInputEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}).filter(function(v){return v>0;}).sort(function(a,b){return b-a;});
-    var getVals=getInputEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}).filter(function(v){return v>0;}).sort(function(a,b){return b-a;});
-    var consolidating=gc>rc;
-    if(leagueSize<12){
-      if(consolidating){effGap+=300;_depthNote='In a '+leagueSize+'-team league, sending two for the best player is the right shape: waivers replace your depth anyway and the open roster spot has value of its own.';}
-      else{effGap-=300;_depthNote='Careful with 1-for-2 in a '+leagueSize+'-team league: depth is cheap on waivers here, so extra bodies are worth less than the sheet says. Make sure the value edge is real.';}
-    } else if(!consolidating&&rc>gc){
-      var needsHelp=sit!=null&&sit>=1;
-      var anchor=giveVals[0]||0;
-      var bothViable=getVals.length>=2&&anchor>0&&getVals[1]>=anchor*0.55;
-      if(needsHelp&&bothViable){effGap+=300;_depthNote='In a '+leagueSize+'-team league with your roster needing help, two players who can both outplay the one you send is a bet worth making: two chances to hit beats one.';}
-  }
-  // Universal starting-lineup reality, any league size: only your best one or two
-  // incoming players ever crack the lineup. A third, fourth, fifth body is bench
-  // filler, so receiving a pile for one star gets taxed hard - and consolidating
-  // three-plus roster players into the best player in the deal earns a bonus.
-  {
-    var _inC=(typeof rc!=='undefined')?rc:0, _outC=(typeof gc!=='undefined')?gc:0;
-    if(_inC>=3){effGap-=280*(_inC-2);_depthNote='You are getting too many players who probably will not start for you, and you are giving away your superstar. Only the best one or two of them will ever see your lineup.';}
-    if(_outC>=3&&_inC<=2){effGap+=150*(_outC-2);}
-      else if(!needsHelp&&bothViable){_depthNote='The 2-for-1 math favors quantity when a team needs help - yours doesn\'t. From strength, take the best player, not the most players.';}
-    }
-  }
+  var _eg=_tmEffGap(
+    giveInputEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    getInputEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    ktcGap,hasKtc,sit);
+  var effGap=_eg.effGap, _depthNote=_eg.note;
   var valueTier;
   if(hasKtc){
     if(effGap>=1000) valueTier="crushing";
@@ -4139,16 +4405,17 @@ async function runAnalysis(){
 
   // Headline = value-first verdict (this is what matters for YOU)
   var headline;
+  var _hi=Math.floor(_tmRand(_tSeed,'headline')*10);
   if(valueTier==="getting_fleeced"){
-    headline=["HELL NO","DON'T SEND THIS","YOU'RE GETTING ROBBED","HARD PASS","WALK AWAY","NOT EVEN CLOSE","THEY'RE LAUGHING AT YOU","ABORT MISSION","DELETE THIS OFFER","RUN"][Math.floor(Math.random()*10)];
+    headline=["HELL NO","DON'T SEND THIS","YOU'RE GETTING ROBBED","HARD PASS","WALK AWAY","NOT EVEN CLOSE","THEY'RE LAUGHING AT YOU","ABORT MISSION","DELETE THIS OFFER","RUN"][_hi];
   } else if(valueTier==="losing"){
-    headline=["ASK FOR MORE","BAD DEAL, PUSH BACK","YOU'RE OVERPAYING","NEGOTIATE FIRST","MISSING SOMETHING","CLOSE BUT NO","NEED A SWEETENER","DON'T SEND YET","HOLD OUT","GET SOMETHING BACK"][Math.floor(Math.random()*10)];
+    headline=["ASK FOR MORE","BAD DEAL, PUSH BACK","YOU'RE OVERPAYING","NEGOTIATE FIRST","MISSING SOMETHING","CLOSE BUT NO","NEED A SWEETENER","DON'T SEND YET","HOLD OUT","GET SOMETHING BACK"][_hi];
   } else if(valueTier==="even"){
-    headline=["WIN-WIN TRADE","BOTH TEAMS EAT","TWO WINNERS HERE","FAIR SWAP, GOOD TRADE","BOTH SIDES IMPROVE","CLEAN, BALANCED DEAL","EVEN MONEY, GOOD DEAL","FAIR FIGHT","IF IT FITS, SEND IT","BALANCED SWAP"][Math.floor(Math.random()*10)];
+    headline=["WIN-WIN TRADE","BOTH TEAMS EAT","TWO WINNERS HERE","FAIR SWAP, GOOD TRADE","BOTH SIDES IMPROVE","CLEAN, BALANCED DEAL","EVEN MONEY, GOOD DEAL","FAIR FIGHT","IF IT FITS, SEND IT","BALANCED SWAP"][_hi];
   } else if(valueTier==="winning"){
-    headline=acc>=55?["SEND IT","DO IT NOW","YEAH, DO THIS","GREEN LIGHT","GO FOR IT","YES, OBVIOUSLY","THIS IS YOUR MOVE","PULL THE TRIGGER","LOCK IT IN, NOW","EASY CALL"][Math.floor(Math.random()*10)]:["GOOD DEAL, KEEP PUSHING","YOU'RE WINNING, STAY ON IT","LOCK IT IN","YOU'RE AHEAD","WORTH IT","LEAN YES","GOOD VALUE","EDGE IN YOUR FAVOR","SLIGHT WIN, TAKE IT","YOUR CALL BUT GOOD"][Math.floor(Math.random()*10)];
+    headline=acc>=55?["SEND IT","DO IT NOW","YEAH, DO THIS","GREEN LIGHT","GO FOR IT","YES, OBVIOUSLY","THIS IS YOUR MOVE","PULL THE TRIGGER","LOCK IT IN, NOW","EASY CALL"][_hi]:["GOOD DEAL, KEEP PUSHING","YOU'RE WINNING, STAY ON IT","LOCK IT IN","YOU'RE AHEAD","WORTH IT","LEAN YES","GOOD VALUE","EDGE IN YOUR FAVOR","SLIGHT WIN, TAKE IT","YOUR CALL BUT GOOD"][_hi];
   } else {
-    headline=["FIRE DEAL, SEND IT","YOU'RE WINNING BIG","EASY YES","ROB THEM BLIND","SLAM DUNK","HIGHWAY ROBBERY","DON'T WAIT","SEND BEFORE THEY WAKE UP","THEY'LL REGRET THIS","TAKE THE W"][Math.floor(Math.random()*10)];
+    headline=["FIRE DEAL, SEND IT","YOU'RE WINNING BIG","EASY YES","ROB THEM BLIND","SLAM DUNK","HIGHWAY ROBBERY","DON'T WAIT","SEND BEFORE THEY WAKE UP","THEY'LL REGRET THIS","TAKE THE W"][_hi];
   }
 
   var isGood=valueTier==="winning"||valueTier==="crushing"||valueTier==="even";
@@ -4187,8 +4454,16 @@ async function runAnalysis(){
   }catch(_){}
   var recency=Math.min(95,Math.max(8,40+p.boosts.recency+_riserBias));
   // vs = "Fits YOUR roster?" - net positional change (what you receive minus what you give at same position)
-  var getPositions=get.map(function(n){var pl=Object.values(allPlayers).find(function(p){return p.name===n;});return pl?pl.pos:"?";});
-  var givePositions=give.map(function(n){var pl=Object.values(allPlayers).find(function(p){return p.name===n;});return pl?pl.pos:"?";});
+  // The player id is sitting right there on the input; use it. Falling back to a
+  // hand-rolled exact-name find picked the wrong homonym and every fit number,
+  // the samePosTrade check and the "Fits YOUR/THEIR roster?" cards went with it.
+  function _posOf(i){
+    var pid=i.dataset.playerId, pl=(pid&&allPlayers[pid])||null;
+    if(!pl)pl=_playerByName(i.value.trim());
+    return pl?pl.pos:"?";
+  }
+  var getPositions=getInputEls.map(_posOf);
+  var givePositions=giveInputEls.map(_posOf);
   var myPosCount={QB:myRoster.filter(function(p){return p.pos==="QB";}).length,RB:myRoster.filter(function(p){return p.pos==="RB";}).length,WR:myRoster.filter(function(p){return p.pos==="WR";}).length,TE:myRoster.filter(function(p){return p.pos==="TE";}).length};
   var netPos={QB:0,RB:0,WR:0,TE:0};
   getPositions.forEach(function(pos){if(netPos[pos]!==undefined)netPos[pos]++;});
@@ -4199,15 +4474,15 @@ async function runAnalysis(){
     return s+(myPosCount[pos]<2?18:myPosCount[pos]<3?8:-3);
   },0);
   var vsBase=fitBonus>0?(hasKtc?(isGood?62:40):50):(fitBonus<0?28:42);
-  var vs=Math.min(95,Math.max(10, vsBase + fitBonus + Math.floor(Math.random()*8)));
+  var vs=Math.min(95,Math.max(10, vsBase + fitBonus + Math.floor(_tmRand(_tSeed,'vs')*8)));
   // ns = "Fits THEIR roster?" - based on what they're getting vs their positional needs
   // givePositions already defined above;
   var oppPosCount={QB:oppRoster.filter(function(p){return p.pos==="QB";}).length,RB:oppRoster.filter(function(p){return p.pos==="RB";}).length,WR:oppRoster.filter(function(p){return p.pos==="WR";}).length,TE:oppRoster.filter(function(p){return p.pos==="TE";}).length};
   var oppFitBonus=givePositions.reduce(function(s,pos){return s+(oppPosCount[pos]<2?15:oppPosCount[pos]<3?5:-5);},0);
-  var ns=Math.min(95,Math.max(10, 45 + oppFitBonus + Math.floor(Math.random()*10)));
+  var ns=Math.min(95,Math.max(10, 45 + oppFitBonus + Math.floor(_tmRand(_tSeed,'ns')*10)));
   // ps = timing - based on opp profile and your situation
   var timingBase=sit===0?60:sit===2?55:45;
-  var ps=Math.min(95,Math.max(10, timingBase + (p.name===profiles.window_closer.name||p.name===profiles.denial_manager.name?15:p.name===profiles.young_contender.name?-10:0) + Math.floor(Math.random()*10)));
+  var ps=Math.min(95,Math.max(10, timingBase + (p.name===profiles.window_closer.name||p.name===profiles.denial_manager.name?15:p.name===profiles.young_contender.name?-10:0) + Math.floor(_tmRand(_tSeed,'ps')*10)));
   // Gate the opponent read behind a Calculate button so it lands as a moment
   // (count-up + sound) instead of just appearing.
   window._oppReadVals={sig1:winNow,sig2:attach,sig3:recency};
@@ -4251,6 +4526,21 @@ async function runAnalysis(){
     // effGap already carries the roster-math depth adjustments from above.
     var _sv=tradeScore(effGap,giveKtc,getKtc,youAnswers,leagueMode,hasKtc);
     yv=_sv.verdict; yd=_sv.desc; yicon=_sv.icon;
+    // ...and now it is actually shown. yv/yd/yicon were assigned here and never
+    // read again, so the "Should YOU do this trade?" badge kept whatever
+    // showYouVerdict wrote back when the third question was answered - scored on
+    // the raw gap, before any roster math. Paint the real one.
+    try{
+      var _yt=document.getElementById("you-type"); if(_yt)_yt.textContent=yv;
+      var _ydE=document.getElementById("you-desc"); if(_ydE)_ydE.textContent=yd;
+      var _yb=document.getElementById("you-badge");
+      if(_yb){
+        _yb.style.background=yicon==="GO"?"rgba(34,197,94,0.1)":yicon==="STOP"?"rgba(239,68,68,0.1)":"rgba(245,158,11,0.1)";
+        _yb.style.borderColor=yicon==="GO"?"rgba(34,197,94,0.35)":yicon==="STOP"?"rgba(239,68,68,0.35)":"rgba(245,158,11,0.35)";
+        _yb.classList.add("show");
+      }
+      window._youVerdict=yv;
+    }catch(_){}
   }
   // ── End correlated verdict ──────────────────────────────────────────────────
 
@@ -4302,8 +4592,11 @@ function sageStyleNote(valueTier){
   document.getElementById("verdict-body").innerHTML=bodyText+"<div style='margin-top:12px'><span style='font-size:11px;font-weight:600;color:var(--accent-bright);background:var(--accent-dim);border:1px solid rgba(167,139,250,.3);border-radius:100px;padding:4px 11px;display:inline-block'>"+p.icon+" Opponent profile: "+oppName(p)+"</span></div>"+moreHtml;
   // Trade balance bar (50% = even, >50% = you win, <50% = you lose)
   // Scale: ±3000 KTC maps to ±40% from center (50±40 = 10–90%), clamped to 5–95%
+  // effGap, not ktcGap. The bar was positioned from the raw gap while its own
+  // label and colour came from effGap, so a 1-for-3 drew the bar at 52% (on YOUR
+  // side of centre), painted it red, and captioned it "You're losing value".
   var balancePct=hasKtc
-    ? Math.min(95,Math.max(5, 50 + (ktcGap/3000)*40))
+    ? Math.min(95,Math.max(5, 50 + (effGap/3000)*40))
     : valueTier==="crushing"?82:valueTier==="winning"?65:valueTier==="even"?50:valueTier==="losing"?35:18;
   balancePct=Math.min(95,Math.max(5,Math.round(balancePct)));
   var barColor=valueTier==="getting_fleeced"?"var(--red)":valueTier==="losing"?"var(--red)":valueTier==="even"?"var(--yellow)":"var(--green)";
@@ -4756,6 +5049,14 @@ function mobMenuToggle(){
   m.classList.toggle('open');
   // lock the page behind the menu so it never scrolls under the drawer
   try{document.body.style.overflow=opening?'hidden':'';}catch(_){}
+  if(opening)_overlayOpen(mobMenuClose);else _overlayClosed();
+}
+// DOM-only close, for the back gesture: history has already been popped.
+function mobMenuClose(){
+  var m=document.getElementById('mob-menu');
+  if(!m||!m.classList.contains('open'))return;
+  m.classList.remove('open');
+  try{document.body.style.overflow='';}catch(_){}
 }
 function mobGo(screen,tab){
   mobMenuToggle();
@@ -5056,8 +5357,18 @@ function saveToHistory(){
   if(!lastResult)return;
   var h=getHistory();h.unshift(lastResult);
   if(h.length>50)h.length=50;
-  saveHistory(h);renderHistory();
-  switchTab(document.querySelectorAll(".tab")[1],"tab-history");
+  saveHistory(h);
+  // No hay ningun elemento con class "tab" en index.html, asi que el viejo
+  // switchTab(querySelectorAll(".tab")[1], ...) recibia undefined como boton,
+  // quitaba .active de TODOS los .tab-content del documento y se lo daba solo a
+  // tab-history: Ask Mac y Mock Draft quedaban en blanco hasta recargar.
+  switchScreen('league');
+  // Se hace click en el boton real para que la barra lo marque. switchInnerTab(null,...)
+  // cambia el contenido pero no deja ninguna pestana marcada, que es el mismo
+  // sintoma de "barra y contenido no coinciden" con otro disfraz.
+  var _tb=document.querySelector('#screen-league .inner-tab[data-tab="tab-history"]');
+  if(_tb)_tb.click();
+  else { switchInnerTab(null,'tab-history','screen-league'); renderHistory(); }
 }
 
 function renderHistory(){
@@ -5086,7 +5397,7 @@ function renderLeaguePersonalities(){
     var avatarUrl=avatar?(String(avatar).indexOf('http')===0?avatar:'https://sleepercdn.com/avatars/thumbs/'+avatar):null;
     var roster=(r.players||[]).map(function(pid){return allPlayers[pid];}).filter(Boolean);
     var prof=inferOppProfileFromHistory(roster,r.roster_id);
-    var isMe=r.owner_id===userId;
+    var isMe=_isMyRoster(r);
     return {name:name,prof:prof,isMe:isMe,avatarUrl:avatarUrl};
   });
   el.innerHTML=rows.map(function(row){
@@ -5199,6 +5510,9 @@ async function checkShareParam(){
 var _VALID_SCREENS=['home','analyze','league','research','learn','community','news','mock','sage'];
 var _heroDismissed=false; // once hidden (league connected), stays hidden
 function switchScreen(name,_noPush){
+  // Las clases boot-* solo mandan hasta la primera navegacion; a partir de ahi
+  // los estilos inline de esta funcion son la fuente de verdad.
+  document.documentElement.classList.remove('boot-home','boot-tool');
   // Learn and News were relocated into Community tabs; reroute any stray
   // navigation (old deep links, cached handlers) to their new home.
   if(name==='learn'){goLearn();return;}
@@ -5246,7 +5560,8 @@ function switchScreen(name,_noPush){
   // showing as ~120px of empty space between the hero and the story below.
   var az=document.getElementById('analyzer');
   if(az)az.style.display=isHome?'none':'';
-  if(!_noPush){history.pushState({screen:name},'','/'+(isHome?'':name));}
+  var _path='/'+(isHome?'':name);
+  if(!_noPush&&window.location.pathname!==_path){history.pushState({screen:name},'',_path);}
   // Scroll: home goes to the very top (hero); tool pages jump to the tool.
   // goHome sets _noAnchorOnce so the wordmark lands at the top smoothly.
   if(window._noAnchorOnce){window._noAnchorOnce=false;}
@@ -5257,15 +5572,35 @@ function switchScreen(name,_noPush){
     // sliding up from the bottom of the page
     if(anchor){setTimeout(function(){anchor.scrollIntoView({behavior:"auto",block:"start"});},0);}
   }
+  // Render the screen's default tab. Only the inner-tab click handlers called
+  // these, so arriving through the nav left a signed-in user with a league fully
+  // loaded staring at "Connect a league to grade your roster" on My League, and
+  // at "Loading player values..." forever on Buy / Sell. It only fixed itself if
+  // you clicked the tab that was already marked active, which nobody does.
+  try{
+    var _act=document.querySelector('#screen-'+name+' .tab-content.active');
+    var _id=_act&&_act.id;
+    if(_id==='tab-roster-grade')renderRosterGrade();
+    else if(_id==='tab-league-trades')renderLeagueTrades();
+    else if(_id==='tab-history')renderHistory();
+    else if(_id==='tab-buysell'){renderBuySell();if(typeof renderWaiverTargets==='function')renderWaiverTargets();}
+  }catch(_){}
 }
 // Tab-level history sync: tab changes inside a screen push a descriptive hash
 // (for example /research#tab-market) so the browser back button walks tabs
 // instead of leaving the site. Restores triggered by popstate run with
 // _tabRestoring set, so they never push again and cannot loop.
 var _TAB_DEFAULTS={analyze:'analyzer',league:'tab-roster-grade',research:'tab-buysell',community:'trades',mock:'solo'};
+// Route parsing: strip leading AND trailing slashes, take the first segment,
+// lowercase it. pathname.replace('/','') only removed the FIRST slash, so
+// '/sage/' became 'sage/' and '/mock/' became 'mock/' - neither matched a
+// screen and both silently fell back to home.
+function _screenFromPath(){
+  return (window.location.pathname.replace(/^\/+|\/+$/g,'').split('/')[0]||'home').toLowerCase();
+}
 function _tabPush(token,scr){
   if(window._tabRestoring)return;
-  if((window.location.pathname.replace('/','')||'home')!==scr)return;
+  if(_screenFromPath()!==scr)return;
   var cur=window.location.hash.slice(1);
   if(cur===token)return;
   // default tab on a fresh screen entry: the screen entry already covers it
@@ -5273,7 +5608,7 @@ function _tabPush(token,scr){
   try{history.pushState({screen:scr,tab:token},'',window.location.pathname+window.location.search+'#'+token);}catch(_){}
 }
 function _applyTabHash(){
-  var scr=window.location.pathname.replace('/','')||'home';
+  var scr=_screenFromPath();
   if(!(scr in _TAB_DEFAULTS))return;
   var token=window.location.hash.slice(1)||_TAB_DEFAULTS[scr];
   window._tabRestoring=true;
@@ -5303,7 +5638,9 @@ function _applyTabHash(){
   window._tabRestoring=false;
 }
 window.addEventListener('popstate',function(e){
-  var name=(e.state&&e.state.screen)||(window.location.pathname.replace('/',''))||'home';
+  // An open overlay owns the back gesture: dismiss it and stay put.
+  if(_overlays.length){var _c=_overlays.pop();try{_c();}catch(_){}return;}
+  var name=(e.state&&e.state.screen)||_screenFromPath();
   if(_VALID_SCREENS.indexOf(name)===-1)name='home';
   switchScreen(name,true);
   _applyTabHash();
@@ -5335,12 +5672,21 @@ function openResearchTab(tabId){
   else{switchInnerTab(null,tabId,'screen-research');}
   closeAllDropdowns&&closeAllDropdowns();
 }
+// A tab bar that scrolls sideways has to bring the selected tab into view. On
+// a 390px phone the Community bar is 458px wide in a 308px track, so picking
+// Learn or Feedback left a bar showing four other tabs with none of them
+// marked, which reads as broken.
+function _revealTab(el){
+  if(!el||!el.scrollIntoView)return;
+  try{el.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});}
+  catch(_){try{el.scrollIntoView();}catch(__){}}
+}
 function switchInnerTab(el,id,screenId){
   var screen=document.getElementById(screenId);
   if(!screen)return;
   screen.querySelectorAll(".inner-tab").forEach(function(t){t.classList.remove("active");});
   screen.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active");});
-  if(el)el.classList.add("active");
+  if(el){el.classList.add("active");_revealTab(el);}
   var content=document.getElementById(id);
   if(content)content.classList.add("active");
   _revealSafety(content);
@@ -5360,10 +5706,14 @@ function _revealSafety(root){
 }
 
 function switchTab(el,id){
-  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
-  document.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active");});
-  if(el)el.classList.add("active");
+  // Scoped to the screen that owns the target pane. The old document-wide
+  // sweep switched OFF the active pane of every other screen, which left Ask
+  // Mac and Mock Draft rendering blank until a reload.
   var content=document.getElementById(id);
+  var scope=(content&&content.closest('.screen'))||document;
+  scope.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+  scope.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active");});
+  if(el)el.classList.add("active");
   if(content)content.classList.add("active");
   if(id==="tab-history")renderHistory();
   if(id==="tab-leaderboard")renderLeaderboard();
@@ -5371,18 +5721,6 @@ function switchTab(el,id){
   if(id==="tab-buysell"){renderBuySell();renderWaiverTargets();}
 }
 
-function showTab(name){
-  document.getElementById("analyzer").scrollIntoView({behavior:"smooth"});
-  var map={analyzer:0,history:1,leaderboard:2};
-  var idx=map[name];
-  if(idx===undefined)return;
-  var tabs=document.querySelectorAll(".tab");
-  var contents=document.querySelectorAll(".tab-content");
-  tabs.forEach(function(t,i){t.classList.toggle("active",i===idx);});
-  contents.forEach(function(cv,i){cv.classList.toggle("active",i===idx);});
-  if(name==="history")renderHistory();
-  if(name==="leaderboard")renderLeaderboard();
-}
 
 function newTrade(){
   document.getElementById("result-panel").classList.remove("visible");
@@ -5460,7 +5798,7 @@ function estimatePickSlot(ownerRosterId){
 }
 // Your own roster id in the connected league (for projecting your own picks' slots).
 function _myRosterId(){
-  var r=(leagueRosters||[]).find(function(x){return x.owner_id===userId;});
+  var r=_myRosterObj();
   return r?r.roster_id:null;
 }
 
@@ -5491,7 +5829,7 @@ function getMyBuildPhase(mySum){
       var gA=wA+lA,gB=wB+lB;
       return (gB?(wB/gB):0.5)-(gA?(wA/gA):0.5);
     });
-    var myRosterObj2=leagueRosters.find(function(r){return r.owner_id===userId;});
+    var myRosterObj2=_myRosterObj();
     if(myRosterObj2){leagueRank=sorted.findIndex(function(r){return r.roster_id===myRosterObj2.roster_id;})+1;}
   }
   var phase=avgAge<24.5||avgKtc<2000?'rebuilding':avgAge<26.5?'building':'contending';
@@ -5499,7 +5837,7 @@ function getMyBuildPhase(mySum){
 }
 
 
-// ═══ TARGET A PLAYER — you name the prize, we price it ═══════════════════════
+// ═══ TARGET A PLAYER: you name the prize, we price it ═══════════════════════
 // The Ideas tab answers "who should I trade for?". This answers the question a
 // manager actually walks in with: "I want THAT guy - what does it cost me?"
 // Pick a rival, pick one or more of his players, and the board comes back with
@@ -5548,7 +5886,7 @@ function _tgtPkgWorth(pkg){
 }
 
 function _tgtMyAssets(){
-  var mine = leagueRosters.find(function(r){ return r.owner_id === userId; });
+  var mine = _myRosterObj();
   if(!mine) return [];
   var excl = (window._ideaExclude || []).map(function(n){ return String(n).toLowerCase(); });
   var out = [];
@@ -5599,7 +5937,7 @@ function tgtRenderPanel(){
     host.innerHTML = '<div class="ideas-empty">Connect a league and this turns into a shopping list: pick anyone on a rival roster and see the price.</div>';
     return;
   }
-  var others = leagueRosters.filter(function(r){ return r.owner_id !== userId; });
+  var others = leagueRosters.filter(function(r){ return !_isMyRoster(r); });
   var opts = '<option value="">Whose player do you want?</option>' + others.map(function(r){
     return '<option value="' + r.roster_id + '"' + (TGT.rosterId === r.roster_id ? ' selected' : '') + '>' +
       _lxEsc(getRosterName(r.roster_id)) + '</option>';
@@ -5689,7 +6027,7 @@ function _tgtSearch(assets, ask, need){
 // and the tool should say so before you send it.
 function _tgtRosterAfter(pkg, targets){
   try{
-    var mine = leagueRosters.find(function(r){ return r.owner_id === userId; });
+    var mine = _myRosterObj();
     if(!mine) return null;
     var gone = {}; pkg.forEach(function(p){ if(p.id) gone[p.id] = 1; });
     var startable = { QB:0, RB:0, WR:0, TE:0 }, before = { QB:0, RB:0, WR:0, TE:0 };
@@ -5800,6 +6138,9 @@ function tgtBuild(){
       '</div>';
     }).join('');
   window._tgtCards = cards;
+  // On a phone the asset picker is ~2,500px tall and the answer lands ~2,750px
+  // below the fold, so tapping the player you want looked like nothing happened.
+  try{ if(window.innerWidth<900) out.scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){}
 }
 
 // Hand the package to the real analyzer, which owns the verdict.
@@ -5987,7 +6328,7 @@ function _lxTeam(r, medStrength){
   try{ prem = _tgtPremiumFor(rid).mult; }catch(_){}
 
   return {
-    rid: rid, name: getRosterName(rid), isMe: r.owner_id === userId, raw: r,
+    rid: rid, name: getRosterName(rid), isMe: _isMyRoster(r), raw: r,
     inv: inv, req: req, strength: strength, coreAge: coreAge, rec: rec,
     pickBal: pickBal, score: score, win: win, why: parts.join(', '),
     holes: shape.holes, thin: shape.thin, surplus: shape.surplus, noGames: recTerm == null,
@@ -6206,7 +6547,7 @@ function _dlFace(p){
     var yr = (String(p.name).match(/(\d{4})/) || [])[1] || '';
     return '<span class="dl-pk"><b>' + rd + '</b><i>' + yr.slice(2) + '</i></span>';
   }
-  return '<img class="dl-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="" loading="lazy">';
+  return '<img class="dl-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="" loading="lazy" onerror="this.remove()">';
 }
 // "Emeka Egbuka" -> "E. Egbuka", so two columns fit side by side on a phone
 function _dlName(p){
@@ -6391,7 +6732,7 @@ function ofrRender(){
     host.innerHTML = '<div class="ideas-empty">Connect a league and this turns into your negotiating desk.</div>';
     return;
   }
-  var others = leagueRosters.filter(function(r){ return r.owner_id !== userId; });
+  var others = leagueRosters.filter(function(r){ return !_isMyRoster(r); });
   var opts = '<option value="">Who is asking?</option>' + others.map(function(r){
     return '<option value="' + r.roster_id + '"' + (OFR.rid === r.roster_id ? ' selected' : '') + '>' + _lxEsc(getRosterName(r.roster_id)) + '</option>';
   }).join('');
@@ -6447,7 +6788,7 @@ function _pkFace(p){
     var yr = (String(p.name).match(/(\d{4})/) || [])[1] || '';
     return '<span class="ofr-pk"><b>' + rd + '</b><i>' + yr.slice(2) + '</i></span>';
   }
-  return '<img class="ofr-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="" loading="lazy">';
+  return '<img class="ofr-face" src="https://sleepercdn.com/content/nfl/players/thumb/' + p.id + '.jpg" alt="" loading="lazy" onerror="this.remove()">';
 }
 
 function _pkCard(p, st){
@@ -6644,7 +6985,7 @@ function ofrEvaluate(){
     // the package comes TO you, so the tiebreak is which of their players fills
     // YOUR holes. Ranking it by their needs demanded the guys they least want
     // to send, which is the wrong end of the negotiation.
-    var _mine = leagueRosters.find(function(r){ return r.owner_id === userId; });
+    var _mine = _myRosterObj();
     var myNeed = _mine ? _tgtTheirNeed(_mine.roster_id) : {};
     var found = _tgtSearch(theirs.slice().sort(function(a,b){ return b.v - a.v; }), fairAsk, myNeed);
     var picked = [], seenPkg = {};
@@ -6696,7 +7037,7 @@ function ofrEvaluate(){
     + ' for ' + want.map(function(p){ return _lxEsc(p.name); }).join(' + ') + '.</div>';
   if(why) h += '<div class="ofr-why">' + _lxEsc(why) + '</div>';
 
-  var _mineB = leagueRosters.find(function(r){ return r.owner_id === userId; });
+  var _mineB = _myRosterObj();
   var myNeedB = _mineB ? _tgtTheirNeed(_mineB.roster_id) : {};
 
   // Which of the players they asked for do you actually have to include? They
@@ -6813,6 +7154,7 @@ function ofrEvaluate(){
   }catch(_){}
 
   out.innerHTML = h;
+  try{ if(window.innerWidth<900) out.scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){}
 }
 
 function generateTradeIdeas(){
@@ -6851,7 +7193,7 @@ function generateTradeIdeas(){
   }
   el.innerHTML="<div class='ideas-empty'>Analyzing your roster and finding the best moves...</div>";
 
-  var myRosterObj=leagueRosters.find(function(r){return r.owner_id===userId;});
+  var myRosterObj=_myRosterObj();
   if(!myRosterObj){
     // Try matching by any roster if userId comparison fails
     el.innerHTML="<div class='ideas-empty'>Could not find your roster - try reloading your league.</div>";
@@ -6872,7 +7214,7 @@ function generateTradeIdeas(){
 
   // --- Strategy 1: Positional need swaps (player↔player) ---
   leagueRosters.forEach(function(oppRosterObj){
-    if(oppRosterObj.owner_id===userId)return;
+    if(_isMyRoster(oppRosterObj))return;
     var oppUser=leagueUsers.find(function(u){return u.user_id===oppRosterObj.owner_id;});
     var oppName=(oppUser&&(oppUser.metadata&&oppUser.metadata.team_name||oppUser.display_name))||"Opponent";
     var oppSum=rosterPosSummary(oppRosterObj.players||[]);
@@ -6900,7 +7242,13 @@ function generateTradeIdeas(){
       var whySend="<strong style='color:var(--text)'>Why send "+iGive.name+":</strong> you have "+iHave.length+" players at "+theyNeed+" and he's not your top option there"+(giveNote?" - "+giveNote.note.split(';')[0].trim():"")+".";
       var myBestAtNeed=(mySum[needPos]||[])[0];
       var startsNow=!myBestAtNeed||theyGive.ktc>myBestAtNeed.ktc*0.85;
-      var roleTxt=startsNow?"he slots straight into your lineup":"he deepens the position now and grows into a starter - a dynasty play, not a week-one fix";
+      // Age gate. This line only looked at market value, so it told a manager that
+      // a 29-year-old running back "grows into a starter, a dynasty play". A
+      // fantasy player closes the tab at that sentence.
+      var _young=theyGive.age&&theyGive.age<=(theyGive.pos==='RB'?25:27);
+      var roleTxt=startsNow?"he slots straight into your lineup"
+        :(_young?"he deepens the position now and grows into a starter - a dynasty play, not a week-one fix"
+                :"he is cover at a position you are thin at, not a long-term answer at his age");
       var whyGet=" <strong style='color:var(--text)'>Why get "+theyGive.name+":</strong> you're thin at "+needPos+" and "+roleTxt+(getNote?" - "+getNote.note.split(';')[0].trim():"")+".";
       var whyThem=" <strong style='color:var(--text)'>Why "+oppName+" says yes:</strong> they need "+theyNeed+" help more than "+needPos+" depth"+(gap>80?", and the small value edge to you is inside normal negotiation range":"")+".";
       var reason=whySend+whyGet+whyThem;
@@ -6926,7 +7274,7 @@ function generateTradeIdeas(){
     // Cap "sell for picks" to a handful so the list isn't a wall of identical picks
     var s2cap=topIdeas.length+3;
     leagueRosters.forEach(function(oppRosterObj){
-      if(oppRosterObj.owner_id===userId||topIdeas.length>=s2cap)return;
+      if(_isMyRoster(oppRosterObj)||topIdeas.length>=s2cap)return;
       var oppUser=leagueUsers.find(function(u){return u.user_id===oppRosterObj.owner_id;});
       var oppName=(oppUser&&(oppUser.metadata&&oppUser.metadata.team_name||oppUser.display_name))||"Opponent";
       [1,2].forEach(function(rnd){
@@ -6972,7 +7320,7 @@ function generateTradeIdeas(){
     if(myGoodPicks.length){
       var topNeed=myNeeds[0]&&myNeeds[0].pos;
       leagueRosters.forEach(function(oppRosterObj){
-        if(oppRosterObj.owner_id===userId||topIdeas.length>=16)return;
+        if(_isMyRoster(oppRosterObj)||topIdeas.length>=16)return;
         var oppUser=leagueUsers.find(function(u){return u.user_id===oppRosterObj.owner_id;});
         var oppName=(oppUser&&(oppUser.metadata&&oppUser.metadata.team_name||oppUser.display_name))||"Opponent";
         var oppSum=rosterPosSummary(oppRosterObj.players||[]);
@@ -7003,7 +7351,7 @@ function generateTradeIdeas(){
 
   // --- Strategy 4: High Risk / High Reward - buy young breakout candidate ---
   leagueRosters.forEach(function(oppRosterObj){
-    if(oppRosterObj.owner_id===userId||topIdeas.length>=16)return;
+    if(_isMyRoster(oppRosterObj)||topIdeas.length>=16)return;
     var oppUser=leagueUsers.find(function(u){return u.user_id===oppRosterObj.owner_id;});
     var oppName=(oppUser&&(oppUser.metadata&&oppUser.metadata.team_name||oppUser.display_name))||"Opponent";
     var oppSum=rosterPosSummary(oppRosterObj.players||[]);
@@ -7071,7 +7419,7 @@ function generateTradeIdeas(){
   if(topIdeas.length<3){
     var upgrades=[];
     leagueRosters.forEach(function(oppRosterObj){
-      if(oppRosterObj.owner_id===userId)return;
+      if(_isMyRoster(oppRosterObj))return;
       var oppUser=leagueUsers.find(function(u){return u.user_id===oppRosterObj.owner_id;});
       var oppName=(oppUser&&(oppUser.metadata&&oppUser.metadata.team_name||oppUser.display_name))||"Opponent";
       var oppSum=rosterPosSummary(oppRosterObj.players||[]);
@@ -7746,6 +8094,7 @@ function openPlayerCard(pid, name){
   // External link removed per user request - all content shown inline
 
   modal.classList.add("open");
+  _overlayOpen(function(){modal.classList.remove("open");document.body.style.overflow="";});
   document.body.style.overflow="hidden";
 
   // ── Fetch ESPN stats async - fills in the stats section ──
@@ -7816,8 +8165,10 @@ function stat(val,label){
 
 function closePlayerCard(){
   var modal=document.getElementById("player-modal");
+  if(modal&&!modal.classList.contains("open"))return;
   if(modal)modal.classList.remove("open");
   document.body.style.overflow="";
+  _overlayClosed();
 }
 
 document.addEventListener("keydown",function(e){if(e.key==="Escape")closePlayerCard();});
@@ -7841,7 +8192,7 @@ function renderRosterGrade(){
       if(p&&byPos[p.pos]!==undefined)byPos[p.pos]+=v;
       byPos.total+=v;
     });
-    return{owner:roster.owner_id,byPos:byPos,isMe:roster.owner_id===userId};
+    return{owner:roster.owner_id,byPos:byPos,isMe:_isMyRoster(roster)};
   });
   var myTeam=teamData.find(function(t){return t.isMe;})||{byPos:{QB:0,RB:0,WR:0,TE:0,total:0}};
   function rankNum(myVal,key){
@@ -8513,7 +8864,10 @@ async function renderPlayersDB(){
         var pos=(p.fantasy_positions&&p.fantasy_positions[0])||p.position||'?';
         var name=((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim();
         if(!name||!pos||pos==='?')return null;
-        return {id:e[0],name:name,pos:pos,team:p.team||'FA',age:p.age||null,exp:p.years_exp!=null?p.years_exp:null};
+        // skey: misma normalizacion que _mdNormName/_mdSuffixIndex, mas colapso
+        // de espacios, para que "Jamarr Chase", "Amon Ra" y "St Brown" encuentren
+        // a "Ja'Marr Chase" y "Amon-Ra St. Brown".
+        return {id:e[0],name:name,skey:_pdbKey(name),pos:pos,team:p.team||'FA',age:p.age||null,exp:p.years_exp!=null?p.years_exp:null};
       }).filter(Boolean);
       if(!Object.keys(allPlayers).length){
         pdbAllPlayers.forEach(function(p){allPlayers[p.id]=p;});
@@ -8550,10 +8904,17 @@ function _runFilterPlayersDB(){
   var pos=(document.getElementById('pdb-pos')||{}).value||'';
   var team=(document.getElementById('pdb-team')||{}).value||'';
   var ql=q.toLowerCase();
+  var qk=_pdbKey(q);
   var chips=pdbActiveChips;
 
   pdbFiltered=pdbAllPlayers.filter(function(p){
-    if(ql&&p.name.toLowerCase().indexOf(ql)<0)return false;
+    // Sleeper no marca retiros (A.J. Green figura como status "Active" sin
+    // equipo), asi que el corte es por relevancia: equipo NFL o valor de
+    // mercado. Sin esto, "Sort: A to Z" arrancaba con A.J. Derby, A.J. Green y
+    // A.J. Hines. Con busqueda explicita se muestran igual, para no esconder a
+    // nadie que el usuario este buscando a proposito.
+    if(!qk&&!(p.team&&p.team!=='FA')&&!ktcFull[p.id])return false;
+    if(qk&&(p.skey||_pdbKey(p.name)).indexOf(qk)<0)return false;
     if(pos&&p.pos!==pos)return false;
     if(team&&p.team!==team)return false;
     var fc=ktcFull[p.id];
@@ -8682,9 +9043,9 @@ var PLAYER_HISTORY = {
   "tyreek hill":       {pos:'WR',team:'FA',values:[6500, 6800, 7200, 6200, 5000, 4000, 1033]},
   "dk metcalf":        {pos:'WR',team:'PIT',values:[5500, 5800, 5200, 5000, 4800, 5400, 1973]},
   "d.k. metcalf":      {pos:'WR',team:'PIT',values:[5500,5800,5200,5000,4800,5400,5200]},
-  "stefon diggs":      {pos:'WR',team:'FA', values:[5800, 6200, 5800, 5200, 1800, 1200, 1272]},
+  "stefon diggs":      {pos:'WR',team:'WAS', values:[5800, 6200, 5800, 5200, 1800, 1200, 1272]},
   "davante adams":     {pos:'WR',team:'LAR', values:[5800, 6200, 5800, 4800, 2800, 1200, 1993]},
-  "keenan allen":      {pos:'WR',team:'FA',values:[5500, 5800, 5200, 4800, 2600, 2000, 137]},
+  "keenan allen":      {pos:'WR',team:'IND',values:[5500, 5800, 5200, 4800, 2600, 2000, 137]},
   "cooper kupp":       {pos:'WR',team:'SEA',values:[6500, 8800, 6800, 5200, 3200, 2400, 593]},
   "tank dell":         {pos:'WR',team:'HOU',values:[null, null, null, 3800, 3200, 4200, 1175]},
   "kyren williams":    {pos:'RB',team:'LAR',values:[null, null, null, 3800, 6400, 6200, 3633]},
@@ -8925,7 +9286,7 @@ function showPlayerChart(nm){
     if(chartArea){
       var pid=findSleeperIdByName(nm);
       if(!Object.keys(ktcFull).length){
-        chartArea.innerHTML='<div class="mkt-empty">Loading market values...</div>';
+        chartArea.innerHTML='<div class="tm-skel-feed" style="min-height:140px"><div class="tm-skel" style="height:44px"></div><div class="tm-skel" style="height:44px"></div><div class="tm-skel" style="height:44px"></div></div>';
         fetchKtcValues(1,1,true).then(function(){showPlayerChart(nm);}).catch(function(){});
         return;
       }
@@ -9914,6 +10275,20 @@ async function _startMockDraftRun(){
   });
   if(MD.rosterTarget.K===0)MD.noK=true;
   if(MD.rosterTarget.DEF===0)MD.noD=true;
+  // PISO DE RONDAS DE LA SUBASTA, derivado de la alineacion y nunca de un
+  // numero fijo. Una subasta llena el roster entero de una sentada: con menos
+  // rondas que puestos la alineacion legal es inalcanzable por construccion.
+  // Medido en la config por defecto (12 equipos / $200 / 8 rondas): 94,4% de
+  // asientos sin alineacion legal y el usuario gastando $8 de $200.
+  if(MD.mode==='auction'){
+    var _lf=0;
+    try{var _ls=_mdLineupSlots();_lf=(_ls.QB||0)+(_ls.RB||0)+(_ls.WR||0)+(_ls.TE||0)+(_ls.FLEX||0)+(_ls.K||0)+(_ls.DEF||0);}
+    catch(_){_lf=(MD.sf?2:1)+2+2+1+1+(MD.noK?0:1)+(MD.noD?0:1);}
+    if(MD.rounds<_lf){
+      MD.rounds=_lf;
+      var _rsel=document.getElementById('md-rounds');if(_rsel)_rsel.value=String(MD.rounds);
+    }
+  }
   // THE RULE: user data outranks the random personas. Any position the user's
   // context, toggles or league settings explicitly touched is owned by that
   // data - the archetypes step almost fully aside there (see mdAdvance).
@@ -9966,7 +10341,6 @@ async function _startMockDraftRun(){
   var adpOf=function(p){
     var ids=window._adpById;if(ids&&ids[p.id]!=null)return ids[p.id];
     var m=window._adp;if(!m)return null;
-    var k=p.name.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
     var e=_mdByName(m,p.name);return e?e.adp:null;};
   MD.pool=Object.values(allPlayers).filter(function(p){
       return ['QB','RB','WR','TE'].indexOf(p.pos)>=0&&((ktcById[p.id]||0)>0||adpOf(p)!=null);
@@ -10152,6 +10526,8 @@ async function _startMockDraftRun(){
   // one history-tendency mention reset with every new room - and Mac's face
   // starts each room with nothing to say yet
   MD._shapeSaid={};MD._histSaid=0;MD._mac=null;
+  // el veredicto de la sala anterior no puede sobrevivir a la nueva
+  var _vc=document.getElementById('md-verdict');if(_vc){_vc.style.display='none';_vc.innerHTML='';}
   MD.initialRanks={};MD.pool.forEach(function(p,i){MD.initialRanks[p.id]=i+1;});
   document.querySelectorAll('.md-pos-chip').forEach(function(c){c.classList.toggle('active',!c.dataset.pos);});
   document.querySelectorAll('.md-flag-chip').forEach(function(c){c.classList.remove('active');});
@@ -10217,6 +10593,16 @@ async function _startMockDraftRun(){
   mdAdvance();
 }
 // Faces: players get their headshot, defenses get their team logo
+// "Christian McCaffrey" -> "C. McCaffrey" en salas de 13+ equipos, donde la
+// columna del tablero no da para el nombre entero. Los apellidos compuestos
+// ("Smith-Njigba", "St. Brown") se respetan tal cual: solo se abrevia el
+// PRIMER token, que es el que sobra para identificar a quien te draftearon.
+function mdbShortName(n){
+  if(!MD.teams||MD.teams<13)return n;
+  var parts=String(n||'').trim().split(' ').filter(Boolean);
+  if(parts.length<2)return n;
+  return parts[0].charAt(0)+'. '+parts.slice(1).join(' ');
+}
 function mdFaceUrl(p){
   if(p.pos==='DEF')return 'https://sleepercdn.com/images/team_logos/nfl/'+String(p.team||p.id).toLowerCase()+'.png';
   return 'https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg';
@@ -10276,17 +10662,13 @@ function mdAdvance(){
     // user's explicit roster target overrides the default minimum (RB:1 set
     // on purpose IS the law), and a context-named player keeps his round rule
     // (user data outranks the gate, documented precedence).
-    var _req={QB:MD.sf?2:1,RB:2,WR:2,TE:1};
-    Object.keys(_req).forEach(function(ps){
-      if(MD.rosterTarget&&MD.rosterTarget[ps]!=null)_req[ps]=Math.min(_req[ps],MD.rosterTarget[ps]);
-    });
-    var _gapPos={},_gapN=0;
-    Object.keys(_req).forEach(function(ps){
-      var _g2=_req[ps]-(ros[ps]||0);
-      if(_g2>0){_gapPos[ps]=1;_gapN+=_g2;}
-    });
+    // El mismo helper puro que usan el asiento del usuario (mdRecommend) y la
+    // subasta: una sola definicion de "que titulares son ya obligatorios", para
+    // que los tres modos no se desincronicen. El calculo es identico al que
+    // habia escrito aqui; lo unico que cambia es donde vive.
     var _kdReserved=((!MD.noK&&!(ros.K>=1))?1:0)+((!MD.noD&&!(ros.DEF>=1))?1:0);
-    var _gateOn=_gapN>0&&((MD.rounds-round+1)-_kdReserved)<=_gapN;
+    var _bGate=_mdStarterGate(ros,MD.rounds-round+1,MD.sf,{rosterTarget:MD.rosterTarget,reserveKD:_kdReserved});
+    var _gapPos=_bGate.pos,_gapN=_bGate.n,_gateOn=_bGate.urgent;
     var cands=MD.pool.slice(0,24);
     // the gate must always have someone to point at: pull the best player at
     // each owed position into the scan window (same pattern as ctxForce)
@@ -10505,6 +10887,34 @@ function mdPosTag(pos){
   return '<span style="font-size:9px;font-weight:700;color:'+c+'">'+pos+'</span>';
 }
 // Mac's recommendation honours the chosen strategy
+// ── PUERTA DE TITULARES, compartida por snake y subasta ─────────────────────
+// Funcion PURA: no sabe de rondas, ni de pickIdx, ni del orden de la serpiente.
+// Solo responde "a este asiento le quedan N huecos y le faltan M titulares:
+// que posiciones son ya obligatorias". El snake pasa slotsLeft = rondas que le
+// quedan al asiento; la subasta pasa su AU.slotsLeft, que no tiene turnos.
+//   ros        {QB,RB,WR,TE,K,DEF} ya draftados por ESE asiento
+//   slotsLeft  huecos de roster que le quedan al asiento
+//   sf         superflex (exige QB2)
+//   opts       {rosterTarget, reserveKD} - reserveKD son huecos que el modo se
+//              guarda para K/DEF y que por tanto no cuentan como libres
+// Devuelve {pos:{POS:cuantos faltan}, n, slotsUsable, urgent}. urgent=true
+// significa que los huecos libres ya no alcanzan para los titulares que
+// faltan: a partir de ahi solo se puede elegir dentro de pos.
+function _mdStarterGate(ros,slotsLeft,sf,opts){
+  opts=opts||{};
+  var req={QB:sf?2:1,RB:2,WR:2,TE:1};
+  var tgt=opts.rosterTarget;
+  if(tgt)Object.keys(req).forEach(function(ps){
+    if(tgt[ps]!=null)req[ps]=Math.min(req[ps],tgt[ps]);
+  });
+  var pos={},n=0;
+  Object.keys(req).forEach(function(ps){
+    var gap=req[ps]-((ros&&ros[ps])||0);
+    if(gap>0){pos[ps]=gap;n+=gap;}
+  });
+  var usable=(slotsLeft||0)-(opts.reserveKD||0);
+  return {pos:pos,n:n,slotsUsable:usable,urgent:n>0&&usable<=n};
+}
 function mdRecommend(top,round){
   var myPos={QB:0,RB:0,WR:0,TE:0};MD.mine.forEach(function(p){myPos[p.pos]=(myPos[p.pos]||0)+1;});
   var _tk={};(MD.picks||[]).forEach(function(pk){if(pk&&pk.p&&pk.p.id)_tk[pk.p.id]=1;});
@@ -10531,6 +10941,36 @@ function mdRecommend(top,round){
     return true;
   });
   if(usable.length)top=usable;
+  // ── STARTER-FILL GATE (usuario) ── el mismo gate duro que ya tienen los bots
+  // en mdAdvance, que lleva 6600 rosters sin un solo fallo bajo el invariante
+  // (i). Faltaba de este lado: mdRecommend solo tenia TOPES (qbCap/teCap) y un
+  // relax que los AFLOJA, nunca un piso. Resultado medido con los ajustes por
+  // defecto (12 equipos, 8 rondas): el auto-draft terminaba RB4/WR4, cero QB y
+  // cero TE, mientras los 12 bots terminaban legales. Y como esta funcion es
+  // tambien la recomendacion que Mac le muestra a un humano, el que le hacia
+  // caso ronda por ronda llegaba al mismo roster ilegal.
+  // Se dispara solo cuando las rondas de skill que quedan (menos las que hay
+  // que reservar para K/DEF) ya no alcanzan para tapar los huecos de titular:
+  // por construccion no puede activarse temprano, asi que la estrategia
+  // elegida (zerorb, herorb, robustrb, elitete) juega libre hasta el final.
+  // K/DEF solo se reservan si esta sala de verdad llega a draftearlos: el
+  // motor los bloquea hasta round >= max(MD.rounds,15)-1, o sea que en un
+  // draft de menos de 15 rondas nunca se toman y no hay que reservarles nada.
+  var _uKD=(MD.rounds>=15)?(((!MD.noK&&!myPos.K)?1:0)+((!MD.noD&&!myPos.DEF)?1:0)):0;
+  // el snake traduce su reloj a huecos: las rondas que le quedan al asiento
+  var _uGate=_mdStarterGate(myPos,MD.rounds-round+1,isSF,{rosterTarget:MD.rosterTarget,reserveKD:_uKD});
+  if(_uGate.urgent){
+    var _uOwed=top.filter(function(p){return _uGate.pos[p.pos];});
+    // si ninguno de los 25 de la lista cubre el hueco, se busca al mejor de esa
+    // posicion en el pool entero (mismo patron que el gate de los bots)
+    if(!_uOwed.length){
+      Object.keys(_uGate.pos).forEach(function(ps){
+        var best2=MD.pool.find(function(p){return p.pos===ps&&!_tk[p.id];});
+        if(best2)_uOwed.push(best2);
+      });
+    }
+    if(_uOwed.length)top=_uOwed;
+  }
   var best=top[0];var why='';
   // backup-time framing when the relaxed cap is exactly why he is the pick
   if(relax&&best){
@@ -10738,18 +11178,20 @@ function mdContextPreview(){
 function _vacatedFor(team){
   if(!team||!window._advStats||!Object.keys(allPlayers).length)return null;
   if(!window._vacatedMap){
+    // Un solo helper para cruzar feeds por nombre: _mdByName/_mdSuffixIndex.
+    // Este bloque tenia su propia normalizacion y su propio manejo de sufijos
+    // copiados a mano, que es exactamente el patron que produjo el fallo de
+    // "James Cook III" (ESPN) vs "James Cook" (Sleeper).
     var curTeam={};
     Object.values(allPlayers).forEach(function(p){
       if(!p.name)return;
-      var k=p.name.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
-      curTeam[k]=p.team||'FA';
-      curTeam[k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'')]=p.team||'FA';
+      curTeam[_mdNormName(p.name)]=p.team||'FA';
     });
     var m={};
     Object.keys(window._advStats).forEach(function(k){
       var a=window._advStats[k];
       if(!a||!a.tgtShare||a.tgtShare<8||!a.team||a.pos==='K')return;
-      var now=curTeam[k]||curTeam[k.replace(/\s+(jr|sr|ii|iii|iv|v)$/,'')];
+      var now=_mdByName(curTeam,k);
       if(!now||now===a.team)return;
       var slot=(m[a.team]=m[a.team]||{share:0,names:[]});
       slot.share+=a.tgtShare;
@@ -11171,7 +11613,7 @@ function mdRowTags(p,compact){
   // a player named by an active mined signal: the claim rides the RISER
   // tooltip when he has one, or earns its own SIGNAL tag (last priority)
   var sig=window._mdSignals&&window._mdSignals.byId?window._mdSignals.byId[p.id]:null;
-  if(ri)tags.push({t:'RISER +'+ri.rise,c:'var(--yellow)',tip:'Drafted '+ri.rise+' picks earlier than his final ADP last season'+(sig?' — '+sig:'')});
+  if(ri)tags.push({t:'RISER +'+ri.rise,c:'var(--yellow)',tip:'Drafted '+ri.rise+' picks earlier than his final ADP last season'+(sig?', '+sig:'')});
   if(!compact&&tags.length<2&&p.pos!=='K'&&p.pos!=='DEF'){
     var pr=_mdPlayoffRuns();
     var pt=pr&&p.team?pr[p.team]:null;
@@ -11274,18 +11716,18 @@ function mdBoardCols(pf,proj){
   // En el telefono el numero de ranking se va: con el ADP en la linea del
   // nombre es informacion repetida, y esos 27px son la diferencia entre que
   // "Christian McCaffrey" quepa en un renglon o parta la fila en dos.
-  var cols=phone?[{k:'who',l:'Jugador',w:'minmax(0,1fr)'}]
-                :[{k:'rk',l:'',w:'30px'},{k:'who',l:'Jugador',w:'minmax(0,1fr)'}];
+  var cols=phone?[{k:'who',l:'Player',w:'minmax(0,1fr)'}]
+                :[{k:'rk',l:'',w:'30px'},{k:'who',l:'Player',w:'minmax(0,1fr)'}];
   // En el telefono el precio (o el ADP) viaja en la linea del nombre, no como
   // columna: repetirlo en las dos partes era ruido y le robaba ancho al nombre.
   if(!phone)cols.push(AU.active?{k:'aav',l:'AAV',w:'54px'}:{k:'adp',l:'ADP',w:'54px'});
-  if(!narrow)cols.push({k:'proj',l:'Proy',w:phone?'38px':'54px',sort:proj?'proj':null});
+  if(!narrow)cols.push({k:'proj',l:'Proj',w:phone?'38px':'54px',sort:proj?'proj':null});
   if(!phone){
     cols.push({k:'bye',l:'Bye',w:'40px'});
     if(proj&&pf)mdSplitCols(pf).forEach(function(c){cols.push({k:c.k,l:c.l,w:'52px',sort:c.k});});
   }
-  cols.push({k:'q',l:'',w:phone?'28px':'28px'});
-  cols.push({k:'go',l:'',w:phone?'34px':'32px'});
+  cols.push({k:'q',l:'',w:phone?'44px':'28px'});
+  cols.push({k:'go',l:'',w:phone?'44px':'32px'});
   return cols;
 }
 // El tablero se redibuja al girar el telefono: el juego de columnas depende
@@ -11473,7 +11915,7 @@ function mdShowChoices(round){
       var sep=document.createElement('div');
       sep.className='md-bd-tier';
       sep.innerHTML='<span>Tier '+_tn2+' '+pf+'</span>'
-        +'<i class="'+(_left<=2?'thin':'')+'">'+(_left===1?'ultimo':'quedan '+_left)+'</i>';
+        +'<i class="'+(_left<=2?'thin':'')+'">'+(_left===1?'last one':_left+' left')+'</i>';
       box.appendChild(sep);
       _lastTier=_tn2;
     }
@@ -11501,7 +11943,7 @@ function mdShowChoices(round){
       if(_narrow&&_pv!=null)meta+=' &middot; <b>'+_mdFmtStat(_pv)+'</b>';
       // El bye solo aparece en el telefono cuando es un choque de verdad: en
       // 157px de linea, un bye que no molesta a nadie parte la fila en dos.
-      if(_bwHot)meta+=' &middot; <span class="hot" title="Ya tienes '+_bwN+' picks en este bye">BYE&nbsp;'+_bw+'</span>';
+      if(_bwHot)meta+=' &middot; <span class="hot" title="You already have '+_bwN+' picks on this bye week">BYE&nbsp;'+_bw+'</span>';
     }
 
     var d=document.createElement('div');
@@ -11528,16 +11970,16 @@ function mdShowChoices(round){
           return '<span class="md-bd-c strong">'+(_pv!=null?_mdFmtStat(_pv):'&ndash;')+'</span>';
         case 'bye':
           return '<span class="md-bd-c'+(_bwHot?' hot':'')+'"'
-            +(_bwHot?' title="Ya tienes '+_bwN+' picks en este bye"':'')+'>'+(_bw||'&ndash;')+'</span>';
+            +(_bwHot?' title="You already have '+_bwN+' picks on this bye week"':'')+'>'+(_bw||'&ndash;')+'</span>';
         case 'q':
           if(isTaken)return '<span></span>';
-          return '<button class="md-bd-q'+(inQ?' on':'')+'" title="'+(inQ?'Quitar de la cola':'Agregar a la cola')+'"'
+          return '<button class="md-bd-q'+(inQ?' on':'')+'" title="'+(inQ?'Remove from queue':'Add to queue')+'"'
             +' onclick="event.stopPropagation();mdQueueToggle(\''+p.id+'\')">'+(inQ?'&minus;':'+')+'</button>';
         case 'go':
           // la flecha de nominar solo existe en TU turno de nominar: en el lote
           // de otro no hay nada que nominar y el morado invita a un click muerto
           if(isTaken||(AU.active&&AU.nominator!==MD.mySlot))return '<span></span>';
-          return '<button class="md-bd-go" title="'+(AU.active?'Nominar ':'Draftear ')+_esc+'"'
+          return '<button class="md-bd-go" title="'+(AU.active?'Nominate ':'Draft ')+_esc+'"'
             +' onclick="event.stopPropagation();mdDraftNow(_mdById(\''+p.id+'\'))">'
             +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>';
         default:
@@ -11553,7 +11995,7 @@ function mdShowChoices(round){
   if(_total>_limit){
     var more=document.createElement('button');
     more.className='md-bd-more';
-    more.textContent='Ver '+Math.min(25,_total-_limit)+' mas';
+    more.textContent='Show '+Math.min(25,_total-_limit)+' more';
     more.onclick=function(){MD.avShown=_limit+25;mdShowChoices(MD.curRound||1);};
     box.appendChild(more);
   }
@@ -11747,9 +12189,9 @@ function mdRenderQueue(){
       +'</span>'
       +(MD.onClock?'<button onclick="mdQueueDraft(\''+pid+'\')" style="flex:none;background:'+(ready?'var(--green)':'var(--accent-bright)')+';border:none;color:#0d0817;font-size:10px;font-weight:800;padding:5px 12px;border-radius:100px;cursor:pointer">'+(AU.active?'Nominate':'Draft')+'</button>':'')
       +'<span style="display:flex;flex-direction:column;margin-left:2px">'
-      +'<span onclick="mdQueueMove(\''+pid+'\',-1)" style="cursor:pointer;color:var(--muted);font-size:9px;line-height:1.1;padding:1px 3px">&#9650;</span>'
-      +'<span onclick="mdQueueMove(\''+pid+'\',1)" style="cursor:pointer;color:var(--muted);font-size:9px;line-height:1.1;padding:1px 3px">&#9660;</span></span>'
-      +'<span style="cursor:pointer;color:var(--muted);font-size:14px;line-height:1;padding:0 2px" onclick="mdQueueToggle(\''+pid+'\')">&times;</span></div>';
+      +'<span role="button" tabindex="0" title="Move up in the queue" aria-label="Move up in the queue" onclick="mdQueueMove(\''+pid+'\',-1)" style="cursor:pointer;color:var(--muted);font-size:9px;line-height:1.1;padding:1px 3px">&#9650;</span>'
+      +'<span role="button" tabindex="0" title="Move down in the queue" aria-label="Move down in the queue" onclick="mdQueueMove(\''+pid+'\',1)" style="cursor:pointer;color:var(--muted);font-size:9px;line-height:1.1;padding:1px 3px">&#9660;</span></span>'
+      +'<span role="button" tabindex="0" title="Remove from queue" aria-label="Remove from queue" style="cursor:pointer;color:var(--muted);font-size:14px;line-height:1;padding:0 2px" onclick="mdQueueToggle(\''+pid+'\')">&times;</span></div>';
   }).join('');
 }
 function mdUserPick(p){
@@ -11882,6 +12324,7 @@ function mdBackToSetup(){
   var s=document.getElementById('md-setup');if(s)s.style.display='block';
   var pk=document.getElementById('md-player-peek');if(pk)pk.style.display='none';
   var sg=document.getElementById('md-sage');if(sg)sg.style.display='none';
+  var vc=document.getElementById('md-verdict');if(vc){vc.style.display='none';vc.innerHTML='';}
   try{mdShowSection('solo');}catch(_){}
 }
 // ── Mac, discreet: his face IS the toggle ───────────────────────────────────
@@ -12304,7 +12747,13 @@ function auInflation(){
   var slotsLeft=0,money=0;
   for(var s=1;s<=MD.teams;s++){
     slotsLeft+=AU.slotsLeft[s];
-    money+=Math.max(0,AU.budgets[s]-AU.slotsLeft[s]); // spendable above $1 floors
+    // un asiento con el roster LLENO no puede gastar un dolar mas: contar su
+    // sobrante como gastable hacia creer a la sala que el dinero se derretia
+    // mientras los pujadores que quedaban estaban en la ruina. Medido: 74 de
+    // 192 lotes cargaban ~$31 de dinero muerto, inflacion publicada 1,128 vs
+    // 0,709 honesta, y los 22 lotes que dispararon el blowout de cierre lo
+    // dispararon solo por esto.
+    if(AU.slotsLeft[s]>0)money+=Math.max(0,AU.budgets[s]-AU.slotsLeft[s]); // spendable above $1 floors
   }
   var vals=MD.pool.map(function(p){return auValue(p);}).sort(function(a,b){return b-a;}).slice(0,slotsLeft);
   var value=0;vals.forEach(function(v){value+=Math.max(0,v-1);});
@@ -12324,11 +12773,35 @@ function auPace(slot){
   for(var s=1;s<=MD.teams;s++)done-=AU.slotsLeft[s];
   return (MD.rounds-AU.slotsLeft[slot])/MD.rounds-done/total;
 }
+// PUERTA DE TITULARES DE LA SUBASTA. Misma DEFINICION de alineacion legal que
+// el STARTER-FILL GATE del snake (QB sf?2:1 / RB2 / WR2 / TE1, con
+// MD.rosterTarget mandando por encima) y misma reserva de K/DEF, para que las
+// dos no puedan divergir en el criterio. Lo que cambia es la MAGNITUD y la
+// CONSECUENCIA, porque la subasta no tiene turnos: el snake cuenta
+// (MD.rounds-round+1), que solo vale si cada asiento escoge una vez por ronda;
+// aqui cada asiento se llena a su propio ritmo y la cuenta buena es
+// AU.slotsLeft[slot]. Y el snake filtra la lista de candidatos, cosa que aqui
+// no existe: el lote es el que alguien nomino, asi que la consecuencia se
+// expresa en disposicion a pagar (auNeed) y en a quien se nomina.
+// Adaptador de FORMA sobre _mdStarterGate: una sola implementacion de la logica
+// para snake y subasta. Habia dos declaraciones del mismo nombre con retornos
+// distintos; la segunda ganaba en silencio y la puerta dejaba de disparar sin
+// que fallara nada. Se comprobo sobre 21.888 combinaciones que las dos logicas
+// eran identicas, asi que aqui solo se traduce el nombre de los campos y se
+// calcula el descuento de K/DEF que la subasta necesita reservar.
+function _auStarterGate(ros,slotsLeft){
+  var kd=((!MD.noK&&!(ros.K>=1))?1:0)+((!MD.noD&&!(ros.DEF>=1))?1:0);
+  var g=_mdStarterGate(ros,slotsLeft,MD.sf,{rosterTarget:MD.rosterTarget,reserveKD:kd});
+  return {owed:g.n,positions:Object.keys(g.pos),forced:g.urgent};
+}
 // how much a bot wants this position right now (0..1 scale on value)
 function auNeed(ros,pos,slotsLeft){
   var caps={QB:MD.sf?3:2,TE:2,K:1,DEF:1,RB:8,WR:8};
   if((ros[pos]||0)>=(caps[pos]||8))return 0;
+  var _g=_auStarterGate(ros,slotsLeft);
+  if(_g.forced&&_g.positions.indexOf(pos)>=0)return 1;
   if(pos==='K'||pos==='DEF')return slotsLeft<=3?1:0.05; // real rooms: $1 at the end
+  if(_g.forced)return 0;
   var starters={QB:MD.sf?2:1,RB:2,WR:MD.scoring>=1?3:2,TE:1};
   if((ros[pos]||0)<(starters[pos]||1))return 1;
   // a fillable bench slot pays FULL sticker: the AAV feed already prices
@@ -12465,6 +12938,13 @@ function auBotNominate(slot){
   var ros=MD.aiRosters[slot]||{};
   var sl=AU.slotsLeft[slot];
   var byV=MD.pool.slice().sort(function(a,b){return auValue(b)-auValue(a);});
+  // la puerta de titulares primero: un asiento que ya no puede posponer un
+  // titular pone ESA posicion en el bloque en vez de otro flyer de banca
+  var _g=_auStarterGate(ros,sl);
+  if(_g.forced){
+    var _f=byV.filter(function(p){return _g.positions.indexOf(p.pos)>=0;})[0];
+    if(_f)return _f;
+  }
   // endgame: lock in your K and D/ST while a dollar still buys one - real
   // rooms nominate their own onesies at the end, not more bench flyers
   if(sl<=3){
@@ -12933,6 +13413,11 @@ function auBotNominateUser(){
   var ros={};MD.mine.forEach(function(x){ros[x.pos]=(ros[x.pos]||0)+1;});
   var sl=AU.slotsLeft[MD.mySlot];
   var byV=MD.pool.slice().sort(function(a,b){return auValue(b)-auValue(a);});
+  var _gu=_auStarterGate(ros,sl);
+  if(_gu.forced){
+    var _fu=byV.filter(function(p){return _gu.positions.indexOf(p.pos)>=0;})[0];
+    if(_fu)return _fu;
+  }
   if(sl<=3){
     if(!(ros.K>=1)&&!MD.noK){var _k=byV.filter(function(p){return p.pos==='K';})[0];if(_k)return _k;}
     if(!(ros.DEF>=1)&&!MD.noD){var _d=byV.filter(function(p){return p.pos==='DEF';})[0];if(_d)return _d;}
@@ -12956,7 +13441,20 @@ function auUserNominate(p){
   auOpenLot(MD.mySlot,p);
 }
 function auOpenLot(slot,p){
-  var i=MD.pool.indexOf(p);if(i<0){auAdvance();return;}
+  // el jugador ya no esta en el pool (fila vieja de la tabla, que se repinta
+  // con debounce): repintar y devolver el turno, nunca gastarlo. Antes esto
+  // llamaba a auAdvance() y le robaba la nominacion al usuario en silencio.
+  var i=MD.pool.indexOf(p);
+  if(i<0){
+    try{mdShowChoices(1);}catch(_){}
+    if(slot===MD.mySlot){
+      var _st=document.getElementById('md-status');
+      if(_st)_st.innerHTML='<span style="color:var(--yellow)">That player is already sold. Pick another.</span>';
+      try{auRenderLot();}catch(_){}
+      return;
+    }
+    auAdvance();return;
+  }
   AU.custom=null; // fresh lot, fresh stepper
   // every lot opens at $1 - tested "statement" openings (~40% of value on own
   // targets) DETERRED the competition that makes prices, and the room banked
@@ -13384,6 +13882,11 @@ function auFinish(){
   MD.onClock=false;
   // clear the frozen last-lot card - the sold list below is the record
   var _lb=document.getElementById('au-lot');if(_lb)_lb.innerHTML='';
+  // ...y la cabecera del telefono, que si no se queda anunciando una puja viva
+  // y un contador congelado sobre un draft terminado (AU.pillT ya murio, asi
+  // que _auTickPill no vuelve a pasar a limpiarla)
+  var _mn=document.getElementById('au-mnum');if(_mn)_mn.textContent='';
+  var _mp=document.getElementById('au-mpill');if(_mp){_mp.className='au-mpill';_mp.textContent='Draft complete';}
   MD.pickIdx=MD.order.length; // mdFinish treats the draft as complete
   mdFinish();
 }
@@ -13588,7 +14091,7 @@ function mdRenderRoster(){
   var needs=order.map(function(ps){
     var h=ps==='FLEX'?flexFill:Math.min(have[ps],slots[ps]);
     var full=h>=slots[ps];
-    var click=ps==='FLEX'?'':' onclick="mdNeedsFilter(\''+ps+'\')" title="Ver '+ps+'s disponibles"';
+    var click=ps==='FLEX'?'':' onclick="mdNeedsFilter(\''+ps+'\')" title="See available '+ps+'s"';
     return '<div class="mdr-need'+(full?' full':'')+(click?' go':'')+'"'+click+'>'
       +'<b class="pos-'+ps+'">'+ps+'</b>'
       +'<span class="mdr-bar"><i style="width:'+Math.round(h/slots[ps]*100)+'%"></i></span>'
@@ -13599,14 +14102,14 @@ function mdRenderRoster(){
   var picksLeft=Math.max(0,(MD.rounds||15)-(MD.mine||[]).length);
   var rows='',benchOpen=false,firstEmpty=true;
   assigned.forEach(function(o){
-    if(o.l==='BN'&&!benchOpen){benchOpen=true;rows+='<div class="mdr-div">Banca</div>';}
+    if(o.l==='BN'&&!benchOpen){benchOpen=true;rows+='<div class="mdr-div">Bench</div>';}
     if(!o.pk){
       // solo el primer hueco explica que hacer; repetirlo en nueve lineas es ruido
-      var hint=firstEmpty?(picksLeft===1?'Te queda 1 pick':'Te quedan '+picksLeft+' picks')
-        :(o.l==='FLEX'?'RB, WR o TE':'');
+      var hint=firstEmpty?(picksLeft===1?'1 pick left':picksLeft+' picks left')
+        :(o.l==='FLEX'?'RB, WR or TE':'');
       firstEmpty=false;
       rows+='<div class="mdr-slot empty"><span class="mdr-tag">'+o.l+'</span>'
-        +'<span class="mdr-who"><span class="mdr-name">Vacio</span>'
+        +'<span class="mdr-who"><span class="mdr-name">Empty</span>'
         +(hint?'<span class="mdr-meta">'+hint+'</span>':'')+'</span></div>';
       return;
     }
@@ -13614,7 +14117,7 @@ function mdRenderRoster(){
     var bye=window._mdByes&&pl.team?window._mdByes[pl.team]:null;
     var pv=mdProjPts(pl.id);
     var _e=pl.name.replace(/'/g,"\\'");
-    rows+='<div class="mdr-slot filled" onclick="openPlayerCard(\''+pl.id+'\',\''+_e+'\')" title="Ver ficha de '+pl.name.replace(/"/g,'&quot;')+'">'
+    rows+='<div class="mdr-slot filled" onclick="openPlayerCard(\''+pl.id+'\',\''+_e+'\')" title="View '+pl.name.replace(/"/g,'&quot;')+'\'s card">'
       +'<span class="mdr-tag on">'+o.l+'</span>'
       +'<img class="mdr-face" src="'+mdFaceUrl(pl)+'" loading="lazy" alt="" onerror="this.style.visibility=\'hidden\'">'
       +'<span class="mdr-who"><span class="mdr-name">'+pl.name+'</span>'
@@ -13626,9 +14129,9 @@ function mdRenderRoster(){
 
   var tot=0;(MD.mine||[]).forEach(function(p){var v=mdProjPts(p.id);if(v!=null)tot+=v;});
   el.innerHTML='<button class="mdr-head" onclick="mdRosterToggle()" aria-expanded="'+(el.classList.contains('open')?'true':'false')+'">'
-      +'<b>Mi equipo</b>'
-      +'<span class="mdr-count">'+(MD.mine||[]).length+' de '+(MD.rounds||15)
-      +(tot?' &middot; Proy '+Math.round(tot).toLocaleString('en-US'):'')+'</span>'
+      +'<b>My team</b>'
+      +'<span class="mdr-count">'+(MD.mine||[]).length+' of '+(MD.rounds||15)
+      +(tot?' &middot; Proj '+Math.round(tot).toLocaleString('en-US'):'')+'</span>'
       +'<i class="mdr-chev" aria-hidden="true"></i></button>'
     +'<div class="mdr-needs">'+needs+'</div>'
     +'<div class="mdr-slots">'+rows+'</div>';
@@ -13716,7 +14219,14 @@ function mdRenderBoard(){
   var lastPk=MD.picks[MD.picks.length-1];
   // Columns get a real minimum width (Stacked proportions): on narrow screens
   // the wrap scrolls sideways instead of crushing every cell
-  var html='<div class="mdb-grid" style="grid-template-columns:34px repeat('+MD.teams+',minmax(96px,1fr))">';
+  // 96px de columna dejan ~38px utiles para el nombre (la cara son 30px + 7 de
+  // gap, y el numero de pick reserva otros 22). Hasta 12 equipos el tablero
+  // entra completo en un desktop de 1440 y ese es el caso por defecto: no se
+  // toca. De 13 en adelante ya no entraba NINGUN nombre, asi que la columna
+  // sube a 112px y el tablero scrollea dentro de .mdb-wrap, que ya es
+  // overflow:auto. Mejor scrollear que no poder leer a quien te draftearon.
+  var _mdbMin=MD.teams>=13?112:96;
+  var html='<div class="mdb-grid" style="grid-template-columns:34px repeat('+MD.teams+',minmax('+_mdbMin+'px,1fr))">';
   html+='<div class="mdb-corner"></div>';
   for(var t=1;t<=MD.teams;t++){
     var me=t===MD.mySlot;
@@ -13744,7 +14254,12 @@ function mdRenderBoard(){
         html+='<div class="mdb-cell mdb-pk pos-'+pos+(pk.mine?' mdb-minepick':'')+(isLast?' mdb-latest':'')+'" title="Click to change this pick" onclick="mdEditPick('+r+','+s2+')">'
           +'<div class="mdb-pickno">'+pk.round+'.'+(pk.pickNo<10?'0':'')+pk.pickNo+'</div>'
           +'<img class="mdb-face" src="'+mdFaceUrl(pk.p)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'"'+(pk.p.pos==='DEF'?' style="object-fit:contain;padding:2px"':'')+'>'
-          +'<div class="mdb-namewrap"><div class="mdb-name">'+pk.p.name+'</div>'
+          // De 13 equipos en adelante la columna no da para un nombre completo ni
+          // con 112px: "Christian McCaffrey" salia "Christi McCaffre" cortado a
+          // mitad de palabra. Inicial + apellido es lo que usa cualquier tablero
+          // denso de fantasy, entra en una linea, y el nombre completo sigue
+          // estando a un hover de distancia (title, ya presente en la celda).
+          +'<div class="mdb-namewrap"><div class="mdb-name">'+mdbShortName(pk.p.name)+'</div>'
           +'<div class="mdb-sub">'+pos+' <span style="color:var(--muted)">'+(pk.p.team||'FA')+'</span></div></div>'
           +'</div>';
       }
@@ -13814,15 +14329,42 @@ async function mpCreate(){
   MP.code=d.code;MP.seat=d.seat;MP.isHost=!!d.host;MP.myName=nm;
   mpPoll();_mpSchedule(2000);
 }
+// One place for room errors. alert() was the old answer: a native dialog that
+// says nothing about what to do next, leaves the page looking untouched once it
+// is dismissed, and prints the server's raw text at the user (it once showed a
+// Vercel Blob credentials error verbatim).
+function mpNote(msg){
+  var host=document.getElementById('mp-card');
+  if(!host){alert(msg);return;}
+  var el=document.getElementById('mp-note');
+  if(!el){
+    el=document.createElement('div');
+    el.id='mp-note';
+    el.style.cssText='margin:10px 0 14px;padding:11px 14px;border-radius:10px;font-size:12.5px;'
+      +'line-height:1.5;background:var(--accent-dim);color:var(--accent-bright);'
+      +'border:1px solid rgba(155,114,232,.35)';
+    var head=document.getElementById('mp-card-header');
+    if(head&&head.nextSibling)host.insertBefore(el,head.nextSibling);else host.appendChild(el);
+  }
+  el.textContent=msg;
+  el.style.display='block';
+}
 async function mpJoin(){
   if(MP.code)return;
   var code=((document.getElementById('mp-join-code')||{}).value||'').toUpperCase().trim();
-  if(code.length!==4){alert('Enter the 4-letter room code.');return;}
+  if(code.length!==4){mpNote('Room codes are four letters. Check the code your friend sent.');return;}
   var nm=_mpName();if(nm===null)return;
   var r=await fetch('/api/room/'+code+'/join',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({name:nm,cid:_mpCid()})});
   var d=await r.json();
-  if(!r.ok){alert(d.error||'Could not join');return;}
+  if(!r.ok){
+    // Never echo the server's text at the user: it is written for logs, not for
+    // a person mid-invite.
+    mpNote(r.status===404
+      ? 'That room is gone. Ask your friend for a new code, or create your own below.'
+      : 'Could not join that room. Try again in a moment.');
+    return;
+  }
   MP.code=code;MP.seat=d.seat;MP.isHost=!!d.host;MP.myName=nm;
   mpPoll();_mpSchedule(2000);
 }
@@ -14199,6 +14741,37 @@ function mdDtypeSync(){
   var t=(document.getElementById('md-dtype')||{}).value;
   var c=document.getElementById('md-budget-cell');
   if(c)c.style.display=t==='auction'?'block':'none';
+  // Una subasta llena el roster ENTERO de una sentada: no hay waiver entre
+  // lotes, asi que una sala con menos rondas que puestos tiene la alineacion
+  // legal fuera de alcance por construccion. El default del snake es 8 y la
+  // alineacion estandar son 9 titulares, de ahi el 94% de asientos ilegales
+  // medido en la config por defecto. El piso sale de la alineacion, nunca de
+  // un numero fijo, para que siga a la liga conectada y a cualquier cambio
+  // futuro de roster. El corte duro vive en _startMockDraftRun (esto solo
+  // mueve lo que el usuario VE en el selector).
+  if(t==='auction'){
+    var _r=document.getElementById('md-rounds');
+    if(_r&&_r.options&&_r.options.length){
+      var _sf=((document.getElementById('md-format')||{}).value==='sf');
+      var _lg=(localStorage.getItem('tm_mock_uselg')!=='0'&&window.leagueFormat)?window.leagueFormat:null;
+      var _min=_lg
+        ?((_lg.numQBs||1)+(_lg.hasSuperFlex?1:0)+(_lg.numRBs||2)+(_lg.numWRs||2)+(_lg.numTEs||1)+((_lg.flexCount||0)+(_lg.recFlexCount||0))+2)
+        :((_sf?2:1)+2+2+1+1+2);
+      // ...mas un banquillo: Yahoo y ESPN despachan rosters de subasta de 15-16
+      // (9 titulares + 6-7 de banca). Sin banca la sala es legal pero anemica.
+      var _want=_min+6;
+      var _best=null,_i,_v;
+      for(_i=0;_i<_r.options.length;_i++){
+        _v=parseInt(_r.options[_i].value||_r.options[_i].text,10);
+        if(!isNaN(_v)&&_v>=_want&&(_best==null||_v<_best))_best=_v;
+      }
+      if(_best==null)for(_i=0;_i<_r.options.length;_i++){
+        _v=parseInt(_r.options[_i].value||_r.options[_i].text,10);
+        if(!isNaN(_v)&&_v>=_min&&(_best==null||_v>_best))_best=_v;
+      }
+      if(_best!=null&&(parseInt(_r.value,10)||0)<_min)_r.value=String(_best);
+    }
+  }
 }
 var MD_TOGGLE_KEYS=['md-6pt','md-tep'];
 function mdSaveSettings(){
@@ -14486,8 +15059,10 @@ function mdFinish(){
   mdSaveHistory(MD.mode==='auction'?'auction':undefined);
   document.getElementById('md-status').textContent='Draft complete. Mac grades your board:';
   var pos={QB:0,RB:0,WR:0,TE:0};MD.mine.forEach(function(p){pos[p.pos]++;});
+  // #md-sage es el canal de Mac en vivo y en la sala esta mudo: al terminar se
+  // deja cerrado y vacio. El cierre del draft vive en #md-verdict.
   var sage=document.getElementById('md-sage');
-  sage.style.display='block';
+  if(sage){sage.style.display='none';sage.innerHTML='';}
   try{sndWin();}catch(_){}
   // ALL the holes get computed FIRST: "balanced board" is only earned when
   // there is genuinely nothing to name - it used to coexist with a 1-QB,
@@ -14530,6 +15105,16 @@ function mdFinish(){
   });
   var avgEdge=edges.length?edges.reduce(function(s2,e){return s2+e.edge;},0)/edges.length:0;
   var letter=avgEdge>=6?'A':avgEdge>=2?'B+':avgEdge>=-1?'B':avgEdge>=-4?'C':'D';
+  // EN SUBASTA la nota es OTRA COSA. "Posicion de pick vs ranking de mercado"
+  // no significa nada cuando no compras en un turno sino a un precio, y ademas
+  // MD.myOveralls solo lo alimenta mdUserPick (camino snake), asi que en una
+  // subasta edges queda vacio y esta letra salia 'B' fija para todo el mundo.
+  // La subasta ya tiene su medida propia y calibrada: _auTeamGrade, ponderada
+  // por dolares sobre auGradeBuy (pagado vs sticker de la sala).
+  if(MD.mode==='auction'){
+    var _ag='';try{_ag=_auTeamGrade(MD.mySlot);}catch(_){}
+    if(_ag)letter=_ag;
+  }
   var steal=edges.slice().sort(function(a,b){return b.edge-a.edge;})[0];
   var reach=edges.slice().sort(function(a,b){return a.edge-b.edge;})[0];
   var valHtml='';
@@ -14638,13 +15223,20 @@ function mdFinish(){
       +'<button class="btn-sm" onclick="switchScreen(\'sage\');setTimeout(function(){var i=document.getElementById(\'sage-chat-input\');if(i){i.value=\'How did I do in my last mock draft?\';i.focus();}},300)">Ask Mac about this draft</button>'
       +'</div>';
   }
-  // the verdict rides Mac's discreet face too: the grade letter IS the
-  // essence, the full breakdown one tap away (respects the collapse gesture)
-  mdMacSay('Draft complete - grade '+letter+'. Tap for the full verdict.',
-    '<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac\'s verdict · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
+  // El cierre del draft NO pasa por mdMacSay. mdMacSay existe para la charla en
+  // vivo y hoy esta muda por regla del dueno: lo primero que hace es vaciar
+  // #md-sage y salir. El veredicto compartia ese nodo, asi que se borraba solo
+  // (la barra quedaba diciendo "Mac grades your board:" y debajo nada). Canal
+  // propio: #md-verdict, que mdMacSay no toca nunca.
+  var _vHtml='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac\'s verdict · '+((MD_STRATS[MD.strat]||MD_STRATS.bpa).name)+'</div>'
+    +'<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px">'
+    +'<span style="font-family:var(--font-head);font-size:22px;font-weight:800;color:var(--text)">Draft complete</span>'
+    +'<span style="font-size:12px;color:var(--muted)">grade '+letter+'</span></div>'
     +'<div style="font-size:13px;color:var(--muted2);line-height:1.7">'+pos.QB+' QB / '+pos.RB+' RB / '+pos.WR+' WR / '+pos.TE+' TE across '+MD.mine.length+' picks. '+takes+'Run it back from another slot and watch the board shift.</div>'
-    +valHtml+rivalHtml+perPick,
-    {face:letter.charAt(0)==='A'?'excited':letter.charAt(0)==='D'?'deadpan':'thinking'});
+    +valHtml+rivalHtml+perPick;
+  var _vBox=document.getElementById('md-verdict');
+  if(_vBox){_vBox.innerHTML=_vHtml;_vBox.style.display='block';
+    try{_vBox.scrollIntoView({behavior:'smooth',block:'start'});}catch(_){}}
   document.getElementById('md-choices').innerHTML='';
   // Hand the draft to Ask Mac: a compact summary he can grade in chat
   try{
@@ -14674,7 +15266,10 @@ document.addEventListener('input',function(e){
 });
 document.addEventListener('focusin',function(e){
   if(!e.target.classList||!e.target.classList.contains('asksage-input'))return;
-  sageAc(e.target);
+  // El pool se carga al primer foco: sin esto el desplegable salia vacio para
+  // quien entraba directo a Start/Sit sin pasar antes por Players DB.
+  var _el=e.target;
+  ensurePlayersLoaded().then(function(){sageAc(_el);}).catch(function(){sageAc(_el);});
 });
 document.addEventListener('click',function(e){
   if(!e.target.closest('.asksage-input')&&!e.target.closest('.asksage-dd')){
@@ -14725,10 +15320,17 @@ async function askSageStartSit(){
   var names=Array.from(document.querySelectorAll('.asksage-input')).map(function(i){return i.value.trim();}).filter(Boolean);
   if(names.length<2){out.innerHTML='<div class="empty-state">Add at least two players to compare.</div>';return;}
   var week=parseInt((document.getElementById('asksage-week')||{}).value)||1;
-  out.innerHTML='<div class="empty-state">Checking week '+week+' matchups and last season\'s data...</div>';
+  // Skeleton con la forma de las dos tarjetas que vienen, no una linea de texto.
+  out.innerHTML='<div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div></div>';
+  // Sin esto, entrar directo a la pestana dejaba allPlayers vacio y CUALQUIER
+  // nombre bien escrito caia en "check the spelling".
+  await ensurePlayersLoaded();
   if(!Object.keys(ktcById).length){try{await fetchKtcValues(1,1,leagueMode!=='redraft');}catch(_){}}
 
-  var RISK_RE=/\bacl\b|achilles|surgery|injur|shut down|\bon ir\b|finished on ir|released|unsigned|suspend|arrest|\bpup\b|camp battle|competition/;
+  // "released"/"unsigned" salieron de aqui: son estado contractual, y el estado
+  // contractual sale del dato VIVO (p.team === 'FA'), no de una nota escrita en
+  // julio. Con la nota vieja, Keenan Allen (hoy en IND) comia -60 de castigo.
+  var RISK_RE=/\bacl\b|achilles|surgery|injur|shut down|\bon ir\b|finished on ir|suspend|arrest|\bpup\b|camp battle|competition/;
   var players=await Promise.all(names.map(async function(n){
     var pid=getPlayerIdByName(n);
     var p=pid?allPlayers[pid]:null;
@@ -14740,7 +15342,7 @@ async function askSageStartSit(){
     }catch(_){}
     var fc=ktcFull[pid]||{};
     var note=getPlayerContextNote(p.name);
-    var hasRisk=note?RISK_RE.test(note.note.toLowerCase()):false;
+    var hasRisk=(note?RISK_RE.test(note.note.toLowerCase()):false)||p.team==='FA';
     // Score: last season\'s weekly production is the base, matchup swings it,
     // situation risk caps it. Market value only breaks ties.
     var base=mu?mu.avgPts*10:((fc.redraftValue||fc.value||0)/100);
@@ -14930,7 +15532,10 @@ function loadHomeNews(){
     if(!arts.length||!wrap||!grid)return;
     grid.innerHTML=arts.map(function(a){
       var srcName=a.source||'ESPN';
-      var srcColor=srcName.indexOf('RotoWire')>=0?'#2f6fd6':srcName.indexOf('Yahoo')>=0?'#6001d2':srcName.indexOf('r/')===0?'#ff6314':'#d50a0a';
+      // Colores de marca aclarados para fondo oscuro: los oficiales daban
+      // 1.96:1 (Yahoo), 3.13:1 (ESPN) y 3.53:1 (RotoWire) sobre #1c1c20.
+      var _dk=document.documentElement.getAttribute('data-theme')!=='light';
+      var srcColor=srcName.indexOf('RotoWire')>=0?(_dk?'#6ea8ff':'#2f6fd6'):srcName.indexOf('Yahoo')>=0?(_dk?'#b18cff':'#6001d2'):srcName.indexOf('r/')===0?(_dk?'#ff8a4c':'#ff6314'):(_dk?'#ff6b6b':'#d50a0a');
       return '<a class="news-card" href="'+a.link+'" target="_blank" rel="noopener" style="flex-direction:column">'
         +'<img src="'+a.image+'" alt="" loading="lazy" style="width:100%;height:130px">'
         +'<div class="nc-body" style="padding:10px 12px"><div class="nc-h">'+a.headline.replace(/</g,'&lt;')+'</div>'
@@ -15004,7 +15609,7 @@ checkShareParam();
 (function(){
   // A shared-trade link (?trade=...) always shows the analysis - don't switch screens
   if(new URLSearchParams(window.location.search).get('trade'))return;
-  var p=window.location.pathname.replace('/','');
+  var p=_screenFromPath();
   var name=(_VALID_SCREENS.indexOf(p)!==-1)?p:'home';
   history.replaceState({screen:name},'',window.location.href);
   switchScreen(name,true); // always run: home must deactivate the default tool screen
@@ -15394,7 +15999,7 @@ function switchCommunityTab(tab){
     var pane=document.getElementById('community-tab-'+t);
     if(pane)pane.style.display=t===tab?'block':'none';
     var tb=document.getElementById('ctab-'+t);
-    if(tb)tb.classList.toggle('active',t===tab);
+    if(tb){tb.classList.toggle('active',t===tab);if(t===tab)_revealTab(tb);}
   });
   if(tab==='mine')loadMyTrades(true);
   if(tab==='forum'){try{renderForumCompose();}catch(_){}if(!forumLoaded)loadForumFeed();}
@@ -15450,7 +16055,7 @@ function switchLearnTab(el,id){
   if(!scope)return;
   scope.querySelectorAll('.inner-tab').forEach(function(t){t.classList.remove('active');});
   scope.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
-  if(el)el.classList.add('active');
+  if(el){el.classList.add('active');_revealTab(el);}
   var c=document.getElementById(id);if(c)c.classList.add('active');
   try{_revealSafety(c);}catch(_){}
 }
@@ -15886,7 +16491,8 @@ function _analystPick(articles){
 }
 function _srcMeta(src){
   var s=src||'';
-  if(s.indexOf('RotoWire')>=0)return {c:'#2f6fd6',label:'RotoWire'};
+  var _dk=document.documentElement.getAttribute('data-theme')!=='light';
+  if(s.indexOf('RotoWire')>=0)return {c:_dk?'#6ea8ff':'#2f6fd6',label:'RotoWire'};
   if(s.indexOf('r/')===0)return {c:'#ff6314',label:s};
   if(s.indexOf('Yahoo')>=0)return {c:'#6001d2',label:'Yahoo Sports'};
   if(s.indexOf('ESPN')>=0)return {c:'#d50a0a',label:'ESPN'};
@@ -15958,7 +16564,12 @@ function loadNewsGrid(force){
     if(!grid)return;
     initAutoRail(grid);
     var FANTASY_RE=/fantasy|waiver|start.?sit|sleeper|dynasty|rankings|injur|trade|depth chart|rotowire|r\//i;
-    var arts=(d.articles||[]).slice().sort(function(a,b){
+    // Analyst Corner ya se lleva estas mismas notas (mismo fetch, misma lista).
+    // Sin excluirlas, el usuario ve dos carruseles con el mismo contenido: los
+    // 6 primeros items del rail eran las tarjetas 2 a 7 del grid.
+    var _taken={};
+    try{_analystPick((d||{}).articles).slice(0,10).forEach(function(a){_taken[String(a.link||a.headline||'')]=1;});}catch(_){}
+    var arts=(d.articles||[]).slice().filter(function(a){return !_taken[String(a.link||a.headline||'')];}).sort(function(a,b){
       var af=FANTASY_RE.test(a.headline+(a.source||''))?0:1;
       var bf=FANTASY_RE.test(b.headline+(b.source||''))?0:1;
       return af-bf;
@@ -15970,7 +16581,7 @@ function loadNewsGrid(force){
         +(a.image?'<img src="'+a.image+'" alt="" loading="lazy" onload="try{this.animate([{opacity:0},{opacity:1}],{duration:350,easing:\'ease\'})}catch(e){}">':'<div class="nc-noimg">'+m.label+'</div>')
         +'<div class="nc-body"><div class="nc-h">'+a.headline.replace(/</g,'&lt;')+'</div>'
         +'<div class="nc-d">'+String(a.description||'').replace(/</g,'&lt;')+'</div>'
-        +'<div style="font-size:10px;font-weight:700;margin-top:4px;color:'+m.c+'">'+m.label+'</div></div></a>';
+        +'<div style="font-size:10px;font-weight:700;margin-top:4px;color:'+m.c+'">'+m.label+_newsAgo(a.published)+'</div></div></a>';
     }).join('');
   }).catch(function(){_newsLoaded=false;});
 }
@@ -16056,6 +16667,27 @@ function renderSageDebates(){
   return html;
 }
 
+// Name -> player, resolved through the same _mdByName/_mdSuffixIndex pair every
+// other name lookup in this file uses (suffix insurance: "James Cook III" vs
+// "James Cook"). When two players share a name the one the market actually
+// prices wins. The raw Object.values(allPlayers).find(p=>p.name===n) it replaces
+// took the FIRST match, which for "Kenneth Walker" is a retired free-agent WR,
+// not the KC running back worth 4,471 - so an RB-for-RB swap was read as a
+// cross-position trade and every fit number came out of the wrong bucket.
+// 37 names in the player DB are duplicated; 3 of them carry market value today.
+var _plByName=null,_plByNameStamp=-1;
+function _playerByName(name){
+  if(!name||typeof allPlayers==='undefined')return null;
+  if(_plByName===null||_plByNameStamp!==_ktcStamp){
+    _plByName=Object.create(null); _plByNameStamp=_ktcStamp;
+    Object.keys(allPlayers).forEach(function(id){
+      var p=allPlayers[id]; if(!p||!p.name)return;
+      var k=_mdNormName(p.name), cur=_plByName[k];
+      if(!cur||(ktcById[id]||0)>(ktcById[cur.id]||0))_plByName[k]=p;
+    });
+  }
+  return _mdByName(_plByName,name);
+}
 function getPlayerIdByName(name){
   if(!name||!allPlayers)return null;
   var nl=name.toLowerCase().trim();

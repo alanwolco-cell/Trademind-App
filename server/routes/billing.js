@@ -142,6 +142,19 @@ async function resolvePlan(e, acctId, username) {
   return { rec: null, owner: null };
 }
 
+// isPro dice "existe un plan vivo para esta persona" y sirve para PINTAR estado.
+// isPlanOwner dice "quien llama TIENE la llave que compro el plan", que es lo unico
+// que puede autorizar gasto: un username de Sleeper es publico, asi que por si solo
+// no puede abrir la puerta a las llamadas al modelo.
+async function isPlanOwner(acctId, username) {
+  try {
+    if (!acctId) return false;
+    const e = await loadEnt();
+    const { rec, owner } = await resolvePlan(e, acctId, username);
+    return _live(rec) && owner === String(acctId);
+  } catch (_) { return false; }
+}
+
 async function isPro(acctId, username) {
   try {
     const e = await loadEnt();
@@ -445,4 +458,5 @@ router.post('/resume', async (req, res) => {
 
 module.exports = router;
 module.exports.isPro = isPro;
+module.exports.isPlanOwner = isPlanOwner;
 module.exports.bindNameIfUnclaimed = bindNameIfUnclaimed;

@@ -24,13 +24,13 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root{
-  --mk-font:-apple-system,"SF Pro Display",BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mk-font:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,Arial,sans-serif;
   --mk-page:#ffffff;
   --mk-band:#f5f5f7;
   --mk-ink:#1d1d1f;
   --mk-ink2:#6e6e73;
   --mk-hair:rgba(0,0,0,.09);
-  --mk-acc:#6a3fff;            /* brand purple, tuned for white */
+  --mk-acc:#7c47e1;            /* brand purple: el mismo token que el relleno */
   --mk-acc-dark:#9b72e8;       /* brand purple, tuned for black */
   --mk-sec-pad:clamp(84px,11vw,150px);
   --mk-ease:cubic-bezier(.16,1,.3,1);
@@ -151,7 +151,7 @@ html.v12 .hero h1 .hl, .hero h1 .hl{color:var(--mk-acc)}
 }
 .mk-btn{
   display:inline-block;
-  background:var(--mk-acc);
+  background:var(--accent-btn);
   color:#fff;
   font-family:var(--mk-font);
   font-size:17px;
@@ -306,7 +306,7 @@ html.v11 .mk-h2, html.v12 .mk-h2, .mk-h2{
 .mk-chat-q{
   align-self:flex-end;
   max-width:78%;
-  background:var(--mk-acc-dark);
+  background:var(--accent-btn);
   color:#fff;
   border-bottom-right-radius:6px;
 }
@@ -351,7 +351,7 @@ html.v11 .mk-h2, html.v12 .mk-h2, .mk-h2{
   color:#86868b;
   margin:0;
 }
-.mk-dark .mk-btn{background:var(--mk-acc-dark)}
+.mk-dark .mk-btn{background:var(--accent-btn)}
 .mk-dark .mk-btn:hover{box-shadow:0 8px 24px rgba(155,114,232,.3)}
 .mk-dark .mk-btnlink{color:var(--mk-acc-dark)}
 .mk-center-row{margin-top:clamp(40px,5vw,56px)}
@@ -622,7 +622,7 @@ html.v11 .nav-item-btn.sage-hot.active, html.v12 .nav-item-btn.sage-hot.active{
 }
 /* Connect: the bar's one filled CTA, Apple-small */
 html.v11 #nav-signin, html.v12 #nav-signin{
-  background:var(--accent-bright);
+  background:var(--accent-btn);
   border:none;
   color:#fff;
   font-family:var(--mk-font);
@@ -630,7 +630,7 @@ html.v11 #nav-signin, html.v12 #nav-signin{
   padding:7px 16px;
 }
 html.v11 #nav-signin:hover, html.v12 #nav-signin:hover{
-  background:var(--accent-bright);
+  background:var(--accent-btn);
   color:#fff;
   filter:brightness(1.08);
   transform:none;
@@ -1387,4 +1387,381 @@ html.v11 .tabbar-mac, html.v12 .tabbar-mac{
 }
 html.v11 .tabbar-item.active .tabbar-mac, html.v12 .tabbar-item.active .tabbar-mac{
   opacity:1;transform:scale(1.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   A08 - correcciones de UX movil. Se anade al FINAL de home.css, que es la
+   ultima hoja que carga, para ganarle a las reglas de tamano que ya existen
+   en styles.css y theme.css sin repartir !important por todo el proyecto.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── A08-1. La sala de draft se salia del telefono ──────────────────────────
+   #md-pos-filter y #md-sections son items flex con min-width:auto, asi que su
+   tamano minimo automatico le ganaba a max-width y a overflow-x:auto: la caja
+   crecia (428px dentro de una columna de 320) en vez de scrollear su contenido.
+   Con html,body en overflow-x:clip el sobrante no se podia ni alcanzar.
+   min-width:0 es lo que devuelve el control a max-width y hace que el scroll
+   interno exista de verdad. */
+@media(max-width:700px){
+  /* PRIMERO el contenedor. La fila que envuelve filtros+orden+buscador lleva
+     su display:flex en el atributo style y hereda min-width:auto, asi que era
+     ELLA la que se quedaba en 428px; con max-width:100% sobre #md-pos-filter
+     el 100% resolvia contra esos mismos 428 y no servia de nada. */
+  #md-available div:has(> #md-pos-filter),
+  #au-z-center div:has(> #md-pos-filter){min-width:0;max-width:100%}
+
+  #screen-mock #md-pos-filter,
+  #au-z-center #md-pos-filter,
+  #screen-mock #md-sections{
+    min-width:0;
+    flex:1 1 100%;
+    overflow-x:auto;
+    flex-wrap:nowrap;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+  }
+  #screen-mock #md-pos-filter::-webkit-scrollbar,
+  #screen-mock #md-sections::-webkit-scrollbar{display:none}
+  /* el buscador de jugadores ocupa su propia linea completa, sin base fija */
+  #screen-mock #md-avail-search{
+    flex:1 1 100%;
+    min-width:0;
+    max-width:100%;
+  }
+  #screen-mock #md-sort{flex:0 0 auto;max-width:100%}
+  #md-available > div,
+  #md-available > div > div{min-width:0}
+}
+
+/* ── A08-2. Areas tactiles a 44px ───────────────────────────────────────────
+   Todo lo que se toca en el telefono llega al minimo de 44x44 CSS px. Los
+   anchos de columna de la lista de jugadores (--md-cols) los escribe app.js
+   en el style inline del contenedor, asi que las dos columnas de botones se
+   corrigen en app.js (parche 2b) y aqui solo se fija la altura. */
+@media(max-width:700px){
+  /* Iconos de la cabecera: eran 30x30. Subirlos a 44 anade 42px al lado
+     derecho, y eso solo partia el wordmark en dos lineas, asi que el bloque
+     va junto: nowrap en el wordmark y margenes de los iconos a cero. */
+  .nav{gap:4px}
+  .nav-logo{flex:0 0 auto;min-width:0}
+  .tm-wordmark{white-space:nowrap}
+  .nav .theme-toggle.icon{width:44px;height:44px;margin-left:0}
+  #alerts-wrap,#nav-search-wrap{margin-left:0!important}
+  .nav #nav-signin{min-height:44px}
+
+  /* Lista de jugadores: draftear y cola. Las dos columnas pasan de 28 y 34px
+     a 44 (parche 2b en app.js), lo que le quita 26px al nombre y hacia que
+     "Christian McCaffrey" partiera la fila en tres lineas. Bajar el hueco
+     entre columnas de 8 a 4px devuelve el ancho: medido, la fila mas alta
+     vuelve de 71px a 59px en 320 y en 390. */
+  #md-choices .md-bd-go,
+  #md-choices .md-bd-q{min-width:44px;min-height:44px}
+  #md-choices .md-bd-row{min-height:44px}
+  #md-choices .md-bd-more{min-height:44px}
+  #md-choices .md-bd-head,
+  #md-choices .md-bd-row{column-gap:4px!important}
+  #screen-mock #md-sort{width:auto!important}
+
+  /* controles de la sala */
+  #screen-mock .md-view-btn{min-height:44px;padding:0 14px}
+  #screen-mock .md-pos-chip,
+  #screen-mock .md-flag-chip,
+  #au-z-center .md-pos-chip,
+  #au-z-center .md-flag-chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  #screen-mock .md-sec-btn{min-height:44px}
+  #screen-mock .md-rb-btn{min-height:44px}
+  #screen-mock .opp-select,
+  #screen-mock #md-sort{min-height:44px}
+  #screen-mock .btn-sm{min-height:44px}
+
+  /* panel de roster: los chips de necesidad filtran la lista al tocarlos */
+  #md-roster .mdr-need{min-height:44px}
+  #md-roster .mdr-head{min-height:44px}
+  #md-roster .mdr-slot{min-height:44px}
+
+  /* casillas: 13x13 y 18x18 no se pueden tocar */
+  #screen-mock input[type=checkbox],
+  #md-auto{width:22px;height:22px;flex:none}
+  #screen-mock label:has(> input[type=checkbox]),
+  #md-setup .md-check{min-height:44px;display:flex;align-items:center;gap:10px}
+
+  /* subasta */
+  #au-mhead .au-x{width:44px;height:44px;flex:none}
+  #au-tabs .au-tab{min-height:44px}
+  #au-lot .au-stepbtn{min-width:44px;min-height:44px}
+  #au-lot .btn-sm{min-height:44px}
+
+  /* pestanas internas y modales */
+  .inner-tab{min-height:44px;display:inline-flex;align-items:center}
+  .pm-close{width:44px;height:44px}
+  #connect-modal .cm-x{width:44px;height:44px}
+}
+
+/* ── A08-2b. Telefonos estrechos (<=400px) ──────────────────────────────────
+   A 320-375px no caben logo + CTA + tres iconos de 44px de ancho. Se mantiene
+   el area tactil de 44x44 con un ::after invisible y se baja la caja visible a
+   40px. Por debajo de 360px sigue sin caber todo: cede lo funcional, no la
+   marca. El loro se queda y la campana de alertas se va al drawer "More",
+   donde el parche de index.html le pone su entrada. Medido: con esto todo lo
+   que queda en la barra entra en pantalla y el wordmark ocupa una sola linea
+   en 320, 360 y 390, cosa que sin el parche no pasa en ninguno de los tres. */
+@media(max-width:400px){
+  .nav .theme-toggle.icon{width:40px;height:40px;position:relative}
+  .nav .theme-toggle.icon::after{
+    content:"";position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);width:44px;height:44px;
+  }
+}
+/* La regla base va ANTES del media query: con la misma especificidad ganaria
+   la ultima, y la entrada del drawer no apareceria nunca. */
+.mob-menu-item.mob-alerts{display:none}
+@media(max-width:360px){
+  /* se oculta el BOTON, nunca #alerts-wrap: el panel #alerts-dd es hijo suyo,
+     y ocultando el contenedor el panel no podria abrirse desde el drawer */
+  #alerts-wrap > button{display:none}
+  #alerts-wrap{margin-left:0!important;width:0}
+  /* Al colapsar el contenedor a 0px, el panel (position:absolute anclado a el)
+     se iria a x=-5. styles.css:1713 ya pedia pinnearlo al viewport ("so it
+     always fits"), pero hoy esa regla no gana: el valor calculado sigue siendo
+     absolute. Se fuerza aqui, y solo en <=360px, que es donde movemos la
+     campana; en 361px y arriba el comportamiento actual no se toca. */
+  #alerts-dd{
+    position:fixed!important;
+    left:10px!important;right:10px!important;
+    top:64px!important;
+    min-width:0!important;width:auto!important;
+  }
+  .nav #nav-signin{padding-left:10px;padding-right:10px;font-size:12px}
+  .mob-menu-item.mob-alerts{display:block}
+}
+
+/* ── A08-3. Safe area: horizontal ───────────────────────────────────────────
+   Con viewport-fit=cover (parche 3a en index.html) el viewport se extiende
+   hasta el borde fisico. En vertical el inset lateral es 0 y esto no cambia
+   nada; en horizontal, en un iPhone con notch, son 34-59px y sin esto el
+   wordmark y las pestanas de los extremos quedan bajo el notch o la esquina.
+   Los insets inferiores ya estaban escritos en las 11 reglas existentes. */
+.nav{
+  padding-left:max(1.5rem, env(safe-area-inset-left,0px));
+  padding-right:max(1.5rem, env(safe-area-inset-right,0px));
+}
+@media(max-width:1200px){
+  .nav{
+    padding-left:max(.75rem, env(safe-area-inset-left,0px));
+    padding-right:max(.75rem, env(safe-area-inset-right,0px));
+  }
+}
+@media(max-width:700px){
+  .nav{
+    padding-left:max(.5rem, env(safe-area-inset-left,0px));
+    padding-right:max(.5rem, env(safe-area-inset-right,0px));
+  }
+  #tabbar{
+    padding-left:env(safe-area-inset-left,0px);
+    padding-right:env(safe-area-inset-right,0px);
+  }
+  #ticker-bar,#md-rstrip,#au-mtabs,#md-roster{
+    padding-left:max(10px, env(safe-area-inset-left,0px));
+    padding-right:max(10px, env(safe-area-inset-right,0px));
+  }
+}
+/* los dos calc() sin fallback se caen enteros en un motor sin env() */
+@media(max-width:700px){
+  #au-mtabs{padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+  #md-rstrip.in-au{bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+}
+
+/* ── A08-4. Zoom automatico de iOS ──────────────────────────────────────────
+   styles.css:1487 ya fuerza 16px en <=700px, pero home.css:896 carga despues
+   con mas especificidad (#md-setup .opp-select = 13.5px) y los selects de
+   #md-profiles-rows llevan font-size:12px en el atributo style, que solo se
+   gana con !important. Por debajo de 16px Safari iOS hace zoom al enfocar. */
+/* El segundo media query cubre el telefono en horizontal: un iPhone 14 apaisado
+   mide 844px de ancho, asi que NINGUNA regla <=700px se aplica ahi, y el zoom
+   de iOS al enfocar depende del tamano de letra, no de la orientacion. */
+@media(max-width:700px),
+       (max-height:500px) and (orientation:landscape) and (pointer:coarse){
+  #md-setup .opp-select,
+  #md-setup .tm-input,
+  #ld-card .opp-select,
+  #mp-card .tm-input,
+  #md-profiles-rows .opp-select,
+  #md-sort,
+  #md-avail-search{font-size:16px!important}
+}
+
+/* ── A08-4b. El buscador del nav rompia la cabecera ─────────────────────────
+   Abierto medía 168px y salia 18px fuera del viewport, partia el wordmark en
+   dos lineas y empujaba fuera de pantalla los botones de alertas y tema. En
+   el telefono pasa a ser una capa a ancho completo, el mismo tratamiento que
+   ya se le dio al panel de alertas en styles.css:1708. */
+@media(max-width:700px){
+  /* el wrap lleva position:relative en el atributo style del HTML, que solo se
+     puede vencer con !important sin tocar el markup */
+  #nav-search-wrap.open{
+    position:fixed!important;
+    left:max(8px, env(safe-area-inset-left,0px));
+    right:max(8px, env(safe-area-inset-right,0px));
+    top:8px;
+    z-index:200;
+    margin-left:0!important;
+  }
+  #nav-search-wrap.open .nav-search-input{
+    width:100%;
+    min-height:44px;
+    margin-left:0;
+    padding:6px 14px 6px 40px;
+  }
+  #nav-search-wrap.open #nav-search-btn{
+    position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:1;
+    width:40px;height:44px;
+  }
+  #nav-search-wrap.open #nav-search-dd{
+    left:0!important;right:0!important;
+    min-width:0!important;width:auto;
+    max-height:60vh;overflow-y:auto;overscroll-behavior:contain;
+  }
+}
+
+/* ── A08-5b. Feedback tactil ────────────────────────────────────────────────
+   En el telefono no hay hover: ocho clases de la sala de draft no daban
+   ninguna respuesta al tocarlas, y el unico resaltado era el azul de fabrica
+   del navegador (rgba(51,181,229,.4)) sobre una app morada. */
+html{-webkit-tap-highlight-color:transparent}
+@media(max-width:700px){
+  .md-bd-go:active,.md-bd-q:active,.md-bd-more:active,
+  .md-pos-chip:active,.md-flag-chip:active,
+  .md-sec-btn:active,.md-rb-btn:active,.md-view-btn:active,
+  .inner-tab:active,.mdr-need:active,.au-tab:active{
+    background:var(--accent-dim);
+    filter:brightness(1.25);
+  }
+  .md-bd-row:active,.mdr-slot:active{background:var(--surface2)}
+  .btn-sm:active,.btn-primary:active,.btn-load:active{transform:scale(.97)}
+}
+
+/* ── A08-5c. Scroll encadenado ──────────────────────────────────────────────
+   Al llegar al final de un scroller interno el gesto seguia moviendo la
+   pagina, que en medio de un draft se lee como "se movio sola". */
+#md-choices,
+#md-roster .mdr-slots,
+.inner-tab-bar,
+.au-boardrow,
+#alerts-dd,
+.pm-card,
+.mob-menu-panel{overscroll-behavior:contain}
+
+/* ── A08-5d. Texto por debajo de 12px ───────────────────────────────────────
+   Se sube el minimo de texto de interfaz a 12px. Varios de estos llevan el
+   font-size en el atributo style del elemento, asi que solo ceden a
+   !important; por eso el bloque lo lleva entero, para que no queden a medias.
+   Excepciones deliberadas, NO tocar:
+     - div.footer-legal (11px): es letra pequena legal, no texto de interfaz.
+     - #tabbar (10px -> 11px): a 12px las cinco etiquetas no caben en 320px.
+       Medido, 11px si entra y sube un punto sobre el original.
+     - los distintivos "ESPN" (8px) y "Y!" (10px) de #login-panel: son marcas
+       dentro de un chip de 18px de alto; a 12px la letra desborda el chip.
+       Si se quieren legibles hay que agrandar el chip, que es cosa de diseno. */
+@media(max-width:700px){
+  #tabbar .tabbar-item{font-size:11px!important}
+  #mode-badge,
+  #login-panel .hint-row,
+  #login-panel div,
+  #login-panel span:not([style*="background"]),
+  #how-mini div,
+  #screen-community span,
+  #board-builder .side-clear-btn,
+  #md-finetune div,
+  #home-news-grid div,
+  #home-analyst-row .ac-src,
+  #home-analyst-row .ac-f,
+  #home-analyst-row .ac-d,
+  #home-news-wrap span,
+  #home-story .mk-chat-tag,
+  #player-modal .pm-ktc-label,
+  #md-setup div,
+  #md-finetune summary,
+  #md-profiles summary,
+  #md-profiles strong,
+  #md-profiles span,
+  #md-profiles-note,
+  #md-fz26-bar span,
+  #md-profiles-rows span,
+  #sage-side .sage-side-empty,
+  #sage-greeting .sage-cap,
+  #sage-suggestions .sage-sugg,
+  #league-meta,
+  #board-builder span,
+  #builder-panel div,
+  #board-mine .bb-empty,
+  #board-opp .bb-empty,
+  #ideas-header span,
+  #ideas-league-name{font-size:12px!important}
+}
+
+/* ── A08-5e. Chips de capacidades de Mac ────────────────────────────────────
+   space-between partia "Reads / your roster" en dos columnas desalineadas. */
+@media(max-width:700px){
+  #sage-greeting .sage-cap{justify-content:flex-start;gap:6px;white-space:nowrap}
+}
+
+/* ═══ PART 8 — THE LIGHT ROOM ═══════════════════════════════════════════════ */
+html[data-theme="light"]{
+  --mk-page-solid:#ffffff;
+  --mk-page:#ffffff;
+  --mk-band:#f5f5f7;
+  --mk-ink:#1d1d1f;
+  --mk-ink2:#6e6e73;
+  --mk-hair:rgba(0,0,0,.10);
+  /* ►►► EL MORADO DE MARCA ENTRA AQUI (tema claro) ◄◄◄
+     Consume el token de A10. En el tema claro este acento juega LOS DOS
+     roles: relleno de boton con texto blanco Y tinta sobre pagina/banda.
+     El fallback solo cubre el caso de que el token no exista todavia. */
+  --mk-acc:var(--accent-btn,#8350e2);
+}
+html.v11[data-theme="light"] .hero, html.v12[data-theme="light"] .hero{
+  background:
+    radial-gradient(1200px 760px at 50% -12%, color-mix(in srgb, var(--mk-acc) 10%, transparent), transparent 64%),
+    #ffffff;
+}
+@media (max-width:700px){
+  html.v11[data-theme="light"] .hero, html.v12[data-theme="light"] .hero{
+    background:
+      radial-gradient(720px 520px at 50% -8%, color-mix(in srgb, var(--mk-acc) 12%, transparent), transparent 66%),
+      #ffffff;
+  }
+}
+html[data-theme="light"] .mk-dark{background:var(--mk-page);color:var(--mk-ink)}
+html[data-theme="light"] #home-problem{background:var(--mk-band)}
+html[data-theme="light"] .mk-dark .mk-sub{color:var(--mk-ink2)}
+html[data-theme="light"] .mk-dark .mk-eyebrow-acc{color:var(--mk-acc)}
+html[data-theme="light"] .mk-dark .mk-btnlink{color:var(--mk-acc)}
+/* el relleno de boton lo manda el token de relleno de A10, no el acento de tinta */
+html[data-theme="light"] .mk-dark .mk-btn{background:var(--accent-btn,#8350e2)}
+html[data-theme="light"] .mk-lines{color:var(--mk-ink2)}
+html[data-theme="light"] .mk-lines-strong{color:var(--mk-ink)}
+html[data-theme="light"] .mk-lines .hl2{color:var(--mk-acc)}
+html[data-theme="light"] .mk-founder p{color:var(--mk-ink2)}
+html[data-theme="light"] .mk-founder .mk-founder-lead{color:var(--mk-ink)}
+html[data-theme="light"] .mk-founder .mk-founder-close{color:var(--mk-acc)}
+html[data-theme="light"] .mk-founder-sign{color:#6e6e73}
+html[data-theme="light"] #home-story > .mk-sec.mk-dark{background:#000;color:#f5f5f7}
+html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-sub{color:#a1a1a6}
+html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-eyebrow-acc{color:var(--mk-acc-dark)}
+html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-btnlink{color:var(--mk-acc-dark)}
+html[data-theme="light"] .mk-card,
+html.v11[data-theme="light"] .mk-card,
+html.v12[data-theme="light"] .mk-card{
+  background:#ffffff;
+  border:1px solid rgba(0,0,0,.06);
+  box-shadow:0 2px 12px rgba(29,29,31,.06);
+}
+html.v11[data-theme="light"] .mk-shot, html.v12[data-theme="light"] .mk-shot{
+  border:1px solid rgba(0,0,0,.10);
+  box-shadow:0 10px 28px -14px rgba(29,29,31,.35);
+}
+html.v11[data-theme="light"] .mk-film, html.v12[data-theme="light"] .mk-film{
+  background:#050507;
+  box-shadow:0 30px 90px -20px rgba(29,29,31,.42),0 8px 28px -12px rgba(29,29,31,.22);
 }

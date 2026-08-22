@@ -485,6 +485,16 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   content:'';position:absolute;top:0;left:0;right:0;height:2px;
   background:var(--tm-grad);opacity:.85;
 }
+/* El cierre del draft: mismo lenguaje que la verdict-card del analizador (de
+   ahi hereda la barra de acento), pero con aire propio porque aqui abajo
+   cuelgan la nota, los agujeros, steal/reach, el ranking de sala y "Mac on
+   every pick". En el telefono despeja la barra fija del roster + la tab bar,
+   que si no se comen los dos botones del final. */
+#md-verdict{line-height:1.6}
+#md-verdict .btn-load,#md-verdict .btn-sm{min-height:44px}
+@media(max-width:700px){
+  #md-verdict{padding:14px 14px calc(14px + 81px + 57px + env(safe-area-inset-bottom))}
+}
 
 /* Every empty state in the app takes the one dashed-accent treatment the
    Community/Research pass established - the mock's included. */
@@ -596,7 +606,11 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
    Desktop >=1000px: auction column | research | yours. Below that the zones
    stack: lot first, research, then queue/team. */
 #au-zones{display:grid;grid-template-columns:360px minmax(0,1fr) 250px;gap:14px;align-items:start}
-@media(max-width:999px){#au-zones{grid-template-columns:1fr}}
+/* minmax(0,1fr), no 1fr: `1fr` es `minmax(auto,1fr)` y la pista no baja del
+   min-content de su contenido, asi que la fila horizontal del tab Board
+   (.au-boardrow, N columnas por manager) estiraba LAS TRES zonas a ~1910px y
+   dejaba el boton OFFER sin texto y los presupuestos sin numeros. */
+@media(max-width:999px){#au-zones{grid-template-columns:minmax(0,1fr)}}
 #au-last{font-size:14px;color:var(--muted2);padding:6px 2px;font-variant-numeric:tabular-nums}
 #au-last b{color:var(--text)}
 /* zone tabs: quiet segmented row, the active one lifts */
@@ -655,6 +669,19 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   /* filter chips scroll in one row under the search */
   #au-z-center #md-pos-filter{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;max-width:100%}
   #au-z-center #md-pos-filter::-webkit-scrollbar{display:none}
+  /* Lo mismo en la sala de snake, que era donde faltaba. A 390px la fila de
+     chips mide 428px: como es un item flex que no puede encogerse (le falta
+     min-width:0), estiraba a su contenedor y "Drafted" quedaba entero fuera de
+     pantalla y el buscador cortado, SIN scroll posible en ninguna direccion.
+     Ahora los chips ocupan su propio renglon y scrollean en horizontal, y el
+     buscador baja a otro a ancho completo: es el control mas usado de la
+     pantalla y no deberia compartir linea con nada. */
+  .md-ctlrow{min-width:0;max-width:100%;flex:1 1 100%}
+  .md-ctlrow #md-pos-filter{flex:1 1 100%;min-width:0;max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .md-ctlrow #md-pos-filter::-webkit-scrollbar{display:none}
+  .md-ctlrow #md-pos-filter>button{flex:none}
+  .md-ctlrow #md-avail-search{flex:1 1 auto;min-width:0}
+  .md-ctlrow #md-sort{flex:0 0 auto}
   /* room tabs pinned at the very bottom (they stand in for the app tab bar
      while the room is on screen), roster strip riding just above them */
   #au-mtabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--surface);border-top:1px solid var(--border);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}

@@ -316,7 +316,7 @@ const hashOf = f => crypto.createHash('sha1').update(JSON.stringify(f.def) + '|'
 function claimOf(f, seasons) {
   const rate = Math.round(f.r[f.metric]), base = Math.round(f.baseline.rate);
   const word = f.metric === 'boom' ? 'boom' : 'bust';
-  return `${rate}% ${word} rate for ${phrase(f.def)} — vs ${base}% for ${phrase(f.baseline.def)} (${seasons}, n=${f.r.n})`;
+  return `${rate}% ${word} rate for ${phrase(f.def)}, vs ${base}% for ${phrase(f.baseline.def)} (${seasons}, n=${f.r.n})`;
 }
 function detailOf(f, seasons) {
   const r = f.r;

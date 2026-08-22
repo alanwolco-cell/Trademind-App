@@ -40,7 +40,7 @@ const ROOMS = parseInt(argv[argv.indexOf('--rooms') + 1], 10) || 600;
 const values = {}; // element id -> .value the settings readers see
 function el(id) {
   const e = {
-    id, style: {}, dataset: {}, options: [], children: [],
+    id, style: { setProperty(k,v){ this[k]=v; }, removeProperty(k){ delete this[k]; }, getPropertyValue(){ return ''; } }, dataset: {}, options: [], children: [],
     classList: { add() { }, remove() { }, toggle() { }, contains: () => false },
     get value() { return values[id] != null ? values[id] : ''; },
     set value(v) { values[id] = v; },

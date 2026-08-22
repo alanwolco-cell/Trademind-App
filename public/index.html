@@ -11,7 +11,17 @@ posthog.init('phc_pqedJWPdf2S4npvYw8UcZpwhrnYvtH8Vd53yABtvZqmc',{api_host:'https
 // Safe wrapper so a call never throws if the library is blocked or slow.
 window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog.capture(ev,props||{});}catch(_){}}
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// La ruta y el estado de sesion se deciden ANTES del primer paint. Sin esto,
+// el HTML pinta la seccion de herramientas (~728px) y app.js la esconde
+// despues: ese colapso era todo el CLS de la home (0.1372). switchScreen()
+// limpia las clases en cuanto hay navegacion de verdad.
+(function(){var d=document.documentElement,p=location.pathname;
+ d.classList.add(p==='/'||p===''?'boot-home':'boot-tool');
+ try{if(!localStorage.getItem('tm_username'))d.classList.add('boot-signedout');}
+ catch(_){d.classList.add('boot-signedout');}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
@@ -34,7 +44,7 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <script defer src="/_vercel/insights/script.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
 <link rel="stylesheet" href="/styles.css?v=2026082005">
@@ -105,7 +115,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
        and the hero carries the big CTA; a third one was noise. -->
   <div class="nav-right">
   <!-- sign in from anywhere; hidden once a session exists -->
-  <button class="btn-sm" id="nav-signin" style="display:none;margin-right:6px" onclick="goConnectLeague()">Connect</button>
+  <button class="btn-sm" id="nav-signin" style="margin-right:6px" onclick="goConnectLeague()">Connect</button>
   <!-- The menu button: every tool beyond the mock and Mac lives in here, on
        desktop and phone alike. On small screens the bottom tab bar's "More"
        opens the same drawer, so the button hides there. -->
@@ -124,7 +134,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 6-2.4 7.5-2.4 7.5h16.8S18 15 18 9"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>
       <span id="alerts-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:8px;font-weight:800;min-width:15px;height:15px;border-radius:100px;align-items:center;justify-content:center;padding:0 3px">0</span>
     </button>
-    <div id="alerts-dd" class="ac-dropdown" style="left:auto;right:0;min-width:280px;max-height:340px;overflow-y:auto"><div style="padding:12px;font-size:11px;color:var(--muted)">Loading...</div></div>
+    <div id="alerts-dd" class="ac-dropdown" style="left:auto;right:0;min-width:280px;max-height:340px;overflow-y:auto"><div class="tm-skel-feed" style="padding:10px 12px;min-height:120px"><div class="tm-skel" style="height:34px"></div><div class="tm-skel" style="height:34px"></div><div class="tm-skel" style="height:34px"></div></div></div>
   </div>
   <button class="theme-toggle icon" id="theme-toggle" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"></button>
 
@@ -184,6 +194,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <button class="mob-menu-item mob-sub" onclick="mobGo('mock','history')">Draft History</button>
         </div>
       </div>
+      <!-- A08: por debajo de 360px la campana sale de la barra (no cabe junto al
+           logo, el CTA y los otros dos iconos a 44px) y su entrada vive aqui.
+           El CSS la oculta por encima de 360px, donde la campana sigue en la
+           barra, para que no haya dos accesos a lo mismo.
+           setTimeout: app.js:15114 cierra el panel en cualquier clic fuera de
+           #alerts-wrap, asi que abrirlo en el mismo tick no funciona. -->
+      <button class="mob-menu-item mob-alerts" onclick="mobMenuToggle();setTimeout(toggleAlerts,0)">Trade alerts</button>
       <button class="mob-menu-item" onclick="mobGo('analyze')">Trade Analyzer</button>
       <button class="mob-menu-item" onclick="mobGo('league')">My League</button>
       <div class="mob-group">
@@ -233,7 +250,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
        the headline already carries the meaning. -->
   <div class="mk-hero-shot mk-reveal" aria-hidden="true">
     <!-- The product film: autoplay, muted, loops - the Apple treatment. -->
-    <video class="mk-film" src="/promo-reel.mp4?v=3" poster="/promo-poster.jpg?v=3" autoplay muted loop playsinline preload="metadata" width="1080" height="1080"></video>
+    <video class="mk-film" data-src="/promo-reel.mp4?v=3" poster="/promo-poster.jpg?v=3" muted loop playsinline preload="none" width="1080" height="1080"></video>
   </div>
 </div>
 
@@ -328,7 +345,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
                  Use Agreement, Cover Page): must appear wherever Yahoo Fantasy data
                  is displayed, with a hyperlink to an official Yahoo Fantasy page.
                  Toggled on in _showBuilderUI whenever the active roster came from Yahoo. -->
-            <div id="yahoo-attrib" style="display:none;font-size:11px;color:var(--muted);margin:0 0 12px">Fantasy data provided by <a href="https://football.fantasy.yahoo.com/" target="_blank" rel="noopener" style="color:var(--muted2);text-decoration:underline">Yahoo Fantasy</a></div>
+            <div id="yahoo-attrib" style="display:none;font-size:11px;color:var(--muted);margin:0 0 12px">Fantasy data provided by <a href="https://football.fantasysports.yahoo.com/" target="_blank" rel="noopener" style="color:var(--muted2);text-decoration:underline">Yahoo Fantasy</a></div>
 
             <!-- ROSTER BOARD BUILDER: tap players on both boards, Sleeper-style.
                  It writes into the classic builder's hidden rows below, so the
@@ -692,6 +709,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="inner-tab-bar">
         <div class="inner-tab active" onclick="switchInnerTab(this,'tab-roster-grade','screen-league');renderRosterGrade()">Roster Grade</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-league-trades','screen-league');renderLeagueTrades()">League Trades</div>
+        <div class="inner-tab" data-tab="tab-history" onclick="switchInnerTab(this,'tab-history','screen-league');renderHistory()">Saved Trades</div>
         <div style="margin-left:auto;flex-shrink:0"><button class="btn-sm" id="sync-btn" onclick="syncRoster()">↺ Sync Roster</button></div>
       </div>
 
@@ -770,7 +788,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           </div>
           <button class="btn-sm" onclick="window._bsOffset=(window._bsOffset||0)+5;renderBuySell()">New suggestions ↺</button>
         </div>
-        <div id="buysell-content"><div class="empty-state">Loading player values...</div></div>
+        <div id="buysell-content"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>
       </div>
       </div>
       <div id="bs-view-stash" style="display:none">
@@ -880,7 +898,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <button onclick="setLeagueModeManual('dynasty')" data-modebtn="dynasty" style="border:none;border-radius:8px;padding:6px 12px;cursor:pointer">Dynasty</button>
             <button onclick="setLeagueModeManual('redraft')" data-modebtn="redraft" style="border:none;border-radius:8px;padding:6px 12px;cursor:pointer">Redraft</button>
           </span>
-          <button class="pdb-chip btn-sm" data-chip="alpha" onclick="togglePdbChip(this)" title="24%+ target share - the best predictor of weekly floor">Alpha usage</button>
+          <button class="pdb-chip btn-sm" data-chip="alpha" onclick="togglePdbChip(this)" title="25%+ target share - the best predictor of weekly floor">Alpha usage</button>
           <button class="pdb-chip btn-sm" data-chip="bellcow" onclick="togglePdbChip(this)" title="250+ touches - volume that survives bad games">Bell-cows</button>
           <button class="pdb-chip btn-sm" data-chip="efficient" onclick="togglePdbChip(this)" title="9+ yards per target or 5.5+ YAC per catch on real volume">Efficiency kings</button>
           <button class="pdb-chip btn-sm" data-chip="ironman" onclick="togglePdbChip(this)" title="Every game played in 2025">Iron men</button>
@@ -900,7 +918,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div id="tab-market" class="tab-content">
       <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;margin-bottom:12px;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:10px;font-size:12px;color:var(--muted2)">
         <span style="width:7px;height:7px;border-radius:50%;background:var(--accent-bright)"></span>
-        Values move all week as the market trades. Tune back in every Tuesday to see who spiked and who slid.
+        Values move all week as the market trades. We refresh them every couple of hours, so what you see is the market right now.
       </div>
       <div class="mkt-overview" id="mkt-overview">
         <div class="mkt-stat"><div class="mkt-stat-val" id="mkt-players-tracked">-</div><div class="mkt-stat-lbl">Players Tracked</div></div>
@@ -920,7 +938,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       </div>
       <div class="mkt-panel" style="margin-top:14px">
         <div class="mkt-panel-title">Most Traded on Mac Draft (last 30 days)</div>
-        <div id="mkt-tm-index"><div class="mkt-empty">Loading Mac Draft trade data...</div></div>
+        <div id="mkt-tm-index"><div class="tm-skel-feed" style="min-height:120px"><div class="tm-skel" style="height:52px"></div><div class="tm-skel" style="height:52px"></div></div></div>
       </div>
       <!-- Market Signals: mined draft-history patterns (public/signals.json).
            Hidden entirely unless the file exists and is under a week old. -->
@@ -931,11 +949,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="mkt-panels" style="margin-top:14px">
         <div class="mkt-panel">
           <div class="mkt-panel-title"><span class="mkt-up">▲</span> Most Added This Week (all Sleeper leagues)</div>
-          <div id="mkt-adds"><div class="mkt-empty">Loading waiver activity...</div></div>
+          <div id="mkt-adds"><div class="tm-skel-feed" style="min-height:120px"><div class="tm-skel" style="height:34px"></div><div class="tm-skel" style="height:34px"></div><div class="tm-skel" style="height:34px"></div></div></div>
         </div>
         <div class="mkt-panel">
           <div class="mkt-panel-title"><span class="mkt-down">▼</span> Most Dropped This Week (all Sleeper leagues)</div>
-          <div id="mkt-drops"><div class="mkt-empty">Loading waiver activity...</div></div>
+          <div id="mkt-drops"><div class="tm-skel-feed" style="min-height:120px"><div class="tm-skel" style="height:34px"></div><div class="tm-skel" style="height:34px"></div><div class="tm-skel" style="height:34px"></div></div></div>
         </div>
       </div>
       <div class="mkt-chart-area">
@@ -1080,7 +1098,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Format</div>
             <select id="md-format" class="opp-select" style="width:100%"><option value="1qb" selected>1 QB</option><option value="sf">Superflex</option></select></div>
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">League type</div>
-            <select id="md-mode" class="opp-select" style="width:100%" onchange="setLeagueModeManual(this.value)"><option value="redraft">Redraft</option><option value="dynasty">Dynasty</option></select></div>
+            <select id="md-mode" class="opp-select" style="width:100%" onchange="setLeagueModeManual(this.value)"><option value="redraft">Redraft</option><option value="dynasty">Dynasty</option></select>
+            <div id="md-mode-note" style="display:none;font-size:10.5px;color:var(--yellow);margin-top:4px;line-height:1.45">Mock boards are priced off 2026 redraft ADP. Dynasty changes how Mac reasons about your picks, not the draft order yet.</div></div>
             <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Your pick</div>
             <select id="md-slot" class="opp-select" style="width:100%"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select></div>
             <div id="md-budget-cell" style="display:none"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Budget</div>
@@ -1162,12 +1181,17 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <span id="md-queue" style="display:flex;gap:6px;flex-wrap:wrap"></span>
           </div>
           <div id="md-sage" style="display:none;margin:12px 0;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:12px"></div>
+          <!-- El cierre del draft vive en SU PROPIO contenedor, nunca en #md-sage.
+               Mac calla dentro de la sala (regla del dueno) y esa regla la aplica
+               mdMacSay borrando #md-sage; si el veredicto compartiera ese nodo se
+               borraria solo, que era exactamente el bug. Dos canales, dos nodos. -->
+          <div id="md-verdict" class="verdict-card" style="display:none;margin:12px 0;padding:16px 18px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:12px"></div>
           <div id="md-player-peek" style="display:none;margin:0 0 12px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:12px"></div>
           <div class="md-cols" id="md-available">
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 6px;flex-wrap:wrap">
                 <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Available players</div>
-                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <div class="md-ctlrow" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                   <div id="md-pos-filter" style="display:flex;gap:4px">
                     <button class="md-pos-chip active" data-pos="" onclick="mdSetPosFilter(this)">All</button>
                     <button class="md-pos-chip" data-pos="QB" onclick="mdSetPosFilter(this)">QB</button>
@@ -1254,7 +1278,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="d101-divider"></div>
           <div class="d101-section">
             <div class="d101-term">Trade Deadline</div>
-            <div class="d101-def">The cutoff date after which no trades can be made for that season. Before the deadline, managers scramble to either buy help for a playoff run or sell veterans for future picks.</div>
+            <div class="d101-def">The cutoff date after which no trades can be made for the rest of that season. Before the deadline, managers scramble to either buy help for a playoff run or sell veterans for future picks. In dynasty the market reopens in the offseason, which is usually the busiest trading window of the year.</div>
         </div>
       </div>
 
@@ -1278,7 +1302,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="d101-divider"></div>
           <div class="d101-section">
             <div class="d101-term">Age Curve</div>
-            <div class="d101-def">Different positions peak and decline at different ages. RBs peak around 22–25 and fall off fast. WRs peak 24–28. QBs can last into their mid-30s. Always think about where a player is on their career arc.</div>
+            <div class="d101-def">Different positions peak and decline at different ages. RBs peak 24-26 and fall off hard around 27-28. WRs peak 25-28 and decline through their late 20s. TEs mature slowly and often produce best after 27. QBs age slowest and hold value into their mid-to-late 30s. Never compare raw ages across positions: a 27-year-old QB has a longer runway than a 24-year-old RB.</div>
         </div>
           <div class="d101-divider"></div>
           <div class="d101-section">
@@ -1381,7 +1405,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px">Analyst Corner <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Auto-scrolling, drag to browse</span></div>
         <div id="analyst-corner" class="auto-rail" style="margin-bottom:20px"></div>
         <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px">Headlines <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Auto-scrolling, drag to browse</span></div>
-        <div id="news-grid" class="auto-rail"><div class="empty-state">Loading headlines...</div></div>
+        <div id="news-grid" class="auto-rail"><div class="tm-skel-row"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>
       </div>
     </div>
 
@@ -1421,7 +1445,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <!-- My Trades panel -->
         <div id="community-tab-mine" style="display:none">
           <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Trades you have published, so you can come back and read what the community said. Only you see this list - everyone else sees them anonymously.</div>
-          <div id="mytrades-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading your trades...</div></div>
+          <div id="mytrades-feed"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>
         </div>
         <!-- Hot Takes (Forum) panel -->
         
@@ -1431,7 +1455,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
               <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 0">Sign in with your Sleeper username to drop a hot take.</div>
             </div>
           </div>
-          <div id="forum-feed"><div style="padding:32px;text-align:center;color:var(--muted)">Loading hot takes...</div></div>
+          <div id="forum-feed"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>
           <div style="text-align:center;margin-top:8px"><button id="forum-load-more-btn" class="btn-sm" onclick="loadMoreForumFeed()" style="display:none">Load more</button></div>
         </div>
         <!-- News panel: the Fantasy Wire (analyst corner + headlines) is relocated
@@ -1439,7 +1463,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div id="community-tab-news" style="display:none"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>
         <!-- Learn panel: the Dynasty 101 / Nerd Stats / Archetypes / About content
              is relocated here from the old standalone Learn screen on first open. -->
-        <div id="community-tab-learn" style="display:none"><div style="padding:32px;text-align:center;color:var(--muted)">Loading...</div></div>
+        <div id="community-tab-learn" style="display:none"><div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div></div>
         <!-- Feedback: anyone can send it; only the founder sees what comes in -->
         <div id="community-tab-feedback" style="display:none">
           <div style="font-size:12.5px;color:var(--muted2);margin-bottom:14px;line-height:1.5">Tell us what to fix, add, or change. This goes straight to the founder and stays private - other users never see it.</div>
@@ -1622,7 +1646,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <p class="mk-founder-close mk-reveal">Life is good when you know the move.</p>
     <div class="mk-cta-row mk-reveal" style="margin-top:22px">
       <a href="#" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Start a mock draft</a>
-      <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Try the Trade Analyzer &rarr;</a>
+      <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Try the Trade Analyzer</a>
     </div>
     <div class="mk-founder-sign mk-reveal">Alan Wolcovinsky, founder</div>
   </div>
@@ -1657,12 +1681,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
   <div class="footer-sub">Trade advice built on context, not generic rankings. Know the move before you make it.</div>
   <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
-    <a href="#analyzer" class="nav-link" onclick="document.getElementById('analyzer').scrollIntoView({behavior:'smooth'});return false">Trade Analyzer</a>
+    <a href="/analyze" class="nav-link" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Trade Analyzer</a>
     <span class="nav-link" onclick="switchScreen('community');loadCommunityFeed();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">Community</span>
     <a href="/privacy" class="nav-link" style="pointer-events:auto">Privacy Policy</a>
     <a href="/terms" class="nav-link" style="pointer-events:auto">Terms of Use</a>
   </div>
-  <div class="footer-legal">© 2026 Mac Draft · Not affiliated with Sleeper, FantasyCalc, or the NFL · Values from FantasyCalc, ADP from Fantasy Football Calculator · Fantasy data for entertainment purposes</div>
+  <div class="footer-legal">© 2026 Mac Draft · Not affiliated with Sleeper, FantasyCalc, or the NFL · Values from FantasyCalc, ADP from Sleeper, auction values from ESPN · Fantasy data for entertainment purposes</div>
 </footer>
 
 <!-- Phone tab bar. Primary destinations belong under the thumb, not behind a
@@ -1744,7 +1768,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         </div>
         <div id="pm-college" style="font-size:11px;color:var(--muted);margin-top:3px"></div>
       </div>
-      <button class="pm-close" onclick="closePlayerCard()">✕</button>
+      <button class="pm-close" onclick="closePlayerCard()" title="Cerrar" aria-label="Cerrar ficha del jugador"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="pm-body">
       <div id="pm-injury" class="pm-injury" style="display:none"></div>

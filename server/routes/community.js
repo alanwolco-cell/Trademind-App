@@ -66,9 +66,20 @@ const RESERVED_ACCT_ID = process.env.RESERVED_ACCT_ID || '';
 // other account may use it afterwards. Not as strong as real accounts, but it
 // makes impersonating an established manager impossible instead of trivial.
 // Returns an error string when the name is taken, or '' when the caller may use it.
+// El nombre se guarda tal cual llega y despues se pinta en la UI, asi que el
+// servidor no puede aceptar cualquier byte: una comilla en un username basta para
+// romper un atributo on* del cliente. Handles de Sleeper reales son alfanumericos
+// con guion bajo; punto y guion se admiten de sobra.
+const NAME_SHAPE = /^[A-Za-z0-9_.-]{1,40}$/;
+function badName(username) {
+  return NAME_SHAPE.test(String(username || '').trim()) ? '' : 'That name has characters we cannot accept. Use letters, numbers, dot, dash or underscore.';
+}
+
 function claimName(db, acctId, username) {
   const name = String(username || '').trim().toLowerCase();
   if (!name) return 'A name is required.';
+  const shapeErr = badName(username);
+  if (shapeErr) return shapeErr;
   if (!acctId) return 'Reconnect your account to post.';
   if (RESERVED_NAMES.has(name) && acctId !== RESERVED_ACCT_ID) return 'That name is reserved.';
   db.nameOwners = db.nameOwners || {};
@@ -175,12 +186,14 @@ router.post('/post', async (req, res) => {
   try {
     const { username, give_side, get_side, verdict, ktc_gap, headline, league_type, team_name, context, description, league_settings, rosters } = req.body || {};
     if (!username || !give_side || !get_side) return res.status(400).json({ error: 'missing fields' });
+    const nameShapeErr = badName(username);
+    if (nameShapeErr) return res.status(400).json({ error: nameShapeErr });
     if (!configured()) return res.status(503).json({ error: 'storage not configured' });
     // How the trade came about, so readers know what opinion you're after.
     const ctx = ['incoming', 'outgoing', 'processed'].includes(context) ? context : 'outgoing';
     const db = await readDb();
     const post = {
-      id: uid(), username, owner: readAcctId(req), give_side, get_side,
+      id: uid(), username: String(username).slice(0, 40), owner: readAcctId(req), give_side, get_side,
       verdict: verdict || 'unknown', ktc_gap: ktc_gap || 0,
       headline: headline || '', league_type: league_type || 'dynasty',
       team_name: team_name || '', context: ctx, anon: true,
@@ -253,10 +266,17 @@ router.post('/opinions', async (req, res) => {
 
 router.post('/opinion-like/:opinionId', async (req, res) => {
   try {
+    // Un like es un voto: se cuenta por CUENTA, una sola vez. Antes era anonimo y
+    // repetible, asi que un bucle inflaba el contador y el karma del autor.
+    const liker = requireAcctId(req, res);
+    if (!liker) return;
     const db = await readDb();
     let found = null;
     Object.values(db.opinions).forEach(arr => arr.forEach(o => { if (o.id === req.params.opinionId) found = o; }));
     if (!found) return res.status(404).json({ error: 'not found' });
+    found.likers = found.likers || {};
+    if (found.likers[liker]) return res.json({ new_like_count: found.like_count || 0 });
+    found.likers[liker] = 1;
     found.like_count = (found.like_count || 0) + 1;
     if (db.users[found.username]) db.users[found.username].bk_balance += 5;
     await writeDb(db);
@@ -467,6 +487,7 @@ router.post('/feedback', async (req, res) => {
   try {
     const { username, text } = req.body || {};
     if (!text || !String(text).trim()) return res.status(400).json({ error: 'empty' });
+    if (username && badName(username)) return res.status(400).json({ error: badName(username) });
     if (!configured()) return res.status(503).json({ error: 'storage not configured' });
     const db = await readDb();
     if (!db.feedback) db.feedback = [];

@@ -7,15 +7,21 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// El repo se resuelve desde la ubicacion de ESTE script, no desde una ruta
+// absoluta de la maquina de nadie: si no, el gate solo corre en un portatil.
+// --app / --html siguen permitiendo auditar un build candidato.
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const _arg = (n, d) => { const i = process.argv.indexOf(n); return i > -1 && process.argv[i+1] ? process.argv[i+1] : d; };
+const APP_PATH = _arg('--app', path.join(REPO, 'public/app.js'));
+const HTML_PATH = _arg('--html', path.join(REPO, 'public/index.html'));
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../../..', 'Users/wolco/Development/trademind-app');
-const APP = fs.readFileSync('/Users/wolco/Development/trademind-app/public/app.js', 'utf8');
+const APP = fs.readFileSync(APP_PATH, 'utf8');
 const BASE = 'https://trademindff.com';
 
 const values = {};
 function el(id) {
   return {
-    id, style: {}, dataset: {}, options: [], children: [],
+    id, style: { setProperty(k,v){ this[k]=v; }, removeProperty(k){ delete this[k]; }, getPropertyValue(){ return ''; } }, dataset: {}, options: [], children: [],
     classList: { add() { }, remove() { }, toggle() { }, contains: () => false },
     get value() { return values[id] != null ? values[id] : ''; },
     set value(v) { values[id] = v; },
@@ -188,6 +194,24 @@ while (MD.pickIdx < MD.order.length && guard++ < 400) {
   sandbox.mdUserPick(p);
 }
 check('draft ran to completion', MD.pickIdx >= MD.order.length, `pickIdx=${MD.pickIdx}/${MD.order.length}`);
+// ── el cierre del draft TIENE que verse ─────────────────────────────────────
+// mdFinish calcula nota, agujeros, steal/reach, ranking de sala y "Mac on
+// every pick" y hasta ahora los entregaba por mdMacSay, que esta muda por
+// regla del dueno y ademas VACIA su contenedor: todo eso se calculaba y se
+// tiraba. El usuario terminaba 15 rondas viendo "Mac grades your board:" y
+// nada debajo. Este check mira el contenedor propio del veredicto.
+const _vd = document.getElementById('md-verdict').innerHTML || '';
+check('verdict: the closing card actually renders', _vd.length > 200, `innerHTML length=${_vd.length}`);
+check('verdict: carries the letter grade', /Value grade/i.test(_vd) && /grade [A-D]/.test(_vd), _vd.slice(0, 160));
+check('verdict: carries the roster shape', /\d+ QB \/ \d+ RB \/ \d+ WR \/ \d+ TE/.test(_vd));
+// La lectura del roster tiene CINCO ramas en mdFinish, y "Balanced board" solo
+// sale si ninguna otra hablo: con un roster WR-heavy salen los WR y no aparece
+// ni "Holes to fix" ni "Balanced board". Comprobar solo esas dos hacia el check
+// inestable (fallaba 3 de cada 10 corridas, por la aleatoriedad con la que se
+// reparten los arquetipos). Se comprueban las cinco ramas.
+check('verdict: carries a roster read', /Holes to fix|Balanced board|WR-heavy build|is a luxury you can flip|You waited on QB until Round/.test(_vd), _vd.slice(0, 200));
+check('verdict: hands over the two closing actions', /mdDownloadRoster\(0\)/.test(_vd) && /How did I do in my last mock draft/.test(_vd));
+check('verdict: Mac stays silent in his own box', (document.getElementById('md-sage').innerHTML || '') === '');
 const strip = document.getElementById('md-rstrip').innerHTML;
 check('mobile: roster strip renders slots with filled faces', strip.indexOf('rs-slot') >= 0 && strip.indexOf('rs-slot filled') >= 0 && strip.indexOf('BN') >= 0, strip.slice(0, 120));
 const picksAtEnd = MD.picks.length;
@@ -203,6 +227,36 @@ check('randomize-all deals every seat a personality', allSet, JSON.stringify(pro
 check('randomize-all skips the user seat', !profs[3] || !profs[3].arch);
 sandbox.mdProfilesClear();
 check('clear wipes the saved profiles', sandbox.localStorage.getItem('tm_md_profiles') == null);
+
+// ── el roster que el AUTO-DRAFT arma tiene que ser legal ────────────────────
+// Los bots tienen un STARTER-FILL GATE en mdAdvance y llevan 6600 rosters sin
+// un fallo. El asiento del usuario no lo tenia: mdRecommend solo tenia TOPES
+// (qbCap/teCap), nunca un piso. Con los ajustes por defecto (12 equipos, 8
+// rondas) el auto-draft terminaba RB4/WR4 - cero QB y cero TE - mientras los
+// 12 bots terminaban legales. Y mdRecommend es tambien lo que Mac le muestra
+// a un humano, asi que el que le hacia caso llegaba al mismo roster ilegal.
+// (va justo antes del bloque de subasta, que fija sus propios `values`: asi
+// estas salas extra no le mueven el asiento del usuario a los checks de perfiles)
+for (const _room of [{ r: '8', sf: '1qb' }, { r: '10', sf: '1qb' }, { r: '15', sf: 'sf' }]) {
+  values['md-rounds'] = _room.r; values['md-format'] = _room.sf; values['md-teams'] = '12'; values['md-slot'] = '5';
+  await sandbox._startMockDraftRun();
+  const M2 = sandbox.MD;
+  let g2 = 0;
+  // exactamente lo que hace _mdAutoPick: la cola, si no MD.lastRec (o sea
+  // mdRecommend), si no el mejor disponible
+  while (M2.pickIdx < M2.order.length && g2++ < 400) {
+    if (!M2.onClock) break;
+    let p2 = (M2.lastRec && M2.pool.indexOf(M2.lastRec) >= 0) ? M2.lastRec : null;
+    if (!p2) p2 = M2.pool.filter(x => x.pos !== 'K' && x.pos !== 'DEF')[0] || M2.pool[0];
+    if (!p2) break;
+    sandbox.mdUserPick(p2);
+  }
+  const _cnt = {}; (M2.mine || []).forEach(p => { _cnt[p.pos] = (_cnt[p.pos] || 0) + 1; });
+  const _need = M2.sf ? { QB: 2, RB: 2, WR: 2, TE: 1 } : { QB: 1, RB: 2, WR: 2, TE: 1 };
+  const _miss = Object.keys(_need).filter(k => (_cnt[k] || 0) < _need[k]);
+  check(`autodraft: ${_room.r}-round ${_room.sf} roster is startable`, _miss.length === 0,
+    `missing ${_miss.join(',') || 'nothing'} - got ${JSON.stringify(_cnt)}`);
+}
 
 // AUCTION: exit mid-room then restart must not double-run timer chains
 values['md-dtype'] = 'auction';
@@ -489,7 +543,7 @@ sandbox._AU_FAST = 0;
 check('pace: real delays without the flag', sandbox._auDelay(2000) === 2000 && sandbox._auBeatMs() >= 1400 && sandbox._auBeatMs() <= 2200);
 sandbox._AU_FAST = 1;
 // decision beat never touches pacing: source-level assertion
-const src = (await import('node:fs')).default.readFileSync('/Users/wolco/Development/trademind-app/public/app.js', 'utf8');
+const src = (await import('node:fs')).default.readFileSync(APP_PATH, 'utf8');
 const beatBody = src.slice(src.indexOf('function _auBidOnce'), src.indexOf('function auBidStep'));
 check('pace: _auBidOnce never reads AU_PACE or timers', beatBody.indexOf('AU_PACE') < 0 && beatBody.indexOf('setTimeout') < 0);
 // GOING banner renders in the lot card at going>=1

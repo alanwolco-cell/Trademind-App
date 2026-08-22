@@ -27,6 +27,7 @@ html.v11, html.v12{
   /* the brand, kept - flat, never ramped */
   --accent:#7c5cbf;
   --accent-bright:#9b72e8;
+  --accent-btn:#7c47e1;
   --accent-dim:rgba(155,114,232,.13);
   --green:#30d158;
   --red:#ff453a;
@@ -34,8 +35,8 @@ html.v11, html.v12{
   /* Apple's continuous-ish radii */
   --radius:12px;
   --radius-lg:18px;
-  --font-head:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
-  --font-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --font-head:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-body:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,system-ui,"Segoe UI",Roboto,Arial,sans-serif;
   --ap-spring:cubic-bezier(.16,1,.3,1);
   --ap-ease:cubic-bezier(.4,0,.2,1);
 }

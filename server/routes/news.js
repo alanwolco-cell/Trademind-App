@@ -349,9 +349,12 @@ router.get('/articles', async (req, res) => {
           const link = pick('link');
           const desc = pick('description').replace(/<[^>]+>/g, '').slice(0, 160);
           const imgM = it.match(/<media:content[^>]*url="([^"]+)"/);
+          const pubM = it.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+          const pubTs = pubM ? Date.parse(pubM[1].trim()) : NaN;
           if (title && link) articles.push({
             headline: title.slice(0, 140), description: desc,
-            link, image: imgM ? imgM[1] : null, published: null, source: 'Yahoo Sports',
+            link, image: imgM ? imgM[1] : null,
+            published: isNaN(pubTs) ? null : new Date(pubTs).toISOString(), source: 'Yahoo Sports',
           });
         });
       }
@@ -360,9 +363,11 @@ router.get('/articles', async (req, res) => {
     // notes with a link back to the full story on rotowire.com
     try {
       const rw = await fetchRotoNews();
+      // fetchRotoNews ya calcula i.ts (news.js:42); tirarlo dejaba al usuario
+      // sin ninguna senal de frescura en el grid.
       rw.slice(0, 8).forEach(i => articles.push({
         headline: i.title.slice(0, 140), description: i.description,
-        link: i.link, image: null, published: null, source: 'RotoWire',
+        link: i.link, image: null, published: i.ts ? new Date(i.ts).toISOString() : null, source: 'RotoWire',
       }));
     } catch (e) { console.error('[news] rotowire:', e.message); }
     // Fantasy-relevant only: player/roster/coaching news stays, business and
@@ -377,19 +382,40 @@ router.get('/articles', async (req, res) => {
     // Yahoo, AND RotoWire. Keep ONE copy per story (Jaccard >= 0.5 on the
     // significant headline words = same story), and prefer the copy with a picture.
     const _stop = new Set('the a an of to in on for and or with his her its at is are was be by from as this that after over into out off up down not new nfl his has had will who what'.split(' '));
-    const _sig = (a) => new Set(((a.headline || '').toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => w.length > 2 && !_stop.has(w)));
+    // El titular de RotoWire es "Nombre Apellido: nota", y ese prefijo mete
+    // palabras que el titular de ESPN no tiene, hundiendo el Jaccard por debajo
+    // del umbral. Se normaliza antes de comparar.
+    const _headline = (a) => {
+      let h = (a.headline || '').toLowerCase();
+      const c = h.indexOf(':');
+      if (c > 0 && c < 32) h = h.slice(0, c) + ' ' + h.slice(c + 1);
+      return h;
+    };
+    const _sig = (a) => new Set((_headline(a).match(/[a-z0-9]+/g) || []).filter(w => w.length > 2 && !_stop.has(w)));
+    // Segunda regla: dos titulares que nombran a la MISMA persona y comparten un
+    // verbo de la misma familia son la misma noticia, aunque el Jaccard no llegue.
+    const _people = (a) => new Set(((a.headline || '').match(/\b[A-Z][a-z]+ [A-Z][a-z'’]+\b/g) || []).map(s => s.toLowerCase()));
+    const _stems = (a) => new Set((_headline(a).match(/[a-z]{4,}/g) || []).map(w => w.replace(/(ed|es|ing|s)$/, '')));
+    const _overlap = (s1, s2) => { let n = 0; s1.forEach(w => { if (s2.has(w)) n++; }); return n; };
     const _same = (s1, s2) => {
       if (!s1.size || !s2.size) return false;
-      let inter = 0; s1.forEach(w => { if (s2.has(w)) inter++; });
+      const inter = _overlap(s1, s2);
       const union = s1.size + s2.size - inter;
-      return union > 0 && inter / union >= 0.5;
+      // 0.34, no 0.50: "Falcons quarterback Michael Penix fully cleared to
+      // practice" y "Michael Penix: Cleared for team drills" dan 0.30 y las dos
+      // salian en el grid.
+      return union > 0 && inter / union >= 0.34;
     };
-    const deduped = [], sigs = [];
+    const deduped = [], sigs = [], ppl = [], stm = [];
     for (const a of filtered) {
-      const sa = _sig(a);
+      const sa = _sig(a), pa = _people(a), ta = _stems(a);
       let dup = -1;
-      for (let i = 0; i < sigs.length; i++) { if (_same(sigs[i], sa)) { dup = i; break; } }
-      if (dup === -1) { deduped.push(a); sigs.push(sa); }
+      for (let i = 0; i < sigs.length; i++) {
+        // misma noticia por solapamiento de palabras, O por misma persona
+        // nombrada mas un verbo compartido
+        if (_same(sigs[i], sa) || (_overlap(ppl[i], pa) > 0 && _overlap(stm[i], ta) >= 2)) { dup = i; break; }
+      }
+      if (dup === -1) { deduped.push(a); sigs.push(sa); ppl.push(pa); stm.push(ta); }
       else if (!deduped[dup].image && a.image) { deduped[dup].image = a.image; } // upgrade to the pictured copy
     }
     // ── Picture backfill: for stories that arrived text-only (RotoWire, Yahoo),

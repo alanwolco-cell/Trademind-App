@@ -26,7 +26,9 @@ function snakeOrder(teams, rounds) {
 function _isHost(doc, body) {
   const cid = String((body || {}).cid || '');
   if (doc.hostCid) return cid === doc.hostCid;
-  return parseInt((body || {}).seat) === 0;
+  // Sin hostCid no hay a quien creerle: "yo soy el asiento 0" lo dice cualquiera que
+  // tenga el codigo de sala. Se falla cerrado.
+  return false;
 }
 // Vercel Blob enforces a ~60s minimum CDN cache on overwritten paths - deadly
 // for a live draft. So every update is a NEW versioned blob (unique URL, never
@@ -102,7 +104,11 @@ router.post('/create', async (req, res) => {
     const rounds = Math.min(16, Math.max(3, parseInt(b.rounds) || 8));
     const pool = Array.isArray(b.pool) ? b.pool.slice(0, 260) : [];
     if (pool.length < teams * rounds) return res.status(400).json({ error: 'pool too small' });
-    const hostCid = String(b.cid || '').slice(0, 40) || null;
+    // Una sala SIEMPRE tiene un host identificable. Si el cliente no manda cid (storage
+    // bloqueado, cliente viejo), el servidor mintea uno y se lo devuelve: sin esto la
+    // sala nace sin dueno y las acciones de host quedan sin nadie que las pueda ejecutar.
+    const hostCid = String(b.cid || '').slice(0, 40)
+      || ('s' + require('crypto').randomBytes(12).toString('hex'));
     const doc = {
       code: code4(), created: Date.now(), status: 'lobby', teams, rounds,
       clock: Math.min(300, Math.max(10, parseInt(b.clock) || 60)),
@@ -111,7 +117,9 @@ router.post('/create', async (req, res) => {
       order: snakeOrder(teams, rounds), pickIdx: 0, picks: [], pool,
     };
     await writeRoom(doc);
-    res.json({ code: doc.code, seat: 0, host: true });
+    // `cid` viaja de vuelta para el caso en que lo minteamos aca: el cliente tiene que
+    // guardarlo o perderia el control de la sala que acaba de crear.
+    res.json({ code: doc.code, seat: 0, host: true, cid: hostCid });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -189,7 +197,7 @@ router.post('/:code/start', async (req, res) => {
     if (!doc) return res.status(404).json({ error: 'room not found' });
     if (doc.status !== 'lobby') return res.status(400).json({ error: 'already started' });
     const scid = String((req.body || {}).cid || '');
-    const startHost = doc.hostCid ? (scid === doc.hostCid) : true;
+    const startHost = !!doc.hostCid && scid === doc.hostCid;
     if (!startHost) return res.status(403).json({ error: 'only the host can start' });
     doc.status = 'drafting';
     autoPickIfNeeded(doc);

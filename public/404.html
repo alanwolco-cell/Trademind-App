@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, follow">
+<title>Page not found | Mac Draft</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:#0d0817;color:#e7e3f0;
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    padding:32px 22px}
+  .wrap{max-width:460px;text-align:center}
+  img.mac{width:96px;height:96px;object-fit:contain;margin-bottom:18px}
+  h1{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    font-size:28px;line-height:1.15;margin:0 0 10px;font-weight:700}
+  p{color:#a9a2bd;margin:0 0 26px;font-size:15px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  a.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+    padding:12px 24px;border-radius:100px;text-decoration:none;font-weight:600;font-size:15px}
+  a.primary{background:#9b72e8;color:#fff}
+  a.quiet{background:transparent;color:#9b72e8;border:1px solid rgba(155,114,232,.4)}
+  a.home{display:inline-block;margin-top:22px;color:#8f88a3;font-size:13px;text-decoration:none}
+  a.home:hover{color:#e7e3f0}
+  @media (max-width:420px){ .row{flex-direction:column} a.btn{width:100%} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="mac" src="/sage/sage-256.png" alt="">
+    <h1>That page doesn't exist.</h1>
+    <p>The link is wrong or the page moved. Here is the way back in.</p>
+    <div class="row">
+      <a class="btn primary" href="/mock">Start a mock draft</a>
+      <a class="btn quiet" href="/sage">Ask Mac</a>
+    </div>
+    <a class="home" href="/">Back to Mac Draft</a>
+  </div>
+</body>
+</html>

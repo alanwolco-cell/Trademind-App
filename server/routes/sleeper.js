@@ -271,4 +271,75 @@ router.get('/img', async (req, res) => {
   } catch (e) { res.status(502).send('proxy error'); }
 });
 
+// ── Slug -> player, for the public /player/:slug pages ───────────────────────
+// The page renderer has to know whether a slug is a real player before it can
+// choose between honest meta tags and a 404, and it cannot ask the browser.
+// It reuses the same /tmp player cache the endpoints above already keep warm.
+// Same slug rule as playerSlug() in public/app.js: change one, change both.
+const _slugify = (n) => String(n || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const _stripSlugSuffix = (s) => s.replace(/-(jr|sr|ii|iii|iv|v)$/, '');
+
+let _slugIndex = null, _slugIndexTs = 0;
+
+function buildSlugIndex(data) {
+  const idx = Object.create(null);
+  Object.keys(data).forEach(id => {
+    const p = data[id];
+    if (!p || !p.fantasy_positions) return;
+    // Same population the app itself loads (see /players/nfl/slim above), so a
+    // slug that opens a card in the app never 404s here, and an offensive
+    // lineman never gets a page.
+    const skill = p.fantasy_positions.some(x => ['QB', 'RB', 'WR', 'TE'].includes(x));
+    const kdst = (p.fantasy_positions.includes('K') && p.team && p.status === 'Active')
+      || p.fantasy_positions.includes('DEF');
+    if (!skill && !kdst) return;
+
+    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+    const slug = _slugify(name);
+    if (!slug) return;
+
+    const entry = {
+      id, name, slug,
+      pos: (p.fantasy_positions || [])[0] || null,
+      team: p.team || null,
+      active: p.status === 'Active' && !!p.team,
+    };
+    // 37 slugs are shared by two or more players, almost always a current
+    // player and a retired one. Whoever is on a roster today owns the URL, so
+    // /player/kyle-williams opens the rookie, not the name that left in 2019.
+    const prev = idx[slug];
+    if (!prev || (entry.active && !prev.active)) idx[slug] = entry;
+    // Sources disagree on suffixes: FantasyCalc writes "Marvin Harrison Jr",
+    // Sleeper writes "Marvin Harrison". Index the suffix-free spelling too so
+    // both links land on the same page instead of one of them 404ing.
+    const bare = _stripSlugSuffix(slug);
+    if (bare !== slug && !idx[bare]) idx[bare] = entry;
+  });
+  return idx;
+}
+
+async function playerBySlug(slug) {
+  const key = _slugify(slug);
+  if (!key) return null;
+  if (!_slugIndex || Date.now() - _slugIndexTs > CACHE_TTL_MS) {
+    let data = readPlayerCache();
+    if (!data) { data = await sleeperFetch('/players/nfl'); writePlayerCache(data); }
+    _slugIndex = buildSlugIndex(data);
+    _slugIndexTs = Date.now();
+  }
+  return _slugIndex[key] || _slugIndex[_stripSlugSuffix(key)] || null;
+}
+
+// Shared with server/lib/roster.js: the live player master, file-cached for an
+// hour. One writer, one TTL, so nothing else has to re-implement this cache.
+async function getPlayers() {
+  const cached = readPlayerCache();
+  if (cached) return cached;
+  const data = await sleeperFetch('/players/nfl');
+  writePlayerCache(data);
+  return data;
+}
+
 module.exports = router;
+module.exports.playerBySlug = playerBySlug;
+module.exports.getPlayers = getPlayers;

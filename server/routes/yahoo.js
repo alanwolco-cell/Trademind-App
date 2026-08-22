@@ -58,7 +58,8 @@ async function yahooGet(pathPart, token) {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`Yahoo Fantasy API returned ${res.status}: ${body.slice(0, 220)}`);
+    console.error('[yahoo] %d: %s', res.status, body.slice(0, 220));
+    throw new Error('Yahoo Fantasy API returned ' + res.status);
   }
   return res.json();
 }
