@@ -46,7 +46,16 @@ function tmAcct(){
   }catch(_){
     // Private mode with storage blocked: fall back to a per-session key so the
     // app still works, accepting that ownership resets when the tab closes.
-    if(!window._tmAcctMem)window._tmAcctMem=String(Date.now())+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+    if(!window._tmAcctMem){
+      // Aunque sea efimera, esta llave manda suscripcion, trades y votos: tiene que ser
+      // impredecible. Math.random no lo es. Si tampoco hay crypto, no inventamos una
+      // credencial debil: se devuelve vacio y el server trata la sesion como anonima.
+      try{
+        var mb=new Uint8Array(32);
+        (window.crypto||window.msCrypto).getRandomValues(mb);
+        window._tmAcctMem=Array.prototype.map.call(mb,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+      }catch(__){window._tmAcctMem='';}
+    }
     return window._tmAcctMem;
   }
 }
@@ -2159,8 +2168,12 @@ function _sageLeagueCtx(){
         if(core.length)rosters.push({team:String(tn).slice(0,28),mine:_isMyRoster(r0),core:core});
       });
     }catch(_){}
-    return {mode:leagueMode,keeper:!!window._isKeeper,league:leagueName||'',teams:n,record:g?(w+'-'+l):'',situation:sit,why:why,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock(),rosters:rosters};
-  }catch(_){return {mode:leagueMode,keeper:!!window._isKeeper,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock()};}
+    // El formato viaja como DATO. Antes el servidor lo deducia con un regex sobre
+    // rules y el nombre de la liga: una superflex real se cotizaba como 1QB (los QB
+    // valen ~87% mas en superflex) y una liga 1QB llamada "SF Bay Dynasty" se
+    // cotizaba como superflex. Fallaba en los dos sentidos.
+    return {mode:leagueMode,keeper:!!window._isKeeper,superflex:!!(window.leagueFormat&&(leagueFormat.hasSuperFlex||leagueFormat.has2QB)),ppr:(window.leagueFormat&&leagueFormat.ppr!=null)?leagueFormat.ppr:1,league:leagueName||'',teams:n,record:g?(w+'-'+l):'',situation:sit,why:why,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock(),rosters:rosters};
+  }catch(_){return {mode:leagueMode,keeper:!!window._isKeeper,superflex:!!(window.leagueFormat&&(leagueFormat.hasSuperFlex||leagueFormat.has2QB)),ppr:(window.leagueFormat&&leagueFormat.ppr!=null)?leagueFormat.ppr:1,youSaid:_youSaid(),rules:_lfRules(),lastMock:_sageLastMock()};}
 }
 // Latest mock draft as one compact line so Mac can grade it in chat
 function _sageLastMock(){
@@ -2302,7 +2315,12 @@ function _sageClean(txt){
     .replace(/\b(costs?|priced at|going for)\s+(?:about\s+|around\s+|roughly\s+|nearly\s+)?[\d,]{4,}\b/gi,'$1 a premium')
     .replace(/\b(value|price|cost)\s+(dipped|fell|slid|dropped|slipped)\s+to\s+(?:about\s+|around\s+)?[\d,]{4,}\b/gi,'$1 $2 hard');
 }
-function _sageStripNav(txt){return _sageClean(String(txt).replace(/\[\[go:[a-z]*\]\]/gi,'').replace(/\[\[go:[a-z]*$/i,'').replace(/[ \t]+(\n|$)/g,'$1').replace(/\s+$/,''));}
+// Solo saca los tokens de navegacion. NO normaliza guiones: el board del mock
+// parte cada lane por el guion separador ("Jugador - razon") y limpiarlo antes
+// del split convierte ese separador en coma, con lo que el nombre del jugador
+// desaparece de la fila.
+function _sageStripNavRaw(txt){return String(txt).replace(/\[\[go:[a-z]*\]\]/gi,'').replace(/\[\[go:[a-z]*$/i,'').replace(/[ \t]+(\n|$)/g,'$1').replace(/\s+$/,'');}
+function _sageStripNav(txt){return _sageClean(_sageStripNavRaw(txt));}
 function _sageNavKeys(txt){var out=[],seen={},m,re=/\[\[go:([a-z]+)\]\]/gi;while((m=re.exec(String(txt)))){var k=m[1].toLowerCase();if(MAC_NAV[k]&&!seen[k]){seen[k]=1;out.push(k);}}return out.slice(0,2);}
 function _sageRenderNav(container,txt){
   var keys=_sageNavKeys(txt);if(!keys.length||!container)return;
@@ -10062,7 +10080,8 @@ async function mdAskSageLive(pid,hostId){
 }
 function _mdSageLiveHtml(txt){
   // same nav-token stripping as the main chat, so [[go:...]] never shows raw
-  try{txt=_sageStripNav(txt);}catch(_){txt=String(txt).replace(/\[\[go:[^\]]*\]\]/g,'').trim();}
+  // Sin normalizar guiones todavia: los lanes se parsean por el guion separador.
+  try{txt=_sageStripNavRaw(txt);}catch(_){txt=String(txt).replace(/\[\[go:[^\]]*\]\]/g,'').trim();}
   // Lane format: Mac answers in risk lanes (SAFE / UPSIDE / VALUE / NEED),
   // one per line. Render them as clean rows; fall back to prose if the model
   // ignored the format.
@@ -10072,8 +10091,8 @@ function _mdSageLiveHtml(txt){
       +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px"><img src="/sage/sage-excited-64.png" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-8px;margin-right:6px" onerror="this.style.display=\'none\'">Mac: pick your lane</div>'
       +rows.map(function(r){
         var parts=r.body.split(/\s+-\s+|\s+–\s+/);
-        var who=parts.length>1?parts[0]:'';
-        var why=parts.length>1?parts.slice(1).join(' - '):r.body;
+        var who=parts.length>1?_sageClean(parts[0]):'';
+        var why=_sageClean(parts.length>1?parts.slice(1).join(' - '):r.body);
         return '<div style="display:flex;gap:9px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border)">'
           +'<span style="flex:none;width:58px;font-size:9.5px;font-weight:800;letter-spacing:.06em;color:var(--accent-bright)">'+r.lane+'</span>'
           +'<span style="font-size:12.5px;line-height:1.55;color:var(--muted2)">'+(who?'<strong style="color:var(--text)">'+escHtml(who)+'</strong> · ':'')+escHtml(why)+'</span></div>';
@@ -10285,8 +10304,21 @@ async function _startMockDraftRun(){
     try{var _ls=_mdLineupSlots();_lf=(_ls.QB||0)+(_ls.RB||0)+(_ls.WR||0)+(_ls.TE||0)+(_ls.FLEX||0)+(_ls.K||0)+(_ls.DEF||0);}
     catch(_){_lf=(MD.sf?2:1)+2+2+1+1+(MD.noK?0:1)+(MD.noD?0:1);}
     if(MD.rounds<_lf){
-      MD.rounds=_lf;
-      var _rsel=document.getElementById('md-rounds');if(_rsel)_rsel.value=String(MD.rounds);
+      // El selector solo ofrece 5/8/10/12/14/15/16, asi que asignarle un valor
+      // que no existe (el piso suele ser 9) lo deja SIN seleccion: se veia en
+      // blanco y, al volver a Start, parseInt('') daba NaN y revertia a 8 en
+      // silencio para que el piso lo volviera a subir. Se sube a la primera
+      // opcion que alcance, y si ninguna alcanza se anade.
+      var _rsel=document.getElementById('md-rounds');
+      if(_rsel){
+        var _opt=Array.prototype.filter.call(_rsel.options,function(o){return parseInt(o.value||o.text,10)>=_lf;})
+          .sort(function(x,y){return parseInt(x.value||x.text,10)-parseInt(y.value||y.text,10);})[0];
+        if(!_opt){_opt=document.createElement('option');_opt.text=String(_lf);_opt.value=String(_lf);_rsel.appendChild(_opt);}
+        _rsel.value=_opt.value||_opt.text;
+        MD.rounds=parseInt(_rsel.value,10);
+      } else {
+        MD.rounds=_lf;
+      }
     }
   }
   // THE RULE: user data outranks the random personas. Any position the user's
@@ -12959,7 +12991,11 @@ function auBotNominate(slot){
     for(var s2=1;s2<=MD.teams;s2++){
       if(s2===slot||AU.slotsLeft[s2]<=0)continue;
       var r2=MD.aiRosters[s2]||{};
-      if(auNeed(r2,p.pos,AU.slotsLeft[s2])>=0.8)return true;
+      // ...y que ademas PUEDA pagar por encima del $1 de apertura. Sin esto el
+      // senuelo se lo queda el propio nominador a $1 cuando la sala ya esta en
+      // la ruina: medido en el arbol aplicado, el usuario pasivo acababa con
+      // SEIS defensas por nominarlas como senuelo una y otra vez.
+      if(auNeed(r2,p.pos,AU.slotsLeft[s2])>=0.8&&(AU.budgets[s2]-(AU.slotsLeft[s2]-1))>=2)return true;
     }
     return false;
   };
@@ -13427,7 +13463,11 @@ function auBotNominateUser(){
     for(var s2=1;s2<=MD.teams;s2++){
       if(s2===MD.mySlot||AU.slotsLeft[s2]<=0)continue;
       var r2=MD.aiRosters[s2]||{};
-      if(auNeed(r2,p.pos,AU.slotsLeft[s2])>=0.8)return true;
+      // ...y que ademas PUEDA pagar por encima del $1 de apertura. Sin esto el
+      // senuelo se lo queda el propio nominador a $1 cuando la sala ya esta en
+      // la ruina: medido en el arbol aplicado, el usuario pasivo acababa con
+      // SEIS defensas por nominarlas como senuelo una y otra vez.
+      if(auNeed(r2,p.pos,AU.slotsLeft[s2])>=0.8&&(AU.budgets[s2]-(AU.slotsLeft[s2]-1))>=2)return true;
     }
     return false;
   };
@@ -14278,9 +14318,24 @@ function mdRenderBoard(){
 // flips the shared MD engine into "server owns the truth" mode.
 var MP={code:null,seat:null,isHost:false,myName:'',lobbySig:'',timer:null,tick:null,active:false,deadline:0,wasMy:false,lastSig:'',myPickCount:0};
 function _mpCid(){
-  var c=localStorage.getItem('tm_client_id');
-  if(!c){c='c'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem('tm_client_id',c);}
-  return c;
+  // En modo privado localStorage LANZA en vez de devolver null, y esta funcion se llama
+  // en cada accion de la sala: sin el try/catch, crear o unirse a una sala moria con una
+  // excepcion no atrapada y el usuario solo veia que el boton no hacia nada.
+  try{
+    var c=localStorage.getItem('tm_client_id');
+    if(!c){c=_mpNewCid();localStorage.setItem('tm_client_id',c);}
+    return c;
+  }catch(_){
+    if(!window._mpCidMem)window._mpCidMem=_mpNewCid();
+    return window._mpCidMem;
+  }
+}
+function _mpNewCid(){
+  try{
+    var b=new Uint8Array(12);
+    (window.crypto||window.msCrypto).getRandomValues(b);
+    return 'c'+Array.prototype.map.call(b,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+  }catch(_){return 'c'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);}
 }
 function _mpStep(step){
   ['mp-choose','mp-lobby','mp-bar'].forEach(function(id){
@@ -14326,6 +14381,9 @@ async function mpCreate(){
       name:nm,cid:_mpCid(),pool:pool})});
   var d=await r.json();
   if(!r.ok){alert(d.error||'Could not create room');return;}
+  // Si el servidor tuvo que mintear el cid (este navegador no pudo generar uno), se
+  // adopta: es la unica prueba de que somos el host de esta sala.
+  if(d.cid&&d.cid!==_mpCid()){try{localStorage.setItem('tm_client_id',d.cid);}catch(_){}}
   MP.code=d.code;MP.seat=d.seat;MP.isHost=!!d.host;MP.myName=nm;
   mpPoll();_mpSchedule(2000);
 }
@@ -16893,7 +16951,11 @@ function calculateOppRead(){
   setTimeout(function(){animateOppRead('sig3',vals.sig3);},240);
   try{setTimeout(function(){sndWin();},1150);}catch(_){}  // resolve chime when it locks in
 }
-function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// Escapa TODO lo que puede cerrar un contexto: las comillas simples y el backtick
+// importan porque este helper tambien alimenta strings JS dentro de atributos on*
+// (ver el boton Like de las opiniones). Sin ellas, un username con una comilla
+// rompia el string y ejecutaba codigo en la sesion de quien mirara la pagina.
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;');}
 
 function timeAgo(ts){
   var d=new Date(ts), now=new Date(), diff=Math.floor((now-d)/1000);
