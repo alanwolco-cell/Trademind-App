@@ -5527,6 +5527,61 @@ async function checkShareParam(){
 
 var _VALID_SCREENS=['home','analyze','league','research','learn','community','news','mock','sage'];
 var _heroDismissed=false; // once hidden (league connected), stays hidden
+// ── A10: arranque accesible + el reel del hero ──────────────────────────────
+// Corre una sola vez, en cuanto el DOM existe.
+(function(){
+  function a10boot(){
+    // 1. El reel. El markup ya trae data-src y preload="none", pero sin esto
+    //    nadie lo dispara: hoy el hero se queda en el poster para siempre.
+    var v=document.querySelector('video.mk-film');
+    if(v&&v.dataset.src&&!v.src){
+      var go=function(){v.src=v.dataset.src;v.play().catch(function(){});};
+      if(!('IntersectionObserver' in window))go();
+      else new IntersectionObserver(function(es,o){es.forEach(function(e){
+        if(e.isIntersecting){go();o.disconnect();}});},{rootMargin:'200px'}).observe(v);
+    }
+    // 2. Un solo <main> que abarque todo lo que va entre el nav y el footer.
+    //    Envolver solo los .screen no basta: en la home quedaria vacio y axe
+    //    sigue marcando landmark-one-main y 13 nodos de region.
+    if(!document.querySelector('main')){
+      var nav=document.querySelector('nav.nav'), foot=document.querySelector('footer');
+      if(nav){var m=document.createElement('main'); m.id='main';
+        nav.parentNode.insertBefore(m,nav.nextSibling);
+        var n=m.nextSibling; while(n&&n!==foot){var nx=n.nextSibling;m.appendChild(n);n=nx;}}
+    }
+    // 3. Un h1 por pantalla. Van ocultos: el diseno ya tiene su propio titulo
+    //    visible, lo que falta es el ancla para lectores de pantalla.
+    var T={'screen-mock':'Mock draft','screen-sage':'Ask Mac','screen-analyze':'Trade analyzer',
+      'screen-community':'Community','screen-league':'My league','screen-research':'Research',
+      'screen-learn':'Learn','screen-news':'News'};
+    Object.keys(T).forEach(function(id){var s=document.getElementById(id);
+      if(s&&!s.querySelector('h1')){var h=document.createElement('h1');h.className='sr-only';
+        h.textContent=T[id];s.insertBefore(h,s.firstChild);}});
+    // 4. Nombre accesible en los controles del mock. Los rotulos existen, pero
+    //    como <div>, asi que un lector de pantalla anuncia "combo box, Snake"
+    //    sin decir nunca de que es.
+    var L={'md-context':'How your league drafts','md-dtype':'Draft type','md-teams':'Teams',
+      'md-scoring':'Scoring','md-format':'Format','md-mode':'League mode','md-slot':'Your draft slot',
+      'md-rounds':'Rounds','md-clock':'Pick clock','md-clock-live':'Pick clock','md-sort':'Sort players',
+      'md-6pt':'6 point passing touchdowns','md-tep':'Tight end premium','md-rc-qb':'QB roster spots',
+      'md-rc-rb':'RB roster spots','md-rc-wr':'WR roster spots','md-rc-te':'TE roster spots',
+      'md-rc-k':'K roster spots','md-rc-def':'DEF roster spots'};
+    Object.keys(L).forEach(function(id){var e=document.getElementById(id);
+      if(e&&!e.getAttribute('aria-label'))e.setAttribute('aria-label',L[id]);});
+    // 5. Las barras de pestanas tienen scroll horizontal y no eran alcanzables
+    //    por teclado. tabindex y nada mas: poner role="tablist" dispara
+    //    aria-required-children porque los hijos no son role="tab" (probado).
+    document.querySelectorAll('.inner-tab-bar').forEach(function(b){b.tabIndex=0;});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',a10boot);
+  else a10boot();
+  // 6. Las fotos de jugador son decorativas: el nombre va al lado en texto.
+  //    Se pintan dinamicamente, asi que hace falta observar.
+  var fixAlt=function(){document.querySelectorAll('img:not([alt])').forEach(function(i){i.alt='';});};
+  fixAlt();
+  new MutationObserver(fixAlt).observe(document.documentElement,{childList:true,subtree:true});
+})();
+
 function switchScreen(name,_noPush){
   // Las clases boot-* solo mandan hasta la primera navegacion; a partir de ahi
   // los estilos inline de esta funcion son la fuente de verdad.
@@ -14192,7 +14247,7 @@ function _mdPaintViewBtns(v){
   document.querySelectorAll('.md-view-btn').forEach(function(b){
     var on=b.dataset.view===v;
     b.style.background=on?'var(--accent-bright)':'none';
-    b.style.color=on?'#0d0817':'var(--muted2)';
+    b.style.color=on?'#fff':'var(--muted2)';
   });
 }
 function mdSetView(v){
@@ -16552,8 +16607,8 @@ function _srcMeta(src){
   var _dk=document.documentElement.getAttribute('data-theme')!=='light';
   if(s.indexOf('RotoWire')>=0)return {c:_dk?'#6ea8ff':'#2f6fd6',label:'RotoWire'};
   if(s.indexOf('r/')===0)return {c:'#ff6314',label:s};
-  if(s.indexOf('Yahoo')>=0)return {c:'#6001d2',label:'Yahoo Sports'};
-  if(s.indexOf('ESPN')>=0)return {c:'#d50a0a',label:'ESPN'};
+  if(s.indexOf('Yahoo')>=0)return {c:_dk?'#b18cff':'#6001d2',label:'Yahoo Sports'};
+  if(s.indexOf('ESPN')>=0)return {c:_dk?'#ff6b6b':'#d50a0a',label:'ESPN'};
   return {c:'var(--accent-bright)',label:s||'News'};
 }
 function _analystCardHtml(a){

@@ -839,7 +839,7 @@ html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
   --accent:#6a3fff;
   --accent-bright:#6a3fff;
   --accent-dim:rgba(106,63,255,.08);
-  --green:#0a8f52;
+  --green:#087a46;
   --red:#d92d3f;
   /* the inline headings reference --font-head; the setup speaks SF */
   --font-head:var(--mk-font);
@@ -1718,7 +1718,7 @@ html[data-theme="light"]{
      Consume el token de A10. En el tema claro este acento juega LOS DOS
      roles: relleno de boton con texto blanco Y tinta sobre pagina/banda.
      El fallback solo cubre el caso de que el token no exista todavia. */
-  --mk-acc:var(--accent-btn,#8350e2);
+  --mk-acc:var(--accent-btn);
 }
 html.v11[data-theme="light"] .hero, html.v12[data-theme="light"] .hero{
   background:
@@ -1738,7 +1738,7 @@ html[data-theme="light"] .mk-dark .mk-sub{color:var(--mk-ink2)}
 html[data-theme="light"] .mk-dark .mk-eyebrow-acc{color:var(--mk-acc)}
 html[data-theme="light"] .mk-dark .mk-btnlink{color:var(--mk-acc)}
 /* el relleno de boton lo manda el token de relleno de A10, no el acento de tinta */
-html[data-theme="light"] .mk-dark .mk-btn{background:var(--accent-btn,#8350e2)}
+html[data-theme="light"] .mk-dark .mk-btn{background:var(--accent-btn)}
 html[data-theme="light"] .mk-lines{color:var(--mk-ink2)}
 html[data-theme="light"] .mk-lines-strong{color:var(--mk-ink)}
 html[data-theme="light"] .mk-lines .hl2{color:var(--mk-acc)}

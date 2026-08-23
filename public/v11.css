@@ -369,9 +369,9 @@ html.v11[data-theme="light"], html.v12[data-theme="light"]{
   --accent:#6a3fff;
   --accent-bright:#6a3fff;
   --accent-dim:rgba(106,63,255,.1);
-  --green:#0a8f52;
+  --green:#087a46;
   --red:#d92d3f;
-  --yellow:#b7791f;
+  --yellow:#946219;
 }
 html.v11[data-theme="light"] body, html.v12[data-theme="light"] body{background:var(--bg);color:var(--text)}
 html.v11[data-theme="light"] .nav, html.v12[data-theme="light"] .nav{background:rgba(246,246,247,.85);border-bottom-color:rgba(20,16,43,.08);box-shadow:none}

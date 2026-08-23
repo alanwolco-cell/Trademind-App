@@ -42,9 +42,20 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta name="twitter:image" content="https://macdraft.app/og.png?v=2026078546">
 <link rel="canonical" href="https://macdraft.app/">
 <script defer src="/_vercel/insights/script.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Familjen Grotesk auto-hospedada. Venia de Google Fonts con display=swap y,
+     desde que se quito Helvetica de la pila, la fuente web manda tambien en el
+     cuerpo: el intercambio reflowaba la pagina entera y el CLS subio a 0.1575.
+     Sirviendola desde el propio origen y precargando los dos pesos que se ven
+     primero, llega antes del primer pintado y no hay intercambio visible. Solo
+     el subconjunto latin: 49 KB los cuatro pesos. -->
+<link rel="preload" href="/fonts/familjen-grotesk-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/familjen-grotesk-700.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Familjen Grotesk';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/familjen-grotesk-400.woff2) format('woff2')}
+@font-face{font-family:'Familjen Grotesk';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/familjen-grotesk-500.woff2) format('woff2')}
+@font-face{font-family:'Familjen Grotesk';font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/familjen-grotesk-600.woff2) format('woff2')}
+@font-face{font-family:'Familjen Grotesk';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/familjen-grotesk-700.woff2) format('woff2')}
+</style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
 <link rel="stylesheet" href="/styles.css?v=2026082005">
