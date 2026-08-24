@@ -2010,3 +2010,14 @@ html{scroll-padding-top:76px}
   .pm-overlay{padding:0}
   .pm-card{max-width:100vw;width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
 }
+
+/* ── Perfil: filas de "lo que no dira todavia" ──────────────────────────────
+   Etiqueta y muestra en dos columnas a partir de 420px; por debajo se apilan,
+   porque a 390 las dos se parten a la vez y la fila deja de leerse. */
+.perfil-muda{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
+.perfil-muda-t{font-size:13px;color:var(--text)}
+.perfil-muda-n{font-size:11px;color:var(--muted2)}
+@media(min-width:420px){
+  .perfil-muda{flex-direction:row;justify-content:space-between;align-items:baseline;gap:12px}
+  .perfil-muda-n{text-align:right;flex:none}
+}

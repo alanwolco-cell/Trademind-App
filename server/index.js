@@ -78,6 +78,7 @@ app.use('/api/odds', require('./routes/odds'));
 app.use('/api/scout', require('./routes/scout'));
 app.use('/api/room', require('./routes/draftroom'));
 app.use('/api/billing', require('./routes/billing'));
+app.use('/api/perfil', require('./routes/perfil'));
 
 // Serve frontend
 // Static assets: a short TTL so repeat views skip the revalidation round-trip,
@@ -218,6 +219,11 @@ app.all(/^\/api\//, (req, res) => res.status(404).json({ error: 'not found' }));
 const SPA_ROUTES = new Set([
   '/', '/home', '/mock', '/sage', '/analyze', '/league', '/research',
   '/community', '/learn', '/news',
+  // /perfil is deliberately NOT in gen-sitemap.mjs and is disallowed in
+  // robots.txt: it is a private self-scouting tab for the owner, gated server
+  // side by PERFIL_ACCTS. It still has to restore from a cold URL, so it
+  // belongs here, but it must never be advertised to a crawler.
+  '/perfil',
 ]);
 
 // A missing file has to 404, not answer with HTML. Serving index.html for a

@@ -5525,7 +5525,7 @@ async function checkShareParam(){
   }catch(e){ console.warn("Invalid share param",e); }
 }
 
-var _VALID_SCREENS=['home','analyze','league','research','learn','community','news','mock','sage'];
+var _VALID_SCREENS=['home','analyze','league','research','learn','community','news','mock','sage','perfil'];
 var _heroDismissed=false; // once hidden (league connected), stays hidden
 // ── A10: arranque accesible + el reel del hero ──────────────────────────────
 // Corre una sola vez, en cuanto el DOM existe.
@@ -5593,6 +5593,7 @@ function switchScreen(name,_noPush){
   // News polling now lives with the Community News tab (_newsPollControl); if we
   // are navigating away from Community entirely, make sure it is stopped.
   if(name!=='community'){try{_newsPollControl(false);}catch(_){}}
+  if(name==='perfil'){try{renderPerfil();}catch(_){}}
   document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
   document.querySelectorAll(".screen-nav").forEach(function(n){n.classList.remove("active");});
   var screen=document.getElementById("screen-"+name);
@@ -17172,3 +17173,124 @@ async function shareTradeToForum(){
 
 // paint the mode togglers on boot so the purple active state shows everywhere
 setTimeout(function(){try{styleModeButtons(leagueMode);}catch(_){}} ,400);
+
+// ── PERFIL: self-scouting privado ──────────────────────────────────────────
+// La seccion que mas importa aqui no es la de hallazgos, es la de "todavia no
+// se". Un perfil que solo ensena lo que puede afirmar parece mas listo de lo
+// que es; ensenar lo que se niega a decir, y cuanto le falta para decirlo, es
+// lo que hace que se pueda confiar en lo que si afirma.
+var _perfilCargando=false;
+function _perfilFecha(ms){try{return new Date(ms).toISOString().slice(0,10);}catch(_){return '';}}
+
+function renderPerfil(){
+  var cuerpo=document.getElementById('perfil-cuerpo');
+  var muestra=document.getElementById('perfil-muestra');
+  if(!cuerpo||_perfilCargando)return;
+  var user=(localStorage.getItem('tm_username')||'').trim();
+  if(!user){
+    muestra.textContent='';
+    cuerpo.innerHTML='<div class="card" style="text-align:center;padding:28px 18px">'
+      +'<div style="font-weight:700;margin-bottom:6px">Connect your Sleeper account first</div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:14px">The profile is built from your real trade history, so it needs to know who you are.</div>'
+      +'<button class="btn-load" onclick="openConnectModal()">Connect</button></div>';
+    return;
+  }
+  _perfilCargando=true;
+  cuerpo.innerHTML='<div class="tm-skel-feed"><div class="tm-skel"></div><div class="tm-skel"></div><div class="tm-skel"></div></div>';
+  muestra.textContent='Reading your leagues...';
+  // El envoltorio global de fetch (arriba del archivo) ya adjunta x-tm-acct a
+  // toda llamada a /api, asi que aqui no hay que acordarse de nada.
+  fetch('/api/perfil?user='+encodeURIComponent(user)).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      _perfilCargando=false;
+      if(!res.ok){
+        muestra.textContent='';
+        cuerpo.innerHTML='<div class="card" style="padding:22px 18px"><div style="font-weight:700;margin-bottom:6px">Not available on this account</div>'
+          +'<div style="font-size:13px;color:var(--muted)">'+escHtml(res.d&&res.d.error||'Could not build the profile.')+'</div></div>';
+        return;
+      }
+      _perfilPintar(res.d,cuerpo,muestra);
+    })
+    .catch(function(){
+      _perfilCargando=false;
+      muestra.textContent='';
+      cuerpo.innerHTML='<div class="card" style="padding:22px 18px;font-size:13px;color:var(--muted)">Could not reach the profile service. Try again in a moment.</div>';
+    });
+}
+
+function _perfilPintar(p,cuerpo,muestra){
+  var m=p.muestra||{},f=p.flujo||{},e=p.edad||{},c=p.contrapartes||{};
+  muestra.textContent=(m.tradesPropios||0)+' trades of your own, across '+((p.ligas||[]).length)+' leagues'
+    +(p.ritmo?', '+_perfilFecha(p.ritmo.primero)+' to '+_perfilFecha(p.ritmo.ultimo):'');
+
+  var firmes=(p.afirmaciones||[]).filter(function(a){return a.estado==='confirmado';});
+  var mudas=(p.afirmaciones||[]).filter(function(a){return a.estado==='insuficiente'||a.estado==='sin_senal';});
+  var h='';
+
+  // El denominador va delante: sin el, un hallazgo suelto parece mas de lo que
+  // es. "2 de 5 patrones" deja ver que hubo un filtro y que la mayoria no paso.
+  h+='<div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin:4px 0 4px">What the data supports</div>'
+    +'<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">'
+    +(m.patronesEmitidos||0)+' of '+(m.patronesEvaluados||0)+' patterns tested clear the bar, after correcting for testing several at once.</div>';
+  if(!firmes.length){
+    h+='<div class="card" style="padding:18px;font-size:13px;color:var(--muted);margin-bottom:20px">Nothing clears the bar yet. That is a real answer, not a failure: with this many trades, anything else would be a guess.</div>';
+  } else {
+    h+='<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">';
+    firmes.forEach(function(a){
+      // Algunas afirmaciones son un reparto A/B y otras no (la concentracion de
+      // socios sale de un test de permutacion), asi que la linea de evidencia se
+      // arma segun lo que la afirmacion traiga, nunca asumiendo la forma.
+      var ev=(a.a!=null&&a.b!=null)?(a.a+' vs '+a.b+' &middot; '):'';
+      var pTxt=a.pEsPiso?('p &lt; '+a.pPiso):('p='+a.p);
+      h+='<div class="card" style="padding:14px 16px;border-left:3px solid var(--accent-btn)">'
+        +'<div style="font-weight:700;font-size:14px;margin-bottom:5px">'+escHtml(a.texto||'')+'</div>'
+        +'<div style="font-size:11.5px;color:var(--muted2)">'+ev+'n='+a.n+' &middot; '+pTxt+'</div></div>';
+    });
+    h+='</div>';
+  }
+
+  if(mudas.length){
+    h+='<div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin:4px 0 4px">What it will not say yet</div>'
+      +'<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Measured and rejected. Kept visible so you can see the profile is not guessing.</div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">';
+    mudas.forEach(function(a){
+      var razon=a.estado==='insuficiente'
+        ? 'needs '+a.falta+' more before it can mean anything'
+        : 'split is what a coin flip looks like (p='+a.p+')';
+      // A 390px las dos columnas se parten las dos y quedan ilegibles, asi que
+      // la fila se apila. La clase vive en styles.css con su media query.
+      h+='<div class="perfil-muda">'
+        +'<span class="perfil-muda-t">'+escHtml(_perfilNombre(a.label))+'</span>'
+        +'<span class="perfil-muda-n">n='+a.n+' &middot; '+razon+'</span></div>';
+    });
+    h+='</div>';
+  }
+
+  h+='<div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin:4px 0 10px">The raw count</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">';
+  h+=_perfilDato('You initiate',(p.iniciativa&&p.iniciativa.inicio)||0,'of '+((p.iniciativa&&(p.iniciativa.inicio+p.iniciativa.respuesta))||0)+' trades');
+  h+=_perfilDato('Picks in / out',(f.picksRecibidos||0)+' / '+(f.picksEnviados||0),'net '+(((f.picksRecibidos||0)-(f.picksEnviados||0))>=0?'+':'')+((f.picksRecibidos||0)-(f.picksEnviados||0)));
+  h+=_perfilDato('Age in / out',(e.recibida==null?'-':e.recibida)+' / '+(e.enviada==null?'-':e.enviada),(e.delta==null?'':'delta '+(e.delta>=0?'+':'')+e.delta+' years'));
+  h+=_perfilDato('Trade partners',c.distintas||0,'most frequent: '+(c.maxRepeticion||0)+' deals');
+  // Si el mapa de jugadores no trajo posiciones, el bloque posicional NO se
+  // dibuja: unos ceros ahi se leen como "no hay datos" y esconden el fallo.
+  if(!m.sinPosicion){
+    ['QB','RB','WR','TE'].forEach(function(ps){
+      h+=_perfilDato(ps+' in / out',((f.recibido&&f.recibido[ps])||0)+' / '+((f.enviado&&f.enviado[ps])||0),'');
+    });
+  }
+  h+='</div>';
+  if(m.sinPosicion)h+='<div style="font-size:12px;color:var(--yellow);margin-top:10px">Position breakdown withheld: '+m.sinPosicion+' players did not resolve to a position, so the split would be wrong.</div>';
+  if(e.nota)h+='<div style="font-size:11px;color:var(--muted2);margin-top:12px">'+escHtml(e.nota)+'</div>';
+  cuerpo.innerHTML=h;
+}
+
+function _perfilDato(t,v,sub){
+  return '<div style="padding:12px 14px;border:1px solid var(--border);border-radius:12px">'
+    +'<div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">'+escHtml(t)+'</div>'
+    +'<div style="font-family:var(--font-head);font-size:19px;font-weight:800;color:var(--text)">'+escHtml(String(v))+'</div>'
+    +(sub?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+escHtml(sub)+'</div>':'')+'</div>';
+}
+function _perfilNombre(k){
+  return {picks:'Do you accumulate picks?',iniciativa:'Do you open the negotiation?',qb:'Do you buy or sell QBs?',cuerpos:'Do you consolidate or spread?',socios:'Do you favour one trade partner?'}[k]||k;
+}
