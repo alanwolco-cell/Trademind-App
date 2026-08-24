@@ -17205,8 +17205,24 @@ function renderPerfil(){
       _perfilCargando=false;
       if(!res.ok){
         muestra.textContent='';
+        // El 403 trae de vuelta el id de ESTA cuenta, y hay que pintarlo. El id
+        // es lo unico que hace falta para habilitarse, y sin el en pantalla la
+        // unica salida es abrir las herramientas de desarrollo: justamente lo
+        // que el servidor lo devuelve para evitar. Es el id propio, mostrado
+        // solo a su dueno, y es un hash: no abre nada por si mismo.
+        var extra='';
+        if(res.d&&res.d.acctId){
+          extra='<div style="margin-top:14px">'
+            +'<div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">This account\'s id</div>'
+            // user-select y word-break para que en el celular se pueda marcar y
+            // copiar sin que el hash se salga de la tarjeta.
+            +'<code style="display:block;font-size:12.5px;word-break:break-all;user-select:all;-webkit-user-select:all;background:var(--surface2,rgba(255,255,255,.06));border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text)">'
+            +escHtml(res.d.acctId)+'</code>'
+            +'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Add it to PERFIL_ACCTS to enable this browser.</div></div>';
+        }
         cuerpo.innerHTML='<div class="card" style="padding:22px 18px"><div style="font-weight:700;margin-bottom:6px">Not available on this account</div>'
-          +'<div style="font-size:13px;color:var(--muted)">'+escHtml(res.d&&res.d.error||'Could not build the profile.')+'</div></div>';
+          +'<div style="font-size:13px;color:var(--muted)">'+escHtml(res.d&&res.d.error||'Could not build the profile.')+'</div>'
+          +extra+'</div>';
         return;
       }
       _perfilPintar(res.d,cuerpo,muestra);
@@ -17292,5 +17308,11 @@ function _perfilDato(t,v,sub){
     +(sub?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+escHtml(sub)+'</div>':'')+'</div>';
 }
 function _perfilNombre(k){
-  return {picks:'Do you accumulate picks?',iniciativa:'Do you open the negotiation?',qb:'Do you buy or sell QBs?',cuerpos:'Do you consolidate or spread?',socios:'Do you favour one trade partner?'}[k]||k;
+  // Los QB llevan el formato en el nombre: en superflex y en una liga de un
+  // solo QB no es la misma pregunta, y una fila que dijera solo "QBs" dejaria
+  // creer que se midio una cosa cuando se midieron dos.
+  return {picks:'Do you accumulate picks?',iniciativa:'Do you open the negotiation?',
+    qb_superflex:'In superflex, do you buy or sell QBs?',
+    qb_1qb:'In one-QB leagues, do you buy or sell QBs?',
+    cuerpos:'Do you consolidate or spread?',socios:'Do you favour one trade partner?'}[k]||k;
 }

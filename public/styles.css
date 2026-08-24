@@ -1602,8 +1602,13 @@ body{min-height:100vh;min-height:100dvh}
     /* inset as padding, not margin, so the bar's surface still bleeds behind
        the iOS home indicator instead of leaving a bare strip */
     padding-bottom:env(safe-area-inset-bottom,0px);
-    backdrop-filter:saturate(170%) blur(16px);
-    -webkit-backdrop-filter:saturate(170%) blur(16px);
+    /* SIN backdrop-filter, a proposito. --surface es opaco en los dos temas
+       (#121214 y #ffffff, alpha 1 medido en el bundle desplegado), asi que el
+       desenfoque quedaba tapado por el fondo de la propia barra: no se veia y
+       aun asi obligaba a Safari a re-muestrear el fondo en cada cuadro. En el
+       iPhone eso hace que la barra se quede atras durante el scroll con
+       inercia y salte a su sitio al frenar. Si algun dia la barra se vuelve
+       translucida, el filtro vuelve, pero con un fondo que lo justifique. */
   }
   #tabbar .tabbar-item{
     flex:1 1 0;min-width:0;

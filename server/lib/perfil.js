@@ -41,7 +41,17 @@ function aplicarFDR(claims) {
   const c = claims.filter(x => x.p != null).sort((a, b) => a.p - b.p);
   let k = 0;
   c.forEach((x, i) => { if (x.p <= ((i + 1) / c.length) * Q_FDR) k = i + 1; });
-  c.forEach((x, i) => { if (i >= k) { x.estado = 'sin_senal'; delete x.texto; } });
+  c.forEach((x, i) => { if (i >= k) x.estado = 'sin_senal'; });
+  // El candado va aparte y al final, sobre TODAS: una afirmacion que no quedo
+  // confirmada no puede salir de aqui con su frase puesta.
+  //
+  // El paso de arriba solo miraba a las que caen fuera del prefijo del step-up,
+  // asi que una p de 0.06 en buena compania sobrevivia marcada "sin senal" y con
+  // el texto entero. Hoy la pantalla filtra por estado y no la pinta, pero esa
+  // es una garantia que vive en la otra punta del proyecto: aqui basta que
+  // alguien escriba `a.texto || ...` para publicar una afirmacion que el propio
+  // motor rechazo. El unico sitio donde el candado no se olvida es este.
+  claims.forEach(x => { if (x.estado !== 'confirmado') delete x.texto; });
   return claims;
 }
 
@@ -70,12 +80,19 @@ function claim(label, a, b, textos) {
   const n = a + b;
   if (n < MIN_N) return { label, n, estado: 'insuficiente', falta: MIN_N - n };
   const p = binomP(Math.max(a, b), n);
-  // Provisional. aplicarFDR() tiene la ultima palabra una vez conoce a todas
-  // las hermanas: una p que pasa sola no siempre pasa acompanada.
+  // Redondear a tres decimales convertia en "p=0" cualquier reparto limpio a
+  // partir de n=16 (2*0.5^16 = 0.0000305). Un cero ahi no se lee como "muy
+  // improbable", se lee como "imposible por azar", que es justo la clase de
+  // exageracion que este modulo entero existe para no cometer. Se guarda con
+  // precision suficiente y se marca el piso para que la pantalla escriba
+  // "menor que", igual que ya hacia concentracionSocios() al otro lado del
+  // archivo: el mismo problema tenia el arreglo escrito y sin propagar.
+  const PISO = 0.001;
   return {
     label,
     n, a, b,
-    p: +p.toFixed(3),
+    p: p < PISO ? +p.toPrecision(2) : +p.toFixed(3),
+    pEsPiso: p < PISO, pPiso: PISO,
     estado: p <= P_CONFIRMED ? 'confirmado' : 'sin_senal',
     lado: a >= b ? 'a' : 'b',
     texto: (a >= b ? textos.a : textos.b)
@@ -84,6 +101,11 @@ function claim(label, a, b, textos) {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const POS = ['QB', 'RB', 'WR', 'TE'];
+// Orden fijo, no el de insercion de un objeto: la lista de afirmaciones se
+// dibuja en pantalla y no puede reordenarse segun en que liga cayo el primer
+// trade. Un formato sin un solo trade no genera fila.
+const FORMATOS = ['superflex', '1qb'];
+const ETIQUETA_FORMATO = { superflex: 'in superflex', '1qb': 'in one-QB leagues' };
 // Union with the player master ALWAYS by id. Sleeper keeps every player in its
 // history, so 215 names have a namesake: matching by name hands you a retired
 // linebacker wearing a star receiver's stats. This bit already bit the project
@@ -102,17 +124,45 @@ const posDe = (players, pid) => {
 };
 
 /**
- * Age the player actually was when the trade happened, not today.
- * Sleeper only exposes current age, so we walk it back by whole seasons. It is
- * an approximation and it is declared as one: good enough to compare the two
- * sides of the same deal, not good enough to quote as a birthday.
+ * Age the player actually was on the day of the trade.
+ *
+ * Se calcula desde `birth_date`, no desde `age`. Sleeper CONGELA `age` el dia
+ * que deja de actualizar a un jugador, asi que para el que ya no esta vigente
+ * queda parada en el ano de su retiro: Matt Ryan figura con 37 habiendo nacido
+ * en 1985. Medido sobre el maestro completo del 2026-08-24, entre los 939
+ * jugadores de posicion CON equipo la `age` acierta en 890 y se desvia hasta 9
+ * anos en 49. Retroceder temporadas enteras desde ese numero no corregia el
+ * error, lo arrastraba, y encima anadia hasta un ano propio de redondeo.
+ *
+ * El sesgo no era neutro: los congelados son los veteranos, que caen sobre todo
+ * del lado que uno VENDE, justo el lado que define el delta de edad.
+ *
+ * `birth_date` cubre 939 de los 997 jugadores de posicion con equipo. Para el
+ * resto se conserva el camino viejo, y la salida DECLARA cuantas edades vinieron
+ * por ahi para que la pantalla no presente una estimacion como una medicion.
+ *
+ * @returns {{edad:number, exacta:boolean}|null}
  */
 function edadEnFecha(players, pid, ts, temporadaActual) {
   const p = players && players[String(pid)];
-  if (!p || !p.age) return null;
+  if (!p) return null;
+  if (p.birth_date && ts) {
+    const nace = new Date(String(p.birth_date) + 'T00:00:00Z');
+    const dia = new Date(ts);
+    if (!isNaN(nace.getTime()) && !isNaN(dia.getTime())) {
+      let a = dia.getUTCFullYear() - nace.getUTCFullYear();
+      const m = dia.getUTCMonth() - nace.getUTCMonth();
+      // El cumpleanos que aun no llego ese ano resta uno. Sin esto, un trade de
+      // enero envejece medio vestuario en doce meses de golpe.
+      if (m < 0 || (m === 0 && dia.getUTCDate() < nace.getUTCDate())) a--;
+      // Cota de cordura: una fecha corrupta no debe entrar al promedio.
+      if (a >= 15 && a < 70) return { edad: a, exacta: true };
+    }
+  }
+  if (p.age == null) return null;
   const anio = new Date(ts).getUTCFullYear();
   const atras = Math.max(0, Number(temporadaActual) - anio);
-  return p.age - atras;
+  return { edad: p.age - atras, exacta: false };
 }
 
 /**
@@ -181,6 +231,7 @@ function construirPerfil(trades, players, ctx) {
   let picksRecibidos = 0, picksEnviados = 0;
   let inicio = 0, respuesta = 0;
   const edadesR = [], edadesE = [];
+  let edadAprox = 0; // edades que salieron del respaldo, NUNCA en silencio
   const contrapartes = {};
   const fechas = [];
   const porTrade = []; // { socios, rivales } para el test de permutacion
@@ -237,7 +288,7 @@ function construirPerfil(trades, players, ctx) {
       if (pos === 'otro') sinPosicion++;
       const edad = edadEnFecha(players, pid, t.created, temporadaActual);
       recibido[pos]++;
-      if (edad != null) edadesR.push(edad);
+      if (edad) { edadesR.push(edad.edad); if (!edad.exacta) edadAprox++; }
       if (pos === 'QB') porFormato[fmt].qbRecibido++;
     }
     for (const [pid, rid] of Object.entries(t.drops || {})) {
@@ -246,7 +297,7 @@ function construirPerfil(trades, players, ctx) {
       if (pos === 'otro') sinPosicion++;
       const edad = edadEnFecha(players, pid, t.created, temporadaActual);
       enviado[pos]++;
-      if (edad != null) edadesE.push(edad);
+      if (edad) { edadesE.push(edad.edad); if (!edad.exacta) edadAprox++; }
       if (pos === 'QB') porFormato[fmt].qbEnviado++;
     }
 
@@ -269,10 +320,19 @@ function construirPerfil(trades, players, ctx) {
       a: 'You open the table. The deals are yours to propose, not to answer.',
       b: 'You answer. The offer almost always arrives already made.'
     }),
-    claim('qb', recibido.QB, enviado.QB, {
-      a: 'You buy quarterbacks.',
-      b: 'You sell quarterbacks.'
-    }),
+    // Los QB van SEPARADOS por formato, nunca sumados. En superflex el QB es el
+    // activo mas caro del tablero y en una liga de un solo QB es casi relleno,
+    // asi que comprar uno en cada sitio no es la misma decision: es la contraria.
+    // Sumarlos hace que un dueno que acumula QB en superflex y los suelta en
+    // 1QB de exactamente el mismo tamano de muestra de 50/50, y el tab declare
+    // que no tiene ninguna tendencia teniendo las dos. Solo se puede hacer
+    // ahora que la deteccion de superflex mira los slots de QB de verdad y no
+    // el nombre del slot.
+    ...FORMATOS.filter(fmt => porFormato[fmt]).map(fmt => claim('qb_' + fmt,
+      porFormato[fmt].qbRecibido, porFormato[fmt].qbEnviado, {
+        a: 'You buy quarterbacks ' + ETIQUETA_FORMATO[fmt] + '.',
+        b: 'You sell quarterbacks ' + ETIQUETA_FORMATO[fmt] + '.'
+      })),
     claim('cuerpos', Object.values(recibido).reduce((s, x) => s + x, 0),
       Object.values(enviado).reduce((s, x) => s + x, 0), {
       a: 'You consolidate: more bodies in than out.',
@@ -299,7 +359,14 @@ function construirPerfil(trades, players, ctx) {
       recibida: edadR == null ? null : +edadR.toFixed(1), nRecibida: edadesR.length,
       enviada: edadE == null ? null : +edadE.toFixed(1), nEnviada: edadesE.length,
       delta: (edadR == null || edadE == null) ? null : +(edadR - edadE).toFixed(1),
-      nota: 'Age estimated at trade time by walking back whole seasons.'
+      // La nota cambia con el dato: si todo salio de birth_date es una medicion
+      // y se dice como tal; si algo cayo al respaldo se dice cuanto.
+      nAprox: edadAprox,
+      nota: edadAprox
+        ? ('Age on the day of each trade, from date of birth. ' + edadAprox
+           + ' of ' + (edadesR.length + edadesE.length)
+           + ' players had no date on file and were estimated by season instead.')
+        : 'Age on the day of each trade, from each player\'s date of birth.'
     },
     contrapartes: {
       distintas: Object.keys(contrapartes).length,
