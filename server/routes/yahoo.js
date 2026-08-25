@@ -3,12 +3,29 @@ const fetch = require('node-fetch');
 const router = express.Router();
 
 // ── Yahoo Fantasy OAuth import ──────────────────────────────────────────────
-// DORMANT until credentials exist. To activate:
-//   1. Create an app at https://developer.yahoo.com/apps/create/
-//      - API Permissions: Fantasy Sports (Read)
-//      - Redirect URI: https://trademindff.com/api/yahoo/callback
-//   2. Add YAHOO_CLIENT_ID + YAHOO_CLIENT_SECRET to Vercel env, redeploy.
-// The frontend checks /api/yahoo/status and shows the login button automatically.
+// NO FUNCIONA, y no es por el codigo. Medido contra Yahoo el 2026-08-24, con la
+// app real y sus credenciales, cambiando UNA cosa por vez:
+//
+//   redirect_uri=macdraft.app      -> error=invalid_request "invalid redirect uri"
+//   redirect_uri=trademindff.com   -> error=invalid_scope   "invalid scope"
+//   trademindff.com + scope=openid -> 302 a login.yahoo.com, entra bien
+//
+// O sea dos bloqueos apilados, y el segundo es el que manda:
+//
+//   1. NUESTRO, barato: la app de Yahoo sigue registrada con el dominio viejo
+//      (trademindff.com) y produccion ya manda macdraft.app. Se arregla anadiendo
+//      https://macdraft.app/api/yahoo/callback a los Redirect URI de la app.
+//   2. DE YAHOO, y es el de verdad: `fspt-r` sale rechazado incluso desde el
+//      dominio registrado. El control con scope=openid pasa con la MISMA app,
+//      asi que el OAuth esta sano: lo que falta es el permiso de Fantasy Sports.
+//      Yahoo cerro el acceso self-serve; hoy hay que solicitarlo en
+//      https://sports.yahoo.com/developer/ y esperar aprobacion, y la consola de
+//      apps ya no ofrece ese permiso para marcarlo. Hasta que aprueben la
+//      solicitud NO hay forma de conectar una liga de Yahoo, con ningun codigo.
+//
+// El frontend muestra el boton en cuanto /api/yahoo/status dice configured, y
+// configured solo mira que existan las credenciales: por eso el boton esta vivo
+// en produccion llevando a una pagina de error de Yahoo.
 
 const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
 const YAHOO_TOKEN = 'https://api.login.yahoo.com/oauth2/get_token';

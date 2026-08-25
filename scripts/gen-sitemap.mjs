@@ -116,6 +116,11 @@ Allow: /
 # Internal setup helper, not a product page.
 Disallow: /whoami
 
+# Private self-scouting profile: one owner, his own trade history. The route
+# already fails closed without PERFIL_ACCTS, but it has no business in an index
+# either: there is nothing here a visitor could use.
+Disallow: /perfil
+
 Sitemap: ${SITE}/sitemap.xml
 `;
 
