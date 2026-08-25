@@ -14,6 +14,8 @@
 // and a player map, get metrics back. That is what makes it testable offline
 // against a hand-computed baseline.
 
+const { ejeDeDosLados } = require('./formato');
+
 // ── Significance ───────────────────────────────────────────────────────────
 // Below a dozen observations a proportion is barely an estimate: the 95% Wald
 // half-width at p=0.5 is 0.98/sqrt(n), which at n=12 is still +-28 points. Any
@@ -219,12 +221,234 @@ function concentracionSocios(porTrade, semilla, corridas) {
 }
 
 /**
+ * A cuantos rivales le ganas en movimientos de waiver, y si eso es mucho.
+ *
+ * No es un binomio sobre liga-temporadas. Ese fue el primer intento y estaba
+ * mal medido: con doce liga-temporadas el umbral no se alcanza ni con un patron
+ * evidente, y el tab se quedaba mudo teniendo 239 movimientos leidos. El
+ * problema no era el dato, era la unidad.
+ *
+ * Aqui el estadistico usa a TODOS los rivales: cuantos de ellos hicieron menos
+ * movimientos que yo, sumado sobre todas mis liga-temporadas. La hipotesis nula
+ * es que dentro de cada liga-temporada da igual cual de los rosters soy yo, asi
+ * que se baraja quien es "yo" y se mira cuantas veces el azar alcanza lo que
+ * hice. Mismo esqueleto que el test de socios, por la misma razon: las
+ * probabilidades no son uniformes entre ligas de distinto tamano.
+ *
+ * Sembrado, como el otro: el mismo historial tiene que dar la misma p siempre.
+ */
+function permutacionContraRivales(label, repartos, semilla, textos, corridas) {
+  const rivales = repartos.reduce((s, r) => s + r.otros.length, 0);
+  if (repartos.length < 3 || rivales < MIN_N) {
+    return { label, n: rivales, estado: 'insuficiente',
+      falta: Math.max(0, MIN_N - rivales), ligasTemporada: repartos.length };
+  }
+  // Los empates cuentan medio a cada lado: quien hizo exactamente mis
+  // movimientos no es ni prueba a favor ni prueba en contra, y mandarlo entero
+  // a un lado inclina el resultado.
+  const gana = (yo, otros) => otros.reduce((s, o) => s + (yo > o ? 1 : yo === o ? 0.5 : 0), 0);
+  const obs = repartos.reduce((s, r) => s + gana(r.mio, r.otros), 0);
+
+  let x = (semilla >>> 0) || 1;
+  const rnd = () => { x ^= x << 13; x >>>= 0; x ^= x >> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+  const N = corridas || 20000;
+  let alMenos = 0, alMenosBajo = 0;
+  for (let i = 0; i < N; i++) {
+    let sim = 0;
+    for (const r of repartos) {
+      const todos = [r.mio, ...r.otros];
+      // Se saca al sorteado por su INDICE. La forma anterior lo buscaba por
+      // valor con indexOf, lo que da el mismo resultado (quitar cualquier
+      // elemento de igual valor deja el mismo multiconjunto, comprobado: p
+      // identica sobre el mismo dato), pero obliga a razonar sobre empates para
+      // convencerse. Por indice es correcto de un vistazo.
+      const j = Math.floor(rnd() * todos.length);
+      sim += gana(todos[j], todos.filter((_, k) => k !== j));
+    }
+    if (sim >= obs) alMenos++;
+    if (sim <= obs) alMenosBajo++;
+  }
+  // Dos colas: trabajar el wire mucho MENOS que la liga tambien es un rasgo.
+  const piso = 1 / (N + 1);
+  const p = Math.min(1, 2 * Math.min((alMenos + 1) / (N + 1), (alMenosBajo + 1) / (N + 1)));
+  const arriba = obs > rivales / 2;
+  return {
+    label, n: rivales, ligasTemporada: repartos.length,
+    ganados: +obs.toFixed(1),
+    p: +p.toPrecision(2), pEsPiso: p <= piso * 2.0001, pPiso: +(piso * 2).toPrecision(2),
+    estado: p <= P_CONFIRMED ? 'confirmado' : 'sin_senal',
+    lado: arriba ? 'a' : 'b',
+    texto: (arriba ? textos.a : textos.b)(Math.round(obs), rivales)
+  };
+}
+
+/** Volumen de waiver: el mismo test, con las palabras de su pregunta. */
+const volumenWaiver = (repartos, semilla, corridas) => permutacionContraRivales(
+  'waiver_volumen', repartos, semilla, {
+    a: (g, n) => 'You work the wire. You out-move ' + g + ' of the ' + n
+      + ' rival manager-seasons you have played against.',
+    b: (g, n) => 'You sit still on the wire. You out-move only ' + g + ' of the ' + n
+      + ' rival manager-seasons you have played against.'
+  }, corridas);
+
+/**
+ * Que clase de drafter eres, dicho por tus drafts y no por tu opinion.
+ *
+ * El producto YA clasifica a sus bots en arquetipos (zerorb, robustrb: viven en
+ * scripts/calibrate-room.mjs y se comprueban en cada gate) y nunca le habia
+ * dicho al dueno cual es EL. Esto lo mide sobre sus drafts reales.
+ *
+ * La ventana son las rondas 1 a 4. Ahi es donde se toma la decision estructural
+ * del equipo: quien va a cargar el backfield y quien los receptores. De la 5 en
+ * adelante ya se draftea por techo y por hueco, y meterlo diluiria justo la
+ * senal que se busca.
+ *
+ * El comparador vuelven a ser los rivales DE ESE MISMO DRAFT: cuantos RB
+ * tempranos son muchos depende del formato, del tamano de la liga y del ano, y
+ * los rivales de la sala controlan las tres cosas de una vez sin tener que
+ * modelarlas.
+ */
+const RONDAS_TEMPRANAS = 4;
+const draftRbTemprano = (repartos, semilla, corridas) => permutacionContraRivales(
+  'draft_rb_temprano', repartos, semilla, {
+    a: (g, n) => 'You build on running backs. In the first four rounds you take more of them than '
+      + g + ' of the ' + n + ' rival drafters you have sat across from.',
+    b: (g, n) => 'You are a zero-RB drafter. In the first four rounds you take fewer running backs than '
+      + (n - g) + ' of the ' + n + ' rival drafters you have sat across from.'
+  }, corridas);
+
+/**
+ * @param {Array} picks  [{ liga, temporada, roster, ronda, pos }]
+ */
+function analizarDrafts(picks, miRosterPorLiga, formatoPorLiga, eje) {
+  const porDraft = {};
+  for (const k of picks || []) {
+    const fmt = formatoPorLiga[k.liga] || 'redraft';
+    if (eje && ejeDeDosLados(fmt) !== eje) continue;
+    if (k.ronda > RONDAS_TEMPRANAS) continue;
+    (porDraft[k.liga + ':' + k.temporada] = porDraft[k.liga + ':' + k.temporada] || []).push(k);
+  }
+  const repartos = [];
+  let misRb = 0, misPicks = 0, drafts = 0;
+  for (const [key, ks] of Object.entries(porDraft)) {
+    const mio = miRosterPorLiga[key.split(':')[0]];
+    if (!mio) continue;
+    const rb = {};
+    // Todo roster que aparezca en el draft cuenta, aunque tomara CERO RB
+    // tempranos: si solo se contaran los que tomaron alguno, el zero-RB
+    // desapareceria del denominador y nadie podria salir por abajo.
+    ks.forEach(k => { rb[k.roster] = rb[k.roster] || 0; if (k.pos === 'RB') rb[k.roster]++; });
+    if (!(mio in rb)) continue;
+    drafts++;
+    misRb += rb[mio];
+    misPicks += ks.filter(k => k.roster === mio).length;
+    const otros = Object.entries(rb).filter(([r]) => Number(r) !== mio).map(([, n]) => n);
+    if (otros.length >= 2) repartos.push({ mio: rb[mio], otros });
+  }
+  return {
+    drafts, misRbTempranos: misRb, misPicksTempranos: misPicks,
+    claims: [draftRbTemprano(repartos, misRb * 7919 + drafts)]
+  };
+}
+
+/**
+ * Como trabajas el waiver, medido contra LOS RIVALES DE TU PROPIA LIGA.
+ *
+ * El punto entero esta en el comparador. "Haces 40 movimientos al ano" no
+ * significa nada suelto: en una liga de 14 con FAAB agresivo eso es poco y en
+ * una liga tranquila de amigos es una barbaridad. Y un promedio global tampoco
+ * sirve, porque mezcla ligas con reglas distintas. Asi que la unidad de
+ * observacion es LA LIGA-TEMPORADA: en cada una se pregunta una sola cosa,
+ * "estuve por encima de la mediana de mi liga, si o no", y eso es un binomio
+ * limpio que entra en la misma maquinaria de significancia que el resto.
+ *
+ * Comparar contra la mediana y no contra la media es deliberado: un solo manager
+ * obsesivo que hace 200 movimientos arrastra la media y hace que todos los demas
+ * parezcan pasivos.
+ *
+ * El dato salio gratis: la ruta ya bajaba las semanas enteras para los trades y
+ * tiraba todo lo demas, incluidos los movimientos de los rivales, que son
+ * precisamente los que hacen comparable el numero.
+ */
+function analizarWaivers(movimientos, miRosterPorLiga, formatoPorLiga, eje) {
+  const porLigaTemporada = {};
+  for (const m of movimientos || []) {
+    const fmt = formatoPorLiga[m.liga] || 'redraft';
+    if (eje && ejeDeDosLados(fmt) !== eje) continue;
+    const k = m.liga + ':' + m.temporada;
+    (porLigaTemporada[k] = porLigaTemporada[k] || []).push(m);
+  }
+
+  const mediana = (a) => {
+    if (!a.length) return null;
+    const o = [...a].sort((x, y) => x - y), h = o.length >> 1;
+    return o.length % 2 ? o[h] : (o[h - 1] + o[h]) / 2;
+  };
+
+  let misMovs = 0;
+  let pujaArriba = 0, pujaAbajo = 0;
+  const misPujas = [];
+  // Cada liga-temporada aporta el reparto COMPLETO de movimientos entre sus
+  // rosters. Guardarlo entero (y no solo un "estuve arriba, si o no") es lo que
+  // permite despues un test de permutacion en vez de doce monedas: con 12
+  // liga-temporadas un binomio no llega al umbral ni aunque el patron sea
+  // brutal, y quedarse callado por elegir mal la unidad de medida no es
+  // prudencia, es desperdiciar el dato.
+  const repartos = [];
+
+  for (const [k, movs] of Object.entries(porLigaTemporada)) {
+    const liga = k.split(':')[0];
+    const mio = miRosterPorLiga[liga];
+    if (!mio) continue;
+
+    // Volumen: cuantos movimientos hizo cada roster de la liga esa temporada.
+    const porRoster = {};
+    movs.forEach(m => { porRoster[m.roster] = (porRoster[m.roster] || 0) + 1; });
+    const mios = porRoster[mio] || 0;
+    misMovs += mios;
+    // Un roster sin NINGUN movimiento tambien cuenta como cero: excluirlo
+    // subiria la mediana y me haria parecer mas activo de lo que soy. Pero solo
+    // se conocen los rosters que aparecen, asi que la mediana se toma sobre los
+    // que hay y se compara contra ella sin fingir que se conoce a los ausentes.
+    const otros = Object.entries(porRoster).filter(([r]) => Number(r) !== mio).map(([, n]) => n);
+    if (otros.length >= 2) repartos.push({ mio: mios, otros });
+
+    // FAAB: solo entre los que de verdad pujaron dinero. Un waiver sin puja (una
+    // liga por orden inverso) no dice nada sobre agresividad y meterlo como cero
+    // convertiria "esta liga no usa FAAB" en "este manager es tacano".
+    const conPuja = movs.filter(m => typeof m.puja === 'number' && m.puja > 0);
+    const misConPuja = conPuja.filter(m => m.roster === mio).map(m => m.puja);
+    const otrosPuja = conPuja.filter(m => m.roster !== mio).map(m => m.puja);
+    if (misConPuja.length && otrosPuja.length >= 3) {
+      misPujas.push(...misConPuja);
+      const medMia = mediana(misConPuja), medOtros = mediana(otrosPuja);
+      if (medMia > medOtros) pujaArriba++; else if (medMia < medOtros) pujaAbajo++;
+    }
+  }
+
+  return {
+    misMovimientos: misMovs,
+    ligasTemporada: Object.keys(porLigaTemporada).length,
+    pujaMediana: misPujas.length ? mediana(misPujas) : null,
+    nPujas: misPujas.length,
+    claims: [
+      volumenWaiver(repartos, misMovs * 7919 + repartos.length),
+      claim('waiver_faab', pujaArriba, pujaAbajo, {
+        a: 'You pay up on waivers: your bids run above what the rest of your league pays.',
+        b: 'You bargain hunt on waivers: your bids run below what the rest of your league pays.'
+      })
+    ]
+  };
+}
+
+/**
  * @param {Array} trades  [{ created, creator, roster_ids, adds, draft_picks, _liga }]
  * @param {Object} players  Sleeper player master, keyed by id
  * @param {Object} ctx  { miRosterPorLiga, miUserId, temporadaActual }
  */
 function construirPerfil(trades, players, ctx) {
-  const { miRosterPorLiga = {}, miUserId = '', temporadaActual = 2026 } = ctx || {};
+  const { miRosterPorLiga = {}, miUserId = '', temporadaActual = 2026, eje = null,
+    movimientos = [], formatoPorLiga = {}, picksDraft = [] } = ctx || {};
   const recibido = { QB: 0, RB: 0, WR: 0, TE: 0, otro: 0 };
   const enviado = { QB: 0, RB: 0, WR: 0, TE: 0, otro: 0 };
   const porFormato = {}; // 1qb / superflex -> { qbRecibido, qbEnviado }
@@ -308,11 +532,30 @@ function construirPerfil(trades, players, ctx) {
     }
   }
 
+  // El waiver entra en la MISMA familia de correccion que el resto: son mas
+  // preguntas sobre la misma persona, y no corregirlas juntas seria exactamente
+  // la trampa que Benjamini-Hochberg esta aqui para tapar.
+  const waivers = analizarWaivers(movimientos, miRosterPorLiga, formatoPorLiga, eje);
+  const drafts = analizarDrafts(picksDraft, miRosterPorLiga, formatoPorLiga, eje);
+
   const media = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
   const edadR = media(edadesR), edadE = media(edadesE);
 
+  // Un pick NO significa lo mismo en los dos formatos, asi que no puede
+  // describirse con las mismas palabras. En dynasty un pick es futuro: lo
+  // acumulas para construir. En redraft el pick es del draft de ESTA
+  // temporada, que se celebra en agosto y se acaba: acumularlos es moverte
+  // dentro de ese draft, no guardar nada para despues. "You bank the future" en
+  // una liga que termina en enero no describe nada.
+  //
+  // El proyecto ya tenia esta regla escrita para Mac ("a redraft league gets
+  // zero dynasty talk", server/routes/sage.js) y el perfil se la saltaba.
+  const esRedraft = eje === 'redraft';
   const afirmaciones = [
-    claim('picks', picksRecibidos, picksEnviados, {
+    claim('picks', picksRecibidos, picksEnviados, esRedraft ? {
+      a: 'You buy draft capital: you move up in the draft more often than down.',
+      b: 'You sell draft capital: you move down in the draft more often than up.'
+    } : {
       a: 'You bank the future: more picks come in than go out.',
       b: 'You spend the future: more picks go out than come in.'
     }),
@@ -339,7 +582,9 @@ function construirPerfil(trades, players, ctx) {
       b: 'You spread: more bodies out than in.'
     }),
     // Semilla derivada del propio dato: mismo historial, misma p, siempre.
-    concentracionSocios(porTrade, usados * 7919 + Object.keys(contrapartes).length)
+    concentracionSocios(porTrade, usados * 7919 + Object.keys(contrapartes).length),
+    ...waivers.claims,
+    ...drafts.claims
   ];
   aplicarFDR(afirmaciones);
 
@@ -362,11 +607,28 @@ function construirPerfil(trades, players, ctx) {
       // La nota cambia con el dato: si todo salio de birth_date es una medicion
       // y se dice como tal; si algo cayo al respaldo se dice cuanto.
       nAprox: edadAprox,
+      // En redraft la edad no dice nada: el equipo se disuelve en enero, asi que
+      // un jugador de 23 y uno de 30 valen por lo que hagan ESTE domingo. El tab
+      // no debe pintar el bloque de edad de ese lado. La regla ya existia para
+      // Mac ("age is irrelevant in redraft"); aqui se hace explicita en el dato
+      // para que la pantalla no tenga que volver a decidirlo.
+      relevante: eje !== 'redraft',
       nota: edadAprox
         ? ('Age on the day of each trade, from date of birth. ' + edadAprox
            + ' of ' + (edadesR.length + edadesE.length)
            + ' players had no date on file and were estimated by season instead.')
         : 'Age on the day of each trade, from each player\'s date of birth.'
+    },
+    waiver: {
+      misMovimientos: waivers.misMovimientos,
+      ligasTemporada: waivers.ligasTemporada,
+      pujaMediana: waivers.pujaMediana,
+      nPujas: waivers.nPujas
+    },
+    draft: {
+      drafts: drafts.drafts,
+      rbTempranos: drafts.misRbTempranos,
+      picksTempranos: drafts.misPicksTempranos
     },
     contrapartes: {
       distintas: Object.keys(contrapartes).length,
@@ -383,4 +645,49 @@ function construirPerfil(trades, players, ctx) {
   return salida;
 }
 
-module.exports = { construirPerfil, binomP, claim, aplicarFDR, concentracionSocios, edadEnFecha, MIN_N, P_CONFIRMED, Q_FDR };
+/**
+ * El perfil PARTIDO por eje: dynasty a un lado, redraft (con keeper dentro) al
+ * otro. Es lo que ven los dos tabs.
+ *
+ * Por que partir, y por que cuesta: acumular picks en dynasty es construir un
+ * equipo; en redraft es mover fichas de una temporada que se acaba. La edad
+ * manda en dynasty y no significa nada en redraft. Un perfil que promedie los
+ * dos no describe a un manager, promedia a dos managers distintos. Hasta hoy el
+ * motor los mezclaba.
+ *
+ * El precio es real y hay que decirlo: partir la muestra en dos deja a cada lado
+ * mas cerca del umbral, asi que cada tab AFIRMA MENOS que el saco mezclado. Eso
+ * es correcto, no una regresion: lo que el saco mezclado afirmaba de mas eran
+ * conclusiones sobre un manager que no existe.
+ *
+ * Cada eje corre su propia familia de Benjamini-Hochberg. Es lo que toca: son
+ * preguntas distintas sobre formatos distintos, y corregirlas juntas castigaria
+ * a un lado por las pruebas que se hicieron en el otro.
+ */
+function construirPerfiles(trades, players, ctx) {
+  const { formatoPorLiga = {}, fuentePorLiga = {} } = ctx || {};
+  const ejes = { dynasty: [], redraft: [] };
+  for (const t of trades || []) {
+    const fmt = formatoPorLiga[t._liga] || 'redraft';
+    ejes[ejeDeDosLados(fmt)].push({ ...t, _formato: fmt });
+  }
+
+  const salida = {};
+  for (const eje of ['dynasty', 'redraft']) {
+    const p = construirPerfil(ejes[eje], players, { ...ctx, eje });
+    const ligas = [...new Set(ejes[eje].map(t => t._liga))];
+    // Cuantas ligas de este lado son keeper y cuantas se clasificaron
+    // adivinando. Van a pantalla: agrupar keeper con redraft es una decision de
+    // producto, y una liga clasificada por su nombre es una apuesta, no un dato.
+    p.composicion = {
+      ligas: ligas.length,
+      keeper: ligas.filter(id => formatoPorLiga[id] === 'keeper').length,
+      porNombre: ligas.filter(id => fuentePorLiga[id] === 'nombre').length,
+      porDefecto: ligas.filter(id => fuentePorLiga[id] === 'defecto').length
+    };
+    salida[eje] = p;
+  }
+  return salida;
+}
+
+module.exports = { construirPerfil, construirPerfiles, analizarWaivers, analizarDrafts, volumenWaiver, permutacionContraRivales, RONDAS_TEMPRANAS, binomP, claim, aplicarFDR, concentracionSocios, edadEnFecha, MIN_N, P_CONFIRMED, Q_FDR };

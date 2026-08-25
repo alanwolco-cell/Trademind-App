@@ -156,6 +156,27 @@ let leagueFormat={totalTeams:12,ppr:1,hasSuperFlex:false,has2QB:false,flexCount:
 // the app talks REDRAFT: that is what the mock-first landing sells, and the
 // setup UI already says Redraft - the engine must agree with the label.
 let leagueMode='redraft';
+
+// Que clase de liga es esta. ESPEJO EXACTO de server/lib/formato.js, que es el
+// canonico: la logica vive alli y aqui se repite solo porque el navegador no
+// puede requerirla. No editar una sin la otra; scripts/qa-perfil.mjs extrae
+// ESTA funcion del archivo y comprueba que las dos coinciden caso por caso, asi
+// que si se separan el gate falla antes de llegar a produccion.
+//
+// Hasta hoy esta decision estaba copiada a mano en dos sitios de este archivo,
+// sin nombre, y ninguna de las dos sabia que el formato keeper existe.
+function tmClasificarLiga(l){
+  var t=l&&l.settings&&l.settings.type;
+  var TIPO={0:'redraft',1:'keeper',2:'dynasty'};
+  if(t!=null&&TIPO[t])return {formato:TIPO[t],fuente:'settings'};
+  var nombre=String((l&&l.name)||'').toLowerCase();
+  if(/\bdynasty\b/.test(nombre))return {formato:'dynasty',fuente:'nombre'};
+  if(/\bkeeper\b/.test(nombre))return {formato:'keeper',fuente:'nombre'};
+  return {formato:'redraft',fuente:'defecto'};
+}
+// El eje de dos lados que ve el usuario. Keeper cae con redraft porque su base
+// de valor es la de redraft, pero es una decision de producto, no un hecho.
+function tmEjeLiga(l){return tmClasificarLiga(l).formato==='dynasty'?'dynasty':'redraft';}
 // Monotonic tokens so a slow background response from a league/format you already
 // switched away from can't clobber the data for the one you're looking at now.
 let _leagueLoadSeq=0;     // bumped every loadLeague/import; identifies the active load
@@ -382,7 +403,7 @@ function _renderCmList(leagues,q){
       +'oninput="_renderCmList(window._myLeagues||[],this.value)">';
   }else{html+='<div style="height:10px"></div>';}
   html+='<div class="cm-leagues">'+(hits.length?hits.map(function(l){
-    var isDyn=!!((l.settings&&l.settings.type===2)||(l.name||'').toLowerCase().indexOf('dynasty')>=0);
+    var isDyn=tmEjeLiga(l)==='dynasty';
     var nm=(l.name||'Unnamed').replace(/&/g,'&amp;').replace(/</g,'&lt;');
     return '<div class="cm-league" onclick="_cmPick(\''+l.league_id+'\')">'
       +'<div><div class="cm-lname">'+nm+'</div>'
@@ -1303,7 +1324,7 @@ function renderLeagues(leagues, autoSelectId){
     card.className="league-card";
     var season=l.season||ACTIVE_SEASON;
     var status=l.status==="in_season"?"In Season":l.status==="pre_draft"?"Pre-Draft":l.status==="complete"?"Complete":(l.status||"");
-    var isDyn=!!((l.settings&&l.settings.type===2)||(l.name||"").toLowerCase().indexOf("dynasty")>=0);
+    var isDyn=tmEjeLiga(l)==='dynasty';
     var modePill='<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;margin-left:6px;background:'+(isDyn?'rgba(99,102,241,.15)':'rgba(251,191,36,.15)')+';color:'+(isDyn?'var(--accent-bright)':'var(--yellow)')+';">'+(isDyn?'Dynasty':'Redraft')+'</span>';
     card.innerHTML="<div><div class='league-card-name'>"+(l.name||"Unnamed")+modePill+"</div><div class='league-card-meta'>"+(l.total_rosters||"?")+" teams · Season "+season+" · "+status+"</div></div><div class='league-card-arrow'>→</div>";
     card.onclick=function(){loadLeague(l.league_id,l.name,l.total_rosters,season);};

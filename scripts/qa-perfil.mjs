@@ -8,6 +8,7 @@
 // del motor, y esta verificado que lo hacian antes del arreglo.
 //
 // Corre desde cualquier directorio.
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -15,7 +16,9 @@ import path from 'node:path';
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const M = require(path.join(aqui, '..', 'server', 'lib', 'perfil.js'));
-const { construirPerfil, binomP, claim, aplicarFDR, edadEnFecha, MIN_N } = M;
+const { construirPerfil, construirPerfiles, analizarWaivers, analizarDrafts, volumenWaiver, binomP, claim, aplicarFDR, edadEnFecha, MIN_N } = M;
+const F = require(path.join(aqui, '..', 'server', 'lib', 'formato.js'));
+const { clasificarLiga, ejeDeDosLados } = F;
 
 let fallos = 0, corridos = 0;
 const ok = (nombre, cond, detalle) => {
@@ -69,6 +72,55 @@ function armarTrades(n) {
 const CTX = { miRosterPorLiga: { LSF: 1, L1QB: 5 }, miUserId: 'U1', temporadaActual: 2026 };
 const P = construirPerfil(armarTrades(14), PLAYERS, CTX);
 const porLabel = (l) => (P.afirmaciones || []).find(a => a.label === l);
+
+// ── 0. Formato de liga: una sola verdad en los dos lados ───────────────────
+// El criterio vivia copiado a mano en dos sitios de app.js y nunca habia
+// llegado al servidor. Ahora es un modulo, pero el navegador no puede
+// requerirlo, asi que existe un espejo en app.js. Este bloque EXTRAE ese espejo
+// del archivo y lo corre contra el canonico caso por caso: si alguien edita uno
+// y se olvida del otro, esto falla. Un comentario que pida mantenerlos iguales
+// no es un candado; esto si.
+console.log('\nFormato de liga: servidor y cliente de acuerdo');
+{
+  const appjs = fs.readFileSync(path.join(aqui, '..', 'public', 'app.js'), 'utf8');
+  const m = appjs.match(/function tmClasificarLiga\(l\)\{[\s\S]*?\n\}/);
+  ok('el espejo de app.js sigue ahi con su nombre', !!m,
+    'si se renombro o se borro, este gate no puede comprobar nada y hay que arreglarlo');
+  if (m) {
+    const clienteClasificar = new Function(m[0] + '; return tmClasificarLiga;')();
+    const CASOS = [
+      { liga: { settings: { type: 2 }, name: 'Home League' }, esperado: 'dynasty', fuente: 'settings' },
+      { liga: { settings: { type: 1 }, name: 'Home League' }, esperado: 'keeper', fuente: 'settings' },
+      { liga: { settings: { type: 0 }, name: 'Dynasty Warriors' }, esperado: 'redraft', fuente: 'settings' },
+      { liga: { name: 'The Dynasty League' }, esperado: 'dynasty', fuente: 'nombre' },
+      { liga: { name: 'Keeper Kings' }, esperado: 'keeper', fuente: 'nombre' },
+      { liga: { name: 'Sunday Money' }, esperado: 'redraft', fuente: 'defecto' },
+      { liga: {}, esperado: 'redraft', fuente: 'defecto' },
+      { liga: null, esperado: 'redraft', fuente: 'defecto' }
+    ];
+    let discrepancias = 0;
+    for (const c of CASOS) {
+      const srv = clasificarLiga(c.liga);
+      const cli = clienteClasificar(c.liga);
+      if (srv.formato !== cli.formato || srv.fuente !== cli.fuente) discrepancias++;
+      eq('  servidor clasifica "' + ((c.liga && c.liga.name) || '(vacia)') + '" como ' + c.esperado,
+        srv.formato, c.esperado);
+      eq('    y lo declara leido de ' + c.fuente, srv.fuente, c.fuente);
+    }
+    eq('cliente y servidor coinciden en los ' + CASOS.length + ' casos', discrepancias, 0);
+  }
+  // El punto entero del respaldo por nombre: una liga de REDRAFT que se llama
+  // "Dynasty Warriors" no es dynasty. settings manda sobre el nombre.
+  eq('settings gana al nombre',
+    clasificarLiga({ settings: { type: 0 }, name: 'Dynasty Warriors' }).formato, 'redraft');
+  // Palabra entera, no subcadena: "dynastic" no es "dynasty".
+  eq('el respaldo busca la palabra entera',
+    clasificarLiga({ name: 'The Dynastic Order' }).formato, 'redraft');
+  // Keeper NO es dynasty. Meterlo ahi inflaba las conclusiones de dynasty.
+  ok('keeper no se cuela en dynasty', clasificarLiga({ settings: { type: 1 } }).formato !== 'dynasty');
+  eq('pero en el eje de dos lados cae con redraft', ejeDeDosLados('keeper'), 'redraft');
+  eq('y dynasty se queda solo de su lado', ejeDeDosLados('dynasty'), 'dynasty');
+}
 
 // ── 1. Edad por birth_date, no por aproximacion ────────────────────────────
 console.log('\nEdad exacta desde birth_date');
@@ -143,6 +195,266 @@ console.log('\nQB por formato');
   const p3 = construirPerfil(soloSF, PLAYERS, CTX);
   ok('sin ligas de un solo QB no aparece esa afirmacion',
     !(p3.afirmaciones || []).some(a => a.label === 'qb_1qb'));
+}
+
+// ── 2b. Dos ejes: dynasty y redraft, separados ─────────────────────────────
+console.log('\nParticion por eje');
+{
+  // Mismo fixture, pero declarando que la liga superflex es DYNASTY y la de un
+  // solo QB es REDRAFT. Es el caso que importa: la senal de cada lado es
+  // opuesta, asi que si la particion no funciona se anulan y no dice nada.
+  const CTX2 = { ...CTX, formatoPorLiga: { LSF: 'dynasty', L1QB: 'redraft' },
+    fuentePorLiga: { LSF: 'settings', L1QB: 'settings' } };
+  const dos = construirPerfiles(armarTrades(14), PLAYERS, CTX2);
+  ok('devuelve los dos ejes', !!(dos.dynasty && dos.redraft));
+  eq('dynasty se queda con sus 14 trades', dos.dynasty.muestra.tradesPropios, 14);
+  eq('redraft se queda con los suyos', dos.redraft.muestra.tradesPropios, 14);
+  eq('los trades no se cuentan dos veces',
+    dos.dynasty.muestra.tradesPropios + dos.redraft.muestra.tradesPropios, 28);
+  // La prueba de que la particion sirve para algo: en dynasty compra QB y en
+  // redraft los vende. Mezclados era 14 vs 14 y el tab callaba.
+  const qbD = dos.dynasty.afirmaciones.find(a => a.label === 'qb_superflex');
+  const qbR = dos.redraft.afirmaciones.find(a => a.label === 'qb_1qb');
+  eq('en dynasty compra QB', qbD && qbD.lado, 'a');
+  eq('en redraft los vende', qbR && qbR.lado, 'b');
+  ok('un eje no ve las afirmaciones del otro',
+    !dos.dynasty.afirmaciones.some(a => a.label === 'qb_1qb'));
+  // Cada lado corre su propia familia de BH.
+  ok('cada eje corrige su familia por separado',
+    dos.dynasty.muestra.patronesEvaluados > 0 && dos.redraft.muestra.patronesEvaluados > 0);
+}
+{
+  // Keeper cae con redraft, pero contado y declarado.
+  const CTX3 = { ...CTX, formatoPorLiga: { LSF: 'dynasty', L1QB: 'keeper' },
+    fuentePorLiga: { LSF: 'settings', L1QB: 'nombre' } };
+  const dos = construirPerfiles(armarTrades(14), PLAYERS, CTX3);
+  eq('la liga keeper cae del lado redraft', dos.redraft.muestra.tradesPropios, 14);
+  eq('  y se declara que era keeper', dos.redraft.composicion.keeper, 1);
+  eq('  y que se clasifico por su nombre', dos.redraft.composicion.porNombre, 1);
+  eq('dynasty no se lleva ninguna keeper', dos.dynasty.composicion.keeper, 0);
+}
+{
+  // Un dueno que solo juega dynasty no puede ver un tab de redraft inventado.
+  const CTX4 = { ...CTX, formatoPorLiga: { LSF: 'dynasty', L1QB: 'dynasty' },
+    fuentePorLiga: { LSF: 'settings', L1QB: 'settings' } };
+  const dos = construirPerfiles(armarTrades(14), PLAYERS, CTX4);
+  eq('todo a dynasty', dos.dynasty.muestra.tradesPropios, 28);
+  eq('redraft queda vacio, no inventado', dos.redraft.muestra.tradesPropios, 0);
+  ok('y un eje vacio no afirma nada',
+    dos.redraft.afirmaciones.every(a => a.estado !== 'confirmado'));
+}
+{
+  // El precio de partir, medido: cada lado afirma MENOS que el saco mezclado.
+  // Se comprueba a proposito para que quede escrito que es esperado y no un bug.
+  const CTX5 = { ...CTX, formatoPorLiga: { LSF: 'dynasty', L1QB: 'redraft' },
+    fuentePorLiga: { LSF: 'settings', L1QB: 'settings' } };
+  const junto = construirPerfil(armarTrades(6), PLAYERS, CTX);
+  const dos = construirPerfiles(armarTrades(6), PLAYERS, CTX5);
+  ok('partir la muestra puede bajar lo que se afirma, y es correcto',
+    dos.dynasty.muestra.tradesPropios < junto.muestra.tradesPropios);
+}
+
+// ── 2c. Nada de vocabulario de dynasty en redraft ──────────────────────────
+console.log('\nEl idioma de cada eje');
+{
+  const CTX_D = { ...CTX, eje: 'dynasty' };
+  const CTX_R = { ...CTX, eje: 'redraft' };
+  const conPicks = armarTrades(14).map(t => ({ ...t, draft_picks: [{ owner_id: t.roster_ids[0], previous_owner_id: t.roster_ids[1] }] }));
+  const d = construirPerfil(conPicks, PLAYERS, CTX_D);
+  const r = construirPerfil(conPicks, PLAYERS, CTX_R);
+  const td = (d.afirmaciones.find(a => a.label === 'picks') || {}).texto || '';
+  const tr = (r.afirmaciones.find(a => a.label === 'picks') || {}).texto || '';
+  ok('dynasty habla de futuro', /future/i.test(td), 'texto: ' + td);
+  ok('redraft NO habla de futuro', !/future/i.test(tr), 'texto: ' + tr);
+  ok('redraft habla del draft de esta temporada', /draft/i.test(tr), 'texto: ' + tr);
+  ok('los dos ejes no dicen lo mismo', td !== tr);
+  // El vocabulario prohibido en redraft, tomado de la regla que ya rige a Mac.
+  ok('ninguna afirmacion de redraft usa jerga de dynasty',
+    r.afirmaciones.every(a => !/\b(future|win.?now|dynasty|rebuild|long.?term|runway)\b/i.test(a.texto || '')),
+    JSON.stringify(r.afirmaciones.filter(a => /\b(future|win.?now|dynasty|rebuild)\b/i.test(a.texto || '')).map(a => a.texto)));
+}
+{
+  // La edad es dato de dynasty. En redraft el equipo se disuelve en enero.
+  const d = construirPerfil(armarTrades(14), PLAYERS, { ...CTX, eje: 'dynasty' });
+  const r = construirPerfil(armarTrades(14), PLAYERS, { ...CTX, eje: 'redraft' });
+  eq('en dynasty la edad es relevante', d.edad.relevante, true);
+  eq('en redraft la edad NO es relevante', r.edad.relevante, false);
+  ok('pero el numero sigue ahi por si se quiere mirar', r.edad.recibida != null);
+}
+
+// ── 2d. Waiver: medido contra los rivales de su propia liga ────────────────
+console.log('\nWaiver');
+{
+  // Catorce liga-temporadas. En todas hago mas movimientos que la mediana de
+  // mis rivales. Sin comparador esto seria un numero suelto sin significado.
+  const movs = [], miRoster = {}, fmt = {};
+  for (let i = 0; i < 14; i++) {
+    const liga = 'L' + i;
+    miRoster[liga] = 1; fmt[liga] = 'dynasty';
+    for (let k = 0; k < 9; k++) movs.push({ liga, temporada: '2025', roster: 1, tipo: 'waiver', puja: 30 });
+    for (const r of [2, 3, 4]) for (let k = 0; k < 2; k++) movs.push({ liga, temporada: '2025', roster: r, tipo: 'waiver', puja: 5 });
+  }
+  const w = analizarWaivers(movs, miRoster, fmt, 'dynasty');
+  const vol = w.claims.find(c => c.label === 'waiver_volumen');
+  const faab = w.claims.find(c => c.label === 'waiver_faab');
+  eq('cuenta mis movimientos', w.misMovimientos, 14 * 9);
+  eq('cuenta las liga-temporada', w.ligasTemporada, 14);
+  eq('volumen: le gano a los 42 rivales-temporada', vol.ganados, 42);
+  eq('  medido sobre todos los rivales, no sobre 14 liga-temporadas', vol.n, 42);
+  eq('  y lo confirma', vol.estado, 'confirmado');
+  eq('FAAB: 14 veces pujando mas', faab.a + '/' + faab.b, '14/0');
+  eq('mediana de mis pujas', w.pujaMediana, 30);
+}
+{
+  // El comparador es lo que da sentido al numero: los MISMOS 9 movimientos
+  // mios, pero con rivales que hacen 20, tienen que dar la respuesta contraria.
+  const movs = [], miRoster = {}, fmt = {};
+  for (let i = 0; i < 14; i++) {
+    const liga = 'L' + i;
+    miRoster[liga] = 1; fmt[liga] = 'dynasty';
+    for (let k = 0; k < 9; k++) movs.push({ liga, temporada: '2025', roster: 1, tipo: 'waiver', puja: 30 });
+    for (const r of [2, 3, 4]) for (let k = 0; k < 20; k++) movs.push({ liga, temporada: '2025', roster: r, tipo: 'waiver', puja: 30 });
+  }
+  const vol = analizarWaivers(movs, miRoster, fmt, 'dynasty').claims.find(c => c.label === 'waiver_volumen');
+  eq('los mismos 9 movimientos, contra rivales activos, dan lo contrario', vol.lado, 'b');
+  ok('  y el texto lo dice', /sit still/i.test(vol.texto || ''), vol.texto);
+}
+{
+  // Una liga sin FAAB no puede convertirse en "este manager es tacano".
+  const movs = [], miRoster = {}, fmt = {};
+  for (let i = 0; i < 14; i++) {
+    const liga = 'L' + i;
+    miRoster[liga] = 1; fmt[liga] = 'dynasty';
+    for (let k = 0; k < 9; k++) movs.push({ liga, temporada: '2025', roster: 1, tipo: 'waiver', puja: null });
+    for (const r of [2, 3, 4]) movs.push({ liga, temporada: '2025', roster: r, tipo: 'waiver', puja: null });
+  }
+  const w = analizarWaivers(movs, miRoster, fmt, 'dynasty');
+  const faab = w.claims.find(c => c.label === 'waiver_faab');
+  eq('sin pujas en ninguna liga, el FAAB no afirma nada', faab.estado, 'insuficiente');
+  eq('  y no inventa una mediana', w.pujaMediana, null);
+}
+{
+  // El eje filtra: los movimientos de redraft no pueden contaminar dynasty.
+  const movs = [], miRoster = { LD: 1, LR: 1 }, fmt = { LD: 'dynasty', LR: 'redraft' };
+  for (let k = 0; k < 9; k++) movs.push({ liga: 'LD', temporada: '2025', roster: 1, tipo: 'waiver', puja: 1 });
+  for (let k = 0; k < 50; k++) movs.push({ liga: 'LR', temporada: '2025', roster: 1, tipo: 'waiver', puja: 1 });
+  eq('dynasty solo ve los suyos', analizarWaivers(movs, miRoster, fmt, 'dynasty').misMovimientos, 9);
+  eq('redraft solo ve los suyos', analizarWaivers(movs, miRoster, fmt, 'redraft').misMovimientos, 50);
+}
+{
+  // Empatar con la mediana no es una tendencia y no puede contarse a un lado.
+  const movs = [], miRoster = {}, fmt = {};
+  for (let i = 0; i < 14; i++) {
+    const liga = 'L' + i;
+    miRoster[liga] = 1; fmt[liga] = 'dynasty';
+    for (const r of [1, 2, 3, 4]) for (let k = 0; k < 5; k++) movs.push({ liga, temporada: '2025', roster: r, tipo: 'waiver', puja: null });
+  }
+  const vol = analizarWaivers(movs, miRoster, fmt, 'dynasty').claims.find(c => c.label === 'waiver_volumen');
+  // Todos empatados: le "gano" a la mitad de cada rival por la regla del medio
+  // punto, que es exactamente no tener ninguna tendencia.
+  eq('con todos empatados el marcador es la mitad justa', vol.ganados, 42 / 2);
+  eq('  y no se afirma nada', vol.estado, 'sin_senal');
+}
+{
+  // El waiver entra en la MISMA familia de BH, no en una aparte.
+  const movs = [];
+  for (let i = 0; i < 14; i++) {
+    for (let k = 0; k < 9; k++) movs.push({ liga: 'LSF', temporada: '20' + (10 + i), roster: 1, tipo: 'waiver', puja: 30 });
+    for (const r of [2, 3, 4]) movs.push({ liga: 'LSF', temporada: '20' + (10 + i), roster: r, tipo: 'waiver', puja: 5 });
+  }
+  const p = construirPerfil(armarTrades(14), PLAYERS, { ...CTX, eje: 'dynasty', movimientos: movs, formatoPorLiga: { LSF: 'dynasty', L1QB: 'dynasty' } });
+  ok('las afirmaciones de waiver llegan al perfil',
+    p.afirmaciones.some(a => a.label === 'waiver_volumen'));
+  ok('y cuentan en el denominador que ve el usuario', p.muestra.patronesEvaluados >= 7);
+  eq('el bloque de waiver va en la salida', p.waiver.misMovimientos, 14 * 9);
+}
+
+{
+  // Los empates son el caso NORMAL en una liga (media docena de managers hacen
+  // el mismo par de movimientos), asi que la regla del medio punto tiene que
+  // estar bien: si un empate contara entero a mi favor, no mover una ficha en
+  // toda la temporada saldria como "trabajas el wire".
+  const repartos = [];
+  for (let i = 0; i < 10; i++) repartos.push({ mio: 4, otros: [4, 4, 4, 4] });
+  const v = volumenWaiver(repartos, 12345);
+  eq('con todo empatado el estadistico es exactamente la mitad', v.ganados, 20);
+  ok('y el azar no puede distinguirlo del ruido', v.estado !== 'confirmado', 'p=' + v.p);
+}
+{
+  // Mismo dato, misma p: el test va sembrado como el de socios.
+  const repartos = [];
+  for (let i = 0; i < 10; i++) repartos.push({ mio: 9, otros: [2, 3, 1, 4] });
+  eq('la p del waiver no se mueve entre corridas',
+    volumenWaiver(repartos, 999).p, volumenWaiver(repartos, 999).p);
+  // Y es de dos colas: ser el MAS pasivo de la liga tambien es un rasgo.
+  const alReves = repartos.map(r => ({ mio: 0, otros: [9, 8, 7, 6] }));
+  const v = volumenWaiver(alReves, 999);
+  eq('quedarse quieto tambien se detecta', v.lado, 'b');
+  ok('  y se confirma igual que lo contrario', v.estado === 'confirmado', 'p=' + v.p);
+}
+{
+  // Sin rivales suficientes no se afirma: tres liga-temporadas de dos rivales
+  // no son una muestra por mucho que el patron parezca limpio.
+  const v = volumenWaiver([{ mio: 9, otros: [1] }, { mio: 9, otros: [1] }], 1);
+  eq('con muy pocos rivales no afirma', v.estado, 'insuficiente');
+}
+
+// ── 2e. Draft: que clase de drafter eres ───────────────────────────────────
+console.log('\nDraft');
+{
+  // Doce drafts. Yo tomo 3 RB en las primeras cuatro rondas, mis rivales 0.
+  const picks = [], miRoster = {}, fmt = {};
+  for (let i = 0; i < 12; i++) {
+    const liga = 'L' + i;
+    miRoster[liga] = 1; fmt[liga] = 'dynasty';
+    for (let r = 1; r <= 4; r++) picks.push({ liga, temporada: '2025', roster: 1, ronda: r, pos: r <= 3 ? 'RB' : 'WR' });
+    for (const rv of [2, 3, 4]) for (let r = 1; r <= 4; r++) picks.push({ liga, temporada: '2025', roster: rv, ronda: r, pos: 'WR' });
+  }
+  const d = analizarDrafts(picks, miRoster, fmt, 'dynasty');
+  const c = d.claims[0];
+  eq('cuenta los drafts', d.drafts, 12);
+  eq('cuenta mis RB tempranos', d.misRbTempranos, 36);
+  eq('le gano a los 36 rivales', c.ganados, 36);
+  eq('  y lo confirma', c.estado, 'confirmado');
+  ok('  y me llama constructor sobre RB', /build on running backs/i.test(c.texto || ''), c.texto);
+}
+{
+  // El espejo: los MISMOS cero RB mios, pero con rivales que toman tres.
+  const picks = [], miRoster = {}, fmt = {};
+  for (let i = 0; i < 12; i++) {
+    const liga = 'L' + i;
+    miRoster[liga] = 1; fmt[liga] = 'dynasty';
+    for (let r = 1; r <= 4; r++) picks.push({ liga, temporada: '2025', roster: 1, ronda: r, pos: 'WR' });
+    for (const rv of [2, 3, 4]) for (let r = 1; r <= 4; r++) picks.push({ liga, temporada: '2025', roster: rv, ronda: r, pos: r <= 3 ? 'RB' : 'WR' });
+  }
+  const c = analizarDrafts(picks, miRoster, fmt, 'dynasty').claims[0];
+  eq('sin RB tempranos sale por el otro lado', c.lado, 'b');
+  ok('  y me llama zero-RB', /zero-RB/i.test(c.texto || ''), c.texto);
+  eq('  y tambien se confirma', c.estado, 'confirmado');
+}
+{
+  // Un rival que tomo CERO RB tempranos tiene que seguir en el denominador: si
+  // solo contaran los que tomaron alguno, nadie podria salir por abajo nunca.
+  const picks = [], miRoster = { L: 1 }, fmt = { L: 'dynasty' };
+  for (let r = 1; r <= 4; r++) picks.push({ liga: 'L', temporada: '2025', roster: 1, ronda: r, pos: 'RB' });
+  for (const rv of [2, 3]) for (let r = 1; r <= 4; r++) picks.push({ liga: 'L', temporada: '2025', roster: rv, ronda: r, pos: 'WR' });
+  const d = analizarDrafts(picks, miRoster, fmt, 'dynasty');
+  eq('el rival de cero RB cuenta igual', d.claims[0].n, 2);
+}
+{
+  // Solo las rondas tempranas. Un RB en la ronda 12 no dice nada del plan.
+  const picks = [], miRoster = { L: 1 }, fmt = { L: 'dynasty' };
+  picks.push({ liga: 'L', temporada: '2025', roster: 1, ronda: 12, pos: 'RB' });
+  for (const rv of [2, 3]) picks.push({ liga: 'L', temporada: '2025', roster: rv, ronda: 12, pos: 'WR' });
+  eq('las rondas tardias no entran', analizarDrafts(picks, miRoster, fmt, 'dynasty').drafts, 0);
+}
+{
+  // El eje filtra tambien aqui.
+  const picks = [], miRoster = { LD: 1, LR: 1 }, fmt = { LD: 'dynasty', LR: 'redraft' };
+  for (let r = 1; r <= 4; r++) picks.push({ liga: 'LD', temporada: '2025', roster: 1, ronda: r, pos: 'RB' });
+  for (let r = 1; r <= 4; r++) picks.push({ liga: 'LR', temporada: '2025', roster: 1, ronda: r, pos: 'RB' });
+  eq('dynasty solo ve su draft', analizarDrafts(picks, miRoster, fmt, 'dynasty').drafts, 1);
+  eq('redraft solo ve el suyo', analizarDrafts(picks, miRoster, fmt, 'redraft').drafts, 1);
 }
 
 // ── 3. Lo que ya funcionaba y no se puede romper ───────────────────────────
