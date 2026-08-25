@@ -240,3 +240,81 @@ declara en la nota amarilla de `index.html:1113`.
 
 NINGUNO de estos se arreglo en esta sesion: es una auditoria, no un cambio. El orden de
 impacto propuesto es 1 (precio por tamano de sala), luego 5 y 4 (los dos baratos), luego 2.
+
+## Sesion 2026-08-25 (tarde): My Rankings, la lista propia del usuario
+
+Pedido del dueno: "un tab de rankings editable y saviable para poder setiar mis tiers".
+Referencia que dio: el video de YouTube eD7Y1UW7iF0, "My Updated Top 60 Overall Rankings
+for Fantasy Football". NO se pudo ver su contenido visual (YouTube solo devuelve el
+titulo), asi que la ESTETICA esta pendiente de que el mande una captura. La
+funcionalidad no dependia de eso y esta entera.
+
+**Donde vive.** `public/rankings.js` (modulo nuevo, no toca app.js salvo por un puente),
+tab "My Rankings" dentro de `screen-research`, bloque `.rk-*` al final de `styles.css`.
+Se hizo archivo aparte a proposito: app.js va por 17.400 lineas y esto es un modulo
+cerrado. `rankings.js` se carga en index.html detras de app.js.
+
+**Que hace.** Arranca del ADP real (`/api/stats/adp`, top 200, sin K ni DEF), el usuario
+reordena arrastrando o con los botones, corta tiers donde quiere, y todo se guarda en
+localStorage. Cada fila muestra el ADP de consenso y el DELTA contra el, que es la unica
+cifra que dice algo: cuanto te separas del mercado.
+
+**Dos decisiones de modelo que importan:**
+- El orden se guarda por ORDEN DE IDS, no por posiciones absolutas: el dia que Sleeper
+  mueva su ADP, la lista propia no se descoloca. Los jugadores nuevos caen detras en su
+  orden de consenso, nunca borran lo que el usuario ordeno.
+- Los cortes de tier se guardan como "despues de ESTE jugador se corta", no como
+  indices. Un tier anclado a un indice se rompe en cuanto mueves a alguien por encima.
+
+**El puente al mock draft** (`public/app.js`, dentro de `mdFilterChoices`, justo antes de
+crear la fila `md-bd-row`). Con la casilla "Use in mock drafts" encendida, el board pinta
+`MY #n` en la linea meta de cada jugador, y lo pone en verde cuando cae 6 puestos o mas
+por debajo de donde el usuario lo tiene. Ese contraste ES la razon de hacerse una lista
+propia. Va en la linea meta y NO en una columna nueva: la rejilla de columnas comparte
+plantilla con la cabecera y anadir una las descuadra (bug ya conocido en el archivo).
+
+**Gate propio: `node scripts/qa-rankings.mjs`, 18 checks, navegador real.** Arranca su
+propio servidor en el 3211. Playwright NO esta en package.json a proposito: su
+postinstall se baja los navegadores y eso entraria en cada build de Vercel; el script lo
+resuelve de donde ya exista en la maquina y dice como instalarlo si falta.
+El check (o) es un CONTROL NEGATIVO: con la casilla apagada el board no puede pintar
+nada. Sin el, el check siguiente pasaria aunque el puente estuviera cableado al reves.
+Verificado: apagado 0 marcas, encendido 25.
+
+**Dos defectos encontrados y arreglados durante el QA:**
+- **ReferenceError al abrir el tab con red lenta.** El onclick inline llamaba
+  `renderRankings()` directo; si el usuario pulsaba antes de que `rankings.js` cargara,
+  saltaba un error en consola y el tab quedaba muerto para siempre. Ahora el onclick va
+  guardado (`window.renderRankings&&...`) y el modulo, al terminar de cargar, se pinta
+  solo si el tab quedo abierto. El gate lo cazo, no la lectura del codigo.
+- **La UI estaba escrita en espanol** y toda la app esta en ingles (Compare, Start/Sit,
+  Players, Market). Traducida entera. Los comentarios del codigo siguen en espanol, que
+  es el estilo del repo.
+
+PENDIENTE DE GUSTO: la captura del video para ajustar la estetica. Y el boton de corte de
+tier lleva la palabra TIER en vez de un icono, porque en el telefono no hay hover que
+revele el tooltip y el glifo se leia como un guion.
+
+## Reel del hero: cuatro defectos EN PRODUCCION, sin arreglar
+
+Auditado el 2026-08-25 extrayendo fotogramas de `public/promo-reel.mp4` con ffmpeg.
+El video se hizo A MANO y no hay ningun script en el repo que lo genere: por eso se
+desincronizo del producto. Lo que se encontro:
+1. **Muestra un jugador que no existe**: "J. Love RB ARI" en la tarjeta destacada.
+   Verificado contra el maestro de Sleeper: los unicos J. Love son Jordan Love (QB, GB)
+   y Josh Love (QB, sin equipo). Es lo primero que ve un visitante.
+2. **Nombre truncado**: "J. Smith-Njigb", cortado en seco.
+3. **Tipografiado en Archivo**, la fuente vetada en agosto. El commit que lo genero
+   (5dd3efd) lo dice literal. El sitio ya migro a Familjen Grotesk; el video no.
+4. **Encuadre**: el archivo es 1920x1080 y solo la franja superior tiene contenido; el
+   HTML lo declara `width="1080" height="1080"`. Primer fotograma negro puro.
+
+DECISION YA TOMADA (aprobada por el dueno): los reels se generan desde el PRODUCTO REAL
+con Playwright contra localhost, versionado en scripts/, para que un comando los
+regenere con la fuente y los datos del dia. NO con IA generativa: un video de la UI hecho
+con IA muestra un producto que no existe. El auction room ya se comprobo que se filma
+bien (captura en la sesion): la tarjeta del lote con foto grande, el precio, OFFER $55 y
+la columna de presupuestos.
+NO EMPEZADO. Es el primer punto de la sesion que sigue, junto con reposicionar el hero
+para que la subasta sea el gancho de entrada en vez del snake (idea aprobada por el
+dueno el 2026-08-25, con los datos del HALLAZGO 3 detras).

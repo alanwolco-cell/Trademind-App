@@ -58,18 +58,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026082403">
+<link rel="stylesheet" href="/styles.css?v=2026082501">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026082403" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026082501" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026082403">
+<link rel="stylesheet" href="/theme.css?v=2026082501">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026082403">
+<link rel="stylesheet" href="/home.css?v=2026082501">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -81,7 +81,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026082403">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026082501">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -781,6 +781,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-startsit','screen-research')">Start / Sit</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-players-db','screen-research');renderPlayersDB()">Players</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-market','screen-research');renderMarketTab()">Market</div>
+        <div class="inner-tab" onclick="switchInnerTab(this,'tab-rankings','screen-research');window.renderRankings&&renderRankings()">My Rankings</div>
       </div>
 
 
@@ -926,6 +927,48 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       </div>
     </div>
     <!-- MARKET TAB -->
+    <!-- MY RANKINGS TAB -->
+    <div id="tab-rankings" class="tab-content">
+      <div class="rk-head">
+        <div class="rk-head-l">
+          <h3 class="rk-title">My Rankings</h3>
+          <p class="rk-sub">Your list beats the consensus. Drag to reorder, cut a tier where the player actually changes, and the mock draft board reads off your ranks instead of ADP.</p>
+        </div>
+        <div class="rk-head-r">
+          <span id="rk-saved" class="rk-saved">Saved</span>
+          <label class="rk-use" title="The mock draft board highlights players by your rank, not by ADP">
+            <input type="checkbox" id="rk-use" onchange="tmrToggleUse(this.checked)"> Use in mock drafts
+          </label>
+        </div>
+      </div>
+
+      <div class="rk-tools">
+        <div class="rk-filters" id="rk-filters">
+          <button type="button" class="rk-fb active" onclick="tmrFilter('ALL',this)">All</button>
+          <button type="button" class="rk-fb" onclick="tmrFilter('QB',this)">QB</button>
+          <button type="button" class="rk-fb" onclick="tmrFilter('RB',this)">RB</button>
+          <button type="button" class="rk-fb" onclick="tmrFilter('WR',this)">WR</button>
+          <button type="button" class="rk-fb" onclick="tmrFilter('TE',this)">TE</button>
+        </div>
+        <input type="search" class="rk-search" id="rk-search" placeholder="Search player or team" oninput="tmrSearch(this.value)" aria-label="Search player or team">
+        <div class="rk-tools-r">
+          <span class="rk-count" id="rk-count"></span>
+          <button type="button" class="rk-btn" onclick="tmrExport()">Copy list</button>
+          <button type="button" class="rk-btn rk-btn-quiet" onclick="tmrReset()">Reset to consensus</button>
+        </div>
+      </div>
+
+      <div class="rk-export" id="rk-export-box" style="display:none">
+        <div class="rk-export-top">
+          <span>Copied. Paste it anywhere.</span>
+          <button type="button" class="rk-btn rk-btn-quiet" onclick="tmrCloseExport()">Close</button>
+        </div>
+        <textarea id="rk-export-ta" class="rk-export-ta" readonly rows="8"></textarea>
+      </div>
+
+      <div id="rk-body" class="rk-list"></div>
+    </div>
+
     <div id="tab-market" class="tab-content">
       <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;margin-bottom:12px;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:10px;font-size:12px;color:var(--muted2)">
         <span style="width:7px;height:7px;border-radius:50%;background:var(--accent-bright)"></span>
@@ -1750,7 +1793,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026082403"></script>
+<script src="/app.js?v=2026082501"></script>
+<script src="/rankings.js?v=2026082501"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

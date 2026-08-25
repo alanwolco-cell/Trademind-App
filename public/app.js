@@ -12055,6 +12055,22 @@ function mdShowChoices(round){
       if(_bwHot)meta+=' &middot; <span class="hot" title="You already have '+_bwN+' picks on this bye week">BYE&nbsp;'+_bw+'</span>';
     }
 
+    // MIS RANKINGS (tab My Rankings, casilla "Use in mock drafts"). Lo unico
+    // que aporta valor aqui no es mi puesto: es la DISTANCIA entre donde yo lo
+    // tengo y donde esta cayendo de verdad. Un jugador que yo pongo #12 y sigue
+    // vivo en el pick 30 es la razon entera de hacerse una lista propia.
+    // Va en la linea meta y NO en una columna: la rejilla de columnas comparte
+    // plantilla con la cabecera y meterle una mas descuadra las dos.
+    if(!isTaken&&typeof tmRankingsActivos==='function'&&tmRankingsActivos()){
+      try{
+        var _my=tmMyRankOf(p.name);
+        if(_my){
+          var _gap=(MD.pickIdx+1)-_my; // + = cae mas tarde de donde yo lo tengo
+          meta+=' &middot; <span class="md-bd-my'+(_gap>=6?' hit':'')+'" title="You have him at #'+_my+'">MY&nbsp;#'+_my+(_gap>=6?' &middot; '+_gap+' late':'')+'</span>';
+        }
+      }catch(_){}
+    }
+
     var d=document.createElement('div');
     d.className='md-bd-row pos-'+p.pos+(!isTaken&&p===rec?' is-rec':'')+(isSel?' is-on':'')+(isTaken?' is-taken':'');
     d.innerHTML=_cols.map(function(c){

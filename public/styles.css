@@ -2104,3 +2104,91 @@ html{scroll-padding-top:76px}
   .perfil-eje-t{font-size:20px}
   .perfil-fallo h4{font-size:22px}
 }
+
+/* ── My Rankings ─────────────────────────────────────────────────────────
+   Mobile-first: a 390px la fila es numero + nombre + acciones y nada mas.
+   El ADP y el delta se quedan (son el motivo de la pantalla), el resto cede.
+   Nada de ellipsis sobre el nombre: el contenedor se dimensiona al nombre
+   real, que es la regla de la casa. */
+.rk-head{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.rk-title{margin:0 0 4px;font-size:19px;line-height:1.2}
+.rk-sub{margin:0;font-size:12.5px;line-height:1.5;color:var(--muted);max-width:56ch}
+.rk-head-r{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rk-saved{font-size:11px;color:var(--accent-bright);opacity:0;transition:opacity .25s ease}
+.rk-use{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.rk-use input{accent-color:var(--accent-btn);width:15px;height:15px;cursor:pointer}
+
+.rk-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.rk-filters{display:flex;gap:6px;flex-wrap:wrap}
+.rk-fb{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:999px;
+  padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.rk-fb:hover{color:var(--text);border-color:var(--accent)}
+.rk-fb.active{background:var(--accent-dim);border-color:var(--accent);color:var(--text)}
+.rk-search{flex:1 1 190px;min-width:150px;background:transparent;border:1px solid var(--border);
+  border-radius:9px;padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit}
+.rk-search:focus{outline:none;border-color:var(--accent)}
+.rk-tools-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.rk-count{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.rk-btn{background:var(--accent-dim);border:1px solid var(--accent);color:var(--text);border-radius:8px;
+  padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.rk-btn:hover{background:var(--accent)}
+.rk-btn-quiet{background:transparent;border-color:var(--border);color:var(--muted)}
+.rk-btn-quiet:hover{background:transparent;border-color:var(--muted);color:var(--text)}
+
+.rk-export{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px}
+.rk-export-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.rk-export-ta{width:100%;background:transparent;border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-size:12px;line-height:1.6;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
+
+.rk-list{display:flex;flex-direction:column;gap:4px}
+.rk-tier{display:flex;align-items:center;gap:10px;margin:14px 0 6px;font-size:10.5px;font-weight:700;
+  letter-spacing:.10em;text-transform:uppercase;color:var(--accent-bright)}
+.rk-tier-first{margin-top:2px}
+.rk-tier::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
+.rk-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--border);
+  border-radius:9px;background:var(--surface,rgba(255,255,255,.02));cursor:grab;transition:border-color .15s,transform .12s}
+.rk-row:hover{border-color:var(--accent)}
+.rk-row.rk-dragging{opacity:.45;cursor:grabbing}
+.rk-num{flex:0 0 auto;min-width:26px;text-align:right;font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.rk-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rk-name{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word}
+.rk-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.rk-pos{font-weight:700;letter-spacing:.03em}
+.rk-QB{color:#e88ab5}.rk-RB{color:#5fd08a}.rk-WR{color:#63b6f5}.rk-TE{color:#e8b45f}
+.rk-adp{font-variant-numeric:tabular-nums}
+.rk-delta{font-weight:700;font-variant-numeric:tabular-nums}
+.rk-up{color:#5fd08a}
+.rk-down{color:#e8a55f}
+.rk-acts{flex:0 0 auto;display:flex;gap:4px}
+.rk-ib{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;padding:0}
+.rk-ib:hover{color:var(--text);border-color:var(--accent)}
+.rk-cut.on{color:var(--accent-bright);border-color:var(--accent);background:var(--accent-dim)}
+.rk-empty{padding:26px 10px;text-align:center;font-size:13px;color:var(--muted)}
+
+/* Skeleton, nunca spinner: la forma es la de la fila que va a llegar */
+.rk-skel-wrap{display:flex;flex-direction:column;gap:4px}
+.rk-skel-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--border);border-radius:9px}
+.rk-skel-num{width:22px;height:13px;border-radius:4px}
+.rk-skel-name{flex:1;height:13px;border-radius:4px;max-width:210px}
+.rk-skel-tag{width:58px;height:11px;border-radius:4px}
+.rk-skel-num,.rk-skel-name,.rk-skel-tag{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.11),rgba(255,255,255,.05));
+  background-size:200% 100%;animation:rk-shine 1.35s ease-in-out infinite}
+@keyframes rk-shine{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.rk-skel-num,.rk-skel-name,.rk-skel-tag{animation:none}}
+
+@media (max-width:520px){
+  .rk-tools-r{margin-left:0;width:100%}
+  .rk-search{flex:1 1 100%}
+  .rk-sub{font-size:12px}
+  .rk-num{min-width:22px;font-size:12.5px}
+  .rk-ib{width:34px;height:34px}
+  .rk-row{padding:8px}
+}
+/* El corte de tier lleva palabra, no icono: en el telefono no hay hover que
+   revele el tooltip y el glifo solo se leia como un guion. */
+.rk-cut{width:auto;padding:0 9px;font-size:9.5px;font-weight:800;letter-spacing:.07em;font-family:inherit}
+/* Mi puesto en el board del mock. Apagado hasta que de verdad hay hallazgo:
+   un jugador que cae 6 puestos o mas por debajo de donde YO lo tengo. */
+.md-bd-my{color:var(--muted);font-variant-numeric:tabular-nums}
+.md-bd-my.hit{color:#5fd08a;font-weight:700}
