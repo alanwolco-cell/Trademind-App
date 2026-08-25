@@ -12,7 +12,7 @@ Dominio: macdraft.app. Deploy en Vercel, proyecto `trademind-starter`.
 node scripts/calibrate-room.mjs   # 40 invariantes, ~10 min. Debe dar ALL GREEN
 node scripts/qa-flows.mjs         # flujos con el motor real
 node scripts/qa-trades.mjs        # 9.989 escenarios, 32 checks
-node scripts/qa-perfil.mjs        # 54 checks del motor del perfil, instantaneo
+node scripts/qa-perfil.mjs        # 156 checks del perfil, instantaneo
 ```
 Los cuatro corren desde cualquier directorio. Un test que no falla contra el codigo
 roto es un adorno: al anadir un gate, verificar que falla ANTES del fix.
@@ -56,7 +56,7 @@ lleva su n; la que no supera el umbral no se emite y se muestra como rechazada.
 
 ### Auditoria del revisor: CERRADA (2026-08-24)
 Los cuatro puntos, mas dos defectos que aparecieron al cerrarlos. El motor ya
-tiene gate propio (`scripts/qa-perfil.mjs`, 54 checks); antes no tenia ninguno,
+tiene gate propio (`scripts/qa-perfil.mjs`, hoy 156 checks); antes no tenia ninguno,
 y se verifico que 25 de esos checks fallaban contra el codigo previo.
 
 - **Edad por `birth_date`, no por aproximacion.** Sleeper CONGELA `age` cuando
@@ -105,7 +105,50 @@ se registre comportamiento propio eso deja de ser cierto, y la politica tiene qu
 decirlo ANTES de guardar el primer evento. Esta escrito en la cabecera de
 `server/routes/perfil.js`.
 
-## Yahoo Fantasy: no conecta, y no es el codigo
+## Sesion 2026-08-24 (tarde): motor reescrito y UI de dos ejes
+
+**Formato de liga: una sola verdad.** `server/lib/formato.js` clasifica dynasty,
+keeper y redraft. El criterio vivia copiado A MANO en dos sitios de `public/app.js`
+y nunca habia llegado al servidor, por lo que el perfil mezclaba los tres formatos.
+Ahora app.js tiene UN espejo (`tmClasificarLiga`) y `qa-perfil.mjs` lo EXTRAE del
+archivo y lo compara caso por caso contra el canonico. Comprobado que el gate falla
+si el espejo deriva.
+
+**Historico: de 2 temporadas a todas.** Camina atras hasta dos vacias seguidas, tope
+10. Del dueno salen 8 temporadas, 29 ligas, 63 trades.
+
+**Dos ejes.** `construirPerfiles()` parte el perfil en dynasty y redraft, cada uno
+con su propia familia de Benjamini-Hochberg. Keeper cae con redraft pero se cuenta y
+se declara. Partir la muestra hace que cada tab afirme MENOS: es correcto, lo que el
+saco mezclado afirmaba de mas eran conclusiones sobre un manager que no existe.
+
+**El idioma de cada eje.** Prohibido vocabulario de dynasty en redraft: "bank the
+future" no significa nada en una liga que acaba en enero. `edad.relevante` es false
+en redraft. La regla ya existia para Mac y el perfil se la saltaba.
+
+**Dos fuentes nuevas de dato.**
+- Waiver: sale GRATIS, la ruta ya bajaba las semanas enteras y tiraba lo que no era
+  trade. Test de PERMUTACION contra los rivales de la propia liga. El primer intento
+  fue un binomio sobre liga-temporadas y daba n=5: el problema no era el dato, era la
+  unidad de medida.
+- Drafts: `/user/{id}/drafts/nfl/{season}` y `/draft/{id}/picks`, rondas 1 a 4. El
+  producto ya clasificaba a sus bots como zerorb/robustrb y nunca le habia dicho al
+  dueno cual es el.
+
+**Hallazgo real confirmado** en redraft: "You build on running backs. In the first
+four rounds you take more of them than 73 of the 105 rival drafters", p=0.011. En
+dynasty ese mismo test da p=0.3. El contraste solo existe porque se partieron los ejes.
+
+**UI: un solo arbol de DOM, dos repartos.** El telefono pone los dos ejes detras de
+tabs; la computadora los abre en dos columnas y esconde los tabs. Lo hace el CSS. Se
+descarto hacer dos disenos distintos (editorial en movil, mazo de cartas en
+escritorio): el mazo es un gesto de pulgar que en computadora no existe, gasta una
+pantalla grande en un dato por vez, y dos arquitecturas son dos codigos para la misma
+pantalla que se separan solos. Del mazo se rescato la cifra grande. El eje inicial NO
+es fijo: abre por el que mas tenga que decir. Verificado en navegador real a 390px y a
+1400px: sin desborde, consola limpia, cambio de tab con aria-selected correcto.
+
+## Yahoo Fantasy: solicitud en curso, esperando a Yahoo
 Medido el 2026-08-24 contra la app real, cambiando una cosa por vez:
 
     redirect_uri=macdraft.app      -> invalid_request "invalid redirect uri"
@@ -118,11 +161,22 @@ self-serve; hoy se solicita en https://sports.yahoo.com/developer/ y se espera
 aprobacion manual, y la consola de apps ya no ofrece ese permiso para marcarlo.
 Hasta que aprueben NO hay codigo que conecte una liga de Yahoo.
 
+El dueno YA habia aplicado y firmado el acuerdo el 4 de agosto (hilo de Gmail
+19fce100154aa018 con fantasyapideveloper@yahoosports.com). Se atasco por dos cosas:
+su respuesta del 5 dejaba ambiguo cual era su email de Yahoo, y su Client ID se pego
+con la palabra siguiente al hacer salto de linea, con lo que probablemente les llego
+un ID invalido. El 2026-08-24 se respondio en el mismo hilo con las dos respuestas
+sin ambiguedad y la evidencia de los scopes.
+
+PREGUNTA ABIERTA: en ese correo se afirmo que la cuenta Yahoo detras de la app es
+awolcovinsky@yahoo.com. Es una INFERENCIA (es la unica cuenta Yahoo que el menciono),
+NO esta verificada. Si el dice que es otra, mandar correccion al mismo hilo.
+
 Dos cosas abiertas, las dos esperando a Wolco:
 1. La app de Yahoo sigue registrada con el dominio viejo (trademindff.com).
    Anadir https://macdraft.app/api/yahoo/callback a sus Redirect URI. Barato,
    pero por si solo no conecta nada: el bloqueo que manda es el scope.
 2. `/api/yahoo/status` devuelve configured en cuanto existen las credenciales,
    asi que el boton "Sign in with Yahoo" esta VIVO en produccion y lleva a una
-   pagina de error de Yahoo, en la pantalla de conectar cuenta. Propuesto
-   esconderlo tras una variable hasta que aprueben; sin decision aun, NO aplicado.
+   pagina de error de Yahoo, en la pantalla de conectar cuenta. Se propuso
+   esconderlo tras una variable y el dueno dijo que NO: se queda visible.

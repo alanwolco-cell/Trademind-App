@@ -17255,78 +17255,203 @@ function renderPerfil(){
     });
 }
 
+// ── Pintado del perfil ─────────────────────────────────────────────────────
+// UN solo arbol de DOM para las dos medidas de pantalla, no dos disenos.
+//
+// La tentacion era hacer un formato editorial en el celular y un mazo de cartas
+// en la computadora. Se descarto por tres razones, y ninguna es de gusto:
+//   1. El mazo se pasa con el pulgar. En una computadora no hay swipe, asi que
+//      habria que poner flechas o secuestrar el scroll, y las dos son peores que
+//      ensenar el contenido. Ademas un mazo gasta una pantalla de 1400px en
+//      ensenar un dato por vez, justo donde sobra sitio para comparar los ejes.
+//   2. Dos arquitecturas son dos codigos para la misma pantalla: cada hallazgo
+//      nuevo hay que disenarlo dos veces y se separan solas. Este proyecto ya
+//      sabe como acaba eso.
+//   3. Rompe el mobile-first: con una version de escritorio distinta, el
+//      telefono queda de puerto.
+// Asi que la estructura es la misma y solo cambia como se REPARTE: en el
+// telefono los dos ejes van detras de un par de tabs, y en la computadora se
+// abren en dos columnas y los tabs desaparecen. Lo hace el CSS, no el JS.
+// El eje que se abre primero NO es fijo. Abrir siempre por dynasty dejaba la
+// primera pantalla en un estado vacio teniendo hallazgos firmes al lado. Se
+// abre por el que mas tenga que decir, y a igualdad por el que mas historial
+// tenga. No esconde nada: el otro esta a un toque, y en computadora se ven los
+// dos a la vez.
+var _perfilEje='dynasty';
+function _perfilEjeInicial(ejes){
+  var mejor='dynasty',mejorN=-1,mejorT=-1;
+  ['dynasty','redraft'].forEach(function(e){
+    var m=(ejes[e]&&ejes[e].muestra)||{};
+    var n=m.patronesEmitidos||0,t=m.tradesPropios||0;
+    if(n>mejorN||(n===mejorN&&t>mejorT)){mejor=e;mejorN=n;mejorT=t;}
+  });
+  return mejor;
+}
+
+/**
+ * La cifra grande de una afirmacion, que es lo unico que se rescato del mazo.
+ * "73 de 105" a tamano de titular se recuerda; "p=0.011" no. Cada familia de
+ * afirmacion guarda su marcador en un sitio distinto, asi que se lee de donde
+ * este y NUNCA se inventa: si no hay marcador, no hay cifra y el bloque se
+ * dibuja sin ella.
+ */
+function _perfilCifra(a){
+  if(!a)return null;
+  if(a.a!=null&&a.b!=null)return {num:(a.lado==='b'?a.b:a.a),den:a.n};
+  if(a.ganados!=null)return {num:(a.lado==='b'?+(a.n-a.ganados).toFixed(0):Math.round(a.ganados)),den:a.n};
+  if(a.maxObs!=null)return {num:a.maxObs,den:a.n};
+  return null;
+}
+function _perfilP(a){
+  if(a.p==null)return '';
+  return a.pEsPiso?('p &lt; '+a.pPiso):('p='+a.p);
+}
+
 function _perfilPintar(p,cuerpo,muestra){
-  var m=p.muestra||{},f=p.flujo||{},e=p.edad||{},c=p.contrapartes||{};
-  muestra.textContent=(m.tradesPropios||0)+' trades of your own, across '+((p.ligas||[]).length)+' leagues'
-    +(p.ritmo?', '+_perfilFecha(p.ritmo.primero)+' to '+_perfilFecha(p.ritmo.ultimo):'');
+  var ejes=p.ejes||{};
+  _perfilEje=_perfilEjeInicial(ejes);
+  var ligas=(p.ligas||[]);
+  var temporadas=(p.temporadas||[]);
+  muestra.textContent=(p.muestra&&p.muestra.tradesPropios||0)+' trades of your own across '
+    +ligas.length+' leagues'
+    +(temporadas.length?', '+temporadas[temporadas.length-1]+' to '+temporadas[0]:'');
 
-  var firmes=(p.afirmaciones||[]).filter(function(a){return a.estado==='confirmado';});
-  var mudas=(p.afirmaciones||[]).filter(function(a){return a.estado==='insuficiente'||a.estado==='sin_senal';});
-  var h='';
+  var h='<div class="perfil-tabs" role="tablist">';
+  ['dynasty','redraft'].forEach(function(e){
+    var x=ejes[e]||{},m=x.muestra||{};
+    h+='<button class="perfil-tab'+(e===_perfilEje?' on':'')+'" role="tab" '
+      +'aria-selected="'+(e===_perfilEje)+'" onclick="_perfilVerEje(\''+e+'\')">'
+      +(e==='dynasty'?'Dynasty':'Redraft')
+      +'<span>'+(m.patronesEmitidos||0)+' of '+(m.patronesEvaluados||0)+'</span></button>';
+  });
+  h+='</div><div class="perfil-ejes">';
+  ['dynasty','redraft'].forEach(function(e){ h+=_perfilColumna(e,ejes[e],ligas); });
+  h+='</div>';
+  cuerpo.innerHTML=h;
+}
 
-  // El denominador va delante: sin el, un hallazgo suelto parece mas de lo que
-  // es. "2 de 5 patrones" deja ver que hubo un filtro y que la mayoria no paso.
-  h+='<div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin:4px 0 4px">What the data supports</div>'
-    +'<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">'
-    +(m.patronesEmitidos||0)+' of '+(m.patronesEvaluados||0)+' patterns tested clear the bar, after correcting for testing several at once.</div>';
-  if(!firmes.length){
-    h+='<div class="card" style="padding:18px;font-size:13px;color:var(--muted);margin-bottom:20px">Nothing clears the bar yet. That is a real answer, not a failure: with this many trades, anything else would be a guess.</div>';
-  } else {
-    h+='<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">';
-    firmes.forEach(function(a){
-      // Algunas afirmaciones son un reparto A/B y otras no (la concentracion de
-      // socios sale de un test de permutacion), asi que la linea de evidencia se
-      // arma segun lo que la afirmacion traiga, nunca asumiendo la forma.
-      var ev=(a.a!=null&&a.b!=null)?(a.a+' vs '+a.b+' &middot; '):'';
-      var pTxt=a.pEsPiso?('p &lt; '+a.pPiso):('p='+a.p);
-      h+='<div class="card" style="padding:14px 16px;border-left:3px solid var(--accent-btn)">'
-        +'<div style="font-weight:700;font-size:14px;margin-bottom:5px">'+escHtml(a.texto||'')+'</div>'
-        +'<div style="font-size:11.5px;color:var(--muted2)">'+ev+'n='+a.n+' &middot; '+pTxt+'</div></div>';
-    });
-    h+='</div>';
+function _perfilVerEje(e){
+  _perfilEje=e;
+  var c=document.getElementById('perfil-cuerpo');
+  if(!c)return;
+  // Optimista: el reparto ya esta en el DOM, asi que cambiar de eje es cambiar
+  // una clase. No se vuelve a pedir nada ni se vuelve a pintar.
+  c.querySelectorAll('.perfil-eje').forEach(function(n){n.classList.toggle('on',n.dataset.eje===e);});
+  c.querySelectorAll('.perfil-tab').forEach(function(n,i){
+    var on=(i===0?'dynasty':'redraft')===e;
+    n.classList.toggle('on',on); n.setAttribute('aria-selected',on);
+  });
+}
+
+function _perfilColumna(eje,x,ligas){
+  var nombre=eje==='dynasty'?'Dynasty':'Redraft';
+  var h='<section class="perfil-eje'+(eje===_perfilEje?' on':'')+'" data-eje="'+eje+'">';
+  if(!x||!(x.muestra&&x.muestra.tradesPropios)){
+    h+='<h3 class="perfil-eje-t">'+nombre+'</h3>'
+      +'<div class="perfil-vacio">No '+nombre.toLowerCase()+' leagues in your history yet. '
+      +'Nothing here is hidden: there is simply nothing to read.</div></section>';
+    return h;
+  }
+  var m=x.muestra||{},c=x.composicion||{},e=x.edad||{},f=x.flujo||{};
+  var firmes=(x.afirmaciones||[]).filter(function(a){return a.estado==='confirmado';});
+  var mudas=(x.afirmaciones||[]).filter(function(a){return a.estado!=='confirmado';});
+
+  h+='<h3 class="perfil-eje-t">'+nombre+'</h3>';
+  h+='<p class="perfil-eje-n">'+(m.tradesPropios||0)+' trades &middot; '
+    +((x.waiver&&x.waiver.misMovimientos)||0)+' waiver moves &middot; '
+    +((x.draft&&x.draft.drafts)||0)+' drafts'
+    +(c.ligas?' &middot; '+c.ligas+' league'+(c.ligas===1?'':'s'):'')+'</p>';
+  // Agrupar keeper con redraft es una decision de producto, y una liga
+  // clasificada por su nombre es una apuesta. Las dos se declaran.
+  if(c.keeper||c.porNombre||c.porDefecto){
+    var avisos=[];
+    if(c.keeper)avisos.push(c.keeper+' keeper league'+(c.keeper===1?'':'s')+' counted here');
+    if(c.porNombre)avisos.push(c.porNombre+' classified by league name');
+    if(c.porDefecto)avisos.push(c.porDefecto+' with no format set');
+    h+='<p class="perfil-aviso">'+escHtml(avisos.join(' &middot; ').replace(/&middot;/g,'·'))+'</p>';
   }
 
+  h+='<p class="perfil-cuenta">'+(m.patronesEmitidos||0)+' of '+(m.patronesEvaluados||0)
+    +' patterns clear the bar, after correcting for testing several at once.</p>';
+
+  if(!firmes.length){
+    h+='<div class="perfil-vacio">Nothing clears the bar yet. That is a real answer, not a '
+      +'failure: with this much history, anything else would be a guess. What was measured '
+      +'and rejected is below.</div>';
+  }
+  firmes.forEach(function(a){
+    var cif=_perfilCifra(a);
+    h+='<article class="perfil-fallo">';
+    var pt=_perfilPartes(a);
+    h+='<h4>'+escHtml(pt.titular)+'</h4>';
+    if(pt.resto)h+='<p class="perfil-porque">'+escHtml(pt.resto)+'</p>';
+    if(cif&&cif.den){
+      var pct=Math.max(3,Math.min(100,Math.round(cif.num/cif.den*100)));
+      h+='<div class="perfil-cifra"><b>'+cif.num+'</b><i>/ '+cif.den+'</i></div>'
+        +'<div class="perfil-barra"><span style="width:'+pct+'%"></span></div>';
+    }
+    h+='<p class="perfil-evid">n='+a.n+(_perfilP(a)?' &middot; '+_perfilP(a):'')+'</p>';
+    h+='</article>';
+  });
+
   if(mudas.length){
-    h+='<div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin:4px 0 4px">What it will not say yet</div>'
-      +'<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Measured and rejected. Kept visible so you can see the profile is not guessing.</div>'
-      +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">';
+    h+='<div class="perfil-libro"><p class="perfil-libro-t">Measured, not claimed &middot; '
+      +mudas.length+'</p>';
     mudas.forEach(function(a){
       var razon=a.estado==='insuficiente'
-        ? 'needs '+a.falta+' more before it can mean anything'
-        : 'split is what a coin flip looks like (p='+a.p+')';
-      // A 390px las dos columnas se parten las dos y quedan ilegibles, asi que
-      // la fila se apila. La clase vive en styles.css con su media query.
-      h+='<div class="perfil-muda">'
-        +'<span class="perfil-muda-t">'+escHtml(_perfilNombre(a.label))+'</span>'
+        ? (a.n?'needs '+a.falta+' more':'no data yet')
+        : (_perfilP(a)||'no signal');
+      h+='<div class="perfil-muda"><span class="perfil-muda-t">'+escHtml(_perfilNombre(a.label))+'</span>'
         +'<span class="perfil-muda-n">n='+a.n+' &middot; '+razon+'</span></div>';
     });
     h+='</div>';
   }
 
-  h+='<div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin:4px 0 10px">The raw count</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">';
-  h+=_perfilDato('You initiate',(p.iniciativa&&p.iniciativa.inicio)||0,'of '+((p.iniciativa&&(p.iniciativa.inicio+p.iniciativa.respuesta))||0)+' trades');
-  h+=_perfilDato('Picks in / out',(f.picksRecibidos||0)+' / '+(f.picksEnviados||0),'net '+(((f.picksRecibidos||0)-(f.picksEnviados||0))>=0?'+':'')+((f.picksRecibidos||0)-(f.picksEnviados||0)));
-  h+=_perfilDato('Age in / out',(e.recibida==null?'-':e.recibida)+' / '+(e.enviada==null?'-':e.enviada),(e.delta==null?'':'delta '+(e.delta>=0?'+':'')+e.delta+' years'));
-  h+=_perfilDato('Trade partners',c.distintas||0,'most frequent: '+(c.maxRepeticion||0)+' deals');
-  // Si el mapa de jugadores no trajo posiciones, el bloque posicional NO se
-  // dibuja: unos ceros ahi se leen como "no hay datos" y esconden el fallo.
-  if(!m.sinPosicion){
-    ['QB','RB','WR','TE'].forEach(function(ps){
-      h+=_perfilDato(ps+' in / out',((f.recibido&&f.recibido[ps])||0)+' / '+((f.enviado&&f.enviado[ps])||0),'');
-    });
+  h+='<div class="perfil-crudo">';
+  h+=_perfilDato('You initiate',((x.iniciativa&&x.iniciativa.inicio)||0)
+    +' of '+((x.iniciativa&&(x.iniciativa.inicio+x.iniciativa.respuesta))||0),'trades');
+  h+=_perfilDato('Picks in / out',(f.picksRecibidos||0)+' / '+(f.picksEnviados||0),
+    'net '+(((f.picksRecibidos||0)-(f.picksEnviados||0))>=0?'+':'')+((f.picksRecibidos||0)-(f.picksEnviados||0)));
+  h+=_perfilDato('Waiver moves',(x.waiver&&x.waiver.misMovimientos)||0,
+    (x.waiver&&x.waiver.pujaMediana!=null)?('median bid '+x.waiver.pujaMediana):'no FAAB leagues');
+  h+=_perfilDato('Early RB',((x.draft&&x.draft.rbTempranos)||0)+' of '+((x.draft&&x.draft.picksTempranos)||0),
+    'first four rounds');
+  // La edad manda en dynasty y no significa nada en redraft: el equipo se
+  // disuelve en enero. El motor ya lo declara en el dato, aqui solo se obedece.
+  if(e.relevante&&e.recibida!=null){
+    h+=_perfilDato('Age in / out',e.recibida+' / '+e.enviada,
+      e.delta==null?'':'delta '+(e.delta>=0?'+':'')+e.delta+' years');
   }
+  h+=_perfilDato('Trade partners',(x.contrapartes&&x.contrapartes.distintas)||0,
+    'most frequent: '+((x.contrapartes&&x.contrapartes.maxRepeticion)||0)+' deals');
   h+='</div>';
-  if(m.sinPosicion)h+='<div style="font-size:12px;color:var(--yellow);margin-top:10px">Position breakdown withheld: '+m.sinPosicion+' players did not resolve to a position, so the split would be wrong.</div>';
-  if(e.nota)h+='<div style="font-size:11px;color:var(--muted2);margin-top:12px">'+escHtml(e.nota)+'</div>';
-  cuerpo.innerHTML=h;
+
+  if(m.sinPosicion)h+='<p class="perfil-alerta">Position breakdown withheld: '+m.sinPosicion
+    +' players did not resolve to a position, so the split would be wrong.</p>';
+  if(e.nota&&e.relevante)h+='<p class="perfil-nota">'+escHtml(e.nota)+'</p>';
+  h+='</section>';
+  return h;
+}
+
+/**
+ * El texto de un hallazgo se parte en dos: la primera frase es el titular y el
+ * resto es la explicacion. Pintar el texto entero debajo del titular repetia la
+ * frase dos veces seguidas, que es como se lee un borrador, no un producto.
+ * Cuando la afirmacion es de una sola frase, no hay explicacion y no se pinta
+ * nada: mejor un bloque corto que una linea repetida.
+ */
+function _perfilPartes(a){
+  var t=String(a.texto||'').trim();
+  var corte=t.indexOf('. ');
+  if(corte<0)return {titular:t,resto:''};
+  return {titular:t.slice(0,corte+1),resto:t.slice(corte+2).trim()};
 }
 
 function _perfilDato(t,v,sub){
-  return '<div style="padding:12px 14px;border:1px solid var(--border);border-radius:12px">'
-    +'<div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">'+escHtml(t)+'</div>'
-    +'<div style="font-family:var(--font-head);font-size:19px;font-weight:800;color:var(--text)">'+escHtml(String(v))+'</div>'
-    +(sub?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+escHtml(sub)+'</div>':'')+'</div>';
+  return '<div class="perfil-celda">'
+    +'<div class="perfil-celda-t">'+escHtml(t)+'</div>'
+    +'<div class="perfil-celda-v">'+escHtml(String(v))+'</div>'
+    +(sub?'<div class="perfil-celda-s">'+escHtml(sub)+'</div>':'')+'</div>';
 }
 function _perfilNombre(k){
   // Los QB llevan el formato en el nombre: en superflex y en una liga de un
@@ -17335,5 +17460,8 @@ function _perfilNombre(k){
   return {picks:'Do you accumulate picks?',iniciativa:'Do you open the negotiation?',
     qb_superflex:'In superflex, do you buy or sell QBs?',
     qb_1qb:'In one-QB leagues, do you buy or sell QBs?',
-    cuerpos:'Do you consolidate or spread?',socios:'Do you favour one trade partner?'}[k]||k;
+    cuerpos:'Do you consolidate or spread?',socios:'Do you favour one trade partner?',
+    waiver_volumen:'Do you work the waiver wire?',
+    waiver_faab:'Do you pay up on waivers?',
+    draft_rb_temprano:'Do you draft running backs early?'}[k]||k;
 }

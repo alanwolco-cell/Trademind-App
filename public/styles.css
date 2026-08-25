@@ -2026,3 +2026,81 @@ html{scroll-padding-top:76px}
   .perfil-muda{flex-direction:row;justify-content:space-between;align-items:baseline;gap:12px}
   .perfil-muda-n{text-align:right;flex:none}
 }
+
+/* ── Perfil: un solo arbol, dos repartos ────────────────────────────────────
+   El telefono pone los dos ejes detras de un par de tabs; la computadora los
+   abre en dos columnas y esconde los tabs. Es LA MISMA marca de DOM en los dos
+   sitios: aqui solo cambia como se reparte. Si esto fueran dos disenos
+   distintos, cada hallazgo nuevo habria que construirlo dos veces y las dos
+   copias se separarian solas, que es como este proyecto ya se ha hecho dano
+   tres veces. */
+.perfil-tabs{display:flex;gap:5px;background:var(--surface2);padding:4px;border-radius:12px;margin:0 0 18px}
+.perfil-tab{
+  flex:1;min-width:0;padding:9px 8px;border:0;border-radius:9px;cursor:pointer;
+  background:transparent;color:var(--muted);font:600 13px/1.2 inherit;
+  font-family:var(--font-head);
+}
+.perfil-tab span{display:block;font-size:10px;font-weight:400;opacity:.75;margin-top:2px;
+  font-variant-numeric:tabular-nums}
+.perfil-tab.on{background:var(--accent-btn);color:#fff}
+.perfil-tab:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px}
+
+.perfil-eje{display:none}
+.perfil-eje.on{display:block}
+.perfil-eje-t{font-family:var(--font-head);font-size:17px;font-weight:700;margin:0 0 3px}
+.perfil-eje-n{font-size:12px;color:var(--muted);margin:0 0 4px;font-variant-numeric:tabular-nums}
+.perfil-aviso{font-size:11.5px;color:var(--muted2);margin:0 0 10px}
+.perfil-cuenta{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+
+/* Un hallazgo. Tipografia grande para la frase y la cifra del marcador debajo:
+   "73 de 105" se recuerda, "p=0.011" no, pero los dos van, porque la cifra sin
+   su n es justo la clase de afirmacion que este tab existe para no hacer. */
+.perfil-fallo{border-top:1px solid var(--border2);padding:16px 0 15px}
+.perfil-fallo:first-of-type{border-top:0;padding-top:2px}
+.perfil-fallo h4{
+  font-family:var(--font-head);font-size:20px;font-weight:700;line-height:1.18;
+  letter-spacing:-.02em;margin:0 0 7px;text-wrap:balance;color:var(--text);
+}
+.perfil-porque{font-size:13px;color:var(--muted2);line-height:1.5;margin:0 0 11px}
+.perfil-cifra{display:flex;align-items:baseline;gap:7px;margin:0 0 7px}
+.perfil-cifra b{font-family:var(--font-head);font-size:38px;font-weight:700;line-height:1;
+  letter-spacing:-.03em;color:var(--text);font-variant-numeric:tabular-nums}
+.perfil-cifra i{font-style:normal;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.perfil-barra{height:5px;border-radius:3px;background:var(--surface3);overflow:hidden;margin:0 0 7px}
+.perfil-barra span{display:block;height:100%;background:var(--accent-btn);border-radius:3px}
+.perfil-evid{font-size:11px;color:var(--muted);margin:0;font-variant-numeric:tabular-nums}
+
+.perfil-vacio{
+  border:1px solid var(--border);border-radius:12px;padding:16px;
+  font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 18px;
+}
+
+/* Lo medido y rechazado. Ocupa sitio a proposito: es lo que demuestra que hubo
+   un filtro, y por tanto lo que hace creibles a los hallazgos de arriba. */
+.perfil-libro{margin:18px 0 0;padding:14px 0 0;border-top:1px solid var(--border)}
+.perfil-libro-t{
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  margin:0 0 9px;
+}
+.perfil-libro .perfil-muda{border:0;border-bottom:1px solid var(--border);border-radius:0;padding:8px 0}
+.perfil-libro .perfil-muda:last-child{border-bottom:0}
+
+.perfil-crudo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 0}
+.perfil-celda{border:1px solid var(--border);border-radius:11px;padding:10px 12px;min-width:0}
+.perfil-celda-t{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2);margin-bottom:4px}
+.perfil-celda-v{font-family:var(--font-head);font-size:18px;font-weight:800;color:var(--text);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.perfil-celda-s{font-size:10.5px;color:var(--muted);margin-top:2px}
+.perfil-alerta{font-size:12px;color:var(--yellow);margin:10px 0 0}
+.perfil-nota{font-size:11px;color:var(--muted2);margin:12px 0 0;line-height:1.5}
+
+/* La computadora no gana un diseno distinto: gana ver MAS A LA VEZ. Los dos
+   ejes en paralelo es justo lo que el telefono no puede dar, y comparar dynasty
+   contra redraft de un vistazo es lo mas util del perfil entero. */
+@media(min-width:900px){
+  .perfil-tabs{display:none}
+  .perfil-ejes{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:start}
+  .perfil-eje{display:block}
+  .perfil-eje-t{font-size:20px}
+  .perfil-fallo h4{font-size:22px}
+}

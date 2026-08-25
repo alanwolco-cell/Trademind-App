@@ -122,6 +122,64 @@ console.log('\nFormato de liga: servidor y cliente de acuerdo');
   eq('y dynasty se queda solo de su lado', ejeDeDosLados('dynasty'), 'dynasty');
 }
 
+// ── 0b. Las funciones puras del pintado ────────────────────────────────────
+// Viven en app.js y no se pueden requerir, asi que se extraen igual que el
+// espejo del formato. Son puras y tienen logica de verdad: sin gate, el dia que
+// alguien cambie la forma de una afirmacion en el motor, la pantalla empieza a
+// mentir en silencio y nadie se entera hasta que lo ve un humano.
+console.log('\nPintado del perfil');
+{
+  const appjs = fs.readFileSync(path.join(aqui, '..', 'public', 'app.js'), 'utf8');
+  const saca = (re, nombre) => {
+    const m = appjs.match(re);
+    ok('sigue existiendo ' + nombre, !!m, 'si se renombro, este gate deja de comprobar nada');
+    return m ? new Function(m[0] + '; return ' + nombre + ';')() : null;
+  };
+  const cifra = saca(/function _perfilCifra\(a\)\{[\s\S]*?\n\}/, '_perfilCifra');
+  const partes = saca(/function _perfilPartes\(a\)\{[\s\S]*?\n\}/, '_perfilPartes');
+  const inicial = saca(/function _perfilEjeInicial\(ejes\)\{[\s\S]*?\n\}/, '_perfilEjeInicial');
+
+  if (cifra) {
+    // Cada familia de afirmacion guarda su marcador en un sitio distinto.
+    eq('binomial por el lado a', JSON.stringify(cifra({ a: 25, b: 5, n: 30, lado: 'a' })), '{"num":25,"den":30}');
+    eq('binomial por el lado b', JSON.stringify(cifra({ a: 5, b: 25, n: 30, lado: 'b' })), '{"num":25,"den":30}');
+    eq('permutacion por arriba', JSON.stringify(cifra({ ganados: 73, n: 105, lado: 'a' })), '{"num":73,"den":105}');
+    // Por abajo la cifra es a cuantos NO les gana: pintar 12 de 105 junto a la
+    // frase "trabajas poco el wire" diria lo contrario de lo que mide.
+    eq('permutacion por abajo cuenta al reves', JSON.stringify(cifra({ ganados: 12, n: 105, lado: 'b' })), '{"num":93,"den":105}');
+    eq('socios usa su repeticion maxima', JSON.stringify(cifra({ maxObs: 16, n: 29 })), '{"num":16,"den":29}');
+    // Sin marcador NO se inventa uno: el bloque se dibuja sin cifra.
+    eq('sin marcador no hay cifra', cifra({ n: 12 }), null);
+    eq('sin afirmacion tampoco', cifra(null), null);
+  }
+  if (partes) {
+    const p1 = partes({ texto: 'You open the table. The deals are yours to propose.' });
+    eq('el titular es la primera frase', p1.titular, 'You open the table.');
+    eq('el resto NO repite el titular', p1.resto, 'The deals are yours to propose.');
+    const p2 = partes({ texto: 'You buy quarterbacks in superflex.' });
+    eq('una sola frase es todo titular', p2.titular, 'You buy quarterbacks in superflex.');
+    eq('  y no deja un resto vacio que pintar', p2.resto, '');
+    eq('sin texto no revienta', partes({}).titular, '');
+  }
+  if (inicial) {
+    // Abrir por un eje mudo teniendo hallazgos al lado es una mala primera
+    // pantalla, y era lo que hacia al fijar 'dynasty'.
+    eq('abre por el eje que afirma algo', inicial({
+      dynasty: { muestra: { patronesEmitidos: 0, tradesPropios: 33 } },
+      redraft: { muestra: { patronesEmitidos: 2, tradesPropios: 30 } }
+    }), 'redraft');
+    eq('y al reves tambien', inicial({
+      dynasty: { muestra: { patronesEmitidos: 3, tradesPropios: 10 } },
+      redraft: { muestra: { patronesEmitidos: 1, tradesPropios: 99 } }
+    }), 'dynasty');
+    eq('a igualdad manda el historial mas largo', inicial({
+      dynasty: { muestra: { patronesEmitidos: 0, tradesPropios: 5 } },
+      redraft: { muestra: { patronesEmitidos: 0, tradesPropios: 40 } }
+    }), 'redraft');
+    eq('sin nada no revienta', inicial({}), 'dynasty');
+  }
+}
+
 // ── 1. Edad por birth_date, no por aproximacion ────────────────────────────
 console.log('\nEdad exacta desde birth_date');
 
