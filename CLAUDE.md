@@ -35,10 +35,12 @@ Pendientes documentados, con derivacion escrita, NO aplicados:
 ## Sesion 2026-08-24: perfil privado de self-scouting (Fase 1)
 Tab en `/perfil` que analiza el historial REAL de Sleeper del dueno.
 Solo para el, sin monetizar. Estado: **DESPLEGADO Y HABILITADO** (2026-08-24).
-PERFIL_ACCTS en produccion trae el acctId de la computadora del dueno. El id es
-POR NAVEGADOR (sha256 de la llave de su localStorage): para entrar desde el
-celular hay que anadir el suyo a la misma lista, separado por coma, y
-redesplegar, porque las variables de Vercel solo entran con un deploy nuevo.
+PERFIL_ACCTS en produccion trae los DOS acctId del dueno:
+ed6e4010a6111daca7f0684f3d2c4273 (computadora) y
+6c35b4ff8e6404f1833a1cf302064463 (celular). El id es POR NAVEGADOR (sha256 de la
+llave de su localStorage): cada navegador nuevo hay que anadirlo a la misma lista,
+separado por coma, y redesplegar, porque las variables de Vercel solo entran con
+un deploy nuevo.
 Verificado en produccion: /perfil 200, sin llave 401, llave no listada 403 con
 su acctId en pantalla, y el mecanismo de habilitacion probado de punta a punta
 en local (llave listada recibe el perfil, no listada rebota).
@@ -180,3 +182,61 @@ Dos cosas abiertas, las dos esperando a Wolco:
    asi que el boton "Sign in with Yahoo" esta VIVO en produccion y lleva a una
    pagina de error de Yahoo, en la pantalla de conectar cuenta. Se propuso
    esconderlo tras una variable y el dueno dijo que NO: se queda visible.
+
+## Sesion 2026-08-25: auditoria de confianza de los mock drafts
+
+Pregunta del dueno: "puedo confiar en los mock drafts de Mac, los de auction tambien".
+Se midio con el arnes REAL (`scripts/calibrate-room.mjs` copiado y reapuntado), contra
+los boards en vivo. Nada de esto es opinion: los scripts del barrido quedaron en el
+scratchpad de la sesion y son reproducibles copiando las primeras 437 lineas del gate.
+
+**El gate oficial: ALL GREEN.** 40 invariantes, 600 salas por formato.
+
+**Barrido fuera de la jaula: 13 configuraciones nuevas, CERO fallos.** Subasta en 8, 10,
+12 y 14 equipos, superflex, standard, $100, $300 y 20 rondas; snake en 8, 10 y 14
+equipos y superflex a 10. El motor aguanta donde el gate nunca lo corre.
+
+**HALLAZGO 1: el precio del #1 se desliza con el tamano de la sala.** Mediana de venta
+como % del presupuesto (real: 30-32%): 8 equipos 25.0%, 10 equipos 30.5%, 12 equipos
+35.0%, 14 equipos 38.5%. El pendiente viejo decia "36% en ligas de 12"; la forma real es
+una PENDIENTE, ~4 puntos por cada dos equipos, y el unico tamano donde acierta es 10, no
+12. El scoring mete otro escalon: standard 29.5% vs PPR 35.0% en la misma sala.
+Causa: `auPoolInit` ancla en el ultimo jugador draftable, asi que una sala mas profunda
+baja el replacement y le regala value-above-replacement al #1. Es VORP de manual, pero
+las subastas reales no tienen esa amplitud. VAL_CURVE=0.86 es una constante global.
+
+**HALLAZGO 2: en snake todos los equipos empatan.** Mejor vs peor roster de la sala: 3.0%
+(mediana, n=40). Coeficiente de variacion entre los 12 asientos: 0.8%. Dos tercios de las
+600 salas del gate producen el MISMO numero exacto de QBs por R5. Consecuencia: el asiento
+del usuario, jugando la recomendacion del propio motor, gana la sala el 65% de las veces
+(azar 8,3%) con una ventaja de 0.07% sobre el mejor bot. La victoria es ruido.
+MATIZ HONESTO: la serpentina iguala por construccion y la medida usa `dv`, la propia
+metrica del motor, asi que es en parte circular. Lo que SI queda probado es que el mock de
+snake no distingue estrategias: no premia una buena ni castiga una mala.
+La nota que ve el usuario (`letter`, linea ~15242) sale de `avgEdge` contra el rank, NO de
+compararlo con los otros equipos, asi que la app NO le dice "ganaste la sala". Bien.
+
+**HALLAZGO 3: la subasta es MAS confiable que el snake, al reves de lo que cubre el gate.**
+Dispersion mejor-vs-peor 21.3%, CV 6.8%: es un mercado de verdad. Y el autopilot del motor
+termina 5.6% POR DEBAJO del mejor bot, o sea el motor no se favorece a si mismo.
+
+**HALLAZGO 4: el invariante (f) es un adorno.** "Los sobreprecios tempranos enfrian el
+resto" se ejercio en 2 de 600 salas del gate (0,3%) y en 0 de 540 del barrido: ninguna sala
+arranca caliente. Un cambio que rompa esa dinamica pasaria el gate casi seguro. Ademas es
+en si una desviacion de realismo: las subastas reales arrancan calientes seguido.
+
+**HALLAZGO 5: `auGradeBuy` no discrimina.** Devuelve 'B' de entrada cuando el precio esta a
+menos de $2 del sticker, y como la mayoria de los lotes son de $1 a $5 casi todo cae ahi:
+89.0% B en el gate ($200), 96.9% en salas de $100. Una nota que da B a 9 de cada 10 compras
+no informa. La banda absoluta tiene su razon ($1 vs $3 es 3x en ratio), pero deberia
+escalar con el presupuesto de la sala.
+
+**HALLAZGO 6: el ADP no sabe de que tamano es tu liga.** Fuente primaria Sleeper (ADP
+global); el respaldo pide literalmente `teams=12` (`server/routes/stats.js:357`).
+
+**HALLAZGO 7 (ya sabido, aqui confirmado): el board nunca es dynasty.** `md-mode` en Dynasty
+solo cambia como razona Mac; el tablero sigue precificado con ADP de redraft 2026. La UI lo
+declara en la nota amarilla de `index.html:1113`.
+
+NINGUNO de estos se arreglo en esta sesion: es una auditoria, no un cambio. El orden de
+impacto propuesto es 1 (precio por tamano de sala), luego 5 y 4 (los dos baratos), luego 2.
