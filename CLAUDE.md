@@ -34,7 +34,14 @@ Pendientes documentados, con derivacion escrita, NO aplicados:
 
 ## Sesion 2026-08-24: perfil privado de self-scouting (Fase 1)
 Tab en `/perfil` que analiza el historial REAL de Sleeper del dueno.
-Solo para el, sin monetizar. Estado: COMPLETO EN LOCAL, NO DESPLEGADO.
+Solo para el, sin monetizar. Estado: **DESPLEGADO Y HABILITADO** (2026-08-24).
+PERFIL_ACCTS en produccion trae el acctId de la computadora del dueno. El id es
+POR NAVEGADOR (sha256 de la llave de su localStorage): para entrar desde el
+celular hay que anadir el suyo a la misma lista, separado por coma, y
+redesplegar, porque las variables de Vercel solo entran con un deploy nuevo.
+Verificado en produccion: /perfil 200, sin llave 401, llave no listada 403 con
+su acctId en pantalla, y el mecanismo de habilitacion probado de punta a punta
+en local (llave listada recibe el perfil, no listada rebota).
 
 Archivos:
 - `/Users/wolco/Development/trademind-app/server/lib/perfil.js` (motor puro)
@@ -90,10 +97,32 @@ Dos defectos encontrados de paso, ambos arreglados con su gate:
   nunca se propago al otro lado del archivo. Ahora el candado de texto va al
   final de `aplicarFDR` sobre TODAS, no sobre un subconjunto.
 
-Falta para desplegar:
-1. Poner el acctId real del dueno en la variable de entorno PERFIL_ACCTS en Vercel.
-   Se obtiene abriendo /perfil: el 403 MUESTRA el acctId propio en pantalla.
-   Es POR NAVEGADOR (sha256 de la llave de su localStorage), asi que cada
-   navegador desde el que quiera entrar necesita su propia entrada en la lista.
-   Sin la variable la ruta falla cerrada y no entra nadie, el dueno incluido:
-   por eso se puede desplegar antes de tener el id.
+### Pendiente propio del perfil
+Fase 2 (comportamiento en la app: que le preguntaste a Mac, que trades miraste y
+no hiciste) NO se puede empezar sin tocar antes `public/privacy.html`. La Fase 1
+no expone nada nuevo porque sale entera de la API publica de Sleeper; el dia que
+se registre comportamiento propio eso deja de ser cierto, y la politica tiene que
+decirlo ANTES de guardar el primer evento. Esta escrito en la cabecera de
+`server/routes/perfil.js`.
+
+## Yahoo Fantasy: no conecta, y no es el codigo
+Medido el 2026-08-24 contra la app real, cambiando una cosa por vez:
+
+    redirect_uri=macdraft.app      -> invalid_request "invalid redirect uri"
+    redirect_uri=trademindff.com   -> invalid_scope   "invalid scope"
+    trademindff.com + scope=openid -> 302 a login.yahoo.com, entra bien
+
+El control con openid pasa con la MISMA app y las mismas credenciales, asi que el
+OAuth esta sano: falta el permiso de Fantasy Sports. Yahoo cerro el acceso
+self-serve; hoy se solicita en https://sports.yahoo.com/developer/ y se espera
+aprobacion manual, y la consola de apps ya no ofrece ese permiso para marcarlo.
+Hasta que aprueben NO hay codigo que conecte una liga de Yahoo.
+
+Dos cosas abiertas, las dos esperando a Wolco:
+1. La app de Yahoo sigue registrada con el dominio viejo (trademindff.com).
+   Anadir https://macdraft.app/api/yahoo/callback a sus Redirect URI. Barato,
+   pero por si solo no conecta nada: el bloqueo que manda es el scope.
+2. `/api/yahoo/status` devuelve configured en cuanto existen las credenciales,
+   asi que el boton "Sign in with Yahoo" esta VIVO en produccion y lleva a una
+   pagina de error de Yahoo, en la pantalla de conectar cuenta. Propuesto
+   esconderlo tras una variable hasta que aprueben; sin decision aun, NO aplicado.
