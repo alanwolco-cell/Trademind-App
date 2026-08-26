@@ -529,3 +529,17 @@ siguientes. Ahora todos reportan FAIL en vez de tumbar la corrida.
 Archivos tocados: `public/rankings.js` (`tmrPaint` reescrito, `tmrSkeleton` con la forma
 nueva), `public/styles.css` (bloque `.rk-*` entero), `public/index.html` (video y su
 comentario), `scripts/gen-reel.mjs`, `scripts/qa-rankings.mjs`.
+
+### Estado al cerrar la sesion del 2026-08-26: DESPLEGADO Y VERIFICADO
+HEAD 6b270f2, empujado a main, arbol limpio. Los SEIS gates en verde antes del commit
+(calibrate-room ALL GREEN, qa-flows, qa-trades, qa-perfil 156, qa-rankings 23, qa-board 104).
+
+Verificado por curl contra macdraft.app, no supuesto:
+- cache-bust 2026082601 servido en sus 7 apariciones
+- el <video> declara width="1282" height="806" con ?v=4
+- styles.css, rankings.js, app.js, theme.css y promo-reel.mp4 los cinco 200
+- "rk-colhead" y "rk-posrank" presentes en el rankings.js desplegado
+- "#tab-rankings{max-width:760px}" y "rk-nums{display:contents}" en el styles.css desplegado
+- promo-reel.mp4 servido con los mismos 600.879 bytes que el local
+- "_mdFitCols" sigue en app.js y "My Rankings" en el HTML: sin regresion de las dos
+  sesiones anteriores
