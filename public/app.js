@@ -5097,8 +5097,29 @@ function mobMenuClose(){
   m.classList.remove('open');
   try{document.body.style.overflow='';}catch(_){}
 }
+// Cierra el cajon SIN devolver la historia. Se usa cuando el propio clic ya nos
+// lleva a otra pantalla.
+// EL FALLO QUE ARREGLA (26-ago-2026, reportado como "ningun tab funciona, todo
+// me manda al home page"): mobGo cerraba con mobMenuToggle(), que llama a
+// _overlayClosed(), que cierra con history.back(). history.back() es ASINCRONO:
+// su popstate aterrizaba DESPUES del switchScreen de la linea siguiente y el
+// manejador restauraba la ruta anterior, o sea la portada. Solo ocurria con el
+// cajon ABIERTO, que es exactamente como llega una persona, y por eso ningun
+// gate lo veia: todos entraban llamando switchScreen() directo.
+// La entrada que empujo el cajon se REAPROVECHA con replaceState en vez de
+// devolverse, para que el boton atras siga saliendo a la portada de una.
+function mobMenuCloseForNav(){
+  var m=document.getElementById('mob-menu');
+  if(!m||!m.classList.contains('open'))return;
+  m.classList.remove('open');
+  try{document.body.style.overflow='';}catch(_){}
+  // se saca el cierre del cajon solo si es el de arriba del todo: si hubiera
+  // otro overlay encima, sacar a ciegas dejaria colgado el que manda
+  if(_overlays.length&&_overlays[_overlays.length-1]===mobMenuClose)_overlays.pop();
+  try{if(history.state&&history.state.overlay)history.replaceState({},'',window.location.href);}catch(_){}
+}
 function mobGo(screen,tab){
-  mobMenuToggle();
+  mobMenuCloseForNav();
   try{
     switchScreen(screen);
     if(screen==='mock'){try{mdRenderStrats();mdPrefillFromLeague();if(tab)mdShowSection(tab);}catch(_){}}
@@ -16055,7 +16076,9 @@ function ctxFoldBlurbs(){
 function tabGo(name){
   var drawerOpen=(document.getElementById('mob-menu')||{classList:{contains:function(){return false;}}}).classList.contains('open');
   if(name==='more'){mobMenuToggle();return;}
-  if(drawerOpen)mobMenuToggle(); // never leave the drawer covering the screen we just opened
+  // Mismo fallo que mobGo: cerrar aqui con mobMenuToggle() disparaba un
+  // history.back() cuyo popstate deshacia el switchScreen de dos lineas abajo.
+  if(drawerOpen)mobMenuCloseForNav(); // never leave the drawer covering the screen we just opened
   if(name==='home'){goHome();return;}
   switchScreen(name);
   if(name==='mock'){try{mdRenderStrats();mdPrefillFromLeague();}catch(_){}}

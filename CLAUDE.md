@@ -15,6 +15,7 @@ node scripts/qa-trades.mjs        # 9.989 escenarios, 32 checks
 node scripts/qa-perfil.mjs        # 156 checks del perfil, instantaneo
 node scripts/qa-rankings.mjs      # 23 checks de My Rankings, navegador real
 node scripts/qa-board.mjs         # 104 checks del tablero, barrido de anchos
+node scripts/qa-nav.mjs           # navegacion CLICANDO desde la portada
 ```
 Los seis corren desde cualquier directorio. Un test que no falla contra el codigo
 roto es un adorno: al anadir un gate, verificar que falla ANTES del fix.
@@ -543,3 +544,47 @@ Verificado por curl contra macdraft.app, no supuesto:
 - promo-reel.mp4 servido con los mismos 600.879 bytes que el local
 - "_mdFitCols" sigue en app.js y "My Rankings" en el HTML: sin regresion de las dos
   sesiones anteriores
+
+## Sesion 2026-08-26 (tarde): ningun tab funcionaba, y el gate que faltaba
+
+Reporte del dueno, en produccion: "no me salen los rankings" y "ningun tab esta
+funcionando, todo me manda al home page". Los seis gates estaban en VERDE.
+
+**Los dos fallos, y por que ningun gate los veia.**
+
+1. **My Rankings no tenia puerta.** La pestana vivia solo en `.inner-tab-bar`, que en el
+   telefono se sale de la ventana: medido, el tab cae en x=451 con la ventana en 390 y en
+   320. Y el cajon de navegacion (`#mob-menu`) no lo listaba: el grupo Research tenia
+   cinco entradas y esta no estaba. O sea que la feature se desplego entera, con su gate
+   propio en verde, y no habia forma de llegar a ella.
+
+2. **Carrera de historial al entrar desde el cajon.** `mobGo()` cerraba el cajon con
+   `mobMenuToggle()`, que llama a `_overlayClosed()`, que cierra con `history.back()`.
+   `history.back()` es ASINCRONO: su `popstate` aterrizaba DESPUES del `switchScreen()` de
+   la linea siguiente, y el manejador restauraba la ruta anterior, la portada. Mismo fallo
+   en `tabGo()` cuando la barra inferior se toca con el cajon abierto.
+   Solo ocurre con el cajon ABIERTO, que es exactamente como llega una persona.
+
+   NO ES REGRESION DE ESTA SESION: se levanto 7aa60b2 en un worktree aparte y falla igual.
+
+**El arreglo.** `mobMenuCloseForNav()` cierra el cajon sin devolver la historia: saca el
+cierre de `_overlays` (solo si es el de arriba, para no dejar colgado otro overlay) y
+REAPROVECHA la entrada que empujo el cajon con `replaceState` en vez de devolverla, con lo
+que el boton atras sigue saliendo a la portada de una. `mobGo` y `tabGo` la usan.
+Y `My Rankings` se anadio al grupo Research del cajon.
+
+**Gate nuevo: `node scripts/qa-nav.mjs`.** Recorre la app CLICANDO desde la portada: abre
+el cajon con el control que este visible (More en el telefono, la hamburguesa en
+escritorio), toca cada destino, y comprueba que la pantalla queda activa Y que el hero de
+la portada ya no ocupa la ventana. Tambien el boton atras, y la barra inferior con el
+cajon abierto encima. **Verificado que falla contra el codigo roto: 14 FALLOS.**
+
+**La leccion, que ya es regla global del dueno:** un gate que entra por la puerta de
+servicio no prueba la puerta de entrada. Los cinco gates viejos entraban llamando
+`switchScreen()` y `renderX()` directo, y por eso estaban todos en verde sobre una app en
+la que no se podia navegar. Toda feature nueva necesita su entrada en el menu y al menos
+un check que llegue por clic.
+
+Archivos tocados: `public/app.js` (`mobMenuCloseForNav` nuevo, `mobGo`, `tabGo`),
+`public/index.html` (entrada My Rankings en el cajon, cache-bust a 2026082602),
+`scripts/qa-nav.mjs` (nuevo).
