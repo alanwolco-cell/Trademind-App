@@ -108,9 +108,76 @@ console.log('\n=== My Rankings: la lista ===');
   const tiers2 = await pg.$$eval('#rk-body .rk-tier', r => r.length);
   ok('(e) cortar tier crea un tier nuevo', tiers2 > tiers, `${tiers} -> ${tiers2}`);
 
-  // el delta contra el consenso aparece tras mover
-  const deltas = await pg.$$eval('#rk-body .rk-delta', r => r.length);
-  ok('(f) el delta contra el consenso se pinta', deltas > 0, deltas + ' jugadores con delta');
+  // El delta contra el consenso se pinta en TODAS las filas visibles, no solo
+  // en las movidas: antes solo aparecia cuando era distinto de cero, asi que
+  // una lista recien abierta escondia la unica cifra que dice algo.
+  const filas = await pg.$$eval('#rk-body .rk-row', r => r.length);
+  const deltas = await pg.$$eval('#rk-body .rk-vs', r => r.length);
+  ok('(f) el delta contra el consenso se pinta en todas las filas', deltas === filas,
+    deltas + ' deltas para ' + filas + ' filas');
+  // $$eval y no $eval: si el elemento no existe, $eval LANZA y se lleva por
+  // delante los checks que vienen detras. Un gate que revienta esconde mas de
+  // lo que ensena.
+  const movido = await pg.$$eval('#rk-body .rk-row .rk-vs', r => r.length ? r[0].textContent.trim() : null);
+  ok('(f2) tras mover, el delta deja de ser cero', /^[+-]\d+$/.test(movido || ''), 'primera fila: ' + JSON.stringify(movido));
+
+  // La cabecera de columnas cae a plomo sobre las columnas de la fila. Es lo
+  // unico que distingue una rejilla de verdad de seis cifras sueltas: si se
+  // descuadra, POS queda encima de los ADP y nadie sabe que es cada numero.
+  const plomo = await pg.evaluate(() => {
+    const row = document.querySelector('#rk-body .rk-row');
+    const head = document.querySelector('#rk-body .rk-colhead');
+    if (!row || !head) return null;
+    const R = (p, sel) => { const e = p.querySelector(sel); return e ? e.getBoundingClientRect() : null; };
+    const pares = [
+      ['pos', R(head, '.rk-ch-pr'), R(row, '.rk-posrank'), 'left'],
+      ['adp', R(head, '.rk-ch-adp'), R(row, '.rk-adp'), 'right'],
+      ['vs', R(head, '.rk-ch-vs'), R(row, '.rk-vs'), 'right']
+    ];
+    return pares.map(([n, h, c, lado]) => {
+      if (!h || !c) return n + ': falta';
+      const d = Math.abs(h[lado] - c[lado]);
+      return d <= 2 ? null : n + ' desviado ' + Math.round(d) + 'px';
+    }).filter(Boolean);
+  });
+  ok('(s) la cabecera cae a plomo sobre sus columnas', plomo && plomo.length === 0,
+    plomo === null ? 'no hay cabecera' : (plomo.join(' | ') || 'pos, adp y vs alineados'));
+
+  // Foto en cada fila, con el id de Sleeper. Sin esto la fila vuelve a ser
+  // texto plano, que es de lo que venia.
+  const fotos = await pg.$$eval('#rk-body .rk-row .rk-pic img',
+    r => r.filter(x => /sleepercdn\.com\/content\/nfl\/players\/thumb\/\d+\.jpg/.test(x.getAttribute('src'))).length);
+  ok('(t) cada fila lleva la foto del jugador', fotos === filas, fotos + ' fotos para ' + filas + ' filas');
+
+  // El rank por posicion sale de MI orden, no del consenso: el primer WR de mi
+  // lista es WR1 aunque el consenso lo tenga tercero.
+  const posRank = await pg.evaluate(() => {
+    const cuenta = {}; const malos = [];
+    document.querySelectorAll('#rk-body .rk-row').forEach(fila => {
+      const ep = fila.querySelector('.rk-pos'), en = fila.querySelector('.rk-posn');
+      if (!ep || !en) { malos.push('fila sin rank por posicion'); return; }
+      const pos = ep.textContent;
+      cuenta[pos] = (cuenta[pos] || 0) + 1;
+      if (Number(en.textContent) !== cuenta[pos]) malos.push(pos + en.textContent + ' deberia ser ' + pos + cuenta[pos]);
+    });
+    return malos.slice(0, 3);
+  });
+  ok('(u) el rank por posicion cuenta sobre mi lista', posRank.length === 0, posRank.join(' | ') || 'correlativo por posicion');
+
+  // La banda de tier declara cuantos jugadores tiene, y ese numero es el de
+  // filas VISIBLES: con un filtro puesto, decir 200 encima de tres seria mentir.
+  // Se suman TODAS las bandas: aqui arriba ya se corto un tier, asi que mirar
+  // solo la primera compararia "1 player" contra las 200 filas de la pantalla.
+  const conteo = await pg.evaluate(() => {
+    const bandas = Array.from(document.querySelectorAll('#rk-body .rk-tier .rk-tier-c'));
+    return {
+      bandas: bandas.length,
+      suma: bandas.reduce((a, e) => a + Number(e.textContent.replace(/\D/g, '') || 0), 0),
+      filas: document.querySelectorAll('#rk-body .rk-row').length
+    };
+  });
+  ok('(v) las bandas de tier declaran su conteo real', conteo.bandas > 0 && conteo.suma === conteo.filas,
+    JSON.stringify(conteo));
 
   // filtro
   await pg.evaluate(() => tmrFilter('QB', document.querySelector('#rk-filters .rk-fb')));

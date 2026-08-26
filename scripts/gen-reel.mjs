@@ -30,7 +30,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DRY = process.argv.includes('--dry');
 const SECS = Number(process.env.REEL_SECS || 13);
-const ANCHO = 1920, ALTO = 1080;
+// El viewport es parametro, no constante: a 1920 entra en cuadro el panel
+// "My team" vacio, y a ~1400 se esconde solo por la regla de layout de la
+// sesion del 25-ago, con lo que todo sale mas grande. Es una decision de
+// encuadre del dueno, asi que se elige desde fuera sin tocar el script.
+const ANCHO = Number(process.env.REEL_W || 1920);
+const ALTO  = Number(process.env.REEL_H || Math.round(ANCHO * 9 / 16));
 
 const CANDIDATOS = [
   path.join(ROOT, 'node_modules/playwright/index.mjs'),
@@ -208,19 +213,24 @@ const ff = (args) => {
 // El recorte a 16:9, con un respiro alrededor y siempre dentro de la ventana.
 let vf = 'fps=30';
 let recorte = 'ventana entera';
+const crop = {};
 if (caja && !process.env.REEL_SIN_RECORTE) {
   const AIRE = 24;
   let x = Math.max(0, Math.floor(caja.x - AIRE));
-  let y = Math.max(0, Math.floor(caja.y - AIRE));
   let w = Math.min(caja.vw - x, Math.ceil(caja.w + AIRE * 2));
-  let h = Math.min(caja.vh - y, Math.ceil(caja.h + AIRE * 2));
-  // llevarlo a 16:9 creciendo el lado que falte, sin salirse de la ventana
-  if (w / h > 16 / 9) { const nh = Math.round(w * 9 / 16); y = Math.max(0, Math.min(caja.vh - nh, y - Math.round((nh - h) / 2))); h = Math.min(nh, caja.vh - y); }
-  else { const nw = Math.round(h * 16 / 9); x = Math.max(0, Math.min(caja.vw - nw, x - Math.round((nw - w) / 2))); w = Math.min(nw, caja.vw - x); }
+  // Arriba NO va aire: encima de la caja esta el rotulo "DRAFT BOARD" de la
+  // pantalla, y con aire entraba cortado por la mitad, que es peor que no verlo.
+  let y = Math.max(0, Math.floor(caja.y));
+  let h = Math.min(caja.vh - y, Math.ceil(caja.h + AIRE));
+  // NO se fuerza 16:9. Forzarlo crecia el lado ancho hasta 1476 y esos 184px de
+  // mas metian en cuadro el panel "My team" VACIO, que es lo unico que el reel
+  // no puede ensenar. El dueno eligio el recorte cerrado sobre tres medidos:
+  // manda el contenido, y el hero pinta el video a min(1120px,94vw) igual.
   // libx264 con yuv420p exige lados PARES
   w -= w % 2; h -= h % 2;
   vf = 'fps=30,crop=' + w + ':' + h + ':' + x + ':' + y;
   recorte = w + 'x' + h + ' en (' + x + ',' + y + ')';
+  crop.w = w; crop.h = h;
 }
 console.log('encuadre: ' + recorte);
 ff(['-ss', desde.toFixed(2), '-i', webm, '-t', String(SECS), '-vf', vf,
@@ -270,6 +280,10 @@ chk('dura lo pedido', Math.abs(segs - SECS) < 4, segs.toFixed(1) + 's de ' + SEC
 
 console.log('\n' + MP4 + '  (' + (fs.statSync(MP4).size / 1024 | 0) + ' KB)');
 console.log(JPG + '  (' + (fs.statSync(JPG).size / 1024 | 0) + ' KB)');
-if (!DRY) console.log('\nRECUERDA: subir el cache-bust ?v= del video en public/index.html,\ny que ahi el video se declara width="1920" height="1080".');
+// El encuadre depende del contenido, asi que los atributos width/height del
+// <video> cambian con cada regeneracion. Se recuerdan con el numero REAL: el
+// reel viejo estuvo meses en produccion declarando 1080x1080 sobre un archivo
+// de 1920x1080.
+if (!DRY) console.log('\nRECUERDA en public/index.html: subir el cache-bust ?v= del video\ny declararlo width="' + (crop.w || '?') + '" height="' + (crop.h || '?') + '".');
 console.log(malas ? '\n' + malas + ' FALLOS' : '\nREEL OK');
 process.exit(malas ? 1 : 0);

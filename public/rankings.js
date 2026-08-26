@@ -115,63 +115,111 @@ async function renderRankings() {
   tmrPaint();
 }
 
+// El esqueleto tiene que tener la FORMA de lo que va a llegar: circulo de la
+// foto, nombre, y las tres cifras de la derecha. Uno generico hace que la
+// pantalla salte al cargar, que es justo lo que un skeleton viene a evitar.
 function tmrSkeleton() {
   var out = '<div class="rk-skel-wrap">';
   for (var i = 0; i < 12; i++) {
-    out += '<div class="rk-skel-row"><div class="rk-skel-num"></div><div class="rk-skel-name"></div><div class="rk-skel-tag"></div></div>';
+    out += '<div class="rk-skel-row">'
+      + '<div class="rk-skel-num"></div><div class="rk-skel-pic"></div>'
+      + '<div class="rk-skel-name"></div>'
+      + '<div class="rk-skel-tag"></div><div class="rk-skel-tag"></div><div class="rk-skel-tag"></div>'
+      + '</div>';
   }
   return out + '</div>';
 }
 
-/* ── pintado ────────────────────────────────────────────────────────────── */
+/* ── pintado ────────────────────────────────────────────── */
+// La fila es una REJILLA, no una linea de texto: rank, foto, jugador, su rank
+// por posicion, el ADP de consenso y la distancia contra el. Antes era un flex
+// con el nombre a la izquierda y tres botones a la derecha, y en escritorio eso
+// dejaba tres cuartas partes de cada fila vacias. Las columnas de la cabecera y
+// las de la fila salen de la MISMA plantilla en el CSS, por eso quedan a plomo.
 function tmrPaint() {
   var host = document.getElementById('rk-body');
   if (!host) return;
 
   var q = _tmrNorm(TMR.q);
-  var tier = 1, html = '', shown = 0;
+  var i, r;
 
-  for (var i = 0; i < TMR.rows.length; i++) {
-    var r = TMR.rows[i];
-    var passPos = TMR.filter === 'ALL' || r.pos === TMR.filter;
-    var passQ = !q || _tmrNorm(r.name).indexOf(q) >= 0 || _tmrNorm(r.team).indexOf(q) >= 0;
+  // Pasada previa. Tres cosas que no se pueden decidir mirando una fila sola:
+  // el rank por posicion (cuenta desde el principio de MI lista), a que tier
+  // pertenece cada jugador, y cuantos VISIBLES tiene ese tier. El conteo va
+  // sobre lo visible a proposito: con un filtro puesto, decir "12 players"
+  // encima de tres filas seria mentir.
+  var visible = [], tierDe = [], posRk = [], cuenta = {}, porTier = {}, t = 1, shown = 0;
+  for (i = 0; i < TMR.rows.length; i++) {
+    r = TMR.rows[i];
+    cuenta[r.pos] = (cuenta[r.pos] || 0) + 1;
+    posRk[i] = cuenta[r.pos];
+    tierDe[i] = t;
+    var pasa = (TMR.filter === 'ALL' || r.pos === TMR.filter)
+      && (!q || _tmrNorm(r.name).indexOf(q) >= 0 || _tmrNorm(r.team).indexOf(q) >= 0);
+    visible[i] = pasa;
+    if (pasa) { shown++; porTier[t] = (porTier[t] || 0) + 1; }
+    if (TMR.breakAfter[r.id]) t++;
+  }
 
-    if (passPos && passQ) {
-      shown++;
-      var mine = i + 1;
-      var delta = r.adpRank - mine; // + = lo tengo mas alto que el consenso
-      var dTxt = delta === 0 ? '' : (delta > 0 ? '+' + delta : String(delta));
-      var dCls = delta > 0 ? 'rk-up' : (delta < 0 ? 'rk-down' : '');
-      html += '<div class="rk-row" draggable="true" data-i="' + i + '" data-id="' + r.id + '"'
-        + ' ondragstart="tmrDragStart(event,' + i + ')" ondragover="tmrDragOver(event,' + i + ')"'
-        + ' ondrop="tmrDrop(event,' + i + ')" ondragend="tmrDragEnd(event)">'
-        + '<span class="rk-num">' + mine + '</span>'
-        + '<span class="rk-main">'
-        + '<span class="rk-name">' + tmrEsc(r.name) + '</span>'
-        + '<span class="rk-meta"><span class="rk-pos rk-' + r.pos + '">' + r.pos + '</span>'
-        + (r.team ? '<span class="rk-team">' + tmrEsc(r.team) + '</span>' : '')
-        + '<span class="rk-adp">ADP ' + r.adp.toFixed(1) + '</span>'
-        + (dTxt ? '<span class="rk-delta ' + dCls + '" title="How far you move him off the consensus">' + dTxt + '</span>' : '')
-        + '</span></span>'
-        + '<span class="rk-acts">'
-        + '<button type="button" class="rk-ib" title="Move up" aria-label="Move up ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',-1)">' + TMR_SVG_UP + '</button>'
-        + '<button type="button" class="rk-ib" title="Move down" aria-label="Move down ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',1)">' + TMR_SVG_DOWN + '</button>'
-        + '<button type="button" class="rk-ib rk-cut' + (TMR.breakAfter[r.id] ? ' on' : '') + '" title="Tier break after this player" aria-label="Tier break after ' + tmrEsc(r.name) + '" onclick="tmrCut(\'' + r.id + '\')">' + 'TIER' + '</button>'
-        + '</span></div>';
+  var html = '', ultimoTier = 0;
+  for (i = 0; i < TMR.rows.length; i++) {
+    if (!visible[i]) continue;
+    r = TMR.rows[i];
+
+    // El rotulo del tier se pinta ANTES de su primera fila visible, no despues
+    // del corte: asi un filtro que vacia un tier entero no deja el rotulo
+    // huerfano colgando de nada.
+    if (tierDe[i] !== ultimoTier) {
+      ultimoTier = tierDe[i];
+      var n = porTier[ultimoTier] || 0;
+      html += '<div class="rk-tier' + (html ? '' : ' rk-tier-first') + '">'
+        + '<span class="rk-tier-n">Tier ' + ultimoTier + '</span>'
+        + '<span class="rk-tier-c">' + n + (n === 1 ? ' player' : ' players') + '</span>'
+        + '</div>';
     }
 
-    if (TMR.breakAfter[r.id]) {
-      tier++;
-      // el separador solo se pinta si hay algo visible debajo: con un filtro
-      // puesto, dos cortes seguidos dejaban rotulos de tier huerfanos
-      if (passPos && passQ) html += '<div class="rk-tier"><span>Tier ' + tier + '</span></div>';
-    }
+    var mine = i + 1;
+    var delta = r.adpRank - mine; // + = lo tengo mas alto que el consenso
+    var dTxt = delta > 0 ? '+' + delta : String(delta);
+    var dCls = delta > 0 ? ' rk-up' : (delta < 0 ? ' rk-down' : ' rk-even');
+
+    html += '<div class="rk-row" draggable="true" data-i="' + i + '" data-id="' + r.id + '"'
+      + ' ondragstart="tmrDragStart(event,' + i + ')" ondragover="tmrDragOver(event,' + i + ')"'
+      + ' ondrop="tmrDrop(event,' + i + ')" ondragend="tmrDragEnd(event)">'
+      + '<span class="rk-num">' + mine + '</span>'
+      + '<span class="rk-pic rk-ring-' + r.pos + '"><img src="https://sleepercdn.com/content/nfl/players/thumb/'
+      + tmrEsc(r.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></span>'
+      + '<span class="rk-name">' + tmrEsc(r.name) + '</span>'
+      + '<span class="rk-nums">'
+      + '<span class="rk-team">' + (r.team ? tmrEsc(r.team) : 'FA') + '</span>'
+      + '<span class="rk-posrank rk-' + r.pos + '"><span class="rk-pos">' + r.pos + '</span>'
+      + '<span class="rk-posn">' + posRk[i] + '</span></span>'
+      + '<span class="rk-adp">' + r.adp.toFixed(1) + '</span>'
+      + '<span class="rk-vs' + dCls + '" title="How far you move him off the consensus">' + dTxt + '</span>'
+      + '</span>'
+      + '<span class="rk-acts">'
+      + '<button type="button" class="rk-ib" title="Move up" aria-label="Move up ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',-1)">' + TMR_SVG_UP + '</button>'
+      + '<button type="button" class="rk-ib" title="Move down" aria-label="Move down ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',1)">' + TMR_SVG_DOWN + '</button>'
+      + '<button type="button" class="rk-ib rk-cut' + (TMR.breakAfter[r.id] ? ' on' : '') + '" title="Tier break after this player" aria-label="Tier break after ' + tmrEsc(r.name) + '" onclick="tmrCut(\'' + r.id + '\')">' + 'TIER' + '</button>'
+      + '</span></div>';
   }
 
   if (!shown) {
     host.innerHTML = '<div class="rk-empty">No players match that filter.</div>';
   } else {
-    host.innerHTML = '<div class="rk-tier rk-tier-first"><span>Tier 1</span></div>' + html;
+    // La cabecera repite la plantilla de columnas de la fila. Sin ella las
+    // cifras de la derecha son numeros sueltos: nadie sabe que 3.4 es el ADP
+    // de consenso y +6 la distancia contra el.
+    // Cada rotulo declara SU area, no se coloca por orden. Colocandolos por
+    // orden, el envoltorio .rk-nums aportaba un hijo mas que la fila y toda la
+    // cabecera salia corrida una columna a la derecha: POS encima de los ADP.
+    host.innerHTML = '<div class="rk-colhead">'
+      + '<span class="rk-ch-num">Rank</span>'
+      + '<span class="rk-ch-name">Player</span>'
+      + '<span class="rk-ch-pr">Pos</span>'
+      + '<span class="rk-ch-adp">ADP</span>'
+      + '<span class="rk-ch-vs">Vs ADP</span>'
+      + '</div>' + html;
   }
 
   var c = document.getElementById('rk-count');

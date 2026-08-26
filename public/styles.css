@@ -2140,26 +2140,92 @@ html{scroll-padding-top:76px}
 .rk-export-ta{width:100%;background:transparent;border:1px solid var(--border);border-radius:8px;
   color:var(--text);font-size:12px;line-height:1.6;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
 
+/* Medida de lectura. Sin tope, en un monitor ancho la fila mide 1500px y el
+   nombre acaba a 390: quedaban 500px de nada entre el nombre y la columna POS.
+   El tope va en el TAB entero, no solo en la lista, para que cabecera,
+   herramientas y filas compartan el mismo borde izquierdo y derecho. */
+#tab-rankings{max-width:760px}
 .rk-list{display:flex;flex-direction:column;gap:4px}
-.rk-tier{display:flex;align-items:center;gap:10px;margin:14px 0 6px;font-size:10.5px;font-weight:700;
+
+/* LA PLANTILLA DE COLUMNAS, una sola vez. La cabecera y la fila comparten esta
+   regla: es lo unico que garantiza que las cifras queden a plomo bajo su
+   rotulo. Si alguna vez se duplica, se separan solas. La columna de acciones va
+   con ancho FIJO y no auto, porque la cabecera no tiene botones y con auto su
+   ultima columna medía cero y descuadraba todas las demas. */
+.rk-row,.rk-colhead{
+  --rk-acts:98px;
+  display:grid;
+  grid-template-columns:34px 34px minmax(96px,1fr) 74px 62px 62px var(--rk-acts);
+  align-items:center;column-gap:12px}
+
+/* La cabecera repite las MISMAS areas que la fila y cada rotulo declara la
+   suya. El padding lateral incluye el borde de 1px de la fila, que si no
+   desplaza las dos rejillas una respecto de la otra. */
+.rk-colhead{grid-template-areas:"num pic name pr adp vs acts";
+  padding:0 11px 7px;font-size:10px;font-weight:700;letter-spacing:.10em;
+  text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);margin-bottom:6px}
+.rk-ch-num{grid-area:num;text-align:right}
+.rk-ch-name{grid-area:name}
+.rk-ch-pr{grid-area:pr}
+.rk-ch-adp{grid-area:adp;text-align:right}
+.rk-ch-vs{grid-area:vs;text-align:right}
+
+.rk-tier{display:flex;align-items:center;gap:10px;margin:16px 0 6px;font-size:10.5px;font-weight:700;
   letter-spacing:.10em;text-transform:uppercase;color:var(--accent-bright)}
 .rk-tier-first{margin-top:2px}
-.rk-tier::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
-.rk-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--border);
+.rk-tier-n{flex:0 0 auto}
+.rk-tier::after{content:'';order:1;flex:1;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
+.rk-tier-c{order:2;flex:0 0 auto;color:var(--muted);letter-spacing:.04em;font-weight:600;text-transform:none;font-size:11px}
+
+.rk-row{grid-template-areas:"num pic name pr adp vs acts" "num pic team pr adp vs acts";
+  row-gap:1px;padding:7px 10px;border:1px solid var(--border);
   border-radius:9px;background:var(--surface,rgba(255,255,255,.02));cursor:grab;transition:border-color .15s,transform .12s}
 .rk-row:hover{border-color:var(--accent)}
 .rk-row.rk-dragging{opacity:.45;cursor:grabbing}
-.rk-num{flex:0 0 auto;min-width:26px;text-align:right;font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
-.rk-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
-.rk-name{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word}
-.rk-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
-.rk-pos{font-weight:700;letter-spacing:.03em}
+
+.rk-num{grid-area:num;text-align:right;font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+/* La foto lleva un anillo del color de SU posicion. Es el mismo dato que el
+   pill, dicho sin gastar una columna. */
+.rk-pic{grid-area:pic;width:34px;height:34px;border-radius:50%;overflow:hidden;
+  border:2px solid currentColor;color:var(--border);background:rgba(255,255,255,.04)}
+.rk-pic img{width:100%;height:100%;object-fit:cover;display:block}
+.rk-ring-QB{color:rgba(232,138,181,.55)}.rk-ring-RB{color:rgba(95,208,138,.55)}
+.rk-ring-WR{color:rgba(99,182,245,.55)}.rk-ring-TE{color:rgba(232,180,95,.55)}
+
+/* El nombre NUNCA se trunca: parte por palabra y crece hacia abajo. La pista
+   tiene minimo 96px por la plantilla, no minmax(0,1fr), para que la rejilla no
+   pueda colapsarla a cero (el fallo que se pago caro en el tablero de subasta). */
+.rk-name{grid-area:name;min-width:0;font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word}
+.rk-team{grid-area:team;min-width:0;font-size:11px;color:var(--muted);letter-spacing:.02em}
+
+/* En escritorio este envoltorio desaparece y sus hijos caen directos en la
+   rejilla, cada uno en su columna. En el telefono vuelve a ser una caja y los
+   agrupa en la segunda linea, debajo del nombre. Un solo arbol de DOM. */
+.rk-nums{display:contents}
+.rk-posrank{grid-area:pr;display:inline-flex;align-items:baseline;justify-self:start;
+  font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 7px;border-radius:999px;
+  background:currentColor}
+/* Tinta fija y oscura, NO var(--bg): en tema claro el fondo es casi blanco y
+   el pill quedaba texto claro sobre azul claro, ilegible. Los cuatro colores de
+   posicion son de medio tono, asi que la tinta oscura contrasta en los dos temas. */
+.rk-posrank>*{color:#0c0d12}
+.rk-pos{font-weight:800}
+.rk-posn{font-weight:700;font-variant-numeric:tabular-nums}
 .rk-QB{color:#e88ab5}.rk-RB{color:#5fd08a}.rk-WR{color:#63b6f5}.rk-TE{color:#e8b45f}
-.rk-adp{font-variant-numeric:tabular-nums}
-.rk-delta{font-weight:700;font-variant-numeric:tabular-nums}
-.rk-up{color:#5fd08a}
-.rk-down{color:#e8a55f}
-.rk-acts{flex:0 0 auto;display:flex;gap:4px}
+.rk-adp{grid-area:adp;text-align:right;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* La distancia contra el consenso se pinta SIEMPRE, tambien cuando es cero.
+   Antes solo aparecia en los jugadores movidos, asi que una lista recien
+   abierta no ensenaba la unica cifra que dice algo. */
+.rk-vs{grid-area:vs;justify-self:end;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  padding:3px 7px;border-radius:6px;min-width:42px;text-align:center}
+.rk-up{color:#5fd08a;background:rgba(95,208,138,.12)}
+.rk-down{color:#e8a55f;background:rgba(232,165,95,.12)}
+/* El cero va sin capsula. Con fondo, una lista recien abierta (todo a cero)
+   era una columna de doscientos recuadros grises que se leian como campos de
+   texto vacios. El dato sigue ahi; deja de gritar. */
+.rk-even{color:var(--muted);background:none;font-weight:600;opacity:.55}
+
+.rk-acts{grid-area:acts;display:flex;gap:4px;justify-content:flex-end}
 .rk-ib{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
   background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;padding:0}
 .rk-ib:hover{color:var(--text);border-color:var(--accent)}
@@ -2168,22 +2234,42 @@ html{scroll-padding-top:76px}
 
 /* Skeleton, nunca spinner: la forma es la de la fila que va a llegar */
 .rk-skel-wrap{display:flex;flex-direction:column;gap:4px}
-.rk-skel-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--border);border-radius:9px}
-.rk-skel-num{width:22px;height:13px;border-radius:4px}
-.rk-skel-name{flex:1;height:13px;border-radius:4px;max-width:210px}
-.rk-skel-tag{width:58px;height:11px;border-radius:4px}
-.rk-skel-num,.rk-skel-name,.rk-skel-tag{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.11),rgba(255,255,255,.05));
+.rk-skel-row{display:grid;grid-template-columns:34px 34px minmax(96px,1fr) 74px 62px 62px 98px;
+  align-items:center;column-gap:12px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;height:50px}
+.rk-skel-num{width:22px;height:13px;border-radius:4px;justify-self:end}
+.rk-skel-pic{width:34px;height:34px;border-radius:50%}
+.rk-skel-name{height:13px;border-radius:4px;max-width:210px}
+.rk-skel-tag{height:11px;border-radius:4px}
+.rk-skel-num,.rk-skel-name,.rk-skel-tag,.rk-skel-pic{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.11),rgba(255,255,255,.05));
   background-size:200% 100%;animation:rk-shine 1.35s ease-in-out infinite}
 @keyframes rk-shine{0%{background-position:200% 0}100%{background-position:-200% 0}}
-@media (prefers-reduced-motion:reduce){.rk-skel-num,.rk-skel-name,.rk-skel-tag{animation:none}}
+@media (prefers-reduced-motion:reduce){.rk-skel-num,.rk-skel-name,.rk-skel-tag,.rk-skel-pic{animation:none}}
 
+/* TELEFONO. La rejilla de siete columnas no cabe y no tiene por que: el
+   envoltorio .rk-nums vuelve a ser una caja y las tres cifras bajan a una
+   segunda linea bajo el nombre, que es como ya se leia esta pantalla. */
+@media (max-width:760px){
+  .rk-colhead{display:none}
+  .rk-row{grid-template-columns:24px 32px minmax(96px,1fr) var(--rk-acts);
+    grid-template-areas:"num pic name acts" "num pic meta acts";column-gap:9px;row-gap:3px}
+  .rk-nums{grid-area:meta;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+  .rk-team,.rk-posrank,.rk-adp,.rk-vs{grid-area:auto}
+  /* En el telefono no hay cabecera de columnas, asi que cada cifra se dice a
+     si misma. Sin esto la linea acababa en un "0" suelto que no significaba
+     nada. */
+  .rk-adp::before{content:'ADP ';color:var(--muted)}
+  .rk-vs::before{content:'vs ';font-weight:600;opacity:.7}
+  .rk-vs{justify-self:auto;min-width:0;padding:2px 6px}
+  .rk-num{font-size:12.5px}
+  .rk-skel-row{grid-template-columns:24px 32px minmax(96px,1fr) 110px}
+  .rk-skel-row>.rk-skel-tag:nth-of-type(2),.rk-skel-row>.rk-skel-tag:nth-of-type(3){display:none}
+}
 @media (max-width:520px){
   .rk-tools-r{margin-left:0;width:100%}
   .rk-search{flex:1 1 100%}
   .rk-sub{font-size:12px}
-  .rk-num{min-width:22px;font-size:12.5px}
+  .rk-row{--rk-acts:110px;padding:7px 8px}
   .rk-ib{width:34px;height:34px}
-  .rk-row{padding:8px}
 }
 /* El corte de tier lleva palabra, no icono: en el telefono no hay hover que
    revele el tooltip y el glifo solo se leia como un guion. */

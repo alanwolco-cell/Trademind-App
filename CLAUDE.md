@@ -9,11 +9,11 @@ Dominio: macdraft.app. Deploy en Vercel, proyecto `trademind-starter`.
 
 ## Gates obligatorios antes de cualquier deploy
 ```
-node scripts/calibrate-room.mjs   # 40 invariantes, ~10 min. Debe dar ALL GREEN
+node scripts/calibrate-room.mjs   # 40 invariantes, ~35 min reales. Debe dar ALL GREEN
 node scripts/qa-flows.mjs         # flujos con el motor real
 node scripts/qa-trades.mjs        # 9.989 escenarios, 32 checks
 node scripts/qa-perfil.mjs        # 156 checks del perfil, instantaneo
-node scripts/qa-rankings.mjs      # 18 checks de My Rankings, navegador real
+node scripts/qa-rankings.mjs      # 23 checks de My Rankings, navegador real
 node scripts/qa-board.mjs         # 104 checks del tablero, barrido de anchos
 ```
 Los seis corren desde cualquier directorio. Un test que no falla contra el codigo
@@ -429,3 +429,103 @@ El mapa de la sala, por si hay que rehacerlo:
   `width="1080" height="1080"` cuando el archivo real es 1920x1080 a 30fps, 13s, y el CSS
   lo pinta a `min(1120px,94vw)` en apaisado. Hay que corregir los atributos al generar.
 
+
+## Sesion 2026-08-26: el reel sale del script, y My Rankings se lee como herramienta
+
+Las dos cosas que quedaron esperando respuesta del dueno al cerrar la sesion anterior.
+Contesto las dos y se cerraron.
+
+### El encuadre del reel: elegido sobre tres medidos, y BAKEADO en el generador
+`scripts/gen-reel.mjs` tenia el viewport clavado en 1920x1080 en dos constantes. Ahora
+son `REEL_W` / `REEL_H` (por defecto lo mismo), y con eso se filmaron las dos candidatas
+que decian las notas, mas una tercera.
+
+- **1920 (lo de antes)**: 1476x830. El panel "My team" VACIO entra por la derecha y el
+  rotulo "DRAFT BOARD" sale cortado arriba.
+- **1400**: 1400x830. Esconde "My team" por la regla de layout del 25-ago, PERO deja el
+  riel derecho (Queue) como un bloque vacio con su texto de ayuda. Sale PEOR que la de
+  1920, al reves de lo que anticipaban las notas: filmar a 1400 no era la solucion.
+- **Recorte cerrado (elegida)**: 1282x806. Tarjeta del lote entera, columna de
+  presupuestos con la insignia moviendose, lista de jugadores. Ningun panel vacio.
+  Unica arruga: la pestana "Results" queda cortada en el borde derecho, y eso se lee
+  como una tarjeta que continua, no como un defecto.
+
+Lo que cambio en el generador, y por que:
+- **Se dejo de forzar 16:9.** Ese forzado crecia el lado ancho de ~1290 a 1476 y esos
+  184px de mas eran EXACTAMENTE lo que metia el panel vacio en cuadro. El hero pinta el
+  video a `min(1120px,94vw)` igual, asi que la proporcion exacta nunca fue un requisito.
+- **Arriba ya no va aire.** El `AIRE` de 24px por los cuatro lados metia media linea del
+  rotulo "DRAFT BOARD". Media palabra cortada es peor que ninguna.
+- **El recordatorio final dice las medidas REALES** del recorte, no un literal. El reel
+  viejo estuvo meses en produccion declarado `width="1080" height="1080"` sobre un
+  archivo de 1920x1080; el recordatorio que hubiera evitado eso decia el numero a mano.
+
+`public/index.html` linea ~264: el video pasa a `width="1282" height="806"` y a `?v=4`.
+El comentario de encima describia el reel VIEJO (snake board, "you are on the clock") y
+ahora describe el que hay: la sala de subasta, filmada por el script.
+
+Los cuatro defectos que el reel tenia EN PRODUCCION quedan cerrados: jugador inexistente
+(control negativo contra el maestro de Sleeper), nombre truncado, fuente Archivo (muere
+por construccion, la app sirve Familjen Grotesk) y encuadre.
+
+### My Rankings: de lista de tarjetas a rejilla de columnas
+Referencia que mando el dueno: captura de "The Basement Draft Guide", del video de
+YouTube eD7Y1UW7iF0 que no se habia podido ver. Alcance que eligio: **solo estetica y
+densidad**, sin funciones nuevas (se le ofrecio Undo, Target Round y estrella/descartar,
+y dijo que no).
+
+**El diagnostico no era de color, era de densidad.** Medido: en escritorio la fila media
+1050px y el contenido ocupaba 260. El 75% de cada fila estaba vacio entre el nombre y los
+tres botones. La referencia llena ese espacio con columnas de dato y por eso se lee como
+herramienta.
+
+Lo que se hizo:
+- **Rejilla de columnas compartida entre cabecera y fila.** `.rk-row` y `.rk-colhead`
+  salen de la MISMA regla CSS: es lo unico que garantiza que las cifras caigan bajo su
+  rotulo. Columnas: rank, foto, jugador, rank por posicion, ADP de consenso, distancia
+  contra el consenso, acciones.
+- **La columna de acciones va con ancho FIJO, no `auto`.** Con `auto`, la cabecera (que
+  no tiene botones) media cero en esa columna y toda la rejilla salia corrida.
+- **Medida de lectura de 760px en `#tab-rankings`.** Sin tope, la fila se estiraba a
+  1500px y el hueco entre el nombre y POS era de 500px. Con el tope, 238px. El tope va en
+  el TAB entero para que cabecera, herramientas y filas compartan margenes.
+- **Foto del jugador con anillo del color de su posicion.** El mismo dato que el pill,
+  dicho sin gastar una columna.
+- **El rank por posicion sale de MI orden** (`WR1`, `RB4`), no del consenso.
+- **La distancia contra el consenso se pinta SIEMPRE**, tambien cuando es cero. Antes
+  solo aparecia en los jugadores movidos, o sea que una lista recien abierta escondia la
+  unica cifra que dice algo. El cero va sin capsula y al 55% de opacidad: con fondo, una
+  lista sin tocar era una columna de doscientos recuadros grises que se leian como
+  campos de texto vacios.
+- **Las bandas de tier declaran su conteo**, y el conteo es de filas VISIBLES: con un
+  filtro puesto, decir "200 players" encima de tres seria mentir. Ademas el rotulo se
+  pinta ANTES de la primera fila visible de su tier y no despues del corte, con lo que
+  un filtro que vacia un tier entero ya no deja rotulos huerfanos.
+- **Telefono: un solo arbol de DOM.** El envoltorio `.rk-nums` es `display:contents` en
+  escritorio (sus hijos caen directos en la rejilla, cada uno en su columna) y vuelve a
+  ser una caja en el telefono, agrupando equipo, pos-rank, ADP y delta en una segunda
+  linea bajo el nombre. Ahi cada cifra se rotula sola (`ADP 1.7`, `vs +3`) porque no hay
+  cabecera que las explique.
+- **Tinta fija oscura en el pill de posicion, NO `var(--bg)`.** En tema claro el fondo es
+  casi blanco y el pill quedaba texto claro sobre azul claro. Verificado en los dos temas.
+
+Lo que NO se copio de la referencia, a proposito: su paleta (naranja oxido sobre negro;
+la nuestra sigue siendo morado sobre negro), el panel de detalle del riel derecho (es
+otra feature entera y el detalle del jugador ya vive en otra pantalla) y el "?" de ayuda
+en cada columna.
+
+**El gate pasa de 18 a 23 checks.** Los cinco nuevos: la cabecera cae a plomo sobre sus
+columnas (tolerancia 2px), el delta se pinta en TODAS las filas visibles, cada fila lleva
+su foto con el id de Sleeper, el rank por posicion es correlativo sobre mi lista, y las
+bandas de tier suman exactamente las filas que hay. **Verificado que los seis fallan
+contra el codigo anterior** (se restauro `public/rankings.js` y `public/styles.css` desde
+HEAD y se corrio): 0 deltas de 200 filas, no hay cabecera, 0 fotos de 200 filas, filas sin
+rank por posicion, 0 bandas.
+
+De paso, el gate se endurecio: usaba `$eval`, que LANZA si el elemento no existe, y con el
+codigo roto reventaba en el segundo fallo llevandose por delante los quince checks
+siguientes. Ahora todos reportan FAIL en vez de tumbar la corrida.
+
+Archivos tocados: `public/rankings.js` (`tmrPaint` reescrito, `tmrSkeleton` con la forma
+nueva), `public/styles.css` (bloque `.rk-*` entero), `public/index.html` (video y su
+comentario), `scripts/gen-reel.mjs`, `scripts/qa-rankings.mjs`.
