@@ -12916,8 +12916,44 @@ function _auRawValue(p){
 function auPoolInit(){
   var total=MD.teams*MD.budget;
   var slots=MD.teams*MD.rounds;
-  var vals=MD.pool.map(function(p){return {p:p,raw:_auRawValue(p)};})
-    .sort(function(a,b){return b.raw-a.raw;});
+  // NIVEL DE PRECIOS REAL EN TODO SCORING (medido 2026-08-26).
+  // _auRawValue solo usa el AAV de mercado si la sala es PPR entera; en half
+  // PPR y en standard lo tiraba y caia a la curva exp(a+b*adp), que aplasta la
+  // cima: en una sala de 10 equipos a $200 half PPR el #1 quedaba en $49
+  // cuando su AAV real son $67, y el #1 costaba el 24,5% del presupuesto
+  // teniendo la propia auditoria de este repo escrito que lo real es 30-32%.
+  // La puerta tenia su razon (el AAV de ESPN es de ligas PPR, y usarlo crudo
+  // en standard sesga hacia los WR), asi que no se quita: se separan las dos
+  // cosas que estaban pegadas. La ESCALA de precios sale del mercado real; a
+  // QUIEN le toca cada precio lo decide el ADP del formato de la sala.
+  // Resultado medido: el #1 pasa a 29,0%, dentro de la banda documentada.
+  var vals;
+  if(MD.scoring>=1){
+    vals=MD.pool.map(function(p){return {p:p,raw:_auRawValue(p)};})
+      .sort(function(a,b){return b.raw-a.raw;});
+  }else{
+    // la curva empirica de precios: los AAV reales de los jugadores de ESTA
+    // sala, ordenados. No es un ajuste, son los precios que la gente paga.
+    var _d=window._mdAav;
+    var _curva=[];
+    if(_d&&_d.players){
+      MD.pool.forEach(function(p){
+        var e=_mdByName(_d.players,p.name);
+        if(e&&e.pos===p.pos&&e.aav>0)_curva.push(e.aav);
+      });
+      _curva.sort(function(a,b){return b-a;});
+    }
+    // el orden lo manda el ADP del formato, que es donde vive la diferencia
+    // entre half PPR y PPR (los RB suben, los WR bajan) - ese reparto ya
+    // estaba bien y no se toca
+    var _porAdp=MD.pool.map(function(p){return {p:p,base:_auRawValue(p)};})
+      .sort(function(a,b){return b.base-a.base;});
+    vals=_porAdp.map(function(v,i){
+      // dentro de la curva real, el precio del puesto i; fuera de ella (la
+      // cola larga que ESPN no cotiza) se conserva el camino de siempre
+      return {p:v.p,raw:(i<_curva.length)?_curva[i]:v.base};
+    });
+  }
   var draftable=vals.slice(0,slots);
   // TEXTBOOK AUCTION VALUE: money buys value ABOVE REPLACEMENT, not raw value.
   // Spreading it over raw-minus-$1 made a bigger room inflate the elites (a
@@ -13584,6 +13620,12 @@ function auStart(){
 }
 function auAdvance(){
   if(!AU.active)return; // the room was left mid-auction: stop cold
+  // MODO ESPEJO (Draft Day): la sala no se conduce sola, la conduce la subasta
+  // REAL que el dueno va narrando. Sin este corte el motor nominaria por su
+  // cuenta y pisaria el lote que de verdad esta en el bloque en Yahoo.
+  // Con AU.live apagado el comportamiento es identico al de siempre, que es
+  // lo que mantiene verdes los 40 invariantes del gate.
+  if(AU.live)return;
   var anyLeft=false,poolLeft=MD.pool.length>0;
   for(var s=1;s<=MD.teams;s++)if(AU.slotsLeft[s]>0)anyLeft=true;
   if(!anyLeft||!poolLeft){auFinish();return;}
@@ -13694,6 +13736,7 @@ function auOpenLot(slot,p){
     AU.lot.myMax=_w;
   }
   auRenderLot();auRenderBudgets();
+  if(AU.live)return; // espejo: las pujas las canta la sala real, no el reloj
   AU.phaseEnd=Date.now()+AU_PACE.BID_MAX;AU.stepT=setTimeout(auBidStep,_auDelay(_auBeatMs()));
 }
 // One decision beat of room bidding. Bots outbid +$1 while the price is
@@ -13903,6 +13946,7 @@ function auSell(){
   // the research table is the auction's whole left brain - it must stay
   // painted at all times (MD.onClock is a snake concept and is never true here)
   mdShowChoicesSoon(1);
+  if(AU.live){try{if(window.lvAfterSale)lvAfterSale();}catch(_){}return;}
   AU.phaseEnd=Date.now()+AU_PACE.NEXT_LOT;AU.stepT=setTimeout(auAdvance,_auDelay(AU_PACE.NEXT_LOT));
 }
 // Mac's read on the block: personal ceiling = room value x live inflation,

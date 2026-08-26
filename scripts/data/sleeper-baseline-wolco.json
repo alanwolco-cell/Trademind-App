@@ -1,0 +1,283 @@
+{
+ "user_id": "359098099047628800",
+ "username": "wolco",
+ "captured": "pre-yahoo-import",
+ "seasons": {
+  "2015": [],
+  "2016": [],
+  "2017": [],
+  "2018": [],
+  "2019": [
+   {
+    "league_id": "475125875923218432",
+    "name": "OLD Teamwork Makes The Dream Work 2019",
+    "previous_league_id": null,
+    "total_rosters": 6,
+    "status": "complete",
+    "season": "2019"
+   },
+   {
+    "league_id": "493613470181224448",
+    "name": "LosChuchonesSioq Ft. Salo",
+    "previous_league_id": null,
+    "total_rosters": 4,
+    "status": "complete",
+    "season": "2019"
+   },
+   {
+    "league_id": "470118803494137856",
+    "name": "Saquon #1",
+    "previous_league_id": null,
+    "total_rosters": 8,
+    "status": "in_season",
+    "season": "2019"
+   },
+   {
+    "league_id": "458789128524263424",
+    "name": "Fantasy 2019🍒",
+    "previous_league_id": null,
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2019"
+   },
+   {
+    "league_id": "457374664797188096",
+    "name": "Ex Dinastia",
+    "previous_league_id": null,
+    "total_rosters": 10,
+    "status": "complete",
+    "season": "2019"
+   },
+   {
+    "league_id": "456170522401566720",
+    "name": "OLD 4 BGR Trades Dynasty 2019",
+    "previous_league_id": null,
+    "total_rosters": 12,
+    "status": "complete",
+    "season": "2019"
+   }
+  ],
+  "2020": [
+   {
+    "league_id": "597383342198935552",
+    "name": "Hhh",
+    "previous_league_id": null,
+    "total_rosters": 0,
+    "status": "complete",
+    "season": "2020"
+   },
+   {
+    "league_id": "517641744237342720",
+    "name": "Teamwork Makes The Dream Work",
+    "previous_league_id": "475125875923218432",
+    "total_rosters": 6,
+    "status": "complete",
+    "season": "2020"
+   }
+  ],
+  "2021": [
+   {
+    "league_id": "740313553172623360",
+    "name": "2021",
+    "previous_league_id": null,
+    "total_rosters": 10,
+    "status": "complete",
+    "season": "2021"
+   },
+   {
+    "league_id": "737741203239481344",
+    "name": "PanamaKids",
+    "previous_league_id": null,
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2021"
+   },
+   {
+    "league_id": "737808986631458816",
+    "name": "Ty cabriado",
+    "previous_league_id": null,
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2021"
+   },
+   {
+    "league_id": "735705943928700928",
+    "name": "Messi",
+    "previous_league_id": null,
+    "total_rosters": 10,
+    "status": "complete",
+    "season": "2021"
+   },
+   {
+    "league_id": "732709275318747136",
+    "name": "Viejos Tiempos",
+    "previous_league_id": null,
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2021"
+   },
+   {
+    "league_id": "728924543137247232",
+    "name": "Unnamed League",
+    "previous_league_id": null,
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2021"
+   }
+  ],
+  "2022": [
+   {
+    "league_id": "870783161326559232",
+    "name": "Los guillados 420",
+    "previous_league_id": null,
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2022"
+   },
+   {
+    "league_id": "863902046296915968",
+    "name": "PanamaKids",
+    "previous_league_id": "737741203239481344",
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2022"
+   },
+   {
+    "league_id": "863900693407399936",
+    "name": "2021",
+    "previous_league_id": "740313553172623360",
+    "total_rosters": 10,
+    "status": "complete",
+    "season": "2022"
+   }
+  ],
+  "2023": [
+   {
+    "league_id": "992210520088027136",
+    "name": "Los guillados 420",
+    "previous_league_id": "870783161326559232",
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2023"
+   },
+   {
+    "league_id": "992180651564273664",
+    "name": "PanamaKids",
+    "previous_league_id": "863902046296915968",
+    "total_rosters": 8,
+    "status": "complete",
+    "season": "2023"
+   }
+  ],
+  "2024": [
+   {
+    "league_id": "1133841156854394880",
+    "name": "Dynasty",
+    "previous_league_id": null,
+    "total_rosters": 10,
+    "status": "complete",
+    "season": "2024"
+   },
+   {
+    "league_id": "1129972704469172224",
+    "name": "Miami Boys Choir",
+    "previous_league_id": null,
+    "total_rosters": 12,
+    "status": "complete",
+    "season": "2024"
+   }
+  ],
+  "2025": [
+   {
+    "league_id": "1269370436819365888",
+    "name": "Prostata league",
+    "previous_league_id": null,
+    "total_rosters": 12,
+    "status": "complete",
+    "season": "2025"
+   },
+   {
+    "league_id": "1266829403225063424",
+    "name": "KVC 2.0",
+    "previous_league_id": null,
+    "total_rosters": 12,
+    "status": "complete",
+    "season": "2025"
+   },
+   {
+    "league_id": "1263210638948171776",
+    "name": "Miami Boys Choir",
+    "previous_league_id": "1129972704469172224",
+    "total_rosters": 12,
+    "status": "complete",
+    "season": "2025"
+   },
+   {
+    "league_id": "1224450940849889280",
+    "name": "Dynasty",
+    "previous_league_id": "1133841156854394880",
+    "total_rosters": 10,
+    "status": "complete",
+    "season": "2025"
+   }
+  ],
+  "2026": [
+   {
+    "league_id": "1397987180218998784",
+    "name": "🏗️ Dark Horse $250",
+    "previous_league_id": null,
+    "total_rosters": 12,
+    "status": "pre_draft",
+    "season": "2026"
+   },
+   {
+    "league_id": "1397782152434712576",
+    "name": "dinosaur central 20",
+    "previous_league_id": null,
+    "total_rosters": 10,
+    "status": "in_season",
+    "season": "2026"
+   },
+   {
+    "league_id": "1397740520205213696",
+    "name": "Peluche Chopped",
+    "previous_league_id": null,
+    "total_rosters": 17,
+    "status": "drafting",
+    "season": "2026"
+   },
+   {
+    "league_id": "1394722906545618944",
+    "name": "Nerd Fantasy League",
+    "previous_league_id": null,
+    "total_rosters": 12,
+    "status": "pre_draft",
+    "season": "2026"
+   },
+   {
+    "league_id": "1393450135224094720",
+    "name": "Miami Boys Choir",
+    "previous_league_id": "1263210638948171776",
+    "total_rosters": 12,
+    "status": "pre_draft",
+    "season": "2026"
+   },
+   {
+    "league_id": "1392943521618460672",
+    "name": "Niggantasy",
+    "previous_league_id": null,
+    "total_rosters": 12,
+    "status": "pre_draft",
+    "season": "2026"
+   },
+   {
+    "league_id": "1312071398390259712",
+    "name": "Dynasty",
+    "previous_league_id": "1224450940849889280",
+    "total_rosters": 10,
+    "status": "in_season",
+    "season": "2026"
+   }
+  ]
+ }
+}

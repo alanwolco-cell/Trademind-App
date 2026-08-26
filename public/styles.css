@@ -2278,3 +2278,134 @@ html{scroll-padding-top:76px}
    un jugador que cae 6 puestos o mas por debajo de donde YO lo tengo. */
 .md-bd-my{color:var(--muted);font-variant-numeric:tabular-nums}
 .md-bd-my.hit{color:#5fd08a;font-weight:700}
+
+/* ── Draft Day: el panel de la subasta en vivo ─────────────────────────────
+ * UN solo arbol de DOM y dos repartos, como .rk-nums y los dos ejes del
+ * perfil: en escritorio flota sobre la sala y se arrastra; en el telefono es
+ * una hoja pegada abajo, porque a 390px no hay sitio al que moverlo y
+ * arrastrarlo solo taparia el board. */
+.lv-panel{
+  position:fixed;right:18px;top:96px;z-index:70;width:340px;max-width:calc(100vw - 24px);
+  background:var(--surface2);border:1px solid var(--border2);border-radius:14px;
+  box-shadow:0 18px 44px rgba(0,0,0,.42);overflow:hidden;
+  font-size:12px;color:var(--text);
+}
+.lv-head{
+  display:flex;align-items:center;gap:8px;padding:9px 10px;cursor:grab;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+.lv-head:active{cursor:grabbing}
+.lv-head b{font-family:var(--font-head);font-size:13px;letter-spacing:.01em}
+.lv-grip{width:12px;height:12px;flex:none;border-radius:2px;
+  background:repeating-linear-gradient(0deg,var(--muted) 0 2px,transparent 2px 4px)}
+.lv-money{margin-left:auto;font-size:11px;color:var(--muted2);white-space:nowrap}
+.lv-x{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;font-size:11px}
+.lv-panel.is-min .lv-body{display:none}
+
+.lv-body{padding:10px;display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow-y:auto}
+
+.lv-in{width:100%;padding:9px 11px;font-size:13px;border-radius:9px;
+  background:var(--bg);border:1px solid var(--border2);color:var(--text)}
+.lv-in:focus{outline:none;border-color:var(--accent-bright)}
+.lv-hint{min-height:16px;margin-top:5px;font-size:11px;color:var(--muted2);line-height:1.5}
+.lv-hint b{color:var(--text)}
+.lv-ms{float:right;color:var(--muted);opacity:.55;font-size:10px}
+.lv-err{color:var(--yellow)}
+.lv-ok{color:var(--accent-bright)}
+
+.lv-lot{padding:10px;border-radius:11px;background:var(--bg);border:1px solid var(--border)}
+.lv-lot.lv-empty{color:var(--muted);text-align:center;padding:16px 10px}
+.lv-lot-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.lv-lot-top b{font-family:var(--font-head);font-size:14px}
+.lv-pos{font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;color:#12101a}
+.lv-team{font-size:11px;color:var(--muted)}
+.lv-num{font-family:var(--font-head);font-size:30px;line-height:1.1;margin-top:6px;color:var(--accent-bright)}
+.lv-num.is-buy{color:var(--green,#5fd39a)}
+.lv-num .lv-why{display:block;font-family:var(--font-body);font-size:11px;color:var(--muted2);margin-top:2px}
+.lv-break{margin-top:7px;font-size:11px;color:var(--muted);line-height:1.6}
+/* el precio sin emocion: va SIEMPRE que difiera del suyo, para que el gusto
+   se pueda ver en dolares en vez de actuar a escondidas */
+.lv-pure{margin-top:7px;font-size:11px;color:var(--muted2)}
+.lv-pure b{color:var(--text)}
+.lv-pure i{display:block;font-style:normal;color:var(--muted);opacity:.85;margin-top:1px}
+.lv-buy{margin-top:8px;padding:7px 9px;border-radius:8px;font-size:11px;line-height:1.5;
+  background:rgba(95,211,154,.11);border:1px solid rgba(95,211,154,.32);color:var(--text)}
+
+.lv-threat{margin-top:9px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.lv-threat i{width:100%;font-style:normal;font-size:10px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em}
+.lv-threat span{font-size:11px;padding:3px 7px;border-radius:6px;
+  background:var(--surface2);border:1px solid var(--border)}
+.lv-threat span b{color:var(--yellow)}
+.lv-threat.lv-clear{display:block;font-size:11px;color:var(--green,#5fd39a)}
+
+.lv-room{border-top:1px solid var(--border);padding-top:9px}
+.lv-room-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.lv-room-h span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.lv-room-h i{font-style:normal;font-size:11px;color:var(--muted2)}
+/* rejilla compartida por todas las filas: las cifras caen bajo su sitio,
+   misma leccion que .rk-row y .rk-colhead */
+.lv-seat{display:grid;grid-template-columns:1fr 44px 24px 66px 42px;gap:6px;align-items:center;
+  padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.lv-seat.is-me{color:var(--accent-bright)}
+.lv-sn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv-sc{text-align:right;font-weight:700}
+.lv-ss{text-align:right;color:var(--muted)}
+.lv-sf{color:var(--muted2);font-size:10px;letter-spacing:.03em}
+.lv-sd{text-align:right;font-size:10px;color:var(--muted)}
+.lv-sd.over{color:var(--yellow)}
+.lv-sd.under{color:var(--green,#5fd39a)}
+.lv-room-f{margin-top:6px;font-size:9px;color:var(--muted);opacity:.7;letter-spacing:.03em}
+
+@media (max-width:700px){
+  /* hoja pegada abajo: nada de arrastre, y el board sigue viendose encima */
+  .lv-panel{left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;
+    border-radius:16px 16px 0 0;border-left:none;border-right:none;border-bottom:none}
+  .lv-head{cursor:default}
+  .lv-grip{width:26px;height:4px;border-radius:3px;background:var(--border2);margin:0 auto 0 0}
+  .lv-body{max-height:52vh}
+  .lv-num{font-size:26px}
+  .lv-seat{grid-template-columns:1fr 42px 22px 58px 38px}
+}
+
+/* las listas de gusto, dentro del panel */
+.lv-lists{border-top:1px solid var(--border);padding-top:8px}
+.lv-lists-t{width:100%;display:flex;align-items:center;gap:8px;background:none;border:none;
+  color:var(--muted);cursor:pointer;padding:3px 0;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em}
+.lv-lists-t i{font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;
+  color:var(--muted2);font-size:11px}
+.lv-lists-t span{margin-left:auto;font-size:9px}
+.lv-list-row{margin-top:8px}
+.lv-list-row label{display:block;font-size:11px;color:var(--text);margin-bottom:3px}
+.lv-list-row label i{font-style:normal;color:var(--muted);font-size:10px;margin-left:6px}
+.lv-list-row textarea{width:100%;padding:6px 8px;font-size:11px;border-radius:7px;resize:vertical;
+  background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:inherit}
+.lv-list-row textarea:focus{outline:none;border-color:var(--accent-bright)}
+.lv-list-row button{margin-top:4px;padding:4px 10px;font-size:11px;border-radius:6px;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border2);color:var(--text)}
+.lv-list-msg{margin-top:8px;font-size:11px;color:var(--muted2);line-height:1.5}
+.lv-list-msg b{color:var(--accent-bright)}
+/* los no reconocidos se PINTAN: un nombre tragado en silencio se descubre pujando */
+.lv-bad{display:block;margin-top:3px;color:var(--yellow)}
+.lv-list-foot{margin-top:9px;font-size:10px;color:var(--muted);line-height:1.55;opacity:.85}
+
+/* La fase de la sala. Sustituye a un numero por una frase que cambia una
+   decision: contra una sala novata, que se funde el presupuesto temprano, lo
+   que gana no es pujar mas fuerte sino saber cuando se quedaron sin dinero. */
+.lv-phase{margin:6px 0 4px;padding:7px 9px;border-radius:8px;font-size:11px;line-height:1.5;
+  background:var(--bg);border:1px solid var(--border);color:var(--muted2)}
+.lv-phase.is-cold{background:rgba(95,211,154,.10);border-color:rgba(95,211,154,.30);color:var(--text)}
+.lv-phase.is-hot{background:rgba(232,181,74,.10);border-color:rgba(232,181,74,.32);color:var(--text)}
+.lv-phase-sub{margin:0 0 7px;font-size:11px;color:var(--muted2);line-height:1.5}
+
+/* El consejo. Va destacado porque es lo que decide; el resto del panel es el
+   respaldo del numero. Una sola linea, y silencio cuando no hay nada que decir. */
+.lv-adv{margin-top:9px;padding:9px 11px;border-radius:9px;font-size:12px;line-height:1.55;
+  background:rgba(155,114,232,.11);border:1px solid rgba(155,114,232,.34);color:var(--text)}
+.lv-res{margin-top:10px;padding-top:9px;border-top:1px solid var(--border)}
+.lv-res label{display:block;font-size:11px;color:var(--text);margin-bottom:4px}
+.lv-res label i{display:block;font-style:normal;color:var(--muted);font-size:10px;line-height:1.45;margin-top:1px}
+.lv-res input{width:74px;padding:5px 8px;font-size:12px;border-radius:6px;
+  background:var(--bg);border:1px solid var(--border2);color:var(--text)}
+.lv-res span{font-size:11px;color:var(--muted)}

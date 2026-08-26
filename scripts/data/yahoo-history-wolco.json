@@ -1,0 +1,1832 @@
+{
+ "extraido": "2026-08-26",
+ "usuario": "awolcovinsky",
+ "ligas": [
+  {
+   "league_id": "273563",
+   "nombre": "Cancel",
+   "season": 2026,
+   "origen": "actual",
+   "draft": [
+    {
+     "ronda": 1,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 1,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 1,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 1,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 1,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 1,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 1,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 1,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 1,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 1,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 2,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 2,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 2,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 2,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 2,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 2,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 2,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 2,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 2,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 2,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 3,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 3,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 3,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 3,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 3,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 3,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 3,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 3,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 3,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 3,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 4,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 4,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 4,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 4,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 4,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 4,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 4,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 4,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 4,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 4,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 5,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 5,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 5,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 5,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 5,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 5,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 5,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 5,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 5,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 5,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 6,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 6,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 6,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 6,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 6,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 6,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 6,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 6,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 6,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 6,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 7,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 7,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 7,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 7,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 7,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 7,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 7,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 7,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 7,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 7,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 8,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 8,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 8,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 8,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 8,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 8,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 8,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 8,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 8,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 8,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 9,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 9,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 9,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 9,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 9,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 9,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 9,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 9,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 9,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 9,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 10,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 10,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 10,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 10,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 10,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 10,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 10,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 10,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 10,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 10,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 11,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 11,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 11,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 11,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 11,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 11,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 11,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 11,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 11,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 11,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 12,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 12,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 12,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 12,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 12,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 12,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 12,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 12,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 12,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 12,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 13,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 13,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 13,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 13,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 13,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 13,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 13,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 13,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 13,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 13,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 14,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 14,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 14,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 14,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 14,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 14,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 14,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 14,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 14,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 14,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 15,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    },
+    {
+     "ronda": 15,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 15,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 15,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 15,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 15,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 15,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 15,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 15,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 15,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 16,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Tight End Isaac"
+    },
+    {
+     "ronda": 16,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Ceedeez nuts"
+    },
+    {
+     "ronda": 16,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Shlomi's Ins..."
+    },
+    {
+     "ronda": 16,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "Juice is Loose"
+    },
+    {
+     "ronda": 16,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 16,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "Kamara bbys"
+    },
+    {
+     "ronda": 16,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "El Brawler"
+    },
+    {
+     "ronda": 16,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bye Week 8"
+    },
+    {
+     "ronda": 16,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Salomon's Ge..."
+    },
+    {
+     "ronda": 16,
+     "pick": 10,
+     "jugador": "--empty--",
+     "equipo": "Teddy"
+    }
+   ]
+  },
+  {
+   "league_id": "524400",
+   "nombre": "Cancel",
+   "season": 2026,
+   "origen": "actual",
+   "draft": [
+    {
+     "ronda": 1,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 1,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 1,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 1,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 1,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 1,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 1,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 1,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 1,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 2,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 2,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 2,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 2,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 2,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 2,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 2,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 2,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 2,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 3,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 3,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 3,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 3,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 3,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 3,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 3,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 3,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 3,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 4,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 4,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 4,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 4,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 4,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 4,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 4,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 4,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 4,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 5,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 5,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 5,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 5,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 5,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 5,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 5,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 5,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 5,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 6,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 6,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 6,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 6,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 6,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 6,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 6,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 6,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 6,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 7,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 7,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 7,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 7,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 7,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 7,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 7,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 7,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 7,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 8,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 8,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 8,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 8,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 8,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 8,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 8,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 8,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 8,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 9,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 9,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 9,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 9,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 9,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 9,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 9,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 9,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 9,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 10,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 10,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 10,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 10,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 10,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 10,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 10,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 10,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 10,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 11,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 11,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 11,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 11,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 11,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 11,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 11,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 11,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 11,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 12,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 12,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 12,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 12,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 12,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 12,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 12,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 12,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 12,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 13,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 13,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 13,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 13,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 13,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 13,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 13,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 13,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 13,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 14,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    },
+    {
+     "ronda": 14,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 14,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 14,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 14,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 14,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 14,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 14,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 14,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 15,
+     "pick": 1,
+     "jugador": "--empty--",
+     "equipo": "La Rana Jr."
+    },
+    {
+     "ronda": 15,
+     "pick": 2,
+     "jugador": "--empty--",
+     "equipo": "Bomberman34"
+    },
+    {
+     "ronda": 15,
+     "pick": 3,
+     "jugador": "--empty--",
+     "equipo": "Family Feud"
+    },
+    {
+     "ronda": 15,
+     "pick": 4,
+     "jugador": "--empty--",
+     "equipo": "RASPUTIN"
+    },
+    {
+     "ronda": 15,
+     "pick": 5,
+     "jugador": "--empty--",
+     "equipo": "Bomberman 34"
+    },
+    {
+     "ronda": 15,
+     "pick": 6,
+     "jugador": "--empty--",
+     "equipo": "x5🏆"
+    },
+    {
+     "ronda": 15,
+     "pick": 7,
+     "jugador": "--empty--",
+     "equipo": "Hail Murray"
+    },
+    {
+     "ronda": 15,
+     "pick": 8,
+     "jugador": "--empty--",
+     "equipo": "Danul 🍷🥂"
+    },
+    {
+     "ronda": 15,
+     "pick": 9,
+     "jugador": "--empty--",
+     "equipo": "Benitocamelas"
+    }
+   ]
+  },
+  {
+   "league_id": "664858",
+   "nombre": "Cancel",
+   "season": 2026,
+   "origen": "actual",
+   "draft": null,
+   "nota": "sin draft"
+  },
+  {
+   "league_id": "1053540",
+   "nombre": "Assign new commissioner",
+   "season": 2026,
+   "origen": "actual",
+   "draft": null,
+   "nota": "liga no accesible"
+  },
+  {
+   "league_id": "1086143",
+   "nombre": "Assign new commissioner",
+   "season": 2026,
+   "origen": "actual",
+   "draft": null,
+   "nota": "liga no accesible"
+  },
+  {
+   "league_id": "1191169",
+   "nombre": "Assign new commissioner",
+   "season": 2026,
+   "origen": "actual",
+   "draft": null,
+   "nota": "liga no accesible"
+  },
+  {
+   "league_id": "1198211",
+   "nombre": "Assign new commissioner",
+   "season": 2026,
+   "origen": "actual",
+   "draft": null,
+   "nota": "liga no accesible"
+  }
+ ]
+}

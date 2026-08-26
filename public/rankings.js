@@ -319,6 +319,33 @@ function tmrCloseExport() {
   if (box) box.style.display = 'none';
 }
 
+/* ── hidratacion silenciosa ─────────────────────────────────────────────
+ * MEDIDO, no supuesto (2026-08-26): con la casilla "Use in mock drafts"
+ * ENCENDIDA y la lista guardada, entrar y draftear sin abrir antes el tab
+ * daba tmRankingsActivos()=false y tmMyRankOf()=null, o sea que la casilla
+ * no hacia NADA por el camino real del usuario. TMR solo se cargaba dentro
+ * de renderRankings(), que solo corre al pulsar la pestana.
+ * El gate qa-rankings no lo veia porque abre el tab primero: otra vez la
+ * puerta de servicio. Esto construye la lista sin pintar UI, para que el
+ * board del mock y la herramienta de subasta en vivo la tengan siempre.
+ */
+async function tmrHydrate() {
+  if (TMR.loaded) return true;
+  try { if (localStorage.getItem(TMR_USE_KEY) !== '1') return false; } catch (_) { return false; }
+  if (!tmrLoadSaved()) return false;   // sin lista propia no hay nada que hidratar
+  var host = document.getElementById('rk-body');
+  var tmp = null;
+  if (!host) { // la pantalla de rankings puede no estar montada: anfitrion de usar y tirar
+    tmp = document.createElement('div');
+    tmp.id = 'rk-body';
+    tmp.style.display = 'none';
+    document.body.appendChild(tmp);
+  }
+  try { await renderRankings(); } catch (_) { }
+  if (tmp && tmp.parentNode) tmp.parentNode.removeChild(tmp);
+  return TMR.loaded && TMR.rows.length > 0;
+}
+
 /* ── puentes hacia el resto de la app ───────────────────────────────────── */
 /* El board del mock pregunta por aqui. Devuelve MI puesto (1-based) o null si
  * el jugador no esta en mi lista, para que quien llame decida si cae de vuelta
@@ -364,6 +391,8 @@ if (typeof window !== 'undefined') {
   window.tmrToggleUse = tmrToggleUse;
   window.tmMyRankOf = tmMyRankOf;
   window.tmRankingsActivos = tmRankingsActivos;
+  window.tmrHydrate = tmrHydrate;
+  window.TMR = TMR;
 
   /* Red de seguridad de la carrera de carga: el tab lo abre un onclick inline, y
    * con la red lenta el usuario puede pulsarlo ANTES de que este archivo exista.

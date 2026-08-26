@@ -1,6 +1,6 @@
 # Mac Draft: estado del proyecto
 
-Ultima actualizacion: 2026-08-25.
+Ultima actualizacion: 2026-08-26 (noche).
 
 ## Que es
 Dynasty fantasy football: mock drafts (snake y subasta) que se comportan como tu liga,
@@ -16,8 +16,9 @@ node scripts/qa-perfil.mjs        # 156 checks del perfil, instantaneo
 node scripts/qa-rankings.mjs      # 23 checks de My Rankings, navegador real
 node scripts/qa-board.mjs         # 104 checks del tablero, barrido de anchos
 node scripts/qa-nav.mjs           # navegacion CLICANDO desde la portada
+node scripts/qa-live.mjs          # 24 checks de Draft Day, navegador real, entra clicando
 ```
-Los seis corren desde cualquier directorio. Un test que no falla contra el codigo
+Los ocho corren desde cualquier directorio. Un test que no falla contra el codigo
 roto es un adorno: al anadir un gate, verificar que falla ANTES del fix.
 
 ## Sesion 2026-08-22: auditoria pre-lanzamiento
@@ -588,3 +589,97 @@ un check que llegue por clic.
 Archivos tocados: `public/app.js` (`mobMenuCloseForNav` nuevo, `mobGo`, `tabGo`),
 `public/index.html` (entrada My Rankings en el cajon, cache-bust a 2026082602),
 `scripts/qa-nav.mjs` (nuevo).
+
+
+## Sesion 2026-08-26 (noche): Draft Day, la subasta REAL conducida por el dueno
+
+**El plazo que manda.** El dueno tiene una subasta real el domingo 30 de agosto de 2026
+en Yahoo, liga Fantazy 2026. Yahoo no da API (la solicitud de Fantasy Sports sigue sin
+respuesta desde el 4 de agosto). Pidio una herramienta para usar EN VIVO durante ese draft:
+"que vaya tanteando la sala", "reaction time muy rapido sin perder accuracy", "basado en mis
+rankings", y consejos en cristiano del tipo "este es el ultimo RB de tu tier, quemate la
+plata y despues usa tu talento para un receiver de 5 dolares".
+
+**Su liga ya estaba en el codigo.** `FZ26_SEATS` (app.js ~9772) y `mdFantazy26Toggle`:
+10 equipos, $200, subasta, half PPR, 1QB, 15 rondas, TD de pase a 6, el en el asiento 9,
+diez rivales con nombre y arquetipo. El dueno CONFIRMO que la liga del domingo es esa.
+Tres datos suyos que gobiernan el diseno: es el PRIMER auction de casi todos sus rivales;
+el cree que Gibbs y Bijan se van "como en 80"; y se declara bueno en la franja media de WR
+pero "a veces me dejo llevar por top receivers".
+
+**Decision de arquitectura: NO se escribio un motor nuevo.** `auMyWorth`, `auBotMax`,
+`auInflation` y `auSell` ya hacian todo lo que pidio. Lo unico que faltaba era que la sala
+la condujera la realidad en vez de los bots. Eso es `AU.live`: TRES cortes en `app.js`
+(`auAdvance` sale temprano, `auOpenLot` no arranca el reloj de pujas, `auSell` no encadena
+la siguiente nominacion y llama a `lvAfterSale`). Con `AU.live` apagado el comportamiento
+es IDENTICO, que es lo que mantuvo el gate de 40 invariantes en verde. El domingo corre el
+mismo codigo que paso las 600 salas del gate.
+
+**`public/live.js` (nuevo).** Panel flotante y arrastrable en escritorio, hoja pegada abajo
+en el telefono, un solo DOM decidido por CSS (bloques `.lv-*` al final de `styles.css`).
+Entrada de una caja: escribir `gibbs` pinta el techo mientras teclea; `gibbs 74 3` y Enter
+registra la venta (jugador, precio, asiento). Se entra por "Draft Day (live auction)" en el
+cajon, arriba del todo, porque el dia que se usa no hay tiempo de buscarla.
+
+Lo que hace, y de donde sale cada cosa (nada inventado):
+- **Techo con desglose**: mercado (`auMyWorth`), mi lista, gusto, reserva y ley del
+  presupuesto, cada parte pintada. Y SIEMPRE al lado el numero limpio sin gusto, con lo
+  que le cuesta su emocion en dolares.
+- **Mis rankings entran en el precio**: el jugador que tengo en el puesto k vale lo que
+  ESTA sala paga por su k-esimo mas caro (la curva que `auPoolInit` ya normalizo). Peso
+  50% por defecto. Quien no esta en mi lista se queda con el mercado puro, no se castiga.
+- **Listas de gusto pegadas** (Love +15%, Not so much -15%, Not my guy -35%). NINGUNA veta:
+  regla textual del dueno, "quiero llevarme jugadores que no me gustan si el valor es
+  correcto; que mis emociones afecten pero hasta un punto". Los nombres no reconocidos se
+  DECLARAN, nunca se tragan.
+- **Ganga**: solo cuando vale mucho mas que la puja Y se calculo (via `auBotMax`) que
+  ningun rival con hueco llega al precio. La primera version comparaba precio contra valor
+  a secas y, como todo lote abre en $1, gritaba ganga en cada nominacion. Lo cazo el test.
+- **Tanteo de la sala** tras cada venta: dinero real por asiento, titulares que debe,
+  pagado contra valor, y la FASE en cristiano ("the room is running out of money, what
+  comes next goes cheap"). Contra una sala novata que se funde el presupuesto temprano,
+  gana quien sabe cuando se quedaron sin dinero.
+- **Reserva de presupuesto** (pendiente viejo del repo, ahora con motivo): se descuenta
+  del techo y SE LIBERA SOLA con la sala rota o con 4 huecos o menos, para no crear dinero
+  muerto, que es un fallo que `auInflation` ya habia medido.
+- **El consejo** (`lvAdvice`): UNA linea o silencio. Prioridad: ganga confirmada, el sesgo
+  que el mismo declara ("you already have 3 WRs and still owe 3 starters, this is the pull
+  you told me you fall for, let him go"), ultimo de su tier en algo que necesita (con la
+  salida barata contada sobre jugadores DRAFTABLES, no sobre la cola larga), sala rota,
+  pasado de precio. El orden importa: con la ganga en tercer lugar, el aviso verde y la
+  frase del tier se contradecian en el segundo de decidir.
+
+**Dos bugs del repo, medidos y arreglados de paso:**
+- La casilla "Use in mock drafts" no hacia NADA por el camino real: `TMR` solo se cargaba
+  al abrir el tab. `tmrHydrate()` en `rankings.js` la construye sin pintar UI (16 ms).
+- El precio base era falso en half PPR: `_auRawValue` solo usaba el AAV real si
+  `MD.scoring>=1`. Gibbs salia a $49 con AAV real de $67, y el #1 costaba el 24,5% del
+  presupuesto contra los 30-32% documentados. Arreglo en `auPoolInit`: la ESCALA sale de la
+  curva empirica de AAV reales, a QUIEN le toca cada precio lo decide el ADP del formato.
+  Gibbs pasa a $57 ($67 con el premium de RB de su liga), el #1 al 28,5%, conservacion de
+  dinero intacta ($2003 sobre $2000 en 150 huecos). calibrate-room: ALL GREEN, 40/40.
+
+**Busqueda por apellido.** `chase` devolvia a Chase Brown (Chase es el nombre de pila del
+otro). En una subasta eso registra la venta equivocada y envenena todo el tanteo. Ahora
+manda el apellido y a igualdad gana el mas caro de la sala. Peor caso sin cache: 0,03 ms.
+
+**El mock de Yahoo del dueno, leido del archivo que guardo con Cmd+S** (esta en
+`/Users/wolco/Downloads/Live NFL Draft _ Yahoo Fantasy Sports.html`): era de 12 equipos,
+no de 10, asi que sus precios ($72 Gibbs y Bijan) vienen inflados por sala profunda
+(HALLAZGO 1 de la auditoria). A 10 equipos equivalen a ~$64, y con el premium de RB ~$75.
+Yahoo NO deja anclas en su DOM (1.223 clases hasheadas `_ys_*`, cero `data-testid`), asi
+que el lector, si se hace, va sobre el TEXTO visible (`Budget`, `Max Offer`, `Proj $`,
+`$72`, `1/15`), que es producto y no cambia con un rediseno. NO ESTA ESCRITO. La
+herramienta funciona igual tecleando, y eso esta probado.
+
+**Gate: `node scripts/qa-live.mjs`, 24 checks.** Entra CLICANDO desde la portada en
+escritorio y telefono. Verificado que falla contra HEAD anterior: (b1) y (b2) rojos, la
+entrada no existe, `lvEnter is not a function`.
+
+Archivos: `public/live.js` (nuevo), `public/app.js` (3 cortes `AU.live`, `auPoolInit`),
+`public/rankings.js` (`tmrHydrate`), `public/styles.css` (`.lv-*`), `public/index.html`
+(entrada del cajon, carga de live.js, cache-bust 2026082603), `scripts/qa-live.mjs` (nuevo).
+
+Pendiente: el lector de Yahoo sobre texto (opcional, no bloquea el domingo); calibrar el
+premium de RB con los precios REALES de su liga cuando existan; el panel flotante de
+rankings dentro del mock (opcion A que el eligio) queda ABSORBIDO por Draft Day.

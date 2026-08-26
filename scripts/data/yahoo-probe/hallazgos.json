@@ -1,0 +1,45 @@
+{
+ "paginas": {
+  "home": {
+   "bytes": 3349304,
+   "incrustado": false,
+   "ligas": [
+    "273563",
+    "524400",
+    "664858"
+   ],
+   "anios": [
+    "2008",
+    "2013",
+    "2017",
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ]
+  },
+  "perfil": {
+   "bytes": 2096916,
+   "incrustado": false,
+   "ligas": [],
+   "anios": [
+    "2008",
+    "2013",
+    "2017",
+    "2022",
+    "2023",
+    "2026"
+   ]
+  }
+ },
+ "api": {
+  "todas las temporadas": {
+   "status": 401,
+   "ok": false
+  },
+  "solo juegos": {
+   "status": 401,
+   "ok": false
+  }
+ }
+}
