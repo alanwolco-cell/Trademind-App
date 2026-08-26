@@ -292,12 +292,31 @@ try {
     .replace('O. Hampton\nRB\nLAC\nBye 7\nProj $41\n$1\nEl Capitan', 'D. Achane\nRB\nMia\nBye 12\nProj $38\n$14\nHunter');
   const r3 = await pg.evaluate(t => {
     const r = lvIngest(t); const u = AU.sold[0];
-    return { sold: r.sold, ultima: u && u.p.name, precio: u && u.price, lote: AU.lot && AU.lot.p.name, bid: AU.lot && AU.lot.bid };
+    return { sold: r.sold, ultima: u && u.p.name, precio: u && u.price, lote: AU.lot && AU.lot.p.name, bid: AU.lot && AU.lot.bid, warn: r.warn };
   }, t3);
   ok('r3', r3.sold === 1 && r3.ultima === 'Omarion Hampton' && r3.precio === 37,
     `con Results CERRADA la venta sale de la diferencia de presupuesto (${r3.ultima} $${r3.precio})`);
   ok('r4', r3.lote === "De'Von Achane" && r3.bid === 14,
     `el lote nuevo entra con su puja viva (${r3.lote} $${r3.bid})`);
+  ok('r5', /share a name \(Kevin\)/.test((r3.warn || []).join(' ')),
+    'dos equipos con el mismo nombre se declaran (mock del dueno: dos Kevin)');
+
+  // (r6) sala NUEVA a mitad del draft, con Results CERRADA: el panel no puede
+  // reconstruir el historial y tiene que pedir la pestana, con los numeros
+  await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await pg.waitForTimeout(2200);
+  await pg.evaluate(async () => await window.lvEnter());
+  await pg.waitForTimeout(1200);
+  const r6 = await pg.evaluate(t => { const r = lvIngest(t); return { sold: r.sold, warn: r.warn[0] || '', picks: MD.picks.length }; }, fixTxt.split('Pick\tPlayer')[0]);
+  ok('r6', r6.sold === 0 && /Open the Results tab/.test(r6.warn) && /shows \d+ players bought and this panel has 0/.test(r6.warn),
+    `a mitad del draft sin Results, pide la pestana con los dos numeros: "${r6.warn.slice(0, 70)}"`);
+  // y con Results visible en el siguiente latido, se pone al dia y calla
+  const r7 = await pg.evaluate(t => { const r = lvIngest(t); return { sold: r.sold, warn: (r.warn || []).join(' ') }; }, fixTxt);
+  ok('r7', r7.sold === 9 && !/Open the Results tab/.test(r7.warn),
+    `con Results visible se pone al dia (${r7.sold} ventas) y deja de pedirla`);
+  // (r8) el nombre truncado del preset casa por prefijo
+  const r8 = await pg.evaluate(() => { LV.seatMap = {}; return lvSeatOf('Family Feud Champions 2026'); });
+  ok('r8', r8 === 10, `"Family Feud ..." del preset casa con el nombre completo de Yahoo por prefijo (asiento ${r8})`);
 
   // ── (s) EL MARCADOR, DE PUNTA A PUNTA: ventana emergente real ────────────
   // La pagina "Yahoo" es una pagina local con el texto de la sala; el marcador

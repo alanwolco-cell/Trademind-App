@@ -672,7 +672,38 @@ que el lector, si se hace, va sobre el TEXTO visible (`Budget`, `Max Offer`, `Pr
 `$72`, `1/15`), que es producto y no cambia con un rediseno. NO ESTA ESCRITO. La
 herramienta funciona igual tecleando, y eso esta probado.
 
-**Gate: `node scripts/qa-live.mjs`, 24 checks.** Entra CLICANDO desde la portada en
+### El lector de Yahoo (mismo dia, mas tarde): ESCRITO, PROBADO, NO DESPLEGADO
+Sin API y sin anclas en el DOM, el lector va sobre el TEXTO visible de la sala
+(`document.body.innerText`). La sala real del dueno esta en
+`scripts/fixtures/yahoo-auction-room-2026-08-26.txt` y el gate la lee tal cual.
+- **Transporte: un marcador de favoritos** (`lvBookmarklet`). Se arrastra UNA vez a la barra
+  desde la seccion "Yahoo" del panel; en la sala de Yahoo se toca, abre Mac Draft en una
+  ventana con `#draftday` (la sala arranca sola) y le manda el texto cada 1,5 s por
+  `postMessage`. Sin consola, sin extension, sin servidor, sin tocar su navegador desde
+  fuera. El receptor solo acepta mensajes con la forma exacta y origen `*.yahoo.com`
+  (`LV.anyOrigin` lo relaja SOLO en el gate).
+- **`lvParseYahoo`**: lote (ancla `Proj $`), ultima venta (`Last:`), tabla de presupuestos
+  (`nombre | $N | a/b`, por ORDEN porque en el mock habia dos "Kevin", y el badge `$1` de
+  la puja viva se cuela dentro y se ignora), y Results cuando la pestana esta activa.
+- **`lvResolve`**: "B. Robinson" por inicial + apellido (Bijan, no Wan'Dale).
+- **`lvSeatOf`**: equipos de Yahoo a asientos por nombre contra `FZ26_SEATS` (prefijo si
+  el preset lo tiene truncado, "Family Feud ..."), "You" es el dueno, el resto al primer
+  asiento libre y DECLARADO en el panel.
+- **`lvApplyYahoo`** es idempotente (el mismo texto no vende dos veces). Ventas desde
+  Results si esta visible; si no, por DIFERENCIA de presupuesto (contador +1 y dinero
+  abajo = venta, precio = lo que bajo, jugador = `Last:`). Si Yahoo tiene mas compras que
+  el panel, pide abrir Results una vez, con los dos numeros. Sin cartel SOLD ni sonido
+  mientras aplica (nueve de golpe al conectar se montaban sobre el panel).
+- `lvEnter` ahora FUERZA subasta y entra por `goMock`: en la segunda visita abria en snake
+  (`AU.slotsLeft` no existia) y con la portada detras del panel. Los dos los cazo el gate.
+
+**Gate: `node scripts/qa-live.mjs`, 41 checks** (parser sobre la sala real, idempotencia,
+venta por diferencia, marcador de punta a punta con ventana emergente real, portada fuera de
+pantalla, ponerse al dia, nombres repetidos, prefijo). Los ocho gates en verde.
+**Commits locales 59bedcb y siguientes, SIN EMPUJAR**: el dueno pidio no desplegar de
+noche. Empujar a main dispara Vercel.
+
+**Gate original: `node scripts/qa-live.mjs`, 24 checks.** Entra CLICANDO desde la portada en
 escritorio y telefono. Verificado que falla contra HEAD anterior: (b1) y (b2) rojos, la
 entrada no existe, `lvEnter is not a function`.
 

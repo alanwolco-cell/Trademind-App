@@ -1048,8 +1048,15 @@ function lvSeatOf(name, seatsInOrder) {
   if (LV.seatMap[name] != null) return LV.seatMap[name];
   if (name === 'You') { LV.seatMap[name] = MD.mySlot; return MD.mySlot; }
   var s;
+  var nN = _tmrNormSafe(name);
   for (s = 1; s <= MD.teams; s++) {
-    if (s !== MD.mySlot && _tmrNormSafe(lvSeatName(s)) === _tmrNormSafe(name)) { LV.seatMap[name] = s; return s; }
+    if (s === MD.mySlot) continue;
+    var sn = lvSeatName(s) || '';
+    // el preset guarda algun nombre truncado ("Family Feud ..."): casa por
+    // prefijo, que es lo unico que se puede afirmar de un nombre cortado
+    var trunc = /\.\.\.$/.test(sn);
+    var sN = _tmrNormSafe(sn.replace(/\.\.\.$/, ''));
+    if (sN && (sN === nN || (trunc && nN.indexOf(sN) === 0))) { LV.seatMap[name] = s; return s; }
   }
   // asiento libre: el que ningun nombre de Yahoo ocupe todavia
   var usados = {};
@@ -1077,6 +1084,11 @@ function lvApplyYahoo(st) {
   }
   var order = st.seats.map(function (x) { return x.name; });
   var tk = {}; (MD.picks || []).forEach(function (k) { if (k && k.p) tk[_mdNormName(k.p.name)] = 1; });
+  // Dos equipos con el mismo nombre (paso en su mock: dos "Kevin") irian al
+  // mismo asiento. No se puede resolver desde el texto; se declara.
+  var vistos = {}, dup = [];
+  st.seats.forEach(function (x) { if (vistos[x.name] && dup.indexOf(x.name) < 0) dup.push(x.name); vistos[x.name] = 1; });
+  if (dup.length) res.warn.push('Two Yahoo teams share a name (' + dup.join(', ') + '): their buys land on one seat.');
   // Ni cartel SOLD ni sonido por las ventas que aplica el lector: al conectar
   // en mitad del draft entran nueve de golpe, y en el telefono el cartel se
   // montaba encima del panel (visto en la captura). La sala real ya tiene su
@@ -1115,6 +1127,18 @@ function lvApplyYahoo(st) {
     });
   }
   LV.snap = st.seats.map(function (x) { return { name: x.name, budget: x.budget, have: x.have }; });
+
+  // PONERSE AL DIA. Si la ventana se abre (o se recarga) a mitad del draft con
+  // Results cerrada, la tabla de presupuestos dice cuantas compras hay y este
+  // panel tiene menos: no hay forma de recuperar el historial desde el texto
+  // salvo abrir Results una vez. Se pide en cristiano, con los dos numeros.
+  var haveY = 0;
+  st.seats.slice(0, MD.teams).forEach(function (x) { haveY += x.have || 0; });
+  var haveAqui = (MD.picks || []).length;
+  if (st.seats.length && haveY > haveAqui) {
+    res.warn.unshift('Yahoo shows ' + haveY + ' players bought and this panel has ' + haveAqui
+      + '. Open the Results tab in Yahoo once so it can catch up.');
+  }
 
   // 3) el lote vivo
   if (st.lot && st.lot.name) {
