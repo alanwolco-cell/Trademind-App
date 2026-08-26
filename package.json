@@ -9,7 +9,9 @@
     "build": "echo 'No build step needed'",
     "yahoo:login": "node scripts/yahoo/login.mjs",
     "yahoo:probe": "node scripts/yahoo/probe.mjs",
-    "yahoo:extract": "node scripts/yahoo/extract.mjs"
+    "yahoo:extract": "node scripts/yahoo/extract.mjs",
+    "yahoo:report": "node scripts/yahoo/report.mjs",
+    "test": "node --test tests/"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

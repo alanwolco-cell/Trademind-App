@@ -11,6 +11,7 @@
 const express = require('express');
 const { requireAcctId } = require('../lib/identity');
 const { construirPerfil, construirPerfiles } = require('../lib/perfil');
+const tendenciasDraft = require('../lib/tendencias-draft');
 const { clasificarLiga, ejeDeDosLados } = require('../lib/formato');
 const NodeCache = require('node-cache');
 
@@ -87,7 +88,10 @@ async function minarDrafts(userId, temporadas) {
         if (k.roster_id == null) continue;
         picks.push({
           liga: d.league_id, temporada: d.season || s, roster: k.roster_id,
-          ronda: k.round, pos: k.metadata && k.metadata.position
+          ronda: k.round, pos: k.metadata && k.metadata.position,
+          // Largo del draft: sin el no se puede juzgar si un kicker en la
+          // ronda 12 fue tarde o tempranisimo. Campo aditivo, nadie mas lo lee.
+          rondasTotales: (d.settings && d.settings.rounds) || null
         });
       }
     }
@@ -199,6 +203,10 @@ router.get('/', async (req, res) => {
       generado: Date.now(), usuario: user, ligas,
       temporadas,
       ejes: construirPerfiles(trades, players, ctx),
+      // Auto-scouting de draft: cinco ejes probados contra los rivales de cada
+      // sala, con correccion por comparaciones multiples. Clave nueva y aparte
+      // a proposito: lo de arriba ya lo consume la pantalla y no se toca.
+      tendenciasDraft: tendenciasDraft.analizarPorEjes(picksDraft, miRosterPorLiga, { formatoPorLiga }),
       ...construirPerfil(trades, players, ctx)
     };
     cache.set(key, salida);

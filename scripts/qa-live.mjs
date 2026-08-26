@@ -108,11 +108,16 @@ try {
       panel: !!document.getElementById('lv-panel'),
       viva: !!(window.AU && AU.active),
       espejo: !!(window.AU && AU.live),
-      desborde: document.documentElement.scrollWidth > window.innerWidth
+      desborde: document.documentElement.scrollWidth > window.innerWidth,
+      // la portada NO puede quedar detras del panel: se mide, no se supone
+      homeFuera: (function () { var h = document.getElementById('screen-home'); return !h || getComputedStyle(h).display === 'none'; })(),
+      mockDentro: (function () { var m = document.getElementById('screen-mock'); return !!m && getComputedStyle(m).display !== 'none'; })()
     }));
     ok(tag === 'phone' ? 'c2' : 'c1', st.panel && st.viva && st.espejo,
       `${tag}: al clicar abre la sala en modo espejo con el panel puesto`);
     ok(tag === 'phone' ? 'd2' : 'd1', !st.desborde, `${tag}: la pantalla no desborda a ${w}px`);
+    ok(tag === 'phone' ? 'c3' : 'c0', st.homeFuera && st.mockDentro,
+      `${tag}: la sala queda en pantalla y la portada fuera (home=${st.homeFuera ? 'oculta' : 'VISIBLE'})`);
     ok(tag === 'phone' ? 'e2' : 'e1', errs.length === 0,
       `${tag}: consola limpia${errs.length ? ' -> ' + errs[0] : ''}`);
     await pg.close();
@@ -250,6 +255,84 @@ try {
   });
   ok('p', ms < TECHO_MS,
     `busqueda + techo sin cache en ${ms.toFixed(3)}ms, techo declarado ${TECHO_MS}ms`);
+
+  // ── (q) EL LECTOR DE YAHOO, sobre la sala REAL que guardo el dueno ───────
+  const FIX = path.join(ROOT, 'scripts', 'fixtures', 'yahoo-auction-room-2026-08-26.txt');
+  const fixTxt = fs.readFileSync(FIX, 'utf8');
+  const parsed = await pg.evaluate(t => lvParseYahoo(t), fixTxt);
+  ok('q1', parsed.lot && parsed.lot.name === 'O. Hampton' && parsed.lot.bid === 1 && parsed.lot.holder === 'El Capitan',
+    `lee el lote vivo (${parsed.lot ? parsed.lot.name + ' $' + parsed.lot.bid + ' ' + parsed.lot.holder : 'nada'})`);
+  ok('q2', parsed.seats.length === 12 && parsed.seats.filter(x => x.name === 'Kevin').length === 2,
+    `lee los 12 asientos por ORDEN, con los dos "Kevin" y sin tragarse el badge $1 (${parsed.seats.length})`);
+  ok('q3', parsed.results.length === 9 && parsed.results[0].name === 'S. Barkley' && parsed.results[8].cost === 64,
+    `lee las 9 ventas de Results en orden de pick (${parsed.results.length})`);
+  const resolved = await pg.evaluate(() => ({
+    b: (lvResolve('B. Robinson') || {}).name, w: (lvResolve('W. Robinson') || {}).name,
+    j: (lvResolve('J. SMITH-NJIGBA') || {}).name, a: (lvResolve('A. St. Brown') || {}).name
+  }));
+  ok('q4', resolved.b === 'Bijan Robinson' && resolved.w === "Wan'Dale Robinson"
+    && resolved.j === 'Jaxon Smith-Njigba' && resolved.a === 'Amon-Ra St. Brown',
+    `resuelve nombres abreviados por inicial + apellido (B./W. Robinson distintos)`);
+
+  // ── (r) APLICAR LATIDOS: ventas, idempotencia y diferencia de presupuesto ──
+  await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await pg.waitForTimeout(2200);
+  await pg.evaluate(async () => await window.lvEnter());
+  await pg.waitForTimeout(1200);
+  const r1 = await pg.evaluate(t => { const r = lvIngest(t); return { sold: r.sold, picks: MD.picks.length, lot: r.lot }; }, fixTxt);
+  ok('r1', r1.sold === 9 && r1.picks === 9 && r1.lot === 'Omarion Hampton',
+    `un latido con Results aplica las 9 ventas y pone el lote (${r1.sold} ventas, lote ${r1.lot})`);
+  const r2 = await pg.evaluate(t => lvIngest(t).sold, fixTxt);
+  ok('r2', r2 === 0, `el MISMO latido otra vez no vende nada (${r2}); es la razon de que se pueda mandar cada 1,5s`);
+  // Results cerrada: solo el lote, "Last:" y la tabla. Hampton se vendio a El
+  // Capitan por $37 y hay lote nuevo. La venta tiene que salir de la DIFERENCIA.
+  let t3 = fixTxt.split('Pick\tPlayer')[0]
+    .replace('Last:\nJ. SMITH-NJIGBA\n(WR · SEA)\nmatt', 'Last:\nO. HAMPTON\n(RB · LAC)\nEl Capitan')
+    .replace('El Capitan\n\t$200\t0/15', 'El Capitan\n\t$163\t1/15')
+    .replace('O. Hampton\nRB\nLAC\nBye 7\nProj $41\n$1\nEl Capitan', 'D. Achane\nRB\nMia\nBye 12\nProj $38\n$14\nHunter');
+  const r3 = await pg.evaluate(t => {
+    const r = lvIngest(t); const u = AU.sold[0];
+    return { sold: r.sold, ultima: u && u.p.name, precio: u && u.price, lote: AU.lot && AU.lot.p.name, bid: AU.lot && AU.lot.bid };
+  }, t3);
+  ok('r3', r3.sold === 1 && r3.ultima === 'Omarion Hampton' && r3.precio === 37,
+    `con Results CERRADA la venta sale de la diferencia de presupuesto (${r3.ultima} $${r3.precio})`);
+  ok('r4', r3.lote === "De'Von Achane" && r3.bid === 14,
+    `el lote nuevo entra con su puja viva (${r3.lote} $${r3.bid})`);
+
+  // ── (s) EL MARCADOR, DE PUNTA A PUNTA: ventana emergente real ────────────
+  // La pagina "Yahoo" es una pagina local con el texto de la sala; el marcador
+  // se ejecuta ahi tal cual saldria de la barra de favoritos, abre Mac Draft
+  // en una ventana nueva y le manda el texto. El origen no es yahoo.com, asi
+  // que la ventana recibe la orden de aceptar cualquier origen SOLO en el gate.
+  const yahoo = await br.newPage({ viewport: { width: 1200, height: 800 } });
+  await yahoo.setContent('<pre id="t"></pre>');
+  await yahoo.evaluate(t => { document.getElementById('t').textContent = t; }, fixTxt);
+  const bm = await pg.evaluate(b => lvBookmarklet(b), BASE);
+  const src = decodeURIComponent(bm.replace(/^javascript:/, ''));
+  const [popup] = await Promise.all([
+    yahoo.waitForEvent('popup'),
+    yahoo.evaluate(code => { (new Function(code))(); }, src)
+  ]);
+  await popup.waitForLoadState('domcontentloaded');
+  let listo = false;
+  for (let i = 0; i < 60 && !listo; i++) {
+    await popup.waitForTimeout(500);
+    listo = await popup.evaluate(() => !!(window.LV && window.AU && AU.active && LV.on)).catch(() => false);
+  }
+  // la URL de la ventana ya no conserva el #draftday: switchScreen la
+  // reescribe con pushState al entrar en la sala, y eso es correcto. Lo que
+  // se comprueba es que la sala este viva, no la forma de la URL.
+  ok('s1', listo, `el marcador abre Mac Draft en una ventana y la sala arranca sola por #draftday`);
+  await popup.evaluate(() => { LV.anyOrigin = true; });
+  let fed = null;
+  for (let i = 0; i < 16 && !(fed && fed.n > 0 && fed.picks === 9); i++) {
+    await popup.waitForTimeout(500);
+    fed = await popup.evaluate(() => ({ n: LV.feed.n, picks: MD.picks.length, live: !!document.querySelector('.lv-yh.is-live') })).catch(() => null);
+  }
+  ok('s2', fed && fed.n > 0 && fed.picks === 9,
+    `la ventana recibe los latidos y aplica la sala (${fed ? fed.n + ' latidos, ' + fed.picks + ' ventas' : 'nada'})`);
+  ok('s3', fed && fed.live, 'el panel marca la conexion como viva');
+  await popup.close(); await yahoo.close();
 
   await pg.close();
 } finally {

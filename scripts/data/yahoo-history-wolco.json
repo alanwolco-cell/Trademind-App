@@ -4,9 +4,14 @@
  "ligas": [
   {
    "league_id": "273563",
-   "nombre": "Cancel",
+   "nombre": "Alan's Amazing League",
+   "equipo": "Teddy",
+   "rol": "Commissioner",
    "season": 2026,
    "origen": "actual",
+   "titulo_real": "Alan's Amazing League",
+   "verificado": true,
+   "draft_nota": null,
    "draft": [
     {
      "ronda": 1,
@@ -968,13 +973,19 @@
      "jugador": "--empty--",
      "equipo": "Teddy"
     }
-   ]
+   ],
+   "mis_picks": 16
   },
   {
    "league_id": "524400",
-   "nombre": "Cancel",
+   "nombre": "PanamaKids",
+   "equipo": "Bomberman 34",
+   "rol": "Member",
    "season": 2026,
    "origen": "actual",
+   "titulo_real": "PanamaKids",
+   "verificado": true,
+   "draft_nota": null,
    "draft": [
     {
      "ronda": 1,
@@ -1786,47 +1797,3144 @@
      "jugador": "--empty--",
      "equipo": "Benitocamelas"
     }
-   ]
+   ],
+   "mis_picks": 30
   },
   {
    "league_id": "664858",
-   "nombre": "Cancel",
+   "nombre": "2021",
+   "equipo": "Adrian Peterson",
+   "rol": "Member",
    "season": 2026,
    "origen": "actual",
-   "draft": null,
-   "nota": "sin draft"
+   "titulo_real": "2021",
+   "verificado": true,
+   "draft_nota": null,
+   "draft": null
   },
   {
+   "nombre": "Last Min",
+   "equipo": "Him",
+   "comisionado": true,
+   "season": 2024,
+   "rank": "6th",
+   "record": "6-9-0",
    "league_id": "1053540",
-   "nombre": "Assign new commissioner",
-   "season": 2026,
-   "origen": "actual",
-   "draft": null,
-   "nota": "liga no accesible"
+   "origen": "renewal",
+   "titulo_real": "Last Min",
+   "verificado": true,
+   "draft_nota": null,
+   "draft": [
+    {
+     "ronda": 1,
+     "pick": 1,
+     "jugador": "Tyreek Hill",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 1,
+     "pick": 2,
+     "jugador": "Christian McCaffrey",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 1,
+     "pick": 3,
+     "jugador": "CeeDee Lamb",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 1,
+     "pick": 4,
+     "jugador": "Joe Burrow",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 1,
+     "pick": 5,
+     "jugador": "Justin Jefferson",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 1,
+     "pick": 6,
+     "jugador": "Amon-Ra St. Brown",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 1,
+     "pick": 7,
+     "jugador": "Bijan Robinson",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 1,
+     "pick": 8,
+     "jugador": "A.J. Brown",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 2,
+     "pick": 1,
+     "jugador": "Jahmyr Gibbs",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 2,
+     "pick": 2,
+     "jugador": "Garrett Wilson",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 2,
+     "pick": 3,
+     "jugador": "Jonathan Taylor",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 2,
+     "pick": 4,
+     "jugador": "Breece Hall",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 2,
+     "pick": 5,
+     "jugador": "Ja'Marr Chase",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 2,
+     "pick": 6,
+     "jugador": "Puka Nacua",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 2,
+     "pick": 7,
+     "jugador": "Davante Adams",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 2,
+     "pick": 8,
+     "jugador": "Marvin Harrison Jr.",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 3,
+     "pick": 1,
+     "jugador": "Travis Etienne Jr.",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 3,
+     "pick": 2,
+     "jugador": "Mike Evans",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 3,
+     "pick": 3,
+     "jugador": "Travis Kelce",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 3,
+     "pick": 4,
+     "jugador": "Saquon Barkley",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 3,
+     "pick": 5,
+     "jugador": "Kyren Williams",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 3,
+     "pick": 6,
+     "jugador": "De'Von Achane",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 3,
+     "pick": 7,
+     "jugador": "Josh Jacobs",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 3,
+     "pick": 8,
+     "jugador": "Josh Allen",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 4,
+     "pick": 1,
+     "jugador": "Chris Olave",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 4,
+     "pick": 2,
+     "jugador": "Isiah Pacheco",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 4,
+     "pick": 3,
+     "jugador": "Patrick Mahomes",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 4,
+     "pick": 4,
+     "jugador": "Nico Collins",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 4,
+     "pick": 5,
+     "jugador": "Derrick Henry",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 4,
+     "pick": 6,
+     "jugador": "Alvin Kamara",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 4,
+     "pick": 7,
+     "jugador": "Joe Mixon",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 4,
+     "pick": 8,
+     "jugador": "Jalen Hurts",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 5,
+     "pick": 1,
+     "jugador": "DJ Moore",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 5,
+     "pick": 2,
+     "jugador": "Brandon Aiyuk",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 5,
+     "pick": 3,
+     "jugador": "Lamar Jackson",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 5,
+     "pick": 4,
+     "jugador": "Deebo Samuel Sr.",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 5,
+     "pick": 5,
+     "jugador": "C.J. Stroud",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 5,
+     "pick": 6,
+     "jugador": "Drake London",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 5,
+     "pick": 7,
+     "jugador": "Stefon Diggs",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 5,
+     "pick": 8,
+     "jugador": "Kenneth Walker III",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 6,
+     "pick": 1,
+     "jugador": "Jaylen Waddle",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 6,
+     "pick": 2,
+     "jugador": "Jordan Love",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 6,
+     "pick": 3,
+     "jugador": "Cooper Kupp",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 6,
+     "pick": 4,
+     "jugador": "Michael Pittman Jr.",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 6,
+     "pick": 5,
+     "jugador": "Sam LaPorta",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 6,
+     "pick": 6,
+     "jugador": "Rachaad White",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 6,
+     "pick": 7,
+     "jugador": "Mark Andrews",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 6,
+     "pick": 8,
+     "jugador": "DeVonta Smith",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 7,
+     "pick": 1,
+     "jugador": "Dalton Kincaid",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 7,
+     "pick": 2,
+     "jugador": "Kyler Murray",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 7,
+     "pick": 3,
+     "jugador": "DK Metcalf",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 7,
+     "pick": 4,
+     "jugador": "James Cook III",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 7,
+     "pick": 5,
+     "jugador": "Aaron Jones Sr.",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 7,
+     "pick": 6,
+     "jugador": "D'Andre Swift",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 7,
+     "pick": 7,
+     "jugador": "Kyle Pitts Sr.",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 7,
+     "pick": 8,
+     "jugador": "Trey McBride",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 8,
+     "pick": 1,
+     "jugador": "James Conner",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 8,
+     "pick": 2,
+     "jugador": "Malik Nabers",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 8,
+     "pick": 3,
+     "jugador": "George Kittle",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 8,
+     "pick": 4,
+     "jugador": "Jake Ferguson",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 8,
+     "pick": 5,
+     "jugador": "Tank Dell",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 8,
+     "pick": 6,
+     "jugador": "Amari Cooper",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 8,
+     "pick": 7,
+     "jugador": "David Montgomery",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 8,
+     "pick": 8,
+     "jugador": "George Pickens",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 9,
+     "pick": 1,
+     "jugador": "Raheem Mostert",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 9,
+     "pick": 2,
+     "jugador": "Keenan Allen",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 9,
+     "pick": 3,
+     "jugador": "Rhamondre Stevenson",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 9,
+     "pick": 4,
+     "jugador": "Tony Pollard",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 9,
+     "pick": 5,
+     "jugador": "Tee Higgins",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 9,
+     "pick": 6,
+     "jugador": "Zamir White",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 9,
+     "pick": 7,
+     "jugador": "49ers",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 9,
+     "pick": 8,
+     "jugador": "Zay Flowers",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 10,
+     "pick": 1,
+     "jugador": "Nick Chubb",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 10,
+     "pick": 2,
+     "jugador": "Xavier Worthy",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 10,
+     "pick": 3,
+     "jugador": "Najee Harris",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 10,
+     "pick": 4,
+     "jugador": "Christian Kirk",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 10,
+     "pick": 5,
+     "jugador": "Rome Odunze",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 10,
+     "pick": 6,
+     "jugador": "Terry McLaurin",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 10,
+     "pick": 7,
+     "jugador": "Anthony Richardson Sr.",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 10,
+     "pick": 8,
+     "jugador": "Rashee Rice",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 11,
+     "pick": 1,
+     "jugador": "Javonte Williams",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 11,
+     "pick": 2,
+     "jugador": "Evan Engram",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 11,
+     "pick": 3,
+     "jugador": "Tua Tagovailoa",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 11,
+     "pick": 4,
+     "jugador": "Ravens",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 11,
+     "pick": 5,
+     "jugador": "Zack Moss",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 11,
+     "pick": 6,
+     "jugador": "Austin Ekeler",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 11,
+     "pick": 7,
+     "jugador": "Dak Prescott",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 11,
+     "pick": 8,
+     "jugador": "Chris Godwin Jr.",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 12,
+     "pick": 1,
+     "jugador": "Jonathon Brooks",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 12,
+     "pick": 2,
+     "jugador": "Jayden Reed",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 12,
+     "pick": 3,
+     "jugador": "Ezekiel Elliott",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 12,
+     "pick": 4,
+     "jugador": "Calvin Ridley",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 12,
+     "pick": 5,
+     "jugador": "Jets",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 12,
+     "pick": 6,
+     "jugador": "Cowboys",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 12,
+     "pick": 7,
+     "jugador": "Ladd McConkey",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 12,
+     "pick": 8,
+     "jugador": "Jerome Ford",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 13,
+     "pick": 1,
+     "jugador": "Brian Robinson",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 13,
+     "pick": 2,
+     "jugador": "Keon Coleman",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 13,
+     "pick": 3,
+     "jugador": "DeAndre Hopkins",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 13,
+     "pick": 4,
+     "jugador": "Brock Bowers",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 13,
+     "pick": 5,
+     "jugador": "Chiefs",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 13,
+     "pick": 6,
+     "jugador": "Courtland Sutton",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 13,
+     "pick": 7,
+     "jugador": "Devin Singletary",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 13,
+     "pick": 8,
+     "jugador": "Browns",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 14,
+     "pick": 1,
+     "jugador": "Harrison Butker",
+     "equipo": "Los Intocables"
+    },
+    {
+     "ronda": 14,
+     "pick": 2,
+     "jugador": "David Njoku",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 14,
+     "pick": 3,
+     "jugador": "Diontae Johnson",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 14,
+     "pick": 4,
+     "jugador": "Justin Tucker",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 14,
+     "pick": 5,
+     "jugador": "Jordan Addison",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 14,
+     "pick": 6,
+     "jugador": "Brandon Aubrey",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 14,
+     "pick": 7,
+     "jugador": "Evan McPherson",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 14,
+     "pick": 8,
+     "jugador": "Seahawks",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 15,
+     "pick": 1,
+     "jugador": "Younghoe Koo",
+     "equipo": "Him"
+    },
+    {
+     "ronda": 15,
+     "pick": 2,
+     "jugador": "Steelers",
+     "equipo": "Yisus Lovers"
+    },
+    {
+     "ronda": 15,
+     "pick": 3,
+     "jugador": "Baker Mayfield",
+     "equipo": "Chaf’s DADDY"
+    },
+    {
+     "ronda": 15,
+     "pick": 4,
+     "jugador": "Jake Elliott",
+     "equipo": "Max's Amazin..."
+    },
+    {
+     "ronda": 15,
+     "pick": 5,
+     "jugador": "Brock Purdy",
+     "equipo": "Yosss"
+    },
+    {
+     "ronda": 15,
+     "pick": 6,
+     "jugador": "Jameson Williams",
+     "equipo": "Gabriel's In..."
+    },
+    {
+     "ronda": 15,
+     "pick": 7,
+     "jugador": "Jaylen Warren",
+     "equipo": "RanJan’s f..."
+    },
+    {
+     "ronda": 15,
+     "pick": 8,
+     "jugador": "Gus Edwards",
+     "equipo": "Los Intocables"
+    }
+   ],
+   "mis_picks": 15
   },
   {
+   "nombre": "MACHOS",
+   "equipo": "J. Allen-mela a mi🦬",
+   "comisionado": true,
+   "season": 2023,
+   "rank": "4th",
+   "record": "9-5-0",
    "league_id": "1086143",
-   "nombre": "Assign new commissioner",
-   "season": 2026,
-   "origen": "actual",
-   "draft": null,
-   "nota": "liga no accesible"
+   "origen": "renewal",
+   "titulo_real": "MACHOS",
+   "verificado": true,
+   "draft_nota": null,
+   "draft": [
+    {
+     "ronda": 1,
+     "pick": 1,
+     "jugador": "Justin Jefferson",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 1,
+     "pick": 2,
+     "jugador": "Ja'Marr Chase",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 1,
+     "pick": 3,
+     "jugador": "Christian McCaffrey",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 1,
+     "pick": 4,
+     "jugador": "Travis Kelce",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 1,
+     "pick": 5,
+     "jugador": "Nick Chubb",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 1,
+     "pick": 6,
+     "jugador": "Bijan Robinson",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 1,
+     "pick": 7,
+     "jugador": "Austin Ekeler",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 1,
+     "pick": 8,
+     "jugador": "Tyreek Hill",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 1,
+     "pick": 9,
+     "jugador": "Cooper Kupp",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 1,
+     "pick": 10,
+     "jugador": "Stefon Diggs",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 1,
+     "pick": 11,
+     "jugador": "Saquon Barkley",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 1,
+     "pick": 12,
+     "jugador": "CeeDee Lamb",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 2,
+     "pick": 1,
+     "jugador": "Tony Pollard",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 2,
+     "pick": 2,
+     "jugador": "Amon-Ra St. Brown",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 2,
+     "pick": 3,
+     "jugador": "A.J. Brown",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 2,
+     "pick": 4,
+     "jugador": "Garrett Wilson",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 2,
+     "pick": 5,
+     "jugador": "Derrick Henry",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 2,
+     "pick": 6,
+     "jugador": "Davante Adams",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 2,
+     "pick": 7,
+     "jugador": "Josh Jacobs",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 2,
+     "pick": 8,
+     "jugador": "Joe Mixon",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 2,
+     "pick": 9,
+     "jugador": "Jaylen Waddle",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 2,
+     "pick": 10,
+     "jugador": "DeVonta Smith",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 2,
+     "pick": 11,
+     "jugador": "Chris Olave",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 2,
+     "pick": 12,
+     "jugador": "Jahmyr Gibbs",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 3,
+     "pick": 1,
+     "jugador": "Calvin Ridley",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 3,
+     "pick": 2,
+     "jugador": "Mark Andrews",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 3,
+     "pick": 3,
+     "jugador": "Jalen Hurts",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 3,
+     "pick": 4,
+     "jugador": "Aaron Jones Sr.",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 3,
+     "pick": 5,
+     "jugador": "Patrick Mahomes",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 3,
+     "pick": 6,
+     "jugador": "Josh Allen",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 3,
+     "pick": 7,
+     "jugador": "Tee Higgins",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 3,
+     "pick": 8,
+     "jugador": "Lamar Jackson",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 3,
+     "pick": 9,
+     "jugador": "Travis Etienne Jr.",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 3,
+     "pick": 10,
+     "jugador": "Najee Harris",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 3,
+     "pick": 11,
+     "jugador": "DK Metcalf",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 3,
+     "pick": 12,
+     "jugador": "Rhamondre Stevenson",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 4,
+     "pick": 1,
+     "jugador": "J.K. Dobbins",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 4,
+     "pick": 2,
+     "jugador": "Jonathan Taylor",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 4,
+     "pick": 3,
+     "jugador": "Dameon Pierce",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 4,
+     "pick": 4,
+     "jugador": "Breece Hall",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 4,
+     "pick": 5,
+     "jugador": "Kenneth Walker III",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 4,
+     "pick": 6,
+     "jugador": "Amari Cooper",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 4,
+     "pick": 7,
+     "jugador": "Keenan Allen",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 4,
+     "pick": 8,
+     "jugador": "Deebo Samuel Sr.",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 4,
+     "pick": 9,
+     "jugador": "Miles Sanders",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 4,
+     "pick": 10,
+     "jugador": "Drake London",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 4,
+     "pick": 11,
+     "jugador": "Alexander Mattison",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 4,
+     "pick": 12,
+     "jugador": "Justin Fields",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 5,
+     "pick": 1,
+     "jugador": "Darren Waller",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 5,
+     "pick": 2,
+     "jugador": "Joe Burrow",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 5,
+     "pick": 3,
+     "jugador": "Diontae Johnson",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 5,
+     "pick": 4,
+     "jugador": "Terry McLaurin",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 5,
+     "pick": 5,
+     "jugador": "DJ Moore",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 5,
+     "pick": 6,
+     "jugador": "Christian Watson",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 5,
+     "pick": 7,
+     "jugador": "Justin Herbert",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 5,
+     "pick": 8,
+     "jugador": "Tyler Lockett",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 5,
+     "pick": 9,
+     "jugador": "Dak Prescott",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 5,
+     "pick": 10,
+     "jugador": "T.J. Hockenson",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 5,
+     "pick": 11,
+     "jugador": "George Kittle",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 5,
+     "pick": 12,
+     "jugador": "Brandon Aiyuk",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 6,
+     "pick": 1,
+     "jugador": "Kyle Pitts Sr.",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 6,
+     "pick": 2,
+     "jugador": "James Cook III",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 6,
+     "pick": 3,
+     "jugador": "DeAndre Hopkins",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 6,
+     "pick": 4,
+     "jugador": "Dallas Goedert",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 6,
+     "pick": 5,
+     "jugador": "James Conner",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 6,
+     "pick": 6,
+     "jugador": "Cam Akers",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 6,
+     "pick": 7,
+     "jugador": "Javonte Williams",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 6,
+     "pick": 8,
+     "jugador": "Evan Engram",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 6,
+     "pick": 9,
+     "jugador": "Mike Evans",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 6,
+     "pick": 10,
+     "jugador": "Mike Williams",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 6,
+     "pick": 11,
+     "jugador": "Rachaad White",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 6,
+     "pick": 12,
+     "jugador": "Alvin Kamara",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 7,
+     "pick": 1,
+     "jugador": "Hollywood Brown",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 7,
+     "pick": 2,
+     "jugador": "Christian Kirk",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 7,
+     "pick": 3,
+     "jugador": "David Montgomery",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 7,
+     "pick": 4,
+     "jugador": "Trevor Lawrence",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 7,
+     "pick": 5,
+     "jugador": "Chris Godwin Jr.",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 7,
+     "pick": 6,
+     "jugador": "Pat Freiermuth",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 7,
+     "pick": 7,
+     "jugador": "Michael Pittman Jr.",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 7,
+     "pick": 8,
+     "jugador": "George Pickens",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 7,
+     "pick": 9,
+     "jugador": "Jordan Addison",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 7,
+     "pick": 10,
+     "jugador": "Daniel Jones",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 7,
+     "pick": 11,
+     "jugador": "Dalvin Cook",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 7,
+     "pick": 12,
+     "jugador": "Deshaun Watson",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 8,
+     "pick": 1,
+     "jugador": "Tua Tagovailoa",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 8,
+     "pick": 2,
+     "jugador": "Gabe Davis",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 8,
+     "pick": 3,
+     "jugador": "49ers",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 8,
+     "pick": 4,
+     "jugador": "Jahan Dotson",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 8,
+     "pick": 5,
+     "jugador": "AJ Dillon",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 8,
+     "pick": 6,
+     "jugador": "David Njoku",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 8,
+     "pick": 7,
+     "jugador": "D'Andre Swift",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 8,
+     "pick": 8,
+     "jugador": "Isiah Pacheco",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 8,
+     "pick": 9,
+     "jugador": "Khalil Herbert",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 8,
+     "pick": 10,
+     "jugador": "Zach Charbonnet",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 8,
+     "pick": 11,
+     "jugador": "Jerry Jeudy",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 8,
+     "pick": 12,
+     "jugador": "Jamaal Williams",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 9,
+     "pick": 1,
+     "jugador": "Brian Robinson",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 9,
+     "pick": 2,
+     "jugador": "Antonio Gibson",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 9,
+     "pick": 3,
+     "jugador": "Samaje Perine",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 9,
+     "pick": 4,
+     "jugador": "Jaxon Smith-Njigba",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 9,
+     "pick": 5,
+     "jugador": "Odell Beckham Jr.",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 9,
+     "pick": 6,
+     "jugador": "Courtland Sutton",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 9,
+     "pick": 7,
+     "jugador": "Anthony Richardson Sr.",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 9,
+     "pick": 8,
+     "jugador": "Elijah Moore",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 9,
+     "pick": 9,
+     "jugador": "Cowboys",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 9,
+     "pick": 10,
+     "jugador": "Justin Tucker",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 9,
+     "pick": 11,
+     "jugador": "Brandin Cooks",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 9,
+     "pick": 12,
+     "jugador": "Michael Thomas",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 10,
+     "pick": 1,
+     "jugador": "Eagles",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 10,
+     "pick": 2,
+     "jugador": "Rashod Bateman",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 10,
+     "pick": 3,
+     "jugador": "Geno Smith",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 10,
+     "pick": 4,
+     "jugador": "Daniel Carlson",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 10,
+     "pick": 5,
+     "jugador": "Tyler Higbee",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 10,
+     "pick": 6,
+     "jugador": "Bills",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 10,
+     "pick": 7,
+     "jugador": "Tyler Bass",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 10,
+     "pick": 8,
+     "jugador": "Kadarius Toney",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 10,
+     "pick": 9,
+     "jugador": "Evan McPherson",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 10,
+     "pick": 10,
+     "jugador": "Nico Collins",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 10,
+     "pick": 11,
+     "jugador": "JuJu Smith-Schuster",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 10,
+     "pick": 12,
+     "jugador": "Jets",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 11,
+     "pick": 1,
+     "jugador": "Roschon Johnson",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 11,
+     "pick": 2,
+     "jugador": "Broncos",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 11,
+     "pick": 3,
+     "jugador": "Dalton Kincaid",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 11,
+     "pick": 4,
+     "jugador": "Aaron Rodgers",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 11,
+     "pick": 5,
+     "jugador": "Younghoe Koo",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 11,
+     "pick": 6,
+     "jugador": "Elijah Mitchell",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 11,
+     "pick": 7,
+     "jugador": "Tyler Allgeier",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 11,
+     "pick": 8,
+     "jugador": "Zay Flowers",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 11,
+     "pick": 9,
+     "jugador": "Kenny Gainwell",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 11,
+     "pick": 10,
+     "jugador": "Jerick McKinnon",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 11,
+     "pick": 11,
+     "jugador": "Kirk Cousins",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 11,
+     "pick": 12,
+     "jugador": "Allen Lazard",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 12,
+     "pick": 1,
+     "jugador": "Skyy Moore",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 12,
+     "pick": 2,
+     "jugador": "Tyler Boyd",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 12,
+     "pick": 3,
+     "jugador": "Chig Okonkwo",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 12,
+     "pick": 4,
+     "jugador": "Treylon Burks",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 12,
+     "pick": 5,
+     "jugador": "Cameron Dicker",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 12,
+     "pick": 6,
+     "jugador": "Dalton Schultz",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 12,
+     "pick": 7,
+     "jugador": "Kareem Hunt",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 12,
+     "pick": 8,
+     "jugador": "Ravens",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 12,
+     "pick": 9,
+     "jugador": "Jeff Wilson Jr.",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 12,
+     "pick": 10,
+     "jugador": "Jaylen Warren",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 12,
+     "pick": 11,
+     "jugador": "Rashaad Penny",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 12,
+     "pick": 12,
+     "jugador": "Jalin Hyatt",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 13,
+     "pick": 1,
+     "jugador": "Graham Gano",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 13,
+     "pick": 2,
+     "jugador": "Harrison Butker",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 13,
+     "pick": 3,
+     "jugador": "Dolphins",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 13,
+     "pick": 4,
+     "jugador": "Steelers",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 13,
+     "pick": 5,
+     "jugador": "Raheem Mostert",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 13,
+     "pick": 6,
+     "jugador": "Patriots",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 13,
+     "pick": 7,
+     "jugador": "Jake Elliott",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 13,
+     "pick": 8,
+     "jugador": "Luke Musgrave",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 13,
+     "pick": 9,
+     "jugador": "Brock Purdy",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 13,
+     "pick": 10,
+     "jugador": "Damien Harris",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 13,
+     "pick": 11,
+     "jugador": "Jake Ferguson",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 13,
+     "pick": 12,
+     "jugador": "Ezekiel Elliott",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 14,
+     "pick": 1,
+     "jugador": "Chris Boswell",
+     "equipo": "MLP"
+    },
+    {
+     "ronda": 14,
+     "pick": 2,
+     "jugador": "Commanders",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 14,
+     "pick": 3,
+     "jugador": "Marvin Mims Jr.",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 14,
+     "pick": 4,
+     "jugador": "Jakobi Meyers",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 14,
+     "pick": 5,
+     "jugador": "Seahawks",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 14,
+     "pick": 6,
+     "jugador": "Quentin Johnston",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 14,
+     "pick": 7,
+     "jugador": "Tank Bigsby",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 14,
+     "pick": 8,
+     "jugador": "Adam Thielen",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 14,
+     "pick": 9,
+     "jugador": "Cole Kmet",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 14,
+     "pick": 10,
+     "jugador": "Sam LaPorta",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 14,
+     "pick": 11,
+     "jugador": "Romeo Doubs",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 14,
+     "pick": 12,
+     "jugador": "Justyn Ross",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 15,
+     "pick": 1,
+     "jugador": "Kendre Miller",
+     "equipo": "Gus's Great ..."
+    },
+    {
+     "ronda": 15,
+     "pick": 2,
+     "jugador": "Darnell Mooney",
+     "equipo": "Marcos's Mag..."
+    },
+    {
+     "ronda": 15,
+     "pick": 3,
+     "jugador": "Jake Moody",
+     "equipo": "Jalen-me la ..."
+    },
+    {
+     "ronda": 15,
+     "pick": 4,
+     "jugador": "De'Von Achane",
+     "equipo": "Finger Licki..."
+    },
+    {
+     "ronda": 15,
+     "pick": 5,
+     "jugador": "Deuce Vaughn",
+     "equipo": "Carbonell"
+    },
+    {
+     "ronda": 15,
+     "pick": 6,
+     "jugador": "Leonard Fournette",
+     "equipo": "J. Allen-mel..."
+    },
+    {
+     "ronda": 15,
+     "pick": 7,
+     "jugador": "Michael Gallup",
+     "equipo": "Tomas Gk's T..."
+    },
+    {
+     "ronda": 15,
+     "pick": 8,
+     "jugador": "Clyde Edwards-Helaire",
+     "equipo": "Khoudaddy"
+    },
+    {
+     "ronda": 15,
+     "pick": 9,
+     "jugador": "Gerald Everett",
+     "equipo": "Los Paneiros"
+    },
+    {
+     "ronda": 15,
+     "pick": 10,
+     "jugador": "Saints",
+     "equipo": "Jero's Choic..."
+    },
+    {
+     "ronda": 15,
+     "pick": 11,
+     "jugador": "Greg Joseph",
+     "equipo": "#FreeJT"
+    },
+    {
+     "ronda": 15,
+     "pick": 12,
+     "jugador": "Juwan Johnson",
+     "equipo": "MLP"
+    }
+   ],
+   "mis_picks": 15
   },
   {
+   "nombre": "Steven's Genius League",
+   "equipo": "Alan's Astonishing Team",
+   "comisionado": true,
+   "season": 2023,
+   "rank": "6th",
+   "record": "5-10-0",
    "league_id": "1191169",
-   "nombre": "Assign new commissioner",
-   "season": 2026,
-   "origen": "actual",
-   "draft": null,
-   "nota": "liga no accesible"
+   "origen": "renewal",
+   "titulo_real": "Steven's Genius League",
+   "verificado": true,
+   "draft_nota": null,
+   "draft": [
+    {
+     "ronda": 1,
+     "pick": 1,
+     "jugador": "Justin Jefferson",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 1,
+     "pick": 2,
+     "jugador": "Ja'Marr Chase",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 1,
+     "pick": 3,
+     "jugador": "Christian McCaffrey",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 1,
+     "pick": 4,
+     "jugador": "Austin Ekeler",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 1,
+     "pick": 5,
+     "jugador": "Tyreek Hill",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 1,
+     "pick": 6,
+     "jugador": "Nick Chubb",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 2,
+     "pick": 1,
+     "jugador": "Stefon Diggs",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 2,
+     "pick": 2,
+     "jugador": "Bijan Robinson",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 2,
+     "pick": 3,
+     "jugador": "Travis Kelce",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 2,
+     "pick": 4,
+     "jugador": "A.J. Brown",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 2,
+     "pick": 5,
+     "jugador": "Saquon Barkley",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 2,
+     "pick": 6,
+     "jugador": "Patrick Mahomes",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 3,
+     "pick": 1,
+     "jugador": "Tony Pollard",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 3,
+     "pick": 2,
+     "jugador": "CeeDee Lamb",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 3,
+     "pick": 3,
+     "jugador": "Garrett Wilson",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 3,
+     "pick": 4,
+     "jugador": "Amon-Ra St. Brown",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 3,
+     "pick": 5,
+     "jugador": "Davante Adams",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 3,
+     "pick": 6,
+     "jugador": "Derrick Henry",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 4,
+     "pick": 1,
+     "jugador": "Josh Jacobs",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 4,
+     "pick": 2,
+     "jugador": "DeVonta Smith",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 4,
+     "pick": 3,
+     "jugador": "Jaylen Waddle",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 4,
+     "pick": 4,
+     "jugador": "Chris Olave",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 4,
+     "pick": 5,
+     "jugador": "Travis Etienne Jr.",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 4,
+     "pick": 6,
+     "jugador": "Joe Mixon",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 5,
+     "pick": 1,
+     "jugador": "Tee Higgins",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 5,
+     "pick": 2,
+     "jugador": "Jalen Hurts",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 5,
+     "pick": 3,
+     "jugador": "Aaron Jones Sr.",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 5,
+     "pick": 4,
+     "jugador": "Calvin Ridley",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 5,
+     "pick": 5,
+     "jugador": "Najee Harris",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 5,
+     "pick": 6,
+     "jugador": "Cooper Kupp",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 6,
+     "pick": 1,
+     "jugador": "Josh Allen",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 6,
+     "pick": 2,
+     "jugador": "Mark Andrews",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 6,
+     "pick": 3,
+     "jugador": "Rhamondre Stevenson",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 6,
+     "pick": 4,
+     "jugador": "Lamar Jackson",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 6,
+     "pick": 5,
+     "jugador": "DK Metcalf",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 6,
+     "pick": 6,
+     "jugador": "Jahmyr Gibbs",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 7,
+     "pick": 1,
+     "jugador": "Dameon Pierce",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 7,
+     "pick": 2,
+     "jugador": "T.J. Hockenson",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 7,
+     "pick": 3,
+     "jugador": "Darren Waller",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 7,
+     "pick": 4,
+     "jugador": "Justin Fields",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 7,
+     "pick": 5,
+     "jugador": "Joe Burrow",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 7,
+     "pick": 6,
+     "jugador": "George Kittle",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 8,
+     "pick": 1,
+     "jugador": "49ers",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 8,
+     "pick": 2,
+     "jugador": "Cowboys",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 8,
+     "pick": 3,
+     "jugador": "Eagles",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 8,
+     "pick": 4,
+     "jugador": "Bills",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 8,
+     "pick": 5,
+     "jugador": "Jets",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 8,
+     "pick": 6,
+     "jugador": "Kyle Pitts Sr.",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 9,
+     "pick": 1,
+     "jugador": "Broncos",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 9,
+     "pick": 2,
+     "jugador": "Justin Tucker",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 9,
+     "pick": 3,
+     "jugador": "Daniel Carlson",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 9,
+     "pick": 4,
+     "jugador": "Tyler Bass",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 9,
+     "pick": 5,
+     "jugador": "Younghoe Koo",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 9,
+     "pick": 6,
+     "jugador": "Harrison Butker",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 10,
+     "pick": 1,
+     "jugador": "Amari Cooper",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 10,
+     "pick": 2,
+     "jugador": "J.K. Dobbins",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 10,
+     "pick": 3,
+     "jugador": "Miles Sanders",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 10,
+     "pick": 4,
+     "jugador": "Deebo Samuel Sr.",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 10,
+     "pick": 5,
+     "jugador": "Kenneth Walker III",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 10,
+     "pick": 6,
+     "jugador": "Evan McPherson",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 11,
+     "pick": 1,
+     "jugador": "Breece Hall",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 11,
+     "pick": 2,
+     "jugador": "Tyler Lockett",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 11,
+     "pick": 3,
+     "jugador": "Alexander Mattison",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 11,
+     "pick": 4,
+     "jugador": "Keenan Allen",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 11,
+     "pick": 5,
+     "jugador": "Drake London",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 11,
+     "pick": 6,
+     "jugador": "Diontae Johnson",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 12,
+     "pick": 1,
+     "jugador": "Cam Akers",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 12,
+     "pick": 2,
+     "jugador": "James Cook III",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 12,
+     "pick": 3,
+     "jugador": "James Conner",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 12,
+     "pick": 4,
+     "jugador": "Brandon Aiyuk",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 12,
+     "pick": 5,
+     "jugador": "David Montgomery",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 12,
+     "pick": 6,
+     "jugador": "DJ Moore",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 13,
+     "pick": 1,
+     "jugador": "Trevor Lawrence",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 13,
+     "pick": 2,
+     "jugador": "Dallas Goedert",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 13,
+     "pick": 3,
+     "jugador": "Justin Herbert",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 13,
+     "pick": 4,
+     "jugador": "Pat Freiermuth",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 13,
+     "pick": 5,
+     "jugador": "Evan Engram",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 13,
+     "pick": 6,
+     "jugador": "Dak Prescott",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 14,
+     "pick": 1,
+     "jugador": "David Njoku",
+     "equipo": "Luis's Legit..."
+    },
+    {
+     "ronda": 14,
+     "pick": 2,
+     "jugador": "Daniel Jones",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 14,
+     "pick": 3,
+     "jugador": "Geno Smith",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 14,
+     "pick": 4,
+     "jugador": "Dalton Kincaid",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 14,
+     "pick": 5,
+     "jugador": "Deshaun Watson",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 14,
+     "pick": 6,
+     "jugador": "Tyler Higbee",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 15,
+     "pick": 1,
+     "jugador": "Patriots",
+     "equipo": "Alan's Aston..."
+    },
+    {
+     "ronda": 15,
+     "pick": 2,
+     "jugador": "Saints",
+     "equipo": "Steven's Swa..."
+    },
+    {
+     "ronda": 15,
+     "pick": 3,
+     "jugador": "Steelers",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 15,
+     "pick": 4,
+     "jugador": "Ravens",
+     "equipo": "Diego's Defi..."
+    },
+    {
+     "ronda": 15,
+     "pick": 5,
+     "jugador": "Dolphins",
+     "equipo": "ernesto's As..."
+    },
+    {
+     "ronda": 15,
+     "pick": 6,
+     "jugador": "Bengals",
+     "equipo": "Luis's Legit..."
+    }
+   ],
+   "mis_picks": 15
   },
   {
+   "nombre": "Steven es hijo",
+   "equipo": "Alan's Fabulous Team",
+   "comisionado": true,
+   "season": 2023,
+   "rank": "6th",
+   "record": "7-8-0",
    "league_id": "1198211",
-   "nombre": "Assign new commissioner",
-   "season": 2026,
-   "origen": "actual",
-   "draft": null,
-   "nota": "liga no accesible"
+   "origen": "renewal",
+   "titulo_real": "Steven es hijo",
+   "verificado": true,
+   "draft_nota": null,
+   "draft": [
+    {
+     "ronda": 1,
+     "pick": 1,
+     "jugador": "Christian McCaffrey",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 1,
+     "pick": 2,
+     "jugador": "Justin Jefferson",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 1,
+     "pick": 3,
+     "jugador": "Austin Ekeler",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 1,
+     "pick": 4,
+     "jugador": "Ja'Marr Chase",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 1,
+     "pick": 5,
+     "jugador": "Stefon Diggs",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 1,
+     "pick": 6,
+     "jugador": "Nick Chubb",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 1,
+     "pick": 7,
+     "jugador": "Bijan Robinson",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 1,
+     "pick": 8,
+     "jugador": "Tyreek Hill",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 2,
+     "pick": 1,
+     "jugador": "Saquon Barkley",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 2,
+     "pick": 2,
+     "jugador": "Travis Kelce",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 2,
+     "pick": 3,
+     "jugador": "A.J. Brown",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 2,
+     "pick": 4,
+     "jugador": "CeeDee Lamb",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 2,
+     "pick": 5,
+     "jugador": "Garrett Wilson",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 2,
+     "pick": 6,
+     "jugador": "Davante Adams",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 2,
+     "pick": 7,
+     "jugador": "Tony Pollard",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 2,
+     "pick": 8,
+     "jugador": "Derrick Henry",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 3,
+     "pick": 1,
+     "jugador": "Josh Jacobs",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 3,
+     "pick": 2,
+     "jugador": "Amon-Ra St. Brown",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 3,
+     "pick": 3,
+     "jugador": "Jaylen Waddle",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 3,
+     "pick": 4,
+     "jugador": "Travis Etienne Jr.",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 3,
+     "pick": 5,
+     "jugador": "Joe Mixon",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 3,
+     "pick": 6,
+     "jugador": "Najee Harris",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 3,
+     "pick": 7,
+     "jugador": "Patrick Mahomes",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 3,
+     "pick": 8,
+     "jugador": "Josh Allen",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 4,
+     "pick": 1,
+     "jugador": "Cooper Kupp",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 4,
+     "pick": 2,
+     "jugador": "Jahmyr Gibbs",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 4,
+     "pick": 3,
+     "jugador": "Jalen Hurts",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 4,
+     "pick": 4,
+     "jugador": "Aaron Jones Sr.",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 4,
+     "pick": 5,
+     "jugador": "Rhamondre Stevenson",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 4,
+     "pick": 6,
+     "jugador": "Lamar Jackson",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 4,
+     "pick": 7,
+     "jugador": "Calvin Ridley",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 4,
+     "pick": 8,
+     "jugador": "Chris Olave",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 5,
+     "pick": 1,
+     "jugador": "DK Metcalf",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 5,
+     "pick": 2,
+     "jugador": "Justin Fields",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 5,
+     "pick": 3,
+     "jugador": "Mark Andrews",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 5,
+     "pick": 4,
+     "jugador": "Joe Burrow",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 5,
+     "pick": 5,
+     "jugador": "Tee Higgins",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 5,
+     "pick": 6,
+     "jugador": "Deebo Samuel Sr.",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 5,
+     "pick": 7,
+     "jugador": "DeVonta Smith",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 5,
+     "pick": 8,
+     "jugador": "Amari Cooper",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 6,
+     "pick": 1,
+     "jugador": "J.K. Dobbins",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 6,
+     "pick": 2,
+     "jugador": "Kenneth Walker III",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 6,
+     "pick": 3,
+     "jugador": "T.J. Hockenson",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 6,
+     "pick": 4,
+     "jugador": "Breece Hall",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 6,
+     "pick": 5,
+     "jugador": "Keenan Allen",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 6,
+     "pick": 6,
+     "jugador": "Tyler Lockett",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 6,
+     "pick": 7,
+     "jugador": "Dameon Pierce",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 6,
+     "pick": 8,
+     "jugador": "Justin Herbert",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 7,
+     "pick": 1,
+     "jugador": "Darren Waller",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 7,
+     "pick": 2,
+     "jugador": "George Kittle",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 7,
+     "pick": 3,
+     "jugador": "Miles Sanders",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 7,
+     "pick": 4,
+     "jugador": "Kyle Pitts Sr.",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 7,
+     "pick": 5,
+     "jugador": "Dallas Goedert",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 7,
+     "pick": 6,
+     "jugador": "Alexander Mattison",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 7,
+     "pick": 7,
+     "jugador": "Christian Watson",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 7,
+     "pick": 8,
+     "jugador": "Terry McLaurin",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 8,
+     "pick": 1,
+     "jugador": "Cam Akers",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 8,
+     "pick": 2,
+     "jugador": "Jonathan Taylor",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 8,
+     "pick": 3,
+     "jugador": "Brandon Aiyuk",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 8,
+     "pick": 4,
+     "jugador": "Trevor Lawrence",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 8,
+     "pick": 5,
+     "jugador": "Chris Godwin Jr.",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 8,
+     "pick": 6,
+     "jugador": "Isiah Pacheco",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 8,
+     "pick": 7,
+     "jugador": "DJ Moore",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 8,
+     "pick": 8,
+     "jugador": "Justin Tucker",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 9,
+     "pick": 1,
+     "jugador": "DeAndre Hopkins",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 9,
+     "pick": 2,
+     "jugador": "James Cook III",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 9,
+     "pick": 3,
+     "jugador": "George Pickens",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 9,
+     "pick": 4,
+     "jugador": "James Conner",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 9,
+     "pick": 5,
+     "jugador": "Drake London",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 9,
+     "pick": 6,
+     "jugador": "Diontae Johnson",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 9,
+     "pick": 7,
+     "jugador": "Javonte Williams",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 9,
+     "pick": 8,
+     "jugador": "Evan Engram",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 10,
+     "pick": 1,
+     "jugador": "49ers",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 10,
+     "pick": 2,
+     "jugador": "Jahan Dotson",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 10,
+     "pick": 3,
+     "jugador": "Bills",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 10,
+     "pick": 4,
+     "jugador": "Mike Williams",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 10,
+     "pick": 5,
+     "jugador": "Michael Pittman Jr.",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 10,
+     "pick": 6,
+     "jugador": "Jets",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 10,
+     "pick": 7,
+     "jugador": "Dalvin Cook",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 10,
+     "pick": 8,
+     "jugador": "Mike Evans",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 11,
+     "pick": 1,
+     "jugador": "Michael Thomas",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 11,
+     "pick": 2,
+     "jugador": "Eagles",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 11,
+     "pick": 3,
+     "jugador": "Daniel Carlson",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 11,
+     "pick": 4,
+     "jugador": "Cowboys",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 11,
+     "pick": 5,
+     "jugador": "Evan McPherson",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 11,
+     "pick": 6,
+     "jugador": "Younghoe Koo",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 11,
+     "pick": 7,
+     "jugador": "David Montgomery",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 11,
+     "pick": 8,
+     "jugador": "Jerry Jeudy",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 12,
+     "pick": 1,
+     "jugador": "Khalil Herbert",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 12,
+     "pick": 2,
+     "jugador": "D'Andre Swift",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 12,
+     "pick": 3,
+     "jugador": "Christian Kirk",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 12,
+     "pick": 4,
+     "jugador": "Patriots",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 12,
+     "pick": 5,
+     "jugador": "Rachaad White",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 12,
+     "pick": 6,
+     "jugador": "Rashod Bateman",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 12,
+     "pick": 7,
+     "jugador": "Tyler Bass",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 12,
+     "pick": 8,
+     "jugador": "Aaron Rodgers",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 13,
+     "pick": 1,
+     "jugador": "Ravens",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 13,
+     "pick": 2,
+     "jugador": "Jordan Addison",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 13,
+     "pick": 3,
+     "jugador": "Zay Flowers",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 13,
+     "pick": 4,
+     "jugador": "Gabe Davis",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 13,
+     "pick": 5,
+     "jugador": "Tua Tagovailoa",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 13,
+     "pick": 6,
+     "jugador": "Antonio Gibson",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 13,
+     "pick": 7,
+     "jugador": "Alvin Kamara",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 13,
+     "pick": 8,
+     "jugador": "Harrison Butker",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 14,
+     "pick": 1,
+     "jugador": "Brian Robinson",
+     "equipo": "Papa de todo..."
+    },
+    {
+     "ronda": 14,
+     "pick": 2,
+     "jugador": "Commanders",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 14,
+     "pick": 3,
+     "jugador": "Pat Freiermuth",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 14,
+     "pick": 4,
+     "jugador": "AJ Dillon",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 14,
+     "pick": 5,
+     "jugador": "Hollywood Brown",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 14,
+     "pick": 6,
+     "jugador": "Dalton Kincaid",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 14,
+     "pick": 7,
+     "jugador": "Deshaun Watson",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 14,
+     "pick": 8,
+     "jugador": "Raheem Mostert",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 15,
+     "pick": 1,
+     "jugador": "Ezekiel Elliott",
+     "equipo": "Paul es mi h..."
+    },
+    {
+     "ronda": 15,
+     "pick": 2,
+     "jugador": "Jamaal Williams",
+     "equipo": "Bengston Foo..."
+    },
+    {
+     "ronda": 15,
+     "pick": 3,
+     "jugador": "Dak Prescott",
+     "equipo": "Rolando's fl..."
+    },
+    {
+     "ronda": 15,
+     "pick": 4,
+     "jugador": "Cameron Dicker",
+     "equipo": "Ancelotti Pa..."
+    },
+    {
+     "ronda": 15,
+     "pick": 5,
+     "jugador": "Jaxon Smith-Njigba",
+     "equipo": "Luis's Legen..."
+    },
+    {
+     "ronda": 15,
+     "pick": 6,
+     "jugador": "Kirk Cousins",
+     "equipo": "DPA"
+    },
+    {
+     "ronda": 15,
+     "pick": 7,
+     "jugador": "Jason Sanders",
+     "equipo": "Alan's Fabul..."
+    },
+    {
+     "ronda": 15,
+     "pick": 8,
+     "jugador": "David Njoku",
+     "equipo": "Papa de todo..."
+    }
+   ],
+   "mis_picks": 15
   }
  ]
 }

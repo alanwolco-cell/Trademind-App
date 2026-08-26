@@ -40,6 +40,11 @@ var LV = {
   desconocidos: [],// nombres pegados que no se reconocieron: se DECLARAN, no se tragan
   lastMs: 0,       // cuanto tardo la ultima respuesta, medido y visible
   listasAbierto: false,
+  // ── la conexion con Yahoo ──
+  feed: { at: 0, n: 0, err: '', teams: 0, unk: [] },  // ultimo latido, cuantos, avisos
+  seatMap: {},     // nombre de equipo en Yahoo -> asiento de esta sala
+  snap: null,      // ultima tabla de presupuestos, para detectar ventas por diferencia
+  anyOrigin: false,// solo para el gate: acepta mensajes de cualquier origen
   // RESERVA DE PRESUPUESTO. Pendiente viejo del repo ("la puerta reserva
   // huecos de roster, no dinero") que ahora tiene motivo concreto: el dueno
   // dice ser bueno en la franja media de WR, y su sala es de novatos que se
@@ -385,8 +390,8 @@ function lvThreats(p) {
 }
 
 function lvSeatName(s) {
+  if (s === MD.mySlot) return 'YOU';   // antes que el preset: mi silla soy yo, no "Falafel"
   if (typeof FZ26_SEATS !== 'undefined' && _mdFz26On() && FZ26_SEATS[s]) return FZ26_SEATS[s].name;
-  if (s === MD.mySlot) return 'YOU';
   return (AU.bots[s] && AU.bots[s].name) || ('Team ' + s);
 }
 
@@ -493,13 +498,29 @@ function lvFase(r) {
  * estar puesto para entonces. */
 async function lvEnter() {
   lvLoadPref(); lvLoadPanel();
+  // La pantalla del mock, ANTES de nada: startMockDraft arranca la sala pero
+  // no cambia de pantalla, y por la ventana emergente (#draftday) y por el
+  // cajon se llegaba con la portada detras del panel (visto en la captura a
+  // 390px). Es la misma entrada que usa el generador de reels.
+  try { goMock('solo'); } catch (_) { }
   // la lista propia tiene que existir ANTES de valorar nada
   try { if (window.tmrHydrate) await window.tmrHydrate(); } catch (_) { }
-  // el preset de SU liga: 10 equipos, $200, half PPR, 1QB, 15 rondas, subasta
-  try { if (!_mdFz26On()) mdFantazy26Toggle(true); } catch (_) { }
+  // El preset de SU liga: 10 equipos, $200, half PPR, 1QB, 15 rondas, SUBASTA.
+  // Se aplica SIEMPRE, apagando y encendiendo: la primera version solo lo
+  // encendia si estaba apagado, y en la segunda visita (ya encendido) el
+  // selector de tipo de draft habia vuelto a snake, la sala abria en snake y
+  // AU.slotsLeft no existia. Lo cazo el gate (r1), no la lectura del codigo.
+  try { if (_mdFz26On()) mdFantazy26Toggle(false); mdFantazy26Toggle(true); } catch (_) { }
+  try { var _dt = document.getElementById('md-dtype'); if (_dt) { _dt.value = 'auction'; mdDtypeSync(); } } catch (_) { }
   AU.live = 1;
   LV.on = true;
   await startMockDraft();
+  // Si la sala no abrio en subasta, no hay nada que pintar: se declara.
+  if (!AU.active || !AU.slotsLeft) {
+    AU.live = 0; LV.on = false;
+    try { console.error('[LV] Draft Day could not open the auction room'); } catch (_) { }
+    return -1;
+  }
   lvBuildIndex();
   var n = lvMisValores();
   LV._nMine = n;
@@ -519,7 +540,7 @@ function lvExit() {
  * la compra. Reimplementar eso aqui seria la segunda verdad otra vez. */
 function lvSold(nameOrP, price, slot) {
   if (!AU.active) return { err: 'The room is not open.' };
-  var p = (typeof nameOrP === 'string') ? lvOne(nameOrP) : nameOrP;
+  var p = (typeof nameOrP === 'string') ? lvResolve(nameOrP) : nameOrP;
   if (!p) return { err: 'No player by that name is still on the board.' };
   price = parseInt(price, 10);
   if (!(price >= 1)) return { err: 'Price has to be a whole dollar amount.' };
@@ -592,6 +613,12 @@ function lvPanel() {
     if (LV.panel.x != null) { el.style.left = LV.panel.x + 'px'; el.style.top = LV.panel.y + 'px'; el.style.right = 'auto'; }
   }
   el.classList.toggle('is-min', !!LV.panel.min);
+  // la hoja del telefono se apoya SOBRE la barra inferior: fija abajo a
+  // secas, la barra le tapaba la ultima fila (visto en la captura a 390px)
+  if (window.innerWidth <= 700) {
+    var tb = document.getElementById('tabbar');
+    el.style.bottom = (tb && tb.offsetHeight ? tb.offsetHeight : 0) + 'px';
+  } else el.style.bottom = '';
 
   var lot = AU.lot;
   var c = lot ? lvCeiling(lot.p) : null;
@@ -618,13 +645,14 @@ function lvPanel() {
     + ' oninput="lvOnType(this.value)" onkeydown="if(event.key===\'Enter\')lvOnEnter(this)">'
     + '<div id="lv-hint" class="lv-hint"></div>'
     + '</div>';
+  h += '<!--LV-YH-->';
 
   // ── el lote vivo
   if (lot && c) {
     var pr = lot.p;
     h += '<div class="lv-lot">';
     h += '<div class="lv-lot-top"><b>' + lvEsc(pr.name) + '</b>'
-      + '<span class="lv-pos pos-' + pr.pos + '">' + pr.pos + '</span>'
+      + '<span class="lv-pos" style="background:' + (_posColor(pr.pos) || 'var(--muted)') + '">' + pr.pos + '</span>'
       + '<span class="lv-team">' + lvEsc(pr.team || 'FA') + '</span></div>';
     h += '<div class="lv-num' + (c.ganga ? ' is-buy' : '') + '">$' + c.techo
       + '<span class="lv-why">your ceiling' + (c.necesita ? ' &middot; fills a starter' : '') + '</span></div>';
@@ -689,12 +717,48 @@ function lvPanel() {
       + '<span class="lv-sn">' + f.slot + ' ' + lvEsc(f.name) + '</span>'
       + '<span class="lv-sc">$' + f.cap + '</span>'
       + '<span class="lv-ss">' + f.sl + '</span>'
-      + '<span class="lv-sf">' + (f.falta.length ? f.falta.join(' ') : '&mdash;') + '</span>'
+      + '<span class="lv-sf">' + (f.falta.length > 2 ? f.falta.length + ' owed' : (f.falta.length ? f.falta.join(' ') : '&mdash;')) + '</span>'
       + '<span class="lv-sd' + (d > 0 ? ' over' : d < 0 ? ' under' : '') + '">' + dTxt + '</span>'
       + '</div>';
   });
   h += '<div class="lv-room-f">seat &middot; max bid &middot; spots &middot; starters owed &middot; paid vs value</div>';
   h += '</div>';
+
+  // ── la conexion con Yahoo ────────────────────────────────────────────────
+  // El marcador se arrastra UNA vez a la barra de favoritos. Lo que hay que
+  // hacer el domingo esta escrito aqui y no en un documento aparte, porque
+  // el dia del draft nadie busca un documento.
+  var f = LV.feed;
+  var hace = f.at ? Math.round((Date.now() - f.at) / 1000) : null;
+  var vivo = hace != null && hace <= 6;
+  var yh = '';
+  yh += '<div class="lv-yh' + (vivo ? ' is-live' : '') + '">';
+  yh += '<div class="lv-yh-h"><span>Yahoo</span><i>'
+    + (vivo ? 'live &middot; ' + f.n + ' updates' : (f.at ? 'no signal for ' + hace + 's' : 'not connected'))
+    + '</i></div>';
+  if (!f.at) {
+    yh += '<div class="lv-yh-how">'
+      + '<b>Once:</b> drag this to your bookmarks bar &rarr; '
+      + '<a class="lv-bm" href="' + lvBookmarklet() + '" onclick="return false" draggable="true">Mac Draft Live</a>'
+      + '<br><b>Draft day:</b> in the Yahoo draft room, click it. This window follows the room by itself.'
+      + '</div>';
+  }
+  if (f.err) yh += '<div class="lv-yh-warn">' + lvEsc(f.err) + '</div>';
+  if (f.unk.length) {
+    // los equipos de Yahoo que no casaron con un asiento de la liga, y los
+    // jugadores que no se reconocieron: se DECLARAN, para que sepa a quien se
+    // le esta cargando cada compra y que nombre hay que meter a mano
+    var eqs = f.unk.filter(function (n) { return LV.seatMap[n] != null; });
+    var jug = f.unk.filter(function (n) { return LV.seatMap[n] == null; });
+    if (eqs.length) yh += '<div class="lv-yh-map">Seats: ' + eqs.map(function (n) { return lvEsc(n) + ' &rarr; ' + LV.seatMap[n]; }).join(', ') + '</div>';
+    if (jug.length) yh += '<div class="lv-yh-warn">Could not match: ' + jug.map(lvEsc).join(', ') + '. Log those by hand.</div>';
+  }
+  yh += '</div>';
+  // Sin conexion, la seccion va ARRIBA, justo bajo la caja: en la captura de
+  // escritorio quedaba bajo el pliegue, detras de diez filas de la sala, y el
+  // domingo nadie va a bajar a buscar el marcador. Conectada, baja al fondo.
+  if (f.at) h += yh;
+  else h = h.replace('<!--LV-YH-->', yh);
 
   // ── las listas de gusto ──────────────────────────────────────────────────
   // Se pegan nombres, no se marcan doscientas casillas: el domingo no hay
@@ -733,6 +797,17 @@ function lvPanel() {
   lvWireDrag(el);
 }
 
+// latido del panel: el estado de la conexion tiene que envejecer a la vista
+// sin que el usuario toque nada. Solo repinta si no hay foco en la caja de
+// entrada, para no robarle una letra a mitad de palabra.
+if (typeof window !== 'undefined') {
+  setInterval(function () {
+    if (!LV.on) return;
+    var a = document.activeElement;
+    if (a && (a.id === 'lv-in' || a.tagName === 'TEXTAREA' || a.id === 'lv-res-in')) return;
+    if (LV.feed.at) lvPanel();
+  }, 3000);
+}
 function lvToggleMin() { LV.panel.min = !LV.panel.min; lvSavePanel(); lvPanel(); }
 function lvToggleLists() { LV.listasAbierto = !LV.listasAbierto; lvPanel(); }
 function lvSetReserva(v) {
@@ -840,6 +915,275 @@ function lvOnEnter(input) {
   if (hint) hint.innerHTML = '<i class="lv-ok">' + lvEsc(r.p.name) + ' &rarr; ' + lvEsc(lvSeatName(r.slot)) + ' $' + r.price + '</i>';
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LA CONEXION CON YAHOO
+ *
+ * Yahoo no da API (la solicitud lleva sin respuesta desde el 4 de agosto) y su
+ * DOM no deja ni un ancla: 1.223 clases hasheadas "_ys_*" y cero data-testid,
+ * medido sobre la sala que el dueno guardo con Cmd+S el 2026-08-26. Un lector
+ * por selectores se romperia en el primer despliegue de Yahoo.
+ *
+ * Asi que se lee el TEXTO visible de la pagina, que es producto y no CSS:
+ * "Proj $41", "Max Offer $186", "$141", "1/15", "Bye 7". Eso no cambia con un
+ * rediseno. La muestra real esta en scripts/fixtures/yahoo-auction-room-*.txt
+ * y el gate la usa tal cual.
+ *
+ * Como llega el texto: un marcador de favoritos (ver lvBookmarklet) que el
+ * dueno arrastra UNA vez a su barra. En la sala de Yahoo lo toca, se abre Mac
+ * Draft en una ventana al lado, y cada 1,5 s le manda document.body.innerText
+ * por postMessage. Sin consola, sin extension, sin servidor, y sin que nada
+ * toque su navegador desde fuera (regla del dueno tras el incidente de agosto).
+ *
+ * Dos trampas reales de la muestra que el parser aguanta a proposito:
+ *  - Hay DOS equipos que se llaman "Kevin". Los asientos van por ORDEN en la
+ *    tabla, nunca por nombre.
+ *  - El badge "$1" de la puja viva se cuela DENTRO de la tabla de presupuestos,
+ *    pegado al equipo que va ganando. Se ignora porque no le sigue un "a/b".
+ * ═══════════════════════════════════════════════════════════════════════════ */
+var LV_POS = { QB: 1, RB: 1, WR: 1, TE: 1, K: 1, DEF: 1, D: 1 };
+
+function lvTokens(txt) {
+  return String(txt || '').split(/[\n\t]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+}
+
+/* El estado de la sala tal como Yahoo lo pinta. Nunca lanza: lo que no
+ * encuentra lo deja en null, y quien aplica decide. */
+function lvParseYahoo(txt) {
+  var T = lvTokens(txt);
+  var out = { lot: null, seats: [], results: [], last: null, raw: T.length };
+  var i, m;
+
+  // ── el lote vivo: se ancla en "Proj $" ─────────────────────────────────
+  for (i = 0; i < T.length; i++) {
+    if (!/^Proj \$\d+/.test(T[i])) continue;
+    // hacia atras: Bye, equipo, posicion, [etiqueta de lesion], nombre
+    var k = i - 1;
+    if (/^Bye \d+/.test(T[k] || '')) k--;
+    var team = T[k--] || '';
+    var pos = T[k--] || '';
+    if (!LV_POS[pos]) { continue; }        // no era una tarjeta de lote
+    var nm = T[k] || '';
+    // etiqueta de lesion entre nombre y posicion ("Q", "O", "IR")
+    if (/^(Q|O|D|IR|SUSP|NA|P)$/.test(nm) && k - 1 >= 0) nm = T[--k] || '';
+    var bid = null, holder = null;
+    m = /^\$(\d+)$/.exec(T[i + 1] || '');
+    if (m) {
+      bid = parseInt(m[1], 10);
+      if (T[i + 2] && !/^(Offer|Max Offer|Budget)/.test(T[i + 2])) holder = T[i + 2];
+    }
+    var proj = parseInt(/^Proj \$(\d+)/.exec(T[i])[1], 10);
+    out.lot = { name: nm, pos: pos === 'D' ? 'DEF' : pos, team: team, proj: proj, bid: bid, holder: holder };
+    break;
+  }
+
+  // ── la ultima venta ("Last:" nombre (POS · EQ) equipo) ────────────────
+  i = T.indexOf('Last:');
+  if (i >= 0 && T[i + 1]) {
+    var pm = /^\(([A-Z]+) · ([A-Za-z]+)\)$/.exec(T[i + 2] || '');
+    out.last = { name: T[i + 1], pos: pm ? pm[1] : null, owner: pm ? (T[i + 3] || null) : null };
+  }
+
+  // ── la tabla de presupuestos: nombre, $N, a/b ─────────────────────────
+  var a = T.indexOf('Avg');
+  if (a >= 0) {
+    for (i = a + 1; i < T.length - 2; i++) {
+      if (T[i] === 'Players' || T[i] === 'Board') break;
+      var bm = /^\$(\d+)$/.exec(T[i + 1] || ''), cm = /^(\d+)\/(\d+)$/.exec(T[i + 2] || '');
+      if (!bm || !cm) continue;
+      if (/^\$\d+$/.test(T[i])) continue;    // el badge de la puja viva, no un equipo
+      out.seats.push({ name: T[i], budget: parseInt(bm[1], 10), have: parseInt(cm[1], 10), of: parseInt(cm[2], 10) });
+      i += 2;
+    }
+  }
+
+  // ── resultados, si la pestana esta activa: se anclan en "Bye n" ───────
+  var r0 = T.indexOf('Cost');
+  if (r0 >= 0) {
+    for (i = r0 + 1; i < T.length; i++) {
+      if (T[i] === 'Queue' || T[i] === 'Autodraft') break;
+      if (!/^Bye \d+$/.test(T[i])) continue;
+      var k2 = i - 1, teamR = T[k2--], posR = T[k2--];
+      if (!LV_POS[posR]) continue;
+      var nmR = T[k2];
+      if (/^(Q|O|D|IR|SUSP|NA|P)$/.test(nmR)) nmR = T[--k2];
+      var pick = parseInt(T[k2 - 1], 10);
+      var owner = T[i + 1], costM = /^\$(\d+)$/.exec(T[i + 2] || '');
+      if (!owner || !costM) continue;
+      out.results.push({ pick: isNaN(pick) ? null : pick, name: nmR, pos: posR === 'D' ? 'DEF' : posR, team: teamR, owner: owner, cost: parseInt(costM[1], 10) });
+    }
+    out.results.sort(function (x, y) { return (x.pick || 0) - (y.pick || 0); });
+  }
+  return out;
+}
+
+/* ── nombres abreviados: "J. Gibbs", "B. Robinson", "J. SMITH-NJIGBA" ────
+ * El apellido solo no basta: "B. Robinson" y "W. Robinson" comparten apellido
+ * y el mas caro seria Bijan las dos veces. Con inicial, se filtra por la
+ * primera letra del nombre de pila. Sin inicial, cae a lvFind. */
+function lvResolve(name) {
+  if (!name) return null;
+  var m = /^([A-Za-z])\.?\s+(.+)$/.exec(String(name).trim());
+  if (!m) return lvOne(name);
+  var ini = m[1].toLowerCase(), ape = m[2];
+  var cands = lvFind(ape);
+  var hit = cands.filter(function (p) {
+    var k = _mdNormName(p.name);
+    return k.charAt(0) === ini && k.indexOf(_mdNormName(ape)) > 0;
+  });
+  if (hit.length) return hit[0];
+  // apellidos compuestos o con guion: el indice ya los normaliza, pero por si
+  // Yahoo separa distinto ("St. Brown" / "St Brown"), se prueba sin puntos
+  var cands2 = lvFind(ape.replace(/\./g, ''));
+  hit = cands2.filter(function (p) { return _mdNormName(p.name).charAt(0) === ini; });
+  return hit.length ? hit[0] : null;
+}
+
+/* ── equipos de Yahoo -> asientos de esta sala ──────────────────────────
+ * Primero por nombre exacto contra los asientos de la liga (FZ26_SEATS trae
+ * los nombres reales de su liga de Yahoo). "You" es el dueno. Lo que no case
+ * se asigna al primer asiento libre en orden de tabla y se DECLARA en el
+ * panel, para que el vea a quien le esta cargando cada compra. */
+function lvSeatOf(name, seatsInOrder) {
+  if (!name) return null;
+  if (LV.seatMap[name] != null) return LV.seatMap[name];
+  if (name === 'You') { LV.seatMap[name] = MD.mySlot; return MD.mySlot; }
+  var s;
+  for (s = 1; s <= MD.teams; s++) {
+    if (s !== MD.mySlot && _tmrNormSafe(lvSeatName(s)) === _tmrNormSafe(name)) { LV.seatMap[name] = s; return s; }
+  }
+  // asiento libre: el que ningun nombre de Yahoo ocupe todavia
+  var usados = {};
+  Object.keys(LV.seatMap).forEach(function (k) { usados[LV.seatMap[k]] = 1; });
+  usados[MD.mySlot] = 1;
+  for (s = 1; s <= MD.teams; s++) {
+    if (!usados[s]) { LV.seatMap[name] = s; if (LV.feed.unk.indexOf(name) < 0) LV.feed.unk.push(name); return s; }
+  }
+  return null;
+}
+function _tmrNormSafe(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
+/* ── aplicar un latido de Yahoo a la sala ───────────────────────────────
+ * Idempotente: el mismo texto dos veces no vende dos veces. Las ventas salen
+ * de Results cuando esta visible; si no, de la DIFERENCIA de presupuestos,
+ * que esta siempre: un equipo cuyo contador sube y cuyo dinero baja acaba de
+ * comprar, y el precio es lo que bajo. */
+function lvApplyYahoo(st) {
+  if (!AU.active || !LV.on) return { err: 'room not open' };
+  var res = { sold: 0, lot: null, warn: [] };
+  LV.feed.at = Date.now(); LV.feed.n++;
+  LV.feed.teams = st.seats.length;
+  if (st.seats.length && st.seats.length !== MD.teams) {
+    res.warn.push('Yahoo shows ' + st.seats.length + ' teams, this room is set for ' + MD.teams + '. Seats past ' + MD.teams + ' are ignored.');
+  }
+  var order = st.seats.map(function (x) { return x.name; });
+  var tk = {}; (MD.picks || []).forEach(function (k) { if (k && k.p) tk[_mdNormName(k.p.name)] = 1; });
+  // Ni cartel SOLD ni sonido por las ventas que aplica el lector: al conectar
+  // en mitad del draft entran nueve de golpe, y en el telefono el cartel se
+  // montaba encima del panel (visto en la captura). La sala real ya tiene su
+  // propio cartel: el de Yahoo.
+  var _splash = AU.noSplash, _snd = (typeof _sndOn !== 'undefined') ? _sndOn : true;
+  AU.noSplash = 1;
+  try { _sndOn = false; } catch (_) { }
+
+  // 1) ventas desde Results, en orden de pick
+  var yaVendidos = {};
+  st.results.forEach(function (r) {
+    var p = lvResolve(r.name);
+    if (!p) { if (LV.feed.unk.indexOf(r.name) < 0) LV.feed.unk.push(r.name); return; }
+    yaVendidos[_mdNormName(p.name)] = 1;
+    if (tk[_mdNormName(p.name)]) return;              // ya aplicada
+    var seat = lvSeatOf(r.owner, order);
+    if (!seat) return;
+    var out = lvSold(p, r.cost, seat);
+    if (out.ok) { res.sold++; tk[_mdNormName(p.name)] = 1; }
+    else res.warn.push(r.name + ': ' + out.err);
+  });
+
+  // 2) ventas por diferencia de presupuesto (Results cerrada)
+  if (LV.snap && st.seats.length && st.last) {
+    var prev = {}; LV.snap.forEach(function (x, idx) { prev[idx] = x; });
+    st.seats.forEach(function (x, idx) {
+      var pv = prev[idx]; if (!pv) return;
+      if (x.have === pv.have + 1 && x.budget < pv.budget) {
+        var price = pv.budget - x.budget;
+        var p2 = lvResolve(st.last.name);
+        if (!p2 || tk[_mdNormName(p2.name)]) return;
+        var seat2 = lvSeatOf(x.name, order); if (!seat2) return;
+        var o2 = lvSold(p2, price, seat2);
+        if (o2.ok) { res.sold++; tk[_mdNormName(p2.name)] = 1; }
+      }
+    });
+  }
+  LV.snap = st.seats.map(function (x) { return { name: x.name, budget: x.budget, have: x.have }; });
+
+  // 3) el lote vivo
+  if (st.lot && st.lot.name) {
+    var pl = lvResolve(st.lot.name);
+    if (!pl) { if (LV.feed.unk.indexOf(st.lot.name) < 0) LV.feed.unk.push(st.lot.name); }
+    else if (MD.pool.indexOf(pl) >= 0) {
+      if (!AU.lot || AU.lot.p !== pl) lvBlock(pl);
+      if (AU.lot && st.lot.bid != null) {
+        AU.lot.bid = st.lot.bid;
+        var hs = st.lot.holder ? lvSeatOf(st.lot.holder, order) : null;
+        if (hs) AU.lot.holder = hs;
+      }
+      res.lot = pl.name;
+    }
+  }
+  LV.feed.err = res.warn[0] || '';
+  AU.noSplash = _splash;
+  try { _sndOn = _snd; } catch (_) { }
+  try { auRenderLot(); auRenderBudgets(); } catch (_) { }
+  lvPanel();
+  return res;
+}
+
+function lvIngest(txt) {
+  var st = lvParseYahoo(txt);
+  return lvApplyYahoo(st);
+}
+
+/* El marcador de favoritos. Se genera con el origen de ESTA pagina, asi que en
+ * local apunta a localhost y en produccion a macdraft.app, sin tocar nada. */
+function lvBookmarklet(base) {
+  base = base || (window.location && window.location.origin) || 'https://macdraft.app';
+  var src = "(function(){var B=" + JSON.stringify(base) + ";"
+    + "var w=window.open(B+'/#draftday','macdraft');"
+    + "if(!w){alert('Allow pop-ups for Yahoo in the address bar, then click Mac Draft Live again.');return;}"
+    + "var f=function(){try{w.postMessage({t:'lv-yahoo',txt:document.body.innerText,at:Date.now()},B);}catch(e){}};"
+    + "if(window.__lvT)clearInterval(window.__lvT);window.__lvT=setInterval(f,1500);f();"
+    + "})();";
+  return 'javascript:' + encodeURIComponent(src);
+}
+
+// el receptor: solo mensajes con la forma exacta, y solo desde Yahoo (o desde
+// cualquier origen cuando el gate lo pide, porque el gate no puede ser Yahoo)
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.t !== 'lv-yahoo' || typeof d.txt !== 'string') return;
+    var host = '';
+    try { host = new URL(e.origin).hostname; } catch (_) { }
+    if (!LV.anyOrigin && !/(^|\.)yahoo\.com$/.test(host)) return;
+    if (!LV.on || !AU.active) return;   // la sala se abre por #draftday al cargar
+    try { lvIngest(d.txt); } catch (_) { }
+  });
+  // abrir la sala sola cuando el marcador nos abre con #draftday
+  var _lvBoot = function () {
+    if (window.location.hash !== '#draftday') return;
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      if (typeof startMockDraft === 'function' && typeof MD !== 'undefined') {
+        clearInterval(t);
+        lvEnter().catch(function () { });
+      } else if (tries > 60) clearInterval(t);
+    }, 250);
+  };
+  if (document.readyState === 'complete') _lvBoot();
+  else window.addEventListener('load', _lvBoot);
+}
+
 /* ── puentes ────────────────────────────────────────────────────────────── */
 if (typeof window !== 'undefined') {
   window.LV = LV;
@@ -864,4 +1208,10 @@ if (typeof window !== 'undefined') {
   window.lvFind = lvFind;
   window.lvMisValores = lvMisValores;
   window.lvBuildIndex = lvBuildIndex;
+  window.lvParseYahoo = lvParseYahoo;
+  window.lvApplyYahoo = lvApplyYahoo;
+  window.lvIngest = lvIngest;
+  window.lvResolve = lvResolve;
+  window.lvSeatOf = lvSeatOf;
+  window.lvBookmarklet = lvBookmarklet;
 }

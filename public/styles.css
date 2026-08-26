@@ -2409,3 +2409,17 @@ html{scroll-padding-top:76px}
 .lv-res input{width:74px;padding:5px 8px;font-size:12px;border-radius:6px;
   background:var(--bg);border:1px solid var(--border2);color:var(--text)}
 .lv-res span{font-size:11px;color:var(--muted)}
+
+/* la conexion con Yahoo, dentro del panel */
+.lv-yh{border-top:1px solid var(--border);padding-top:8px}
+.lv-yh-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.lv-yh-h span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.lv-yh-h i{font-style:normal;font-size:11px;color:var(--muted2)}
+.lv-yh.is-live .lv-yh-h i{color:var(--green,#5fd39a)}
+.lv-yh-how{font-size:11px;color:var(--muted2);line-height:1.65}
+.lv-yh-how b{color:var(--text);font-weight:600}
+/* el marcador: se ve como un boton para que se entienda que se ARRASTRA */
+.lv-bm{display:inline-block;padding:3px 9px;border-radius:6px;font-weight:700;font-size:11px;
+  background:var(--accent-bright);color:#12101a;text-decoration:none;cursor:grab}
+.lv-yh-warn{margin-top:5px;font-size:11px;color:var(--yellow);line-height:1.5}
+.lv-yh-map{margin-top:5px;font-size:10px;color:var(--muted);line-height:1.5}
