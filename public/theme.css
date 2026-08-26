@@ -1024,7 +1024,11 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .md-bd-txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
 .md-bd-name{
   font-family:var(--font-head);font-size:14.5px;font-weight:600;letter-spacing:-.01em;color:var(--text);
-  overflow-wrap:anywhere;
+  /* break-word, NUNCA anywhere: con anywhere el ancho minimo de contenido del
+     nombre es UNA LETRA, y eso es lo que autoriza a la rejilla a colapsar la
+     pista a cero y a partir "Jahmyr Gibbs" en once renglones. Con break-word
+     el minimo es la palabra mas larga, que es un suelo de verdad. */
+  overflow-wrap:break-word;
 }
 .md-bd-mac{
   font-style:normal;font-size:9px;font-weight:700;letter-spacing:.08em;
@@ -1108,6 +1112,24 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
    columna se sale del telefono por la derecha */
 .md-cols>*{min-width:0}
 @media(max-width:1080px){.md-cols{grid-template-columns:minmax(0,1fr)}}
+/* SOLO en subasta y SOLO en la franja donde no cabe (2026-08-25). Los rieles
+   de #au-zones (360 + 250) y el padding de #screen-mock se comen 1002px antes
+   de que la lista de jugadores reciba un pixel, asi que entre 1081 y 1499 el
+   panel "My team" de 300px acababa siendo MAS ancho que la propia lista, que
+   se quedaba en 220px y partia los nombres. Aqui se esconde y la lista se
+   queda con el centro entero.
+   El corte va acotado por los dos lados a proposito:
+   - por arriba de 1499 hay sitio de sobra para los dos;
+   - por debajo de 1081 .md-cols ya es de una columna y el panel cae debajo de
+     la lista sin robarle nada, y por debajo de 700 este mismo #md-roster ES
+     la barra fija del telefono, asi que esconderlo alli seria una regresion.
+   No se pierde informacion: lo mismo esta en el tab "Team" del riel derecho
+   (#au-mtabs) y en el boton "My team" de la barra del tablero. En snake no
+   aplica: alli no existe #au-zones y la lista ya recibe 858px a 1280. */
+@media(min-width:1081px) and (max-width:1499px){
+  #au-zones .md-cols{grid-template-columns:minmax(0,1fr)}
+  #au-zones #md-roster{display:none}
+}
 #md-roster{
   position:sticky;top:78px;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;

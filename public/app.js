@@ -11816,7 +11816,45 @@ function mdShowChoicesSoon(round){
 // fuente de verdad: la cabecera y las filas lo consumen igual, asi que no
 // pueden descuadrarse. En el telefono el ADP y el bye bajan a la linea del
 // nombre en vez de pelear por 40px que le hacen falta al nombre.
-function mdBoardCols(pf,proj){
+// Cuanto ocupa una columna de ancho fijo, con su hueco.
+function _mdCostoCol(c){ return (parseInt(c.w,10)||0)+8; }
+// Recorta el juego de columnas hasta que la pista del nombre conserve su piso.
+// Las que se sueltan van de menos a mas util; AAV/ADP no se suelta nunca:
+// en una subasta la columna del dinero es el punto entero de la pantalla.
+// Si ni con el juego minimo alcanza, se devuelve igual y la fila desborda su
+// caja (visible, y contenido por el scroll de #md-choices) en vez de triturar
+// el nombre en silencio, que era el bug viejo.
+function _mdFitCols(cols,caja){
+  var PISO=120;          // foto de 30px, su hueco de 8, y un nombre en dos renglones
+  var CHROME=22;         // padding 9+9 de la fila mas sus bordes
+  var soltables=['x1','x2','x3','x4','bye','rk','proj'];  // las de reparto primero
+  var sobra=function(){
+    var fijo=0;
+    cols.forEach(function(c){ if(c.k!=='who') fijo+=_mdCostoCol(c); });
+    return caja-fijo-CHROME;
+  };
+  for(var i=0;i<soltables.length && sobra()<PISO;i++){
+    var k=soltables[i];
+    cols=cols.filter(function(c){ return c.k!==k; });
+  }
+  // las columnas de reparto (mdSplitCols) llevan clave propia; se sueltan todas
+  // juntas si despues de lo anterior sigue sin caber
+  if(sobra()<PISO){
+    var base={who:1,rk:1,adp:1,aav:1,proj:1,bye:1,q:1,go:1};
+    cols=cols.filter(function(c){ return base[c.k]; });
+  }
+  return cols;
+}
+function mdBoardCols(pf,proj,anchoCaja){
+  // DOS EJES, que antes estaban confundidos en uno solo:
+  //  - phone/narrow deciden el layout TACTIL (blancos de 44px, el precio en la
+  //    linea del nombre). Eso depende del dispositivo, o sea de la ventana, y
+  //    se queda como estaba: es el diseno de movil ya aprobado.
+  //  - la CAJA decide que columnas caben. Ese era el bug del 2026-08-25:
+  //    mirando solo la ventana, en subasta a 1280px el codigo armaba la
+  //    plantilla de escritorio (pide 428px) dentro de un contenedor de 220px,
+  //    la pista del nombre colapsaba a cero y "Jahmyr Gibbs" salia en once
+  //    renglones de una letra.
   var phone=window.innerWidth<=700;
   // iPhone SE y compania: a 320px la columna de proyeccion se come justo los
   // 44px que necesita "Christian McCaffrey" para caber en un renglon, asi que
@@ -11825,8 +11863,11 @@ function mdBoardCols(pf,proj){
   // En el telefono el numero de ranking se va: con el ADP en la linea del
   // nombre es informacion repetida, y esos 27px son la diferencia entre que
   // "Christian McCaffrey" quepa en un renglon o parta la fila en dos.
-  var cols=phone?[{k:'who',l:'Player',w:'minmax(0,1fr)'}]
-                :[{k:'rk',l:'',w:'30px'},{k:'who',l:'Player',w:'minmax(0,1fr)'}];
+  // minmax(0,...) dejaba que la rejilla se comiera la pista entera cuando no
+  // le alcanzaba el ancho. Con un piso, si algo no cabe se nota como desborde
+  // (visible, arreglable) en vez de como un nombre triturado en silencio.
+  var cols=phone?[{k:'who',l:'Player',w:'minmax(96px,1fr)'}]
+                :[{k:'rk',l:'',w:'30px'},{k:'who',l:'Player',w:'minmax(96px,1fr)'}];
   // En el telefono el precio (o el ADP) viaja en la linea del nombre, no como
   // columna: repetirlo en las dos partes era ruido y le robaba ancho al nombre.
   if(!phone)cols.push(AU.active?{k:'aav',l:'AAV',w:'54px'}:{k:'adp',l:'ADP',w:'54px'});
@@ -11837,18 +11878,33 @@ function mdBoardCols(pf,proj){
   }
   cols.push({k:'q',l:'',w:phone?'44px':'28px'});
   cols.push({k:'go',l:'',w:phone?'44px':'32px'});
-  return cols;
+  return _mdFitCols(cols,anchoCaja>0?anchoCaja:window.innerWidth);
 }
-// El tablero se redibuja al girar el telefono: el juego de columnas depende
-// del ancho, y una plantilla vieja dejaria la cabecera corrida.
-var _mdColsW=window.innerWidth;
-window.addEventListener('resize',function(){
-  var w=window.innerWidth;
-  if((w<=700)===(_mdColsW<=700)&&(w<=340)===(_mdColsW<=340))return; // solo al cruzar un corte
-  _mdColsW=w;
-  var bd=document.getElementById('md-board');
-  if(bd&&bd.dataset.live==='1')mdShowChoicesSoon(MD.curRound||1);
-});
+// El tablero se redibuja cuando cambia el ancho de LA CAJA, no el de la
+// ventana. Vigilar la ventana no alcanzaba por dos motivos: la caja se
+// estrecha sin que la ventana se mueva (al abrirse la columna de la subasta),
+// y al reescalar de 1920 a 1366 no se cruzaba ningun corte de los de antes,
+// asi que la plantilla vieja se quedaba puesta sobre una caja mas chica y el
+// nombre caia a cero. El guardia de firma evita el bucle: solo repinta cuando
+// el juego de columnas de verdad cambia.
+var _mdColsSig='';
+function _mdWatchCols(){
+  var box=document.getElementById('md-choices');
+  if(!box||box._mdRO||typeof ResizeObserver!=='function')return;
+  box._mdRO=new ResizeObserver(function(){
+    var bd=document.getElementById('md-board');
+    if(!bd||bd.dataset.live!=='1')return;
+    var sig='';
+    try{
+      sig=mdBoardCols(MD.posFilter||'',window._mdProj&&window._mdProj.byId,box.clientWidth)
+            .map(function(c){return c.k+c.w;}).join('|');
+    }catch(_){return;}
+    if(!sig||sig===_mdColsSig)return;
+    _mdColsSig=sig;
+    mdShowChoicesSoon(MD.curRound||1);
+  });
+  box._mdRO.observe(box);
+}
 function mdShowChoices(round){
   var q=((document.getElementById('md-avail-search')||{}).value||'').toLowerCase().trim();
   var pf=MD.posFilter||'';
@@ -11992,10 +12048,15 @@ function mdShowChoices(round){
   // debajo de su rotulo. La plantilla se calcula aqui, para este ancho, asi
   // que cabecera y filas no pueden discrepar - que era exactamente el bug que
   // dejaba las columnas de stats en cero al filtrar por posicion en el movil.
+  // display primero: una caja en display:none mide 0 y devolveria la
+  // plantilla de telefono en una pantalla de escritorio.
+  box.style.display='block';
+  var _caja=box.clientWidth||0;
   var _phone=window.innerWidth<=700;
   var _narrow=window.innerWidth<=340;
-  var _cols=mdBoardCols(pf,_proj);
-  box.style.display='block';
+  var _cols=mdBoardCols(pf,_proj,_caja);
+  _mdColsSig=_cols.map(function(c){return c.k+c.w;}).join('|');
+  _mdWatchCols();
   box.style.gridTemplateColumns='';
   box.style.setProperty('--md-cols',_cols.map(function(c){return c.w;}).join(' '));
   var _hd=document.createElement('div');

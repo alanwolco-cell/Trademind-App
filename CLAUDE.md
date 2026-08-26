@@ -1,6 +1,6 @@
 # Mac Draft: estado del proyecto
 
-Ultima actualizacion: 2026-08-24.
+Ultima actualizacion: 2026-08-25.
 
 ## Que es
 Dynasty fantasy football: mock drafts (snake y subasta) que se comportan como tu liga,
@@ -13,8 +13,10 @@ node scripts/calibrate-room.mjs   # 40 invariantes, ~10 min. Debe dar ALL GREEN
 node scripts/qa-flows.mjs         # flujos con el motor real
 node scripts/qa-trades.mjs        # 9.989 escenarios, 32 checks
 node scripts/qa-perfil.mjs        # 156 checks del perfil, instantaneo
+node scripts/qa-rankings.mjs      # 18 checks de My Rankings, navegador real
+node scripts/qa-board.mjs         # 104 checks del tablero, barrido de anchos
 ```
-Los cuatro corren desde cualquier directorio. Un test que no falla contra el codigo
+Los seis corren desde cualquier directorio. Un test que no falla contra el codigo
 roto es un adorno: al anadir un gate, verificar que falla ANTES del fix.
 
 ## Sesion 2026-08-22: auditoria pre-lanzamiento
@@ -318,3 +320,112 @@ la columna de presupuestos.
 NO EMPEZADO. Es el primer punto de la sesion que sigue, junto con reposicionar el hero
 para que la subasta sea el gancho de entrada en vez del snake (idea aprobada por el
 dueno el 2026-08-25, con los datos del HALLAZGO 3 detras).
+
+## Sesion 2026-08-25 (noche): el tablero de subasta se rompia en toda la franja de un MacBook
+
+Aparecio filmando. Preparando el generador de reels, la PRIMERA captura de la sala de
+subasta mostro los nombres de la tabla partidos letra por letra. No era del video.
+
+**Lo que pasaba.** En subasta la lista de jugadores se quedaba con 220px a 1280px de
+ventana, y con 40px a 1100px. `overflow-wrap:anywhere` convertia esa falta de ancho en
+"Jahmyr Gibbs" repartido en once renglones de una letra, y el panel "My team" se le
+montaba encima. Medido: bien a 1920 y 1600, roto de 1500 para abajo, bien otra vez en el
+telefono. Snake nunca se vio afectado.
+O sea que los dos anchos que el repo ya vigilaba (1920 y 390) son exactamente los dos
+donde el bug NO se ve. En medio queda toda la franja de un MacBook.
+
+**Por que.** Tres cosas encadenadas, cada una razonable por separado:
+- `#au-zones` (theme.css:608) reparte `360px minmax(0,1fr) 250px` y solo colapsa por
+  debajo de 999px. Con el padding de `#screen-mock` y el panel `#md-roster` de 300px,
+  1002px de la ventana estaban comprometidos ANTES de que la lista recibiera un pixel.
+  A 1280 eso dejaba la lista en 220px y el panel "My team", VACIO, mas ancho que ella.
+- `mdBoardCols()` elegia las columnas por `window.innerWidth`, no por el ancho del
+  contenedor, asi que armaba la plantilla de escritorio (pide 428px) dentro de 220px.
+- `overflow-wrap:anywhere` hace que el ancho minimo de contenido de un nombre sea UNA
+  LETRA. Eso es lo que autoriza a la rejilla a colapsar la pista a cero: sin el, el
+  minimo habria sido la palabra mas larga y el fallo se habria visto como desborde.
+
+**Lo que se arreglo, en cuatro piezas.**
+- `mdBoardCols(pf,proj,anchoCaja)` separa DOS EJES que estaban confundidos en uno:
+  `phone`/`narrow` siguen mirando la VENTANA, porque gobiernan el layout tactil (blancos
+  de 44px) y ese diseno de movil ya estaba aprobado; el ancho de la CAJA decide que
+  columnas caben. Mezclarlos fue un error intermedio propio: con un solo umbral de caja
+  la columna AAV desaparecia a 1600px, donde cabia perfecta. El gate lo cazo.
+- `_mdFitCols()` suelta columnas de menos a mas util (reparto, Bye, rank, Proj) hasta que
+  la pista del nombre conserva 120px. AAV/ADP NO se suelta nunca: en una subasta la
+  columna del dinero es el punto entero de la pantalla, y hay un check dedicado a eso.
+- La pista pasa de `minmax(0,1fr)` a `minmax(96px,1fr)` y `.md-bd-name` de
+  `overflow-wrap:anywhere` a `break-word`. Si algo no cabe, ahora se nota como desborde
+  (visible, arreglable) en vez de como un nombre triturado en silencio.
+- Un `ResizeObserver` sobre `#md-choices` sustituye al listener de `resize`, que solo
+  repintaba al cruzar 700 o 340. Al reescalar de 1920 a 1366 no se cruzaba ninguno, asi
+  que la plantilla vieja se quedaba puesta sobre una caja mas chica. Tambien lo cazo el
+  gate, no la lectura del codigo.
+
+**La decision de layout la tomo el dueno**, sobre cuatro opciones medidas: entre 1081 y
+1499px, y SOLO en subasta, se esconde `#md-roster`. La lista pasa de 220 a 536px a 1280,
+y de 40 a 356 a 1100. El corte va acotado por los DOS lados a proposito: por debajo de
+700 ese mismo `#md-roster` ES la barra fija del telefono, y esconderlo alli seria una
+regresion. Verificado, no supuesto: el tab "Team" del riel derecho (`#au-z-right`) lista
+QB/RB/WR/TE/FLEX/K/DEF/BN con sus huecos, asi que no se pierde informacion.
+
+**Gate nuevo: `node scripts/qa-board.mjs`, 104 checks, navegador real.** Diez anchos en
+subasta, tres en snake, mas un reescalado en vivo. Se verifico que falla contra el codigo
+roto: 28 fallos antes, 12 tras la primera pieza, 6 tras la segunda, ALL GREEN al final.
+Snake es el CONTROL: pasaba con el codigo roto y sigue pasando, asi que el gate no esta
+midiendo el clima.
+
+Arruga menor, sin arreglar y sin decidir: entre 1500 y 1699px la lista es MAS estrecha
+(440-540px) que a 1440px (696px), porque ahi el panel todavia se muestra. Todo pasa los
+invariantes en esa franja; es una arruga de monotonia, no un defecto.
+
+Archivos tocados: `public/app.js` (`mdBoardCols`, `_mdFitCols`, `_mdWatchCols`,
+`mdShowChoices`), `public/theme.css` (`.md-bd-name`, el bloque nuevo tras `.md-cols`),
+`scripts/qa-board.mjs` (nuevo).
+
+### El generador de reels: ESCRITO Y FUNCIONANDO, pendiente el encuadre
+`scripts/gen-reel.mjs`. `node scripts/gen-reel.mjs --dry` deja la salida en un temporal
+sin tocar public/; sin `--dry` escribe `public/promo-reel.mp4` y su poster. Se comprueba
+solo: jugadores contra el maestro de Sleeper (con CONTROL NEGATIVO, un nombre cebo que el
+conjunto debe rechazar), nombres sin cortar, Familjen Grotesk, consola limpia, primer
+fotograma no negro por luminancia media, y duracion.
+Tres tropiezos propios que quedaron resueltos y conviene no repetir:
+- `-fps_mode passthrough` choca con `-r`: para pasar de un webm de framerate variable a
+  un mp4 constante va el filtro `fps=30`, no `-r` suelto.
+- Playwright graba desde que se crea el CONTEXTO, no desde que uno empieza a filmar: sin
+  recortar, el reel arrancaba con los once segundos de armar la sala. Se guarda el
+  instante de creacion y se recorta con `-ss`.
+- El maestro slim viene como OBJETO indexado por id con `first_name`/`last_name`, NO con
+  `name`. Armarlo con `p.name` daba un conjunto de cadenas vacias y acusaba de inexistente
+  a Bijan Robinson. De ahi que el control negativo sea obligatorio.
+
+FALTA: que el dueno elija el encuadre. Hoy recorta a 16:9 alrededor de `#au-lot`,
+`#au-budgets` y `#md-choices`, y sale 1476x830. Se ve la puja subiendo ($52 a $76 sobre
+Jahmyr Gibbs) cambiando de dueno y moviendose la insignia por la columna de presupuestos,
+que es exactamente el gancho de la subasta. Dos arrugas sin decidir: el borde superior
+corta el rotulo "DRAFT BOARD", y a 1920 de ventana el panel "My team" (vacio) entra en el
+cuadro. Filmar a ~1400 de ventana lo esconderia solo, por la regla de layout de esta misma
+sesion, y todo saldria ~20% mas grande.
+Tambien falta corregir `public/index.html:264`: sigue declarando `width="1080"
+height="1080"`. Se cambia AL desplegar el reel nuevo, a las medidas reales del que salga.
+
+El mapa de la sala, por si hay que rehacerlo:
+- Se arranca sin clicks fragiles: `goMock('solo')`, `selectOption` sobre `#md-dtype`,
+  `#md-teams`, `#md-scoring`, `#md-format`, `#md-budget`, `#md-slot`, `#md-rounds`, y
+  `#md-start-btn`. No existe ninguna funcion tipo `mdSetAuctionParams`.
+- La sala: `#au-wrap`, con `#au-lot` (`.au-face`, `.au-name`, `.au-sub`, `.au-bid-num`,
+  `.au-holder`) y `#au-budgets` (`.au-brow`).
+- El ritmo lo lleva `AU_PACE` (1400-2200ms entre pujas), pensado ya para camara.
+  `_auBidOnce()` es un paso atomico si se quiere filmar cuadro a cuadro; `window._AU_FAST`
+  colapsa las esperas a 1ms. `auSimLot()` NO sirve para filmar: salta al resultado.
+- **El motor NO tiene semilla.** `MD.seed` solo se usa para jitter en tres puntos; el
+  resto llama `Math.random()` directo. Para que el reel sea reproducible hay que sembrar
+  `Math.random` con `page.addInitScript` ANTES de que cargue app.js. Probado y funciona.
+- Comprobado filmando: jugador REAL (Jahmyr Gibbs RB DET, contra el maestro de Sleeper),
+  Familjen Grotesk auto-hospedada en `/fonts/*.woff2` (o sea que el defecto 3 del reel
+  viejo, la fuente Archivo, muere por construccion), 12 filas de presupuesto, sin nombres
+  cortados. Es decir: filmar el producto real arregla solo tres de los cuatro defectos.
+- El cuarto (encuadre) es de HTML: `public/index.html:264` declara el video
+  `width="1080" height="1080"` cuando el archivo real es 1920x1080 a 30fps, 13s, y el CSS
+  lo pinta a `min(1120px,94vw)` en apaisado. Hay que corregir los atributos al generar.
+
