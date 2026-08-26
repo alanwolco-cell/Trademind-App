@@ -542,6 +542,10 @@ function lvSold(nameOrP, price, slot) {
   if (!AU.active) return { err: 'The room is not open.' };
   var p = (typeof nameOrP === 'string') ? lvResolve(nameOrP) : nameOrP;
   if (!p) return { err: 'No player by that name is still on the board.' };
+  // Ya vendido: auSell no encuentra al jugador en el pool y aun asi descuenta
+  // el dinero y el hueco al comprador. Tecleado dos veces, "gibbs 72 3"
+  // cobraba $144 a un asiento por un solo jugador. Se corta aqui.
+  if (MD.pool.indexOf(p) < 0) return { err: p.name + ' is already sold.' };
   price = parseInt(price, 10);
   if (!(price >= 1)) return { err: 'Price has to be a whole dollar amount.' };
   slot = parseInt(slot, 10);
@@ -793,7 +797,21 @@ function lvPanel() {
   h += '</div>';
 
   h += '</div>'; // lv-body
+  // Lo que el usuario esta escribiendo SOBREVIVE al repintado. Con la
+  // conexion viva el panel se repinta con cada latido (1,5 s), y sin esto la
+  // caja perdia el texto y el foco a mitad de palabra: justo en el lote en
+  // que hay que reaccionar rapido.
+  var inp = document.getElementById('lv-in');
+  var keep = inp ? { v: inp.value, f: document.activeElement === inp, s: inp.selectionStart, e: inp.selectionEnd } : null;
   el.innerHTML = h;
+  if (keep && (keep.v || keep.f)) {
+    var inp2 = document.getElementById('lv-in');
+    if (inp2) {
+      inp2.value = keep.v;
+      if (keep.f) { inp2.focus(); try { inp2.setSelectionRange(keep.s, keep.e); } catch (_) { } }
+      if (keep.v) lvOnType(keep.v);
+    }
+  }
   lvWireDrag(el);
 }
 
@@ -882,6 +900,14 @@ function lvOnType(v) {
   var cand = lvFind(q);
   if (!cand.length) { hint.innerHTML = q.trim() ? '<i>no match</i>' : ''; return; }
   var p = cand[0];
+  // el indice conserva a los vendidos (se arma una vez por sala): si el que
+  // se teclea ya se fue, se dice, en vez de pintarle un techo a un fantasma
+  if (MD.pool.indexOf(p) < 0) {
+    var v = null; (AU.sold || []).forEach(function (x) { if (x.p === p) v = x; });
+    hint.innerHTML = '<b>' + lvEsc(p.name) + '</b> ' + p.pos + ' &middot; already sold'
+      + (v ? ' for $' + v.price + ' to ' + lvEsc(lvSeatName(v.slot)) : '');
+    return;
+  }
   var c = lvCeiling(p);
   var extra = '';
   if (m && m[2]) {

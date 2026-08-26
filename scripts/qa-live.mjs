@@ -152,6 +152,10 @@ try {
     `una venta descuenta el dinero del comprador ($${venta.antes.bud} -> $${venta.desp.bud})`);
   ok('h', venta.desp.sl === venta.antes.sl - 1 && venta.desp.pool === venta.antes.pool - 1,
     'una venta gasta un hueco de roster y saca al jugador del board');
+  // la MISMA venta tecleada dos veces no puede cobrar dos veces
+  const dobl = await pg.evaluate(() => { const b = AU.budgets[3]; const r = lvSold('gibbs', 72, 3); return { err: r.err || '', b0: b, b1: AU.budgets[3] }; });
+  ok('h2', /already sold/.test(dobl.err) && dobl.b0 === dobl.b1,
+    `vender dos veces al mismo jugador se rechaza sin tocar el dinero ($${dobl.b0} sigue en $${dobl.b1})`);
 
   const inf = await pg.evaluate(() => {
     [['bijan', 72, 4], ['mccaffrey', 68, 5], ['chase', 69, 6], ['nacua', 64, 7]]
@@ -314,6 +318,14 @@ try {
   const r7 = await pg.evaluate(t => { const r = lvIngest(t); return { sold: r.sold, warn: (r.warn || []).join(' ') }; }, fixTxt);
   ok('r7', r7.sold === 9 && !/Open the Results tab/.test(r7.warn),
     `con Results visible se pone al dia (${r7.sold} ventas) y deja de pedirla`);
+  // (r9) lo que se esta escribiendo sobrevive a un latido: se teclea a medias,
+  // llega un latido que repinta el panel, y la caja conserva texto y foco
+  await pg.click('#lv-in');
+  await pg.keyboard.type('gib');
+  await pg.evaluate(t => lvIngest(t), fixTxt);
+  const r9 = await pg.evaluate(() => { const i = document.getElementById('lv-in'); return { v: i && i.value, f: document.activeElement === i, hint: (document.getElementById('lv-hint') || {}).textContent || '' }; });
+  ok('r9', r9.v === 'gib' && r9.f && /Gibbs/.test(r9.hint),
+    `lo escrito sobrevive al latido: valor "${r9.v}", foco ${r9.f}, pista sigue en Gibbs`);
   // (r8) el nombre truncado del preset casa por prefijo
   const r8 = await pg.evaluate(() => { LV.seatMap = {}; return lvSeatOf('Family Feud Champions 2026'); });
   ok('r8', r8 === 10, `"Family Feud ..." del preset casa con el nombre completo de Yahoo por prefijo (asiento ${r8})`);
