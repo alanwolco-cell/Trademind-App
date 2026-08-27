@@ -697,11 +697,14 @@ Sin API y sin anclas en el DOM, el lector va sobre el TEXTO visible de la sala
 - `lvEnter` ahora FUERZA subasta y entra por `goMock`: en la segunda visita abria en snake
   (`AU.slotsLeft` no existia) y con la portada detras del panel. Los dos los cazo el gate.
 
-**Gate: `node scripts/qa-live.mjs`, 41 checks** (parser sobre la sala real, idempotencia,
+**Gate: `node scripts/qa-live.mjs`, 43 checks** (parser sobre la sala real, idempotencia,
 venta por diferencia, marcador de punta a punta con ventana emergente real, portada fuera de
 pantalla, ponerse al dia, nombres repetidos, prefijo). Los ocho gates en verde.
-**Commits locales 59bedcb y siguientes, SIN EMPUJAR**: el dueno pidio no desplegar de
-noche. Empujar a main dispara Vercel.
+**DESPLEGADO (verificado 2026-08-26, sesion siguiente):** `origin/main` = HEAD a84237b y
+macdraft.app sirve live.js, app.js, rankings.js, styles.css e index.html byte a byte
+iguales al local (sha256). `QA_BASE=https://macdraft.app` qa-live 43/43 y qa-nav en verde.
+El cache-bust sigue en 2026082603 (no se subio a 04 porque los archivos ya se sirven
+identicos; subirlo solo si vuelve a cambiar live.js).
 
 **Gate original: `node scripts/qa-live.mjs`, 24 checks.** Entra CLICANDO desde la portada en
 escritorio y telefono. Verificado que falla contra HEAD anterior: (b1) y (b2) rojos, la
