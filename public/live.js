@@ -30,6 +30,7 @@ var LV = {
   on: false,
   pref: {},        // id -> 'love' | 'meh' | 'avoid'
   mine: {},        // id -> valor en dolares SEGUN MI lista
+  manual: {},      // id -> precio que el dueno ESCRIBIO en My Rankings
   myRank: {},      // id -> mi puesto
   idx: null,       // [{k:nombre normalizado, p:jugador}] para busqueda instantanea
   peso: 0.5,       // cuanto mandan mis rankings frente al mercado (0..1)
@@ -79,6 +80,9 @@ function lvSavePref() {
       reserva: LV.reserva, sesgo: LV.sesgo
     }));
   } catch (_) { }
+  // Las tres listas de gusto forman parte del documento de My Rankings del
+  // dueno: cambiar una etiqueta aqui la manda al otro dispositivo tambien.
+  try { if (window.tmrSyncQueue) window.tmrSyncQueue(); } catch (_) { }
 }
 function lvLoadPref() {
   try {
@@ -163,7 +167,18 @@ function lvOne(q) { var r = lvFind(q); return r.length ? r[0] : null; }
  * quien no este en ella no se le aplica NADA (se queda con el mercado puro),
  * en vez de castigarlo por ausencia. */
 function lvMisValores() {
-  LV.mine = {}; LV.myRank = {};
+  LV.mine = {}; LV.myRank = {}; LV.manual = {};
+  // EL PRECIO ESCRITO A MANO, primero y aparte. No depende de que la lista
+  // este cargada ni de la casilla "Use in mock drafts": escribir "$70 por
+  // Gibbs" en My Rankings es una decision tomada, no una opinion que haya que
+  // mezclar con el mercado, y tiene que valer venga por donde venga el dueno.
+  var man = null;
+  try { man = window.tmrPlanPrices ? window.tmrPlanPrices() : null; } catch (_) { }
+  // Los precios se guardan con el id del board de ADP. Normalmente ES el id de
+  // Sleeper que usa el pool de la sala, asi que se copian directos; y ademas
+  // se vuelven a mapear POR NOMBRE mas abajo, que es el camino que ya usa la
+  // lista. Las llaves que no correspondan a nadie del pool no molestan.
+  if (man) Object.keys(man).forEach(function (id) { if (man[id] != null) LV.manual[id] = man[id]; });
   if (typeof TMR === 'undefined' || !TMR.loaded || !TMR.rows.length) return 0;
   var curva = Object.keys(AU.val || {}).map(function (k) { return AU.val[k]; })
     .sort(function (a, b) { return b - a; });
@@ -174,6 +189,7 @@ function lvMisValores() {
     if (!p) return;                       // vendido ya, o fuera del pool de la sala
     LV.myRank[p.id] = i + 1;
     LV.mine[p.id] = curva[Math.min(i, curva.length - 1)];
+    if (man && man[r.id] != null) LV.manual[p.id] = man[r.id];
     n++;
   });
   return n;
@@ -189,15 +205,25 @@ function lvCeiling(p) {
   var base = auMyWorth(p);               // motor: valor de sala x inflacion, necesidad, cap
   var mercado = base.worth;
   var mio = LV.mine[p.id] || null;
+  var man = (LV.manual && LV.manual[p.id] != null) ? LV.manual[p.id] : null;
   var mezcla = mercado;
-  if (mio != null) mezcla = Math.round(mercado * (1 - LV.peso) + mio * LV.peso);
+  // Un precio escrito a mano SUSTITUYE la mezcla entera, no entra en ella. La
+  // mezcla existe para convertir un ORDEN (mi puesto 4) en dinero, que es una
+  // opinion que hay que traducir; un numero escrito ya viene en dolares y ya
+  // lleva dentro todo lo que el dueno sabe del jugador. Promediarlo con el
+  // mercado seria contestarle "eso no es lo que quisiste decir".
+  if (man != null) mezcla = man;
+  else if (mio != null) mezcla = Math.round(mercado * (1 - LV.peso) + mio * LV.peso);
 
   // El gusto sesga el precio y nada mas. 'avoid' NO es un veto: es pedir un
   // descuento grande. Un jugador que no me gusta a mitad de precio sigue
   // siendo la mejor compra de la sala, y esa puerta queda abierta a proposito.
   var pref = LV.pref[p.id] || null;
   var tras = mezcla;
-  if (pref === 'love') tras = Math.round(mezcla * (1 + LV.loveP));
+  // Sobre un precio escrito a mano el gusto NO se aplica: quien puso $70 ya
+  // sabia si le gusta. Cobrarle la emocion encima seria cobrarsela dos veces.
+  if (man != null) { /* el numero del dueno se respeta tal cual */ }
+  else if (pref === 'love') tras = Math.round(mezcla * (1 + LV.loveP));
   else if (pref === 'meh') tras = Math.round(mezcla * (1 - LV.mehP));
   else if (pref === 'avoid') tras = Math.round(mezcla * (1 - LV.avoidP));
 
@@ -253,7 +279,7 @@ function lvCeiling(p) {
   LV.lastMs = t0 ? ((window.performance.now() - t0)) : 0;
   return {
     techo: techo, puro: puro, coste: puro - techo, ganga: ganga, bid: bid,
-    mercado: mercado, mio: mio, mezcla: mezcla, pref: pref,
+    mercado: mercado, mio: mio, manual: man, mezcla: mezcla, pref: pref,
     cap: cap, capRes: capRes, resAct: resAct, resLib: resLib,
     topeAlcanzado: tras > capRes, necesita: base.needsIt,
     rank: LV.myRank[p.id] || null
@@ -674,7 +700,11 @@ function lvPanel() {
     // el desglose: de donde sale cada parte del numero
     var partes = [];
     partes.push('market $' + c.mercado);
-    if (c.mio != null) partes.push('your list #' + c.rank + ' = $' + c.mio);
+    // El precio escrito a mano se DECLARA y ocupa el sitio de la lista: si el
+    // numero de la pantalla sale de algo que el dueno escribio, tiene que
+    // poder verlo, o el desglose miente por omision.
+    if (c.manual != null) partes.push('your price $' + c.manual);
+    else if (c.mio != null) partes.push('your list #' + c.rank + ' = $' + c.mio);
     if (c.pref === 'love') partes.push('Love +' + Math.round(LV.loveP * 100) + '%');
     if (c.pref === 'meh') partes.push('Not so much -' + Math.round(LV.mehP * 100) + '%');
     if (c.resAct) partes.push('holding $' + c.resAct + ' back for later');

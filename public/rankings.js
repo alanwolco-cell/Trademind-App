@@ -23,11 +23,36 @@ var TMR = {
   filter: 'ALL',
   q: '',
   loaded: false,
-  drag: null
+  drag: null,
+  // ── el dinero ─────────────────────────────────────────────────────────
+  sticker: null,   // id -> precio de la sala, tal cual lo saca auPoolInit
+  price: {},       // id -> precio objetivo (sala mezclada con MI puesto)
+  manual: {},      // id -> precio escrito a mano: manda sobre el calculado
+  target: {},      // id -> true: entra en el plan de la barra Build
+  room: null,      // la sala con la que se calculo, declarada en pantalla
+  pricing: false,  // mientras el motor no responde, la columna va en skeleton
+  _curva: null,    // los precios de la sala ordenados de mayor a menor
+  _firma: '',      // firma de la sala: si cambia, hay que volver a calcular
+  _edit: null,     // id que se esta editando ahora mismo
+  _cancel: false,  // Escape: el blur que viene detras NO debe guardar
+  // ── el dueno y su sincronizacion ──────────────────────────────────────
+  owner: null,     // null = sin preguntar, true/false = lo que dijo el servidor
+  _ownerP: null,   // la promesa de esa pregunta: se hace UNA vez
+  _dirty: false,   // hay cambios locales que el servidor todavia no tiene
+  _syncT: null,    // el debounce del PUT
+  _syncing: false,
+  seedMissing: []  // nombres del seed que no resolvieron: se declaran
 };
 
 var TMR_KEY = 'tm_rankings_v1';
 var TMR_USE_KEY = 'tm_rankings_use';
+/* El plan (precios a mano y objetivos) vive en SU propia llave, no dentro de
+ * la del orden: "Reset to consensus" borra el orden y los tiers, y perder
+ * ademas los precios que uno escribio a mano no es lo que anuncia ese boton. */
+var TMR_PLAN_KEY = 'tm_rankings_plan_v1';
+var TMR_SEED_KEY = 'tm_rk_seed_v1';     // el seed corre UNA vez por dispositivo y por documento
+var TMR_SYNC_AT_KEY = 'tm_rk_sync_at';  // updatedAt del ultimo estado que el servidor confirmo
+var TMR_SYNC_MS = 800;                  // debounce del PUT
 var TMR_LIMIT = 200; // top 200: mas abajo el ADP es ruido y la lista se vuelve inmanejable
 
 function _tmrNorm(s) {
@@ -63,11 +88,206 @@ function tmrLoadSaved() {
   } catch (_) { return null; }
 }
 
+/* ── el plan: precios a mano y objetivos ────────────────────────────────────
+ * Los dos se guardan POR ID DE SLEEPER, nunca por posicion en la lista, que
+ * es la misma decision que ya gobierna el orden: el dia que uno mueva a un
+ * jugador, su precio y su marca de objetivo se van con el. */
+function tmrPlanSave() {
+  try {
+    localStorage.setItem(TMR_PLAN_KEY, JSON.stringify({
+      prices: TMR.manual,
+      targets: Object.keys(TMR.target).filter(function (k) { return TMR.target[k]; }),
+      updated: Date.now()
+    }));
+  } catch (_) { /* modo privado: la sesion sigue funcionando en memoria */ }
+  var st = document.getElementById('rk-saved');
+  if (st) {
+    st.textContent = 'Saved';
+    st.style.opacity = '1';
+    clearTimeout(TMR._stT);
+    TMR._stT = setTimeout(function () { st.style.opacity = '0'; }, 1400);
+  }
+  tmrSyncQueue();
+}
+
+function tmrPlanLoad() {
+  try {
+    var d = JSON.parse(localStorage.getItem(TMR_PLAN_KEY) || 'null');
+    if (!d) return;
+    if (d.prices) Object.keys(d.prices).forEach(function (k) {
+      var n = Number(d.prices[k]);
+      if (isFinite(n) && n >= 0) TMR.manual[k] = Math.round(n);
+    });
+    (d.targets || []).forEach(function (k) { TMR.target[k] = true; });
+  } catch (_) { }
+}
+
+/* Lo que lee Draft Day. No exige que el tab se haya abierto ni que la casilla
+ * de "Use in mock drafts" este encendida: un precio escrito a mano es una
+ * decision tomada, y tiene que valer venga por donde venga el usuario. */
+function tmrPlanPrices() { return TMR.manual; }
+
+function tmrPriceOf(id) {
+  if (TMR.manual[id] != null) return TMR.manual[id];
+  return (TMR.price[id] != null) ? TMR.price[id] : null;
+}
+
+/* ── el precio, sacado del motor de subasta que ya existe ───────────────────
+ * NO hay una segunda formula de precios en este archivo. auPoolInit reparte el
+ * dinero de la sala entre los jugadores draftables (curva recalibrada contra
+ * una subasta real el 2026-08-28) y esto lo llama TAL CUAL, prestandole a MD
+ * la forma de la sala durante una vuelta sincrona y devolviendosela intacta.
+ * Escribir aqui "precio = AAV x algo" seria la segunda verdad que este repo ya
+ * pago caro en otros sitios.
+ *
+ * Que sala. La que este puesta en Mock Draft, que es la del dueno cuando el
+ * preset Fantazy 2026 esta encendido (10 equipos, $200, 15 rondas, half PPR).
+ * La barra Build DECLARA esa sala en pantalla: un precio sin su sala no
+ * significa nada, porque el mismo jugador vale distinto en 10 que en 14.
+ *
+ * Lo que NO entra, y por que. lvCeiling (Draft Day) parte del mismo sitio pero
+ * le suma inflacion viva, el hueco de titular que te falta y la ley del
+ * presupuesto: tres cosas que solo existen con una sala abierta y que cambian
+ * a cada venta. Antes del draft no hay ninguna, asi que el numero honesto es
+ * el sticker de la sala mezclado con MI puesto, sin gusto: exactamente el
+ * numero limpio que Draft Day llama "puro". Ademas, mezclar sobre la misma
+ * curva conserva el dinero (los 150 huecos siguen sumando el bote de la sala),
+ * que es justo lo que hace que la barra Build se pueda sumar contra $200. */
+function tmrRoomCfg() {
+  // De donde sale la sala, en este orden y por una razon medida: los selects
+  // del mock NO estan puestos hasta que mdRestoreSettings corre, y esa funcion
+  // vive en el arranque de la pantalla de Mock Draft. Entrando directo a
+  // My Rankings los selects traen todavia sus valores del HTML (12 equipos, 8
+  // rondas, PPR entera) y la columna habria pintado el precio de una sala que
+  // no es la suya: medido, el mismo jugador pasaba de $76 a $104. La memoria
+  // del dispositivo (tm_mock_settings, la misma que restaura el mock) es la
+  // unica verdad. Sin memoria todavia, el respaldo NO son los defaults del
+  // HTML (12 equipos, 8 rondas): ocho rondas son 96 huecos y en una subasta
+  // eso no es un precio, es otro juego. El respaldo es la forma de una
+  // subasta normal, que ademas es la de su liga: 10 equipos, $200, 15 rondas,
+  // half PPR. Y la barra Build lo DECLARA en pantalla.
+  var mem = null;
+  try { mem = JSON.parse(localStorage.getItem('tm_mock_settings') || 'null'); } catch (_) { }
+  var g = function (id, d) {
+    return (mem && mem[id] != null && mem[id] !== '') ? mem[id] : d;
+  };
+  var sc = parseFloat(g('md-scoring', '0.5'));
+  return {
+    teams: parseInt(g('md-teams', '10'), 10) || 10,
+    budget: parseInt(g('md-budget', '200'), 10) || 200,
+    rounds: parseInt(g('md-rounds', '15'), 10) || 15,
+    scoring: isFinite(sc) ? sc : 0.5,
+    sf: g('md-format', '1qb') === 'sf'
+  };
+}
+
+// El pool de precios se arma del MISMO board que la lista (window._adp) y con
+// el mismo tamano que usa la sala de verdad, porque auPoolInit ancla el precio
+// en el ULTIMO jugador draftable: un pool mas corto moveria ese ancla y con
+// ella todos los precios.
+function _tmrPricePool(n) {
+  var src = window._adp;
+  if (!src) return null;
+  var out = [];
+  Object.keys(src).forEach(function (k) {
+    var p = src[k];
+    if (!p || !p.adp || !p.pos) return;
+    if (['QB', 'RB', 'WR', 'TE'].indexOf(p.pos) < 0) return;  // la sala tampoco los tiene
+    out.push({ id: String(p._id || k), name: p.name || k, pos: p.pos, team: p.team || '', adp: p.adp });
+  });
+  out.sort(function (a, b) { return a.adp - b.adp; });
+  return out.slice(0, n);
+}
+
+async function tmrPrices() {
+  if (typeof MD === 'undefined' || typeof AU === 'undefined' || typeof auPoolInit !== 'function') return false;
+  var cfg = tmrRoomCfg();
+  var firma = [cfg.teams, cfg.budget, cfg.rounds, cfg.scoring, cfg.sf ? 1 : 0].join('/');
+  if (TMR.sticker && TMR._firma === firma) { tmrBlend(); return true; }
+  // Una sala VIVA es dueña de AU.val: no se le toca ni prestado. Lo mismo
+  // vale mientras startMockDraft esta a medias, porque es asincrono y nuestro
+  // prestamo le devolveria a MD los valores de ANTES de que empezara.
+  // Pero con una sala abierta no hace falta pedir nada prestado: AU.val YA es
+  // el precio de esa sala, que es exactamente la que el usuario esta jugando.
+  if (AU.active) {
+    if (AU.val && Object.keys(AU.val).length) {
+      TMR.sticker = AU.val;
+      TMR._curva = Object.keys(AU.val).map(function (k) { return AU.val[k]; }).sort(function (a, b) { return b - a; });
+      TMR._firma = firma;
+      TMR.room = cfg;
+      tmrBlend();
+      return true;
+    }
+    return false;
+  }
+  if (MD._starting) return false;
+  if (typeof mdLoadAav === 'function') { try { await mdLoadAav(); } catch (_) { } }
+  if (AU.active || MD._starting) return false;   // pudo abrirse una mientras llegaba el feed
+  var pool = _tmrPricePool(Math.max(260, cfg.teams * cfg.rounds + 80));
+  if (!pool || pool.length < 50) return false;
+
+  // El prestamo. Sincrono de punta a punta: entre el guardado y la devolucion
+  // no puede haber un await, o cualquier otro codigo veria un MD que no es el
+  // suyo.
+  var bak = { pool: MD.pool, teams: MD.teams, budget: MD.budget, rounds: MD.rounds, scoring: MD.scoring, sf: MD.sf, val: AU.val };
+  var val = null;
+  try {
+    MD.pool = pool; MD.teams = cfg.teams; MD.budget = cfg.budget;
+    MD.rounds = cfg.rounds; MD.scoring = cfg.scoring; MD.sf = cfg.sf;
+    auPoolInit();
+    val = AU.val;
+  } catch (_) {
+    val = null;
+  } finally {
+    MD.pool = bak.pool; MD.teams = bak.teams; MD.budget = bak.budget;
+    MD.rounds = bak.rounds; MD.scoring = bak.scoring; MD.sf = bak.sf; AU.val = bak.val;
+  }
+  if (!val) return false;
+
+  TMR.sticker = val;
+  TMR._curva = Object.keys(val).map(function (k) { return val[k]; }).sort(function (a, b) { return b - a; });
+  TMR._firma = firma;
+  TMR.room = cfg;
+  tmrBlend();
+  return true;
+}
+
+/* La mezcla, que es barata y se rehace en cada pintado: el jugador que YO
+ * tengo en el puesto k vale lo que esta sala paga por su k-esimo mas caro. Es
+ * la MISMA conversion que usa Draft Day (lvMisValores), con el mismo peso, y
+ * por eso mover a alguien en la lista le mueve el precio en el acto. A quien
+ * no este en mi lista no se le aplica nada: se queda con el precio de sala. */
+function tmrBlend() {
+  var st = TMR.sticker, curva = TMR._curva;
+  if (!st || !curva || !curva.length) return;
+  var peso = (window.LV && typeof LV.peso === 'number') ? LV.peso : 0.5;
+  var pr = {};
+  for (var i = 0; i < TMR.rows.length; i++) {
+    var r = TMR.rows[i], sk = st[r.id];
+    if (sk == null) continue;
+    var mio = curva[Math.min(i, curva.length - 1)];
+    pr[r.id] = Math.max(1, Math.round(sk * (1 - peso) + mio * peso));
+  }
+  TMR.price = pr;
+}
+
 /* ── carga ──────────────────────────────────────────────────────────────── */
 async function renderRankings() {
   var host = document.getElementById('rk-body');
   if (!host) return;
-  if (TMR.loaded) { tmrPaint(); return; }
+  if (TMR.loaded) {
+    tmrPaint();
+    if (!(await tmrOwner())) return;
+    // Reabrir el tab es el momento de volver a preguntar: por el servidor (el
+    // telefono pudo editar la lista mientras tanto) y por los precios, porque
+    // un intento anterior pudo quedarse sin ellos (sala viva, feed caido) y el
+    // usuario pudo cambiar la sala en Mock Draft. tmrPrices se corta sola por
+    // firma si nada cambio, asi que reintentarlo es gratis.
+    try { await tmrSyncPull(); } catch (_) { }
+    try { await tmrPrices(); } catch (_) { }
+    tmrPaint();
+    return;
+  }
 
   host.innerHTML = tmrSkeleton();
 
@@ -112,22 +332,324 @@ async function renderRankings() {
 
   TMR.rows = list;
   TMR.loaded = true;
+
+  // La lista se pinta YA. Lo que sigue (precios, objetivos, sincronizacion) es
+  // SOLO del dueno: para cualquier otra cuenta My Rankings termina aqui y queda
+  // identico a como estaba, con una sola pregunta al servidor que responde 200.
+  tmrPaint();
+  if (!(await tmrOwner())) return;
+
+  // El servidor primero: si el telefono guardo una version mas nueva, es esa la
+  // que se pinta, no la cache de este navegador. Y el seed va DESPUES de leer
+  // el servidor, porque el documento dice si ya corrio en el otro dispositivo.
+  try { await tmrSyncPull(); } catch (_) { }
+  try { tmrSeed(); } catch (_) { }
+
+  // La columna del dinero en skeleton mientras llega el feed de subasta:
+  // esperar al feed para ensenar doscientos nombres que ya estan en memoria
+  // seria cambiar una pantalla instantanea por una en blanco.
+  TMR.pricing = true;
+  tmrPaint();
+  try { await tmrPrices(); } catch (_) { }
+  TMR.pricing = false;
   tmrPaint();
 }
 
+/* ── el dueno ───────────────────────────────────────────────────────────────
+ * Una sola pregunta por carga, con la MISMA regla del servidor (permitido() de
+ * server/routes/perfil.js): aqui no hay una segunda lista de duenos. Mientras
+ * no conteste, o si contesta que no, la pantalla es la de siempre. */
+function tmrOwner() {
+  if (TMR._ownerP) return TMR._ownerP;
+  TMR._ownerP = (async function () {
+    var own = false;
+    try {
+      var r = await fetch('/api/perfil/owner', { cache: 'no-store' });
+      if (r.ok) { var j = await r.json(); own = !!(j && j.owner); }
+    } catch (_) { own = false; }
+    TMR.owner = own;
+    var tab = document.getElementById('tab-rankings');
+    if (tab) tab.classList.toggle('rk-owner', own);
+    return own;
+  })();
+  return TMR._ownerP;
+}
+
+/* ── sincronizacion por servidor ────────────────────────────────────────────
+ * Un documento del dueno en /api/perfil/rankings, compartido por sus dos
+ * navegadores (computadora y celular). localStorage sigue siendo la cache y
+ * lo que se pinta al instante; el servidor decide quien tiene la version mas
+ * nueva por updatedAt. El PUT va con debounce, y si falla queda marcado como
+ * pendiente: se reintenta con el siguiente cambio y al volver el foco. */
+function tmrSyncDoc() {
+  var pref = null;
+  try {
+    if (window.LV && LV.pref) pref = LV.pref;
+    else { var d = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); pref = (d && d.pref) || {}; }
+  } catch (_) { pref = {}; }
+  var seeded = false;
+  try { seeded = localStorage.getItem(TMR_SEED_KEY) === '1'; } catch (_) { }
+  var order = null;
+  var saved = tmrLoadSaved();
+  if (TMR.loaded && TMR.rows.length) order = TMR.rows.map(function (r) { return r.id; });
+  else if (saved) order = saved.order;
+  return {
+    v: 1,
+    fmt: TMR.fmt || (saved && saved.fmt) || null,
+    order: order || [],
+    breaks: Object.keys(TMR.breakAfter || {}).filter(function (k) { return TMR.breakAfter[k]; }),
+    prices: TMR.manual,
+    targets: Object.keys(TMR.target).filter(function (k) { return TMR.target[k]; }),
+    pref: pref || {},
+    seeded: seeded,
+    updatedAt: Date.now()
+  };
+}
+
+function tmrSyncAt() {
+  try { return Number(localStorage.getItem(TMR_SYNC_AT_KEY)) || 0; } catch (_) { return 0; }
+}
+
+function tmrSyncStatus(txt, keep) {
+  var el = document.getElementById('rk-sync');
+  if (!el) return;
+  el.textContent = txt || '';
+  el.className = 'rk-sync' + (keep ? ' is-warn' : '');
+}
+
+/* Aplica el documento del servidor: cache local, memoria y pantalla. */
+function tmrSyncApply(doc) {
+  if (!doc || typeof doc !== 'object') return;
+  try {
+    if (Array.isArray(doc.order) && doc.order.length) {
+      localStorage.setItem(TMR_KEY, JSON.stringify({ fmt: doc.fmt || TMR.fmt, order: doc.order, breaks: doc.breaks || [], updated: Date.now() }));
+    }
+    localStorage.setItem(TMR_PLAN_KEY, JSON.stringify({ prices: doc.prices || {}, targets: doc.targets || [], updated: Date.now() }));
+    if (doc.pref && typeof doc.pref === 'object') {
+      var d = null;
+      try { d = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); } catch (_) { }
+      d = d || {};
+      d.pref = doc.pref;
+      localStorage.setItem('tm_lv_pref', JSON.stringify(d));
+      if (window.LV) LV.pref = doc.pref;
+    }
+    if (doc.seeded) localStorage.setItem(TMR_SEED_KEY, '1');
+  } catch (_) { }
+  TMR.manual = {};
+  TMR.target = {};
+  tmrPlanLoad();
+  if (TMR.loaded && TMR.rows.length && Array.isArray(doc.order) && doc.order.length) {
+    var byId = {}, out = [], seen = {};
+    TMR.rows.forEach(function (r) { byId[r.id] = r; });
+    doc.order.forEach(function (id) { if (byId[id] && !seen[id]) { out.push(byId[id]); seen[id] = 1; } });
+    TMR.rows.forEach(function (r) { if (!seen[r.id]) out.push(r); });
+    TMR.rows = out;
+    TMR._idx = null; TMR._idxN = -1;
+    TMR.breakAfter = {};
+    (doc.breaks || []).forEach(function (id) { TMR.breakAfter[id] = true; });
+  }
+}
+
+async function tmrSyncPull() {
+  if (TMR.owner !== true) return false;
+  var r;
+  try { r = await fetch('/api/perfil/rankings', { cache: 'no-store' }); } catch (_) { tmrSyncStatus('Offline', true); return false; }
+  if (!r.ok) { tmrSyncStatus('Offline', true); return false; }
+  var j = null;
+  try { j = await r.json(); } catch (_) { return false; }
+  var at = Number(j && j.updatedAt) || 0;
+  var mio = tmrSyncAt();
+  if (j && j.doc && at > mio && !TMR._dirty) {
+    tmrSyncApply(j.doc);
+    try { localStorage.setItem(TMR_SYNC_AT_KEY, String(at)); } catch (_) { }
+    tmrSyncStatus('Synced from your other device');
+    setTimeout(function () { if (!TMR._dirty) tmrSyncStatus(''); }, 2200);
+    if (TMR.loaded) tmrPaint();
+    return true;
+  }
+  if (!j || !j.doc) {
+    // El servidor no tiene nada todavia: lo que hay aqui es la version buena
+    if (mio === 0 && (tmrLoadSaved() || Object.keys(TMR.manual).length || Object.keys(TMR.target).length)) tmrSyncQueue();
+  }
+  if (TMR._dirty) tmrSyncQueue();
+  else tmrSyncStatus(j && j.store && j.store !== 'blob' ? 'Synced (' + j.store + ')' : 'Synced');
+  return false;
+}
+
+function tmrSyncQueue() {
+  if (TMR.owner !== true) return;
+  TMR._dirty = true;
+  tmrSyncStatus('Saving');
+  clearTimeout(TMR._syncT);
+  TMR._syncT = setTimeout(tmrSyncPush, TMR_SYNC_MS);
+}
+
+async function tmrSyncPush() {
+  if (TMR.owner !== true || TMR._syncing) return;
+  TMR._syncing = true;
+  var doc = tmrSyncDoc();
+  var ok = false, store = '';
+  try {
+    var r = await fetch('/api/perfil/rankings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc)
+    });
+    if (r.ok) {
+      var j = null;
+      try { j = await r.json(); } catch (_) { }
+      ok = true; store = (j && j.store) || '';
+      try { localStorage.setItem(TMR_SYNC_AT_KEY, String((j && j.updatedAt) || doc.updatedAt)); } catch (_) { }
+    }
+  } catch (_) { ok = false; }
+  TMR._syncing = false;
+  if (ok) {
+    TMR._dirty = false;
+    tmrSyncStatus(store && store !== 'blob' ? 'Synced (' + store + ')' : 'Synced');
+  } else {
+    // Se queda pendiente: se reintenta con el siguiente cambio y al volver el foco
+    tmrSyncStatus('Offline, will retry', true);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', function () {
+    if (TMR.owner !== true) return;
+    if (TMR._dirty) { tmrSyncPush(); return; }
+    if (TMR.loaded) tmrSyncPull().catch(function () { });
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || TMR.owner !== true) return;
+    if (TMR._dirty) tmrSyncPush();
+    else if (TMR.loaded) tmrSyncPull().catch(function () { });
+  });
+  // Editar y cerrar la pestana en menos de 800 ms no puede perder el cambio:
+  // el PUT pendiente sale con keepalive, que sobrevive a la descarga de la
+  // pagina. (sendBeacon no sirve: no lleva la cabecera de cuenta.)
+  window.addEventListener('pagehide', function () {
+    if (TMR.owner !== true || !TMR._dirty) return;
+    clearTimeout(TMR._syncT);
+    try {
+      fetch('/api/perfil/rankings', {
+        method: 'PUT', keepalive: true, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tmrSyncDoc())
+      }).catch(function () { });
+    } catch (_) { }
+  });
+}
+
+/* ── el seed: una sola vez ──────────────────────────────────────────────────
+ * Los objetivos del plan que el dueno aprobo el 2026-08-28 y su lista Love de
+ * Draft Day. Corre UNA vez: la bandera va en localStorage y TAMBIEN en el
+ * documento del servidor, para que el otro dispositivo no lo repita encima de
+ * lo que el dueno ya cambio. Nunca pisa nada que exista, y los nombres que no
+ * resuelven contra el board se DECLARAN en la barra Build, no se tragan. */
+var TMR_SEED_TARGETS = ['Jahmyr Gibbs', 'Ashton Jeanty', "De'Von Achane", 'Derrick Henry', 'Kyren Williams',
+  "D'Andre Swift", 'Breece Hall', 'Travis Etienne', 'Cam Skattebo', 'Javonte Williams', 'Quinshon Judkins',
+  'TreVeyon Henderson', 'Chris Olave', 'Ladd McConkey', 'DeVonta Smith', 'Emeka Egbuka', 'Zay Flowers',
+  'Tee Higgins', 'Tetairoa McMillan', 'Colston Loveland', 'Tyler Warren', 'Tucker Kraft', 'Jalen Hurts',
+  'Jayden Daniels', 'Drake Maye'];
+var TMR_SEED_LOVE = ["D'Andre Swift", 'Breece Hall', 'Travis Etienne', 'Cam Skattebo', 'Javonte Williams',
+  'Quinshon Judkins', 'TreVeyon Henderson', 'Jahmyr Gibbs'];
+
+function tmrSeedFind(name) {
+  var n = _tmrNorm(name);
+  for (var i = 0; i < TMR.rows.length; i++) if (_tmrNorm(TMR.rows[i].name) === n) return TMR.rows[i];
+  // el board a veces trae el nombre sin sufijo o con inicial: se acepta el
+  // apellido completo con la misma inicial de pila, si es unico
+  var partes = n.split(' '), ap = partes[partes.length - 1], cands = [];
+  for (var k = 0; k < TMR.rows.length; k++) {
+    var m = _tmrNorm(TMR.rows[k].name);
+    if (m.split(' ').pop() === ap && m.charAt(0) === n.charAt(0)) cands.push(TMR.rows[k]);
+  }
+  return cands.length === 1 ? cands[0] : null;
+}
+
+function tmrSeed() {
+  if (TMR.owner !== true || !TMR.loaded || !TMR.rows.length) return false;
+  try { if (localStorage.getItem(TMR_SEED_KEY) === '1') return false; } catch (_) { }
+  var missing = [];
+  TMR_SEED_TARGETS.forEach(function (nm) {
+    var r = tmrSeedFind(nm);
+    if (!r) { missing.push(nm); return; }
+    if (!TMR.target[r.id]) TMR.target[r.id] = true;
+  });
+  var pref = null;
+  try { var d = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); pref = (d && d.pref) || {}; } catch (_) { pref = {}; }
+  if (window.LV && LV.pref) pref = LV.pref;
+  TMR_SEED_LOVE.forEach(function (nm) {
+    var r = tmrSeedFind(nm);
+    if (!r) { if (missing.indexOf(nm) < 0) missing.push(nm); return; }
+    if (!pref[r.id]) pref[r.id] = 'love';   // sin pisar lo que ya exista
+  });
+  try {
+    if (window.LV && typeof lvSavePref === 'function') { LV.pref = pref; lvSavePref(); }
+    else {
+      var d2 = null;
+      try { d2 = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); } catch (_) { }
+      d2 = d2 || {}; d2.pref = pref;
+      localStorage.setItem('tm_lv_pref', JSON.stringify(d2));
+    }
+    localStorage.setItem(TMR_SEED_KEY, '1');
+  } catch (_) { }
+  TMR.seedMissing = missing;
+  tmrPlanSave();   // guarda y encola el PUT con seeded:true
+  return true;
+}
+
 // El esqueleto tiene que tener la FORMA de lo que va a llegar: circulo de la
-// foto, nombre, y las tres cifras de la derecha. Uno generico hace que la
-// pantalla salte al cargar, que es justo lo que un skeleton viene a evitar.
+// foto, nombre, y las CUATRO cifras de la derecha (pos, ADP, distancia y el
+// precio). Uno generico hace que la pantalla salte al cargar, que es justo lo
+// que un skeleton viene a evitar.
 function tmrSkeleton() {
   var out = '<div class="rk-skel-wrap">';
   for (var i = 0; i < 12; i++) {
     out += '<div class="rk-skel-row">'
       + '<div class="rk-skel-num"></div><div class="rk-skel-pic"></div>'
       + '<div class="rk-skel-name"></div>'
-      + '<div class="rk-skel-tag"></div><div class="rk-skel-tag"></div><div class="rk-skel-tag"></div>'
+      + '<div class="rk-skel-tag"></div><div class="rk-skel-tag"></div>'
+      + '<div class="rk-skel-tag"></div><div class="rk-skel-tag"></div>'
       + '</div>';
   }
   return out + '</div>';
+}
+
+/* ── la celda del dinero ────────────────────────────────────────────────────
+ * Un precio a mano se tiene que poder distinguir del calculado de un vistazo,
+ * o el usuario no sabe cual de los doscientos toco: va en el color de acento y
+ * subrayado, con el numero del motor en el title, y con su boton de volver al
+ * calculado al lado. Sin la vuelta atras, escribir un precio seria una puerta
+ * de un solo sentido. */
+function tmrPriceCell(id) {
+  var man = TMR.manual[id], calc = TMR.price[id];
+  if (TMR.pricing && man == null && calc == null) return '<span class="rk-pr-skel"></span>';
+  var v = (man != null) ? man : calc;
+  var t = (man != null)
+    ? 'Your price. This room prices him at $' + (calc == null ? '?' : calc) + '.'
+    : 'What this room should pay for him. Click to set your own.';
+  var h = '<button type="button" class="rk-pr' + (man != null ? ' is-manual' : '') + '"'
+    + ' title="' + tmrEsc(t) + '" onclick="tmrEditPrice(\'' + id + '\')">'
+    + (v == null ? '$-' : '$' + v) + '</button>';
+  if (man != null) {
+    h += '<button type="button" class="rk-prx" title="Back to the room price"'
+      + ' aria-label="Back to the room price" onclick="tmrClearPrice(\'' + id + '\')">' + TMR_SVG_BACK + '</button>';
+  }
+  return h;
+}
+
+/* El boton de objetivo vive PEGADO al precio, no con los de mover y cortar.
+ * Dos razones, y la segunda es de medida:
+ *  - "lo quiero" y "a este precio" son la misma decision, y la barra Build
+ *    suma exactamente esas dos cosas.
+ *  - en un telefono de 320px no caben cuatro botones en la columna de
+ *    acciones al lado de un nombre de 96px: medido, se quedaban en 19px de
+ *    ancho cada uno. En la linea del precio, que en movil baja bajo el
+ *    nombre, sobra sitio. */
+function tmrTargetBtn(r) {
+  var on = !!TMR.target[r.id];
+  return '<button type="button" class="rk-ib rk-tg' + (on ? ' on' : '')
+    + '" title="' + (on ? 'Drop him from your build' : 'Add him to your build')
+    + '" aria-pressed="' + (on ? 'true' : 'false')
+    + '" aria-label="Target ' + tmrEsc(r.name) + '" onclick="tmrToggleTarget(\'' + r.id + '\')">'
+    + TMR_SVG_TARGET + '</button>';
 }
 
 /* ── pintado ────────────────────────────────────────────── */
@@ -139,6 +661,10 @@ function tmrSkeleton() {
 function tmrPaint() {
   var host = document.getElementById('rk-body');
   if (!host) return;
+
+  // El precio depende de MI puesto, asi que mover a alguien lo mueve: la
+  // mezcla se rehace en cada pintado (es un recorrido de 200, no una fetch).
+  tmrBlend();
 
   var q = _tmrNorm(TMR.q);
   var i, r;
@@ -196,6 +722,9 @@ function tmrPaint() {
       + '<span class="rk-posn">' + posRk[i] + '</span></span>'
       + '<span class="rk-adp">' + r.adp.toFixed(1) + '</span>'
       + '<span class="rk-vs' + dCls + '" title="How far you move him off the consensus">' + dTxt + '</span>'
+      + (TMR.owner === true
+        ? '<span class="rk-pay" data-id="' + tmrEsc(r.id) + '">' + tmrPriceCell(r.id) + '</span>' + tmrTargetBtn(r)
+        : '')
       + '</span>'
       + '<span class="rk-acts">'
       + '<button type="button" class="rk-ib" title="Move up" aria-label="Move up ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',-1)">' + TMR_SVG_UP + '</button>'
@@ -219,11 +748,85 @@ function tmrPaint() {
       + '<span class="rk-ch-pr">Pos</span>'
       + '<span class="rk-ch-adp">ADP</span>'
       + '<span class="rk-ch-vs">Vs ADP</span>'
+      + (TMR.owner === true ? '<span class="rk-ch-pay">Pay</span>' : '')
       + '</div>' + html;
   }
 
   var c = document.getElementById('rk-count');
   if (c) c.textContent = shown + ' of ' + TMR.rows.length;
+  tmrBuildPaint();
+}
+
+/* ── la barra Build ─────────────────────────────────────────────────────────
+ * Lo que el dueno pidio con sus palabras: "de ahi sacar una lista para ver
+ * cual es la manera mas eficiente de construir mi equipo". O sea, no la suma
+ * de los objetivos a secas: la suma CONTRA su presupuesto, y contando que cada
+ * hueco de roster que quede sin objetivo igual cuesta el dolar del suelo de la
+ * subasta. Sin ese dolar por hueco, un plan de tres cracks parece que cabe en
+ * $200 y el domingo se queda con doce sillas vacias y cero dolares. */
+function tmrBuildData() {
+  var cfg = TMR.room || tmrRoomCfg();
+  var byId = {};
+  TMR.rows.forEach(function (r) { byId[r.id] = r; });
+  var pos = {}, gasto = 0, n = 0, sinPrecio = 0;
+  Object.keys(TMR.target).forEach(function (id) {
+    if (!TMR.target[id]) return;
+    var r = byId[id];
+    if (!r) return;                       // ya no esta en la lista: no cuenta
+    n++;
+    pos[r.pos] = (pos[r.pos] || 0) + 1;
+    var v = tmrPriceOf(id);
+    if (v == null) { sinPrecio++; return; }
+    gasto += v;
+  });
+  var huecos = Math.max(0, cfg.rounds - n);
+  var total = gasto + huecos;
+  return {
+    n: n, gasto: gasto, huecos: huecos, total: total,
+    left: cfg.budget - total, over: total > cfg.budget,
+    pos: pos, cfg: cfg, sinPrecio: sinPrecio
+  };
+}
+
+function tmrBuildPaint() {
+  var el = document.getElementById('rk-build');
+  if (!el) return;
+  if (TMR.owner !== true) { el.hidden = true; el.innerHTML = ''; return; }
+  var d = tmrBuildData(), cfg = d.cfg;
+  var room = ((typeof _mdFz26On === 'function' && _mdFz26On()) ? 'Fantazy 2026 · ' : '')
+    + cfg.teams + ' teams · $' + cfg.budget + ' · ' + cfg.rounds + ' rounds';
+  var h = '<div class="rk-bd-head"><span class="rk-bd-k">Build</span>'
+    + '<span class="rk-bd-room">' + tmrEsc(room) + '</span></div>';
+
+  if (!d.n) {
+    h += '<div class="rk-bd-empty">Target the players you actually want. This adds up what they cost'
+      + ' and what is left of your $' + cfg.budget + '.</div>';
+  } else {
+    var posTxt = ['QB', 'RB', 'WR', 'TE'].filter(function (p) { return d.pos[p]; })
+      .map(function (p) { return p + ' ' + d.pos[p]; }).join(' · ');
+    h += '<div class="rk-bd-figs">'
+      + '<span class="rk-bd-fig"><b>$' + d.total + '</b><i>' + d.n + (d.n === 1 ? ' target at $' : ' targets at $') + d.gasto
+      + ', ' + d.huecos + (d.huecos === 1 ? ' spot at $1' : ' spots at $1') + '</i></span>'
+      + '<span class="rk-bd-fig rk-bd-left"><b>' + (d.left < 0 ? '-$' + Math.abs(d.left) : '$' + d.left) + '</b>'
+      + '<i>' + (d.over ? 'past your $' + cfg.budget : 'left of $' + cfg.budget) + '</i></span>'
+      + (posTxt ? '<span class="rk-bd-pos">' + posTxt + '</span>' : '')
+      + '</div>';
+    if (d.over) {
+      h += '<div class="rk-bd-warn">This plan does not fill ' + cfg.rounds + ' spots with $' + cfg.budget
+        + '. Drop a target or lower a price.</div>';
+    }
+    if (d.sinPrecio) {
+      h += '<div class="rk-bd-warn is-soft">' + d.sinPrecio
+        + (d.sinPrecio === 1 ? ' target has no room price yet and is not in the total.'
+          : ' targets have no room price yet and are not in the total.') + '</div>';
+    }
+  }
+  if (TMR.seedMissing && TMR.seedMissing.length) {
+    h += '<div class="rk-bd-warn is-soft">Could not find on the board: ' + tmrEsc(TMR.seedMissing.join(', ')) + '.</div>';
+  }
+  el.className = 'rk-build' + (d.over ? ' is-over' : '');
+  el.hidden = false;
+  el.innerHTML = h;
 }
 
 function tmrEsc(s) {
@@ -232,6 +835,14 @@ function tmrEsc(s) {
 
 var TMR_SVG_UP = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3.5 3.5 8h3v4.5h3V8h3z" fill="currentColor"/></svg>';
 var TMR_SVG_DOWN = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 12.5 12.5 8h-3V3.5h-3V8h-3z" fill="currentColor"/></svg>';
+// Objetivo: la diana. Nada de emojis en interfaz, regla del proyecto.
+var TMR_SVG_TARGET = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">'
+  + '<circle cx="8" cy="8" r="5.4" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+  + '<circle cx="8" cy="8" r="1.9" fill="currentColor"/></svg>';
+// Volver al precio del motor: flecha de deshacer
+var TMR_SVG_BACK = '<svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true">'
+  + '<path d="M4.4 6.6a4.4 4.4 0 1 1-.9 3.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>'
+  + '<path d="M2.2 3.4v3.6h3.6z" fill="currentColor"/></svg>';
 
 /* ── edicion ────────────────────────────────────────────────────────────── */
 function tmrMove(i, dir) {
@@ -242,6 +853,70 @@ function tmrMove(i, dir) {
   TMR.rows[j] = t;
   tmrSave();
   tmrPaint();
+}
+
+/* ── el precio a mano y los objetivos ───────────────────────────────────────
+ * La edicion es en el sitio: la cifra ES el boton, tocarla la convierte en una
+ * caja de numero. Enter y salir guardan, Escape cancela. No hay dialogo ni
+ * pantalla aparte porque el gesto que esto tiene que aguantar es corregir
+ * treinta precios seguidos sin levantar la mano del teclado. */
+function tmrEditPrice(id) {
+  var cell = document.querySelector('#rk-body .rk-pay[data-id="' + String(id).replace(/"/g, '') + '"]');
+  if (!cell) return;
+  var cur = tmrPriceOf(id);
+  var tope = (TMR.room ? TMR.room.budget : 200);
+  TMR._edit = id;
+  TMR._cancel = false;
+  cell.innerHTML = '<input class="rk-pr-in" type="number" inputmode="numeric" min="0" max="' + tope + '"'
+    + ' value="' + (cur == null ? '' : cur) + '" aria-label="What you would pay"'
+    + ' onkeydown="tmrPriceKey(event)" onblur="tmrPriceBlur(this,\'' + id + '\')">';
+  var inp = cell.querySelector('input');
+  if (inp) { inp.focus(); try { inp.select(); } catch (_) { } }
+}
+
+function tmrPriceKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); TMR._cancel = false; e.target.blur(); }
+  else if (e.key === 'Escape') { e.preventDefault(); TMR._cancel = true; e.target.blur(); }
+}
+
+function tmrPriceBlur(inp, id) {
+  var cancelar = TMR._cancel;
+  TMR._cancel = false;
+  TMR._edit = null;
+  if (cancelar) { tmrPaint(); return; }
+  tmrSetPrice(id, inp ? inp.value : '');
+}
+
+// Vacio = quitar el precio a mano, no guardar un cero: un cero declarado es
+// "no pago nada por el", y eso no es lo que hace quien borra la caja.
+function tmrSetPrice(id, v) {
+  var txt = String(v == null ? '' : v).trim();
+  if (txt === '') {
+    delete TMR.manual[id];
+  } else {
+    var n = Math.round(Number(txt));
+    if (!isFinite(n) || n < 0) { tmrPaint(); return; }   // basura: no se guarda nada
+    var tope = (TMR.room ? TMR.room.budget : 200);
+    TMR.manual[id] = Math.max(0, Math.min(n, tope));
+  }
+  // Optimista: la cifra y la barra Build se repintan antes de guardar. El
+  // guardado es localStorage y no puede fallar a medias, asi que no hay nada
+  // que revertir.
+  tmrPaint();
+  tmrPlanSave();
+}
+
+function tmrClearPrice(id) {
+  delete TMR.manual[id];
+  tmrPaint();
+  tmrPlanSave();
+}
+
+function tmrToggleTarget(id) {
+  if (TMR.target[id]) delete TMR.target[id];
+  else TMR.target[id] = true;
+  tmrPaint();
+  tmrPlanSave();
 }
 
 function tmrCut(id) {
@@ -287,7 +962,10 @@ function tmrReset() {
   try { localStorage.removeItem(TMR_KEY); } catch (_) { }
   TMR.breakAfter = {};
   TMR.loaded = false;
-  renderRankings();
+  // Un reset es un cambio local: el servidor NO puede devolver el orden viejo
+  // al recargar la lista. Se marca sucio antes y se empuja despues.
+  TMR._dirty = (TMR.owner === true);
+  renderRankings().then(function () { if (TMR.owner === true) tmrSyncQueue(); });
 }
 
 /* Exportar en texto plano: es lo que la gente pega en su chat de liga o en una
@@ -373,7 +1051,12 @@ function tmrToggleUse(on) {
  * leyendo los puestos viejos. Se invalida donde se guarda, que es el unico
  * punto por el que pasan TODAS las ediciones. */
 var _tmrSaveInner = tmrSave;
-tmrSave = function () { TMR._idx = null; TMR._idxN = -1; _tmrSaveInner(); };
+tmrSave = function () { TMR._idx = null; TMR._idxN = -1; _tmrSaveInner(); tmrSyncQueue(); };
+
+/* El plan se carga al ARRANCAR el modulo, no al abrir el tab: Draft Day
+ * pregunta por los precios a mano sin pasar por esta pantalla, y una lectura
+ * de localStorage no cuesta nada. */
+try { tmrPlanLoad(); } catch (_) { }
 
 if (typeof window !== 'undefined') {
   window.renderRankings = renderRankings;
@@ -389,6 +1072,21 @@ if (typeof window !== 'undefined') {
   window.tmrDrop = tmrDrop;
   window.tmrDragEnd = tmrDragEnd;
   window.tmrToggleUse = tmrToggleUse;
+  window.tmrEditPrice = tmrEditPrice;
+  window.tmrPriceKey = tmrPriceKey;
+  window.tmrPriceBlur = tmrPriceBlur;
+  window.tmrSetPrice = tmrSetPrice;
+  window.tmrClearPrice = tmrClearPrice;
+  window.tmrToggleTarget = tmrToggleTarget;
+  window.tmrPriceOf = tmrPriceOf;
+  window.tmrPlanPrices = tmrPlanPrices;
+  window.tmrPrices = tmrPrices;
+  window.tmrOwner = tmrOwner;
+  window.tmrSyncQueue = tmrSyncQueue;
+  window.tmrSyncPush = tmrSyncPush;
+  window.tmrSyncPull = tmrSyncPull;
+  window.tmrSyncDoc = tmrSyncDoc;
+  window.tmrSeed = tmrSeed;
   window.tmMyRankOf = tmMyRankOf;
   window.tmRankingsActivos = tmRankingsActivos;
   window.tmrHydrate = tmrHydrate;

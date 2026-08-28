@@ -2115,6 +2115,9 @@ html{scroll-padding-top:76px}
 .rk-sub{margin:0;font-size:12.5px;line-height:1.5;color:var(--muted);max-width:56ch}
 .rk-head-r{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .rk-saved{font-size:11px;color:var(--accent-bright);opacity:0;transition:opacity .25s ease}
+.rk-sync{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rk-sync:empty{display:none}
+.rk-sync.is-warn{color:#e8705f;font-weight:600}
 .rk-use{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
 .rk-use input{accent-color:var(--accent-btn);width:15px;height:15px;cursor:pointer}
 
@@ -2157,6 +2160,13 @@ html{scroll-padding-top:76px}
   display:grid;
   grid-template-columns:34px 34px minmax(96px,1fr) 74px 62px 62px var(--rk-acts);
   align-items:center;column-gap:12px}
+/* Las columnas del dinero (Pay y el objetivo) existen SOLO para el dueno: el
+   tab lleva .rk-owner cuando el servidor lo confirma, y hasta entonces la
+   rejilla es la de siempre, identica para cualquier otra cuenta. */
+.rk-owner .rk-row,.rk-owner .rk-colhead{
+  --rk-acts:110px;
+  grid-template-columns:34px 34px minmax(96px,1fr) 70px 52px 52px 68px 34px var(--rk-acts);
+  column-gap:11px}
 
 /* La cabecera repite las MISMAS areas que la fila y cada rotulo declara la
    suya. El padding lateral incluye el borde de 1px de la fila, que si no
@@ -2169,6 +2179,7 @@ html{scroll-padding-top:76px}
 .rk-ch-pr{grid-area:pr}
 .rk-ch-adp{grid-area:adp;text-align:right}
 .rk-ch-vs{grid-area:vs;text-align:right}
+.rk-ch-pay{grid-area:pay;width:46px;text-align:right}
 
 .rk-tier{display:flex;align-items:center;gap:10px;margin:16px 0 6px;font-size:10.5px;font-weight:700;
   letter-spacing:.10em;text-transform:uppercase;color:var(--accent-bright)}
@@ -2177,6 +2188,8 @@ html{scroll-padding-top:76px}
 .rk-tier::after{content:'';order:1;flex:1;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
 .rk-tier-c{order:2;flex:0 0 auto;color:var(--muted);letter-spacing:.04em;font-weight:600;text-transform:none;font-size:11px}
 
+.rk-owner .rk-colhead{grid-template-areas:"num pic name pr adp vs pay tg acts"}
+.rk-owner .rk-row{grid-template-areas:"num pic name pr adp vs pay tg acts" "num pic team pr adp vs pay tg acts"}
 .rk-row{grid-template-areas:"num pic name pr adp vs acts" "num pic team pr adp vs acts";
   row-gap:1px;padding:7px 10px;border:1px solid var(--border);
   border-radius:9px;background:var(--surface,rgba(255,255,255,.02));cursor:grab;transition:border-color .15s,transform .12s}
@@ -2225,12 +2238,72 @@ html{scroll-padding-top:76px}
    texto vacios. El dato sigue ahi; deja de gritar. */
 .rk-even{color:var(--muted);background:none;font-weight:600;opacity:.55}
 
+/* EL DINERO. La cifra ES el boton: se toca y se convierte en caja. Un precio
+   escrito a mano va en el acento y subrayado, para poder distinguir de un
+   vistazo cuales de los doscientos toco uno; el numero del motor viaja en el
+   title y su boton de vuelta atras al lado, porque escribir un precio no puede
+   ser una puerta de un solo sentido. */
+.rk-pay{grid-area:pay;display:flex;align-items:center;justify-content:flex-start;gap:2px;min-width:0}
+.rk-pr{min-width:46px;text-align:right;background:transparent;border:1px solid transparent;border-radius:6px;padding:3px 5px;
+  font:inherit;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--text);cursor:text;white-space:nowrap}
+.rk-pr:hover{border-color:var(--accent)}
+.rk-pr:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.rk-pr.is-manual{color:var(--accent-bright);text-decoration:underline;
+  text-underline-offset:3px;text-decoration-thickness:1.5px}
+.rk-prx{width:18px;height:18px;flex:0 0 18px;display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:0;border-radius:5px;color:var(--muted);cursor:pointer;padding:0}
+.rk-prx:hover{color:var(--text)}
+.rk-pr-in{width:70px;background:var(--bg);border:1px solid var(--accent);border-radius:6px;
+  color:var(--text);font:inherit;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  padding:2px 4px;text-align:right}
+.rk-pr-in:focus{outline:none}
+/* Chrome pinta las flechitas del input number encima de la cifra en 70px */
+.rk-pr-in::-webkit-outer-spin-button,.rk-pr-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.rk-pr-in{-moz-appearance:textfield;appearance:textfield}
+.rk-pr-skel{width:42px;height:13px;border-radius:4px;
+  background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.11),rgba(255,255,255,.05));
+  background-size:200% 100%;animation:rk-shine 1.35s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.rk-pr-skel{animation:none}}
+
+/* El objetivo va en SU columna, pegado al precio: "lo quiero" y "a este
+   precio" son la misma decision. En el telefono cae en la linea de la cifra
+   junto al precio, porque cuatro botones en la columna de acciones a 320px
+   los deja en 19px de ancho (medido). */
+.rk-tg{grid-area:tg;justify-self:start}
 .rk-acts{grid-area:acts;display:flex;gap:4px;justify-content:flex-end}
-.rk-ib{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+/* flex:0 0 auto o los botones se comprimen dentro de la columna y el blanco
+   tactil se encoge en silencio */
+.rk-ib{width:30px;height:30px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
   background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--muted);cursor:pointer;padding:0}
 .rk-ib:hover{color:var(--text);border-color:var(--accent)}
 .rk-cut.on{color:var(--accent-bright);border-color:var(--accent);background:var(--accent-dim)}
+.rk-cut{font-size:9px;font-weight:800;letter-spacing:.04em}
+.rk-tg.on{color:var(--accent-bright);border-color:var(--accent);background:var(--accent-dim)}
 .rk-empty{padding:26px 10px;text-align:center;font-size:13px;color:var(--muted)}
+
+/* LA BARRA BUILD. No es una tarjeta centrada mas: lleva una regla de acento a
+   la izquierda y las cifras alineadas contra el rotulo, para que se lea como
+   un instrumento y no como un aviso. En rojo cuando el plan no cabe en el
+   presupuesto, que es la unica vez que tiene que gritar. */
+.rk-build{border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:10px;padding:11px 14px;margin-bottom:14px;
+  background:var(--surface,rgba(255,255,255,.02))}
+.rk-build.is-over{border-color:#e8705f;border-left-color:#e8705f}
+.rk-bd-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:7px}
+.rk-bd-k{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-bright)}
+.rk-bd-room{font-size:11px;color:var(--muted);letter-spacing:.02em}
+.rk-bd-empty{font-size:12.5px;color:var(--muted);line-height:1.5;max-width:56ch}
+.rk-bd-figs{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+.rk-bd-fig{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rk-bd-fig b{font-size:21px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.rk-bd-fig i{font-style:normal;font-size:11px;color:var(--muted);line-height:1.35}
+.rk-bd-left b{color:var(--accent-bright)}
+.rk-build.is-over .rk-bd-left b{color:#e8705f}
+.rk-bd-pos{margin-left:auto;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--muted);
+  align-self:center;white-space:nowrap}
+.rk-bd-warn{margin-top:8px;font-size:12px;font-weight:600;color:#e8705f;line-height:1.45}
+.rk-bd-warn.is-soft{color:var(--muted);font-weight:500}
 
 /* Skeleton, nunca spinner: la forma es la de la fila que va a llegar */
 .rk-skel-wrap{display:flex;flex-direction:column;gap:4px}
@@ -2250,10 +2323,25 @@ html{scroll-padding-top:76px}
    segunda linea bajo el nombre, que es como ya se leia esta pantalla. */
 @media (max-width:760px){
   .rk-colhead{display:none}
-  .rk-row{grid-template-columns:24px 32px minmax(96px,1fr) var(--rk-acts);
+  /* .rk-owner .rk-row va aqui tambien: pesa mas que .rk-row y sin esto la
+     plantilla de escritorio del dueno (con Pay y objetivo) se impondria en
+     el telefono y sacaria las cifras del viewport (medido: right=715 en 390). */
+  .rk-row,.rk-owner .rk-row{grid-template-columns:24px 32px minmax(96px,1fr) var(--rk-acts);
     grid-template-areas:"num pic name acts" "num pic meta acts";column-gap:9px;row-gap:3px}
   .rk-nums{grid-area:meta;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-  .rk-team,.rk-posrank,.rk-adp,.rk-vs{grid-area:auto}
+  .rk-team,.rk-posrank,.rk-adp,.rk-vs,.rk-pay,.rk-tg{grid-area:auto}
+  /* El precio ya lleva su $ delante, asi que en la linea de la cifra se dice
+     solo, sin cabecera que lo explique. */
+  .rk-pr{padding:2px 4px}
+  .rk-pr-in{width:56px}
+  /* Blanco tactil: el boton se ve de 34px como sus hermanos, pero se toca en
+     40x44. El overlay crece SOLO hacia arriba y abajo, para no comerse los
+     toques del precio que tiene al lado. */
+  .rk-ib.rk-tg{position:relative}
+  .rk-ib.rk-tg::after{content:'';position:absolute;left:0;right:-10px;top:50%;
+    transform:translateY(-50%);height:44px}
+  .rk-bd-figs{gap:16px}
+  .rk-bd-pos{margin-left:0;width:100%;align-self:auto}
   /* En el telefono no hay cabecera de columnas, asi que cada cifra se dice a
      si misma. Sin esto la linea acababa en un "0" suelto que no significaba
      nada. */
@@ -2262,7 +2350,8 @@ html{scroll-padding-top:76px}
   .rk-vs{justify-self:auto;min-width:0;padding:2px 6px}
   .rk-num{font-size:12.5px}
   .rk-skel-row{grid-template-columns:24px 32px minmax(96px,1fr) 110px}
-  .rk-skel-row>.rk-skel-tag:nth-of-type(2),.rk-skel-row>.rk-skel-tag:nth-of-type(3){display:none}
+  .rk-skel-row>.rk-skel-tag:nth-of-type(2),.rk-skel-row>.rk-skel-tag:nth-of-type(3),
+  .rk-skel-row>.rk-skel-tag:nth-of-type(4){display:none}
 }
 @media (max-width:520px){
   .rk-tools-r{margin-left:0;width:100%}
