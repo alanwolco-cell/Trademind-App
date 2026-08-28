@@ -829,3 +829,31 @@ Archivos: `server/routes/perfil.js` (owner + rankings), `public/rankings.js` (ow
 sync, seed), `public/live.js` (lvSavePref encola), `public/styles.css` (rejilla por
 dueno, `.rk-sync`), `public/index.html` (`#rk-sync`, cache-bust 2026082801),
 `scripts/qa-rankings.mjs`.
+
+### Cierre real de la sesion (2026-08-28, escrito por el principal)
+- El "agente en la nube" corrio en realidad en un worktree LOCAL
+  (`.claude/worktrees/agent-...`) sobre la rama `wip/rk-precios`; el commit de la feature
+  es 3974990 en esa rama. El primer merge a main tomo la rama del worktree equivocada
+  (apuntaba a la base) y main se desplego un momento SIN la feature; corregido mergeando
+  `wip/rk-precios`. Leccion: mergear por el hash del commit, no por el nombre de rama del
+  worktree.
+- Control negativo del gate nuevo contra main: **24 FAILs** (worktree detached de main
+  con el `qa-rankings.mjs` nuevo copiado encima).
+- `calibrate-room` corrio en verde hoy (40/40) ANTES de la feature, sobre VAL_CURVE 1.2.
+
+### PWA: la app instalada abria en Safari (mismo dia)
+Reporte del dueno: "cuando abro el app de mac draft se me abre como un website". Causa:
+NO habia manifest ni `apple-mobile-web-app-capable`, asi que "Add to Home Screen" creaba
+un marcador. Arreglado en b3bcd70:
+- `public/manifest.webmanifest` (standalone, scope /, background_color de marca #2a1f4a,
+  iconos 192/512 escalados desde apple-touch-icon.png de 180, la unica fuente que hay).
+- Metas de iOS en el head y `<style>html,body{background:#050507}</style>`.
+- 12 `apple-touch-startup-image` (de la SE a la 16 Pro Max, degradado VERTICAL, 1,3 MB
+  entre todas) y un `#tm-splash` CSS solo en `display-mode:standalone`, mismo degradado y
+  mismo icono, que se quita solo a los 1,6 s aunque el JS se caiga.
+- Todo lo genera `node scripts/gen-pwa-assets.mjs` (ffmpeg; el fondo negro del icono se
+  quita con colorkey para el splash). Verificado en navegador: splash oculto en modo
+  web, manifest 200 `application/manifest+json`, 390px sin desborde, consola limpia salvo
+  los dos del entorno local.
+- **El dueno tiene que DESINSTALAR y volver a anadir la app a la pantalla de inicio** para
+  que iOS tome el manifest y el modo app.
