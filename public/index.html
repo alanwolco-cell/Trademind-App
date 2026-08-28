@@ -26,6 +26,29 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<!-- PWA: sin manifest, "Add to Home Screen" creaba un MARCADOR y la app abria en
+     Safari (reporte del dueno 2026-08-28). El arranque nunca es negro: color de marca en
+     html/body para el destello, y en iOS la imagen fija de SU tamano exacto (iOS ignora
+     background_color). Las imagenes las genera scripts/gen-pwa-assets.mjs. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#050507">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mac Draft">
+<style>html,body{background:#050507}</style>
+<link rel="apple-touch-startup-image" href="/splash/640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1080x2340.png" media="(device-width: 360px) and (device-height: 780px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="/splash/1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <title>Mac Draft - The Mock Draft That Drafts Like Your League</title>
 <meta name="description" content="Fantasy football mock drafts personalized to your league. Describe how your room drafts, or connect Sleeper, and practice against bots that reach, wait and snipe like the real thing. Mac advises every pick.">
 <meta property="og:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
@@ -101,6 +124,22 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 </script>
 </head>
 <body>
+<!-- Arranque de la PWA instalada: mismo degradado vertical y mismo icono que la imagen
+     fija de iOS, asi el traspaso no se ve. Solo en modo standalone (en el sitio normal
+     no hay arranque). Se quita sola por CSS aunque el JS se caiga. -->
+<div id="tm-splash" aria-hidden="true"><img src="/splash/mark.png" alt="" width="140" height="140"></div>
+<style>
+#tm-splash{display:none}
+@media (display-mode:standalone){
+  #tm-splash{display:flex;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#2a1f4a 0%,#050507 100%);pointer-events:none;
+    animation:tm-splash-out .45s ease-in 1.15s forwards}
+  #tm-splash img{width:36vw;height:36vw;max-width:220px;max-height:220px;
+    animation:tm-splash-breathe 1.15s ease-in-out}
+  @keyframes tm-splash-out{to{opacity:0;visibility:hidden}}
+  @keyframes tm-splash-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+}
+</style>
 
 <nav class="nav">
   <div class="nav-logo" onclick="goHome()" title="Home">

@@ -15,3 +15,4 @@ server/cache/
 
 # ruflo tooling (symlink a ~/.claude/helpers, no versionar)
 .claude/helpers
+scripts/.splash-tags.html
