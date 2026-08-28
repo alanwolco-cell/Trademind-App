@@ -255,6 +255,51 @@ try {
   ok('o2', res.roto === 0 && res.pocos === 0,
     'la reserva se libera sola con la sala rota y con pocos huecos (nada de dinero muerto)');
 
+  // ── (t) EL PRECIO QUE EL DUENO ESCRIBIO EN My Rankings MANDA ────────────
+  //    Escribir "$88 por Jeanty" es una decision tomada, no una opinion que
+  //    haya que promediar con el mercado. Se comprueba por el camino publico
+  //    (tmrSetPrice), con control ANTES y DESPUES, y se comprueba tambien que
+  //    el desglose lo DECLARA: un techo que sale de algo que uno escribio y no
+  //    lo dice, miente por omision.
+  //    Y NO puede lanzar: contra el codigo anterior tmrSetPrice no existe, y un
+  //    evaluate que revienta se lleva por delante los checks que vienen detras
+  //    (el gate se pondria verde por no llegar a mirar).
+  const man = await pg.evaluate(() => {
+    if (typeof window.tmrSetPrice !== 'function') return { falta: 'no existe tmrSetPrice: la feature no esta' };
+    AU.budgets[MD.mySlot] = 200; AU.slotsLeft[MD.mySlot] = 15; AU.inflation = 1;
+    LV.reserva = 0;
+    const p = lvOne('jeanty');
+    delete LV.pref[p.id];
+    lvBlock(p);
+    lvMisValores();
+    const antes = lvCeiling(p);
+    window.tmrSetPrice(p.id, 88);      // el camino publico, el mismo del tab
+    lvMisValores();
+    const desp = lvCeiling(p);
+    // el gusto NO puede volver a cobrarse sobre un numero ya escrito
+    LV.pref[p.id] = 'avoid';
+    const conGusto = lvCeiling(p);
+    delete LV.pref[p.id];
+    lvPanel();
+    const txt = (document.querySelector('#lv-panel .lv-break') || {}).textContent || '';
+    // y al quitarlo se vuelve al numero del motor
+    window.tmrSetPrice(p.id, '');
+    lvMisValores();
+    const vuelta = lvCeiling(p);
+    return {
+      antes: antes.techo, antesMan: antes.manual, desp: desp.techo, despMan: desp.manual,
+      conGusto: conGusto.techo, vuelta: vuelta.techo, txt: txt.trim()
+    };
+  });
+  ok('t1', !man.falta && man.antesMan == null && man.antes !== 88 && man.despMan === 88 && man.desp === 88,
+    man.falta || `el techo pasa de $${man.antes} (motor) a $${man.desp} en cuanto el dueno escribe su precio`);
+  ok('t2', !man.falta && man.conGusto === 88,
+    man.falta || `"no es mi tipo" no vuelve a recortar un precio escrito a mano (sigue en $${man.conGusto})`);
+  ok('t3', !man.falta && /your price \$88/.test(man.txt || ''),
+    man.falta || `el desglose declara de donde sale el numero: "${(man.txt || '').slice(0, 90)}"`);
+  ok('t4', !man.falta && man.vuelta === man.antes,
+    man.falta || `al borrar el precio a mano se vuelve al del motor ($${man.vuelta})`);
+
   // ── (p) REACTION TIME, con techo declarado ───────────────────────────────
   const ms = await pg.evaluate(() => {
     const qs = ['chase', 'gibbs', 'bijan', 'nabers', 'hall', 'achane', 'taylor', 'brown', 'smith', 'jeanty'];

@@ -940,7 +940,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="rk-head">
         <div class="rk-head-l">
           <h3 class="rk-title">My Rankings</h3>
-          <p class="rk-sub">Your list beats the consensus. Drag to reorder, cut a tier where the player actually changes, and the mock draft board reads off your ranks instead of ADP.</p>
+          <p class="rk-sub">Your list beats the consensus. Drag to reorder, cut a tier where the player actually changes, set what you would pay, and the mock draft board reads off your ranks instead of ADP.</p>
         </div>
         <div class="rk-head-r">
           <span id="rk-saved" class="rk-saved">Saved</span>
@@ -965,6 +965,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <button type="button" class="rk-btn rk-btn-quiet" onclick="tmrReset()">Reset to consensus</button>
         </div>
       </div>
+
+      <!-- La barra Build: lo que suman los objetivos contra el presupuesto de
+           la sala. Vive fuera de #rk-body para poder repintarse sola sin tocar
+           las doscientas filas. -->
+      <div class="rk-build" id="rk-build" hidden></div>
 
       <div class="rk-export" id="rk-export-box" style="display:none">
         <div class="rk-export-top">
