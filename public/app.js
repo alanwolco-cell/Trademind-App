@@ -12970,7 +12970,18 @@ function auPoolInit(){
   // Spreading on a compressed curve (exponent < 1) keeps every dollar in the
   // room - money is still conserved - but moves it off the elites and into
   // the middle rounds, which is where a real room's money actually goes.
-  var VAL_CURVE=0.86;
+  // RECALIBRADO 2026-08-28 CONTRA UNA SUBASTA REAL (fixture
+  // scripts/fixtures/auction-nfl-divas-2026-08-27.json: 10 equipos, $200,
+  // 1QB, publico parecido al de la liga del dueno). Con 0.86 el motor era
+  // demasiado plano: los 16 jugadores de $50+ costaron $990 y el motor los
+  // ponia en $777 (-22%); los 29 lotes de $1 los subia a $95. Una sala real
+  // de aficionados es stars-and-scrubs: el #1 se fue al 43% del presupuesto
+  // y el top-10 se llevo el 33,5% de TODO el dinero. Barrido con
+  // scripts/compare-real-auction.mjs: 1.0 deja la cima a -10%, 1.1 a -4%,
+  // 1.2 la clava (Gibbs $80 vs $86, Bijan $77 vs $79, Chase $70 vs $73) con
+  // la franja $15-29 en -1%. Sobreescribible con window.AU_VAL_CURVE para
+  // barrer sin tocar el archivo.
+  var VAL_CURVE=(typeof window!=='undefined'&&window.AU_VAL_CURVE)||1.2;
   var discSum=0;
   draftable.forEach(function(v){discSum+=Math.pow(Math.max(0,v.raw-repl),VAL_CURVE);});
   var k=discSum>0?(total-slots)/discSum:0;

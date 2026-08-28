@@ -158,8 +158,13 @@ try {
     `vender dos veces al mismo jugador se rechaza sin tocar el dinero ($${dobl.b0} sigue en $${dobl.b1})`);
 
   const inf = await pg.evaluate(() => {
-    [['bijan', 72, 4], ['mccaffrey', 68, 5], ['chase', 69, 6], ['nacua', 64, 7]]
-      .forEach(([n, p, s]) => lvSold(n, p, s));
+    // sobreprecio RELATIVO al sticker vigente (1.2x), no dolares fijos: con
+    // dolares fijos el check se pudrio al recalibrar VAL_CURVE (2026-08-28),
+    // porque $72 por Bijan paso de sobreprecio a precio justo
+    [['bijan', 4], ['mccaffrey', 5], ['chase', 6], ['nacua', 7]].forEach(([n, s]) => {
+      const p = MD.pool.find(x => new RegExp(n, 'i').test(x.name));
+      lvSold(n, Math.round(auValue(p) * 1.2), s);
+    });
     const r = lvRead();
     return { inf: r.inflacion, adelanto: r.adelanto, frase: lvFase(r).t };
   });

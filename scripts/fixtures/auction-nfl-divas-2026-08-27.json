@@ -1,0 +1,17 @@
+{
+  "source": "Sleeper auction 'NFL Divas', captura del dueno 2026-08-27. 10 equipos, $200, 13 rondas, 1QB. Mismo formato y publico parecido al de su liga del 2026-08-30.",
+  "teams": 10, "budget": 200, "rounds": 13,
+  "notes": "Ocho columnas suman $200 al dolar. kike0189 suma 196 con $2 libres (un precio mal leido). gabhom9 suma 167: faltan $33, Nabers y/o Pickens leidos a $32 probablemente mas altos. Pesar esa columna con cuidado.",
+  "rosters": {
+    "tshac": [["C. Williams","QB",2],["K. Walker","RB",55],["C. Skattebo","RB",18],["J. Smith-Njigba","WR",60],["D. London","WR",35],["T. Kraft","TE",4],["L. Burden","WR",6],["Vikings","DEF",1],["J. Price","RB",7],["R. Stevenson","RB",2],["P. Mahomes","QB",3],["J. Warren","RB",3],["H. Fannin","TE",4]],
+    "kike0189": [["D. Prescott","QB",2],["J. Taylor","RB",61],["J. Cook","RB",60],["C. Olave","WR",19],["Z. Flowers","WR",13],["S. LaPorta","TE",2],["D. Swift","RB",15],["Seahawks","DEF",2],["G. Wilson","WR",7],["J. Herbert","QB",3],["Texans","DEF",1],["D. Moore","WR",7],["T. Pollard","RB",4]],
+    "ptyjp": [["J. Daniels","QB",6],["S. Barkley","RB",53],["O. Hampton","RB",53],["J. Jefferson","WR",56],["T. McMillan","WR",10],["T. Kelce","TE",5],["J. Waddle","WR",3],["Broncos","DEF",2],["T. Henderson","RB",5],["J. Williams","WR",5],["B. Nix","QB",1],["R. Dowdle","RB",1],["K. Gainwell","RB",1]],
+    "mikeros1312": [["J. Hurts","QB",10],["K. Williams","RB",26],["J. Williams","RB",19],["P. Nacua","WR",66],["A. St. Brown","WR",65],["K. Pitts","TE",2],["R. Harvey","RB",1],["Rams","DEF",3],["B. Purdy","QB",2],["P. Washington","WR",3],["B. Corum","RB",1],["J. Tyson","WR",1],["C. Godwin","WR",1]],
+    "gabhom9": [["J. Burrow","QB",30],["A. Jeanty","RB",50],["Q. Judkins","RB",6],["G. Pickens","WR",32],["M. Nabers","WR",32],["T. Warren","TE",16],["T. Higgins","WR",10],["Jaguars","DEF",2],["B. Tuten","RB",14],["T. Lawrence","QB",2],["C. Watson","WR",1],["C. Hubbard","RB",1],["M. Washington","WR",1]],
+    "PunkJow8": [["J. Allen","QB",38],["B. Irving","RB",15],["T. Etienne","RB",10],["J. Chase","WR",73],["C. Lamb","WR",54],["D. Kincaid","TE",1],["B. Thomas","WR",2],["Eagles","DEF",1],["J. Mason","RB",2],["K. Monangai","RB",1],["A. Pierce","WR",1],["M. Lemon","WR",1],["R. White","RB",1]],
+    "jowko13": [["J. Goff","QB",1],["B. Robinson","RB",79],["C. Brown","RB",56],["E. Egbuka","WR",15],["L. McConkey","WR",19],["C. Loveland","TE",23],["K. Concepcion","WR",1],["Patriots","DEF",1],["D. Samuel","WR",1],["Z. Charbonnet","RB",1],["M. Lloyd","RB",1],["D. Stribling","WR",1],["J. Coleman","WR",1]],
+    "alexl31": [["D. Maye","QB",12],["C. McCaffrey","RB",63],["J. Love","RB",28],["R. Rice","WR",26],["D. Smith","WR",16],["T. McBride","TE",30],["B. Hall","RB",13],["Packers","DEF",1],["C. Tate","WR",6],["J. Croskey-Merritt","RB",2],["T. Allgeier","RB",1],["W. Marks","RB",1],["D. Metcalf","WR",1]],
+    "mmattout": [["L. Jackson","QB",25],["J. Gibbs","RB",86],["J. Jacobs","RB",24],["A. Brown","WR",41],["T. McLaurin","WR",6],["G. Kittle","TE",5],["R. Odunze","WR",4],["Steelers","DEF",1],["I. Likely","TE",3],["J. Addison","WR",1],["A. Jones","RB",1],["M. Wilson","WR",1],["T. Tracy","RB",1]],
+    "jackych": [["M. Stafford","QB",5],["D. Achane","RB",46],["D. Henry","RB",45],["N. Collins","WR",40],["D. Adams","WR",5],["B. Bowers","TE",36],["D. Montgomery","RB",8],["Chargers","DEF",1],["M. Evans","WR",4],["J. Brooks","RB",6],["M. Harrison","WR",2],["J. Dart","QB",1],["J. Dobbins","RB",1]]
+  }
+}
