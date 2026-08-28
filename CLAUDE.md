@@ -717,3 +717,69 @@ Archivos: `public/live.js` (nuevo), `public/app.js` (3 cortes `AU.live`, `auPool
 Pendiente: el lector de Yahoo sobre texto (opcional, no bloquea el domingo); calibrar el
 premium de RB con los precios REALES de su liga cuando existan; el panel flotante de
 rankings dentro del mock (opcion A que el eligio) queda ABSORBIDO por Draft Day.
+
+## Sesion 2026-08-28: subasta real como calibracion, y My Rankings con precios
+
+**Lo que llego.** El dueno mando la captura de una subasta REAL de Sleeper ("NFL Divas":
+10 equipos, $200, 13 rondas, 1QB, publico parecido al de su liga del domingo 30) y pidio
+pesarla mucho. Transcrita a `scripts/fixtures/auction-nfl-divas-2026-08-27.json` (130
+lotes; ocho columnas suman $200 al dolar, kike0189 -$2 y gabhom9 -$33 declarados dentro).
+
+**Lo que dijo la sala contra el motor** (`node scripts/compare-real-auction.mjs <fixture>
+--rounds 13 --curve X`, corre el motor real con FZ26 y compara jugador por jugador):
+- Con VAL_CURVE=0.86 el motor era demasiado plano: $50+ reales $990 vs $777 simulados
+  (-22%); los 29 lotes de $1 reales el motor los subia a $95. La franja $15-29 estaba
+  bien (+4%). Sala real = stars and scrubs: #1 al 43% del presupuesto, top-10 con el 33,5%
+  de todo el dinero, 38 de 130 lotes a $1.
+- **VAL_CURVE pasa de 0.86 a 1.2** (`public/app.js` ~12973, sobreescribible con
+  `window.AU_VAL_CURVE`). A 1.2: Gibbs sticker $80 vs $86 real, Bijan $77 vs $79, Chase $70
+  vs $73, RB total -2%, franja $15-29 -1%. Commit d14ad7f. calibrate-room ALL GREEN 40/40,
+  qa-flows verde, qa-live 43/43 (el check (i) vendia a dolares fijos que con la curva
+  nueva ya no eran sobreprecio; ahora deriva el sobreprecio del sticker vigente x1.2).
+- Lo que 1.2 NO cubre, a proposito: QB inflado en esa sala (Burrow $30 vs $12; -25% en
+  QB, la mitad es un solo lote), RB2 a precio de RB1 (Chase Brown $56, Walker $55, Hampton
+  $53 contra $39/$36/$40), y mas $1 reales de los que simula el motor.
+
+**Precios FZ26 con la curva nueva (sticker / venta simulada):** Gibbs 77/83, Bijan 75/81,
+Chase 68/73, Nacua 65/70, CMC 64/69, Taylor 61/66, JSN 61/66, ASB 59/64, Cook 54/57,
+Barkley 53/57, Lamb 53/56, Jefferson 51/56, Jeanty 45/48, Achane 42/45, Hampton 40/43,
+Henry 39/41, C. Brown 39/40, Allen 36/38, AJB 36/37, Walker 36/37, London 35/36, Bowers
+34/35, McBride 33/34, Collins 32/33, Pickens 32/33, Kyren 31/31, Love 27/26, Jacobs 26/25,
+Rice 26/24, Nabers 25/22, Olave 24/21, Hall 23/21, Javonte 22/19, D. Smith 21/18, McMillan
+20/17, Lamar 19/18, Skattebo 19/16, Higgins 18/16, Flowers 17/14, McConkey 17/14, Egbuka
+17/14, Etienne 16/12, G. Wilson 15/10, Loveland 15/14, Irving 14/11, Montgomery 13/9,
+Judkins 13/8, Swift 12/8, Maye 11/10, Warren 11/10, Henderson 11/8, Burrow 10/9, Hurts 7/6.
+
+**Plan que se le dio al dueno** (el lo aprobo por accion): Gibbs hasta $90, tope $92;
+segundo RB en Jeanty/Achane ($42-50) o tarde en la franja $25-40 (Henry, Kyren, Love,
+Jacobs, Hall, Javonte), NUNCA en la franja $50-65 donde la sala pierde la cabeza; RB3
+gratis (Skattebo, Judkins, Henderson); ~$53 para 3-4 WR de la franja $9-20 que la sala
+regala cuando ya no tiene plata; QB a $5-11; nominar temprano los RB2 de $50 y los QB caros
+para que los demas se quemen. Sesgo a vigilar: AJB/London/Collins a $35-41.
+Jugadores que le gustan (textual): Swift, Hall, Etienne, Skattebo, Javonte "y ese tier".
+
+**EN CURSO al escribir esto (agente `wolco-ingeniero`, nombre rk-precios, SIN commit):**
+feature en My Rankings, SOLO para el dueno (misma `permitido(acctId)` de
+`server/routes/perfil.js`, endpoint nuevo `/api/perfil/owner`):
+1. Columna $ por jugador = techo limpio del motor para FZ26 (mercado + mi ranking, sin
+   gusto), EDITABLE inline, manual guardado por id de Sleeper.
+2. Target toggle por fila + barra Build (suma de objetivos, resto de $200, huecos de 15 con
+   relleno a $1, desglose por posicion, rojo si se pasa).
+3. Draft Day lee el precio manual como techo del dueno.
+4. **Sync por servidor para editar desde el celular**: GET/PUT `/api/perfil/rankings`, un
+   solo documento del dueno en Vercel Blob (patron de `server/routes/sage.js` ~295-320),
+   compartido por sus dos acctId; localStorage como cache, PUT con debounce, indicador
+   saved/saving/offline.
+5. Seed de una sola vez (`tm_rk_seed_v1`): objetivos precargados (Gibbs, Jeanty, Achane,
+   Henry, Kyren, Swift, Hall, Etienne, Skattebo, Javonte, Judkins, Henderson, Olave,
+   McConkey, D. Smith, Egbuka, Flowers, Higgins, McMillan, Loveland, Warren, Kraft, Hurts,
+   Daniels, Maye) y lista Love de Draft Day con su tier de RB.
+Gates a extender: qa-rankings (ida y vuelta entre dos contextos, control negativo sin
+owner) y qa-live (lee el manual). Verificar que los checks nuevos fallan contra HEAD.
+
+**Si la sesion se corto antes de cerrar, el proximo paso es:** `git status` para ver que
+dejo el agente; leer su trabajo; correr qa-rankings, qa-live, qa-nav, qa-board; subir el
+cache-bust de index.html a 2026082801; commit; push a main (Vercel despliega solo);
+verificar en produccion por curl (sha256 de rankings.js, live.js, app.js contra el local)
+y `QA_BASE=https://macdraft.app node scripts/qa-live.mjs`. Recordarle al dueno que en el
+celular la lista sale del servidor: abrir /research > My Rankings con su cuenta habilitada.
