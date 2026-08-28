@@ -783,3 +783,49 @@ cache-bust de index.html a 2026082801; commit; push a main (Vercel despliega sol
 verificar en produccion por curl (sha256 de rankings.js, live.js, app.js contra el local)
 y `QA_BASE=https://macdraft.app node scripts/qa-live.mjs`. Recordarle al dueno que en el
 celular la lista sale del servidor: abrir /research > My Rankings con su cuenta habilitada.
+
+### Cierre 2026-08-28: My Rankings con precios, plan y sync, DESPLEGADO
+Retomado por un agente en la nube desde `wip/rk-precios` (07b0764, columna $ editable,
+Target y Build ya hechos y en verde). Lo que faltaba y se termino:
+
+- **Solo dueno.** `GET /api/perfil/owner` -> `{owner:true|false}`, siempre 200, con la
+  MISMA `permitido()` y `readAcctId` de `server/routes/perfil.js`. `rankings.js` lo
+  pregunta UNA vez (`tmrOwner`), pone `.rk-owner` en `#tab-rankings`, y solo entonces
+  pinta Pay, el objetivo y la barra Build. La rejilla base del CSS vuelve a ser la de
+  siempre (7 columnas); `.rk-owner .rk-row,.rk-owner .rk-colhead` anade las dos del
+  dinero. OJO: esa regla pesa mas que `.rk-row` y en el bloque movil hay que repetirla,
+  o la plantilla de escritorio se impone en 390px (medido: right=715, lo cazo el gate).
+- **Sync por servidor.** `GET/PUT /api/perfil/rankings`, tras `requireAcctId` +
+  `permitido()` (401 anonimo, 403 ajeno, 400 forma mala, 413 sobre el tope). Un solo
+  documento `perfil/rankings-owner.json` en Vercel Blob (patron de sage.js), compartido
+  por los dos acctId. Sin token o con `PERFIL_RK_STORE=local` cae a archivo
+  (`PERFIL_RK_FILE` o el tmpdir) y la respuesta lo DECLARA en `store`; el gate usa eso
+  para no tocar el blob real aunque `.env.local` traiga el token. El tope efectivo es
+  100 KB, no 200: lo corta antes el `express.json` global; el documento real pesa ~6 KB.
+  Cliente: localStorage pinta al instante; `tmrSyncPull` al abrir y al volver el foco
+  (reemplaza si `updatedAt` del servidor > `tm_rk_sync_at` local y no hay cambios
+  sucios); `tmrSyncQueue` con debounce 800 ms desde `tmrSave`, `tmrPlanSave` y
+  `lvSavePref`; `pagehide` manda el pendiente con `keepalive`; indicador de texto
+  `#rk-sync` (Saving / Synced / Offline, will retry), sin spinner. El documento lleva
+  orden, cortes, precios a mano, objetivos, las tres listas de gusto y `seeded`.
+- **Seed una sola vez** (`tm_rk_seed_v1` local y `seeded` en el documento): los 25
+  objetivos y los 8 Love resolvieron TODOS contra el board (verificado en el gate,
+  `missing: []`); si alguno no resolviera, se declara en la barra Build.
+
+**Gates.** qa-rankings 59 checks (eran 46 en la rama, 23 en main); los nuevos: N1-N3
+control negativo (cuenta ajena: cero celdas Pay, cero barra, cero PUT/GET, 7 columnas),
+S1-S4 seed y subida, R1-R4 ida y vuelta entre DOS contextos de navegador (390px el
+segundo, y la vuelta al volver el foco), O1-O2 los endpoints. qa-live 47, qa-nav 16,
+qa-board 104, qa-perfil 156, todos en verde. calibrate-room no se corrio (no se toco el
+motor; ya habia corrido en verde hoy).
+Contra main (arbol extraido con `git archive`, mismo gate nuevo): ver el reporte de
+la sesion para la cifra exacta de fallos.
+
+**Que le toca al dueno.** En el celular: abrir /research > My Rankings con la cuenta
+habilitada (los dos acctId ya estan en PERFIL_ACCTS); la lista baja del servidor sola.
+El indicador dice "Synced" cuando el servidor tiene lo ultimo.
+
+Archivos: `server/routes/perfil.js` (owner + rankings), `public/rankings.js` (owner,
+sync, seed), `public/live.js` (lvSavePref encola), `public/styles.css` (rejilla por
+dueno, `.rk-sync`), `public/index.html` (`#rk-sync`, cache-bust 2026082801),
+`scripts/qa-rankings.mjs`.

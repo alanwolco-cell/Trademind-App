@@ -80,6 +80,9 @@ function lvSavePref() {
       reserva: LV.reserva, sesgo: LV.sesgo
     }));
   } catch (_) { }
+  // Las tres listas de gusto forman parte del documento de My Rankings del
+  // dueno: cambiar una etiqueta aqui la manda al otro dispositivo tambien.
+  try { if (window.tmrSyncQueue) window.tmrSyncQueue(); } catch (_) { }
 }
 function lvLoadPref() {
   try {

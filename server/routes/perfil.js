@@ -9,7 +9,7 @@
 // public/privacy.html has to say so before a single event is stored.
 
 const express = require('express');
-const { requireAcctId } = require('../lib/identity');
+const { requireAcctId, readAcctId } = require('../lib/identity');
 const { construirPerfil, construirPerfiles } = require('../lib/perfil');
 const tendenciasDraft = require('../lib/tendencias-draft');
 const { clasificarLiga, ejeDeDosLados } = require('../lib/formato');
@@ -214,6 +214,115 @@ router.get('/', async (req, res) => {
   } catch (e) {
     console.error('[perfil]', e.message);
     res.status(500).json({ error: 'could not build profile' });
+  }
+});
+
+// ── Quien es el dueno, para la UI ─────────────────────────────────────────
+// GET /api/perfil/owner -> { owner: true|false }. Siempre 200: My Rankings lo
+// pregunta en cada apertura y una cuenta corriente NO puede ver un 403 en su
+// consola por abrir un tab. La regla es la MISMA permitido() de arriba: no hay
+// una segunda lista de duenos en ningun sitio.
+router.get('/owner', (req, res) => {
+  const acct = readAcctId(req);
+  res.set('Cache-Control', 'no-store');
+  res.json({ owner: !!acct && permitido(acct) });
+});
+
+// ── El documento de My Rankings del dueno ──────────────────────────────────
+// UN solo documento, de nombre fijo, compartido por sus dos acctId (computadora
+// y celular): la cuenta de esta app es POR NAVEGADOR, y lo que el dueno quiere
+// es editar su lista desde el telefono y verla en la computadora. Vive en
+// Vercel Blob con el mismo patron que los contadores de sage.js. Sin token
+// (local, CI) cae a un archivo temporal, y la respuesta DECLARA en `store` de
+// donde salio, para que un gate nunca crea que probo el blob sin probarlo.
+//
+// Tope: 200 KB de JSON. Ojo: el express.json global de server/index.js corta
+// antes, en los 100 KB por defecto, asi que el tope efectivo es ese. El
+// documento real (200 ids, precios y objetivos) anda por los 6 KB.
+const RK_PATH = 'perfil/rankings-owner.json';
+const RK_MAX = 200 * 1024;
+const RK_FILE = process.env.PERFIL_RK_FILE
+  || require('path').join(require('os').tmpdir(), 'macdraft-rankings-owner.json');
+let _rkMem = null;
+
+function rkStore() {
+  if (process.env.PERFIL_RK_STORE === 'local') return 'file';
+  return process.env.BLOB_READ_WRITE_TOKEN ? 'blob' : 'file';
+}
+
+async function rkRead() {
+  const store = rkStore();
+  if (store === 'blob') {
+    const { list } = require('@vercel/blob');
+    const { blobs } = await list({ prefix: RK_PATH, limit: 1 });
+    if (!blobs.length) return { doc: null, store };
+    const r = await fetch(blobs[0].url + '?t=' + Date.now());
+    if (!r.ok) throw new Error('blob read ' + r.status);
+    const doc = await r.json();
+    return { doc: (doc && typeof doc === 'object') ? doc : null, store };
+  }
+  try {
+    const raw = require('fs').readFileSync(RK_FILE, 'utf8');
+    const doc = JSON.parse(raw);
+    return { doc: (doc && typeof doc === 'object') ? doc : null, store };
+  } catch (_) {
+    return { doc: _rkMem, store: _rkMem ? 'memory' : store };
+  }
+}
+
+async function rkWrite(doc) {
+  const store = rkStore();
+  const raw = JSON.stringify(doc);
+  if (store === 'blob') {
+    const { put } = require('@vercel/blob');
+    await put(RK_PATH, raw, { access: 'public', addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 0 });
+    return store;
+  }
+  try { require('fs').writeFileSync(RK_FILE, raw); return store; }
+  catch (_) { _rkMem = doc; return 'memory'; }
+}
+
+function rkGuard(req, res) {
+  const acct = requireAcctId(req, res);
+  if (!acct) return '';
+  if (!permitido(acct)) {
+    res.status(403).json({ error: 'Rankings sync is not enabled for this account.', acctId: acct });
+    return '';
+  }
+  return acct;
+}
+
+// GET /api/perfil/rankings -> { doc, updatedAt, store }
+router.get('/rankings', async (req, res) => {
+  if (!rkGuard(req, res)) return;
+  res.set('Cache-Control', 'no-store');
+  try {
+    const r = await rkRead();
+    res.json({ doc: r.doc, updatedAt: r.doc ? (Number(r.doc.updatedAt) || 0) : 0, store: r.store });
+  } catch (e) {
+    res.status(502).json({ error: 'Could not read the saved rankings.', detail: String(e.message || e).slice(0, 120) });
+  }
+});
+
+// PUT /api/perfil/rankings  body: el documento entero. Se valida la forma,
+// no el contenido: es la lista del dueno y el dueno manda.
+router.put('/rankings', async (req, res) => {
+  if (!rkGuard(req, res)) return;
+  const doc = req.body;
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return res.status(400).json({ error: 'Send a JSON object.' });
+  if (doc.order != null && !Array.isArray(doc.order)) return res.status(400).json({ error: '`order` must be an array of ids.' });
+  for (const k of ['prices', 'targets', 'pref', 'breaks']) {
+    if (doc[k] != null && typeof doc[k] !== 'object') return res.status(400).json({ error: '`' + k + '` must be an object or array.' });
+  }
+  const updatedAt = Number(doc.updatedAt) || Date.now();
+  const out = Object.assign({}, doc, { updatedAt });
+  const size = Buffer.byteLength(JSON.stringify(out));
+  if (size > RK_MAX) return res.status(413).json({ error: 'Document is over 200 KB.', size });
+  try {
+    const store = await rkWrite(out);
+    res.json({ ok: true, updatedAt, store, size });
+  } catch (e) {
+    res.status(502).json({ error: 'Could not save the rankings.', detail: String(e.message || e).slice(0, 120) });
   }
 });
 

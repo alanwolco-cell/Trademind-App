@@ -36,15 +36,28 @@ const { chromium } = await import(ruta);
 const PORT = process.env.QA_PORT || 3211;
 let BASE = process.env.QA_BASE || ('http://localhost:' + PORT);
 let srv = null;
+// El dueno del gate: una llave de cuenta fija, cuyo acctId (sha256, 32 hex,
+// la misma derivacion de server/lib/identity.js) va en PERFIL_ACCTS del
+// servidor de prueba. Y un desconocido, para el control negativo.
+import crypto from 'node:crypto';
+import os from 'node:os';
+const OWNER_KEY = 'qa-rankings-owner-' + 'a'.repeat(40);
+const OTHER_KEY = 'qa-rankings-other-' + 'b'.repeat(40);
+const OWNER_ID = crypto.createHash('sha256').update(OWNER_KEY).digest('hex').slice(0, 32);
+// El documento del dueno arranca VACIO en cada corrida: el seed y la ida y
+// vuelta entre navegadores se prueban desde cero, en un archivo temporal, sin
+// tocar el blob de produccion aunque .env.local traiga el token.
+const RK_FILE = path.join(os.tmpdir(), 'qa-rankings-doc-' + process.pid + '.json');
+try { fs.unlinkSync(RK_FILE); } catch (_) { }
 if (!process.env.QA_BASE) {
   srv = spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')],
-    { env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
+    { env: { ...process.env, PORT: String(PORT), PERFIL_ACCTS: OWNER_ID, PERFIL_RK_STORE: 'local', PERFIL_RK_FILE: RK_FILE }, stdio: 'ignore' });
   for (let i = 0; i < 40; i++) {
     try { const r = await fetch(BASE + '/'); if (r.ok) break; } catch (_) { }
     await new Promise(r => setTimeout(r, 500));
   }
 }
-const cerrar = () => { if (srv) try { srv.kill(); } catch (_) { } };
+const cerrar = () => { if (srv) try { srv.kill(); } catch (_) { } try { fs.unlinkSync(RK_FILE); } catch (_) { } };
 
 // Los dos errores de consola del entorno local: el script de insights de Vercel
 // no existe fuera de Vercel y /api/odds/implied necesita ODDS_API_KEY. En
@@ -62,14 +75,29 @@ const abrirTab = async pg => {
   await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-row').length > 0, { timeout: 30000 });
 };
 const b = await chromium.launch();
-async function nueva(w, h) {
-  const pg = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
-  const errs = [];
+// Cada pagina abre en SU contexto (localStorage propio) con la llave de cuenta
+// del dueno, salvo que se pida la del desconocido. Se cuentan los PUT al
+// documento y los GET, porque el control negativo tiene que probar que una
+// cuenta corriente no manda NADA al servidor.
+async function nueva(w, h, opts) {
+  opts = opts || {};
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
+  await ctx.addInitScript(k => { try { localStorage.setItem('tm_acct', k); } catch (_) { } }, opts.key || OWNER_KEY);
+  const pg = await ctx.newPage();
+  const errs = [], puts = [], gets = [];
   pg.on('console', m => { if (m.type() === 'error' && !KNOWN.some(r => r.test(m.text()))) errs.push(m.text().slice(0, 140)); });
   pg.on('pageerror', e => errs.push('PAGEERROR ' + e.message.slice(0, 140)));
+  pg.on('request', rq => {
+    if (/\/api\/perfil\/rankings/.test(rq.url())) (rq.method() === 'PUT' ? puts : gets).push(rq.url());
+  });
+  const _close = pg.close.bind(pg);
+  pg.close = async () => { try { await _close(); } catch (_) { } try { await ctx.close(); } catch (_) { } };
   await pg.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60000 });
-  return { pg, errs };
+  return { pg, errs, puts, gets, ctx };
 }
+// Espera a que el ultimo cambio haya llegado al servidor
+const sincronizado = pg => pg.waitForFunction(() => typeof TMR !== 'undefined' && TMR.owner === true && !TMR._dirty && !TMR._syncing
+  && Number(localStorage.getItem('tm_rk_sync_at')) > 0, { timeout: 15000 }).then(() => true).catch(() => false);
 
 console.log('\n=== My Rankings: la lista ===');
 // ── escritorio ──────────────────────────────────────────────────────────
@@ -345,8 +373,10 @@ const teclear = async (pg, sel, v) => { try { await pg.fill(sel, v, { timeout: 3
   }), idSeg);
   ok('(x3) Escape cancela y no guarda nada', lleno2 && !esc._err && esc.manual && esc.txt !== '$7', JSON.stringify(esc));
 
-  // objetivos, ANTES de recargar: se guardan en la misma llave
-  await eva(pg, () => { tmrToggleTarget(TMR.rows[0].id); tmrToggleTarget(TMR.rows[1].id); });
+  // objetivos, ANTES de recargar: se guardan en la misma llave. Se limpia el
+  // plan primero: el seed del dueno ya dejo sus objetivos puestos.
+  await eva(pg, () => { Object.keys(TMR.target).forEach(k => { if (TMR.target[k]) tmrToggleTarget(k); }); tmrToggleTarget(TMR.rows[0].id); tmrToggleTarget(TMR.rows[1].id); });
+  await sincronizado(pg);
   await pg.waitForTimeout(150);
 
   await pg.reload({ waitUntil: 'networkidle' });
@@ -549,6 +579,130 @@ for (const [tag, w, h] of [['escritorio', 1440, 950], ['movil', 390, 844]]) {
     JSON.stringify(st));
   ok('(C-' + tag + ') consola limpia entrando por clic', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.close();
+}
+
+console.log('\n=== My Rankings: solo el dueno, y su documento en el servidor ===');
+// (N) CONTROL NEGATIVO. Una cuenta que no es la del dueno abre My Rankings y
+//     tiene que ver EXACTAMENTE lo de antes: sin columna Pay, sin barra Build,
+//     sin objetivos, y sin mandar ni pedir nada a /api/perfil/rankings.
+{
+  const { pg, errs, puts, gets } = await nueva(1440, 950, { key: OTHER_KEY });
+  await abrirTab(pg);
+  await pg.waitForFunction(() => typeof TMR !== 'undefined' && TMR.owner !== null, { timeout: 15000 }).catch(() => { });
+  await eva(pg, () => { tmrMove(0, 1); });   // un cambio: NO puede disparar un PUT
+  await pg.waitForTimeout(1500);
+  const neg = await eva(pg, () => ({
+    owner: (typeof TMR !== 'undefined') ? TMR.owner : 'sin TMR',
+    pr: document.querySelectorAll('#rk-body .rk-pr').length,
+    tg: document.querySelectorAll('#rk-body .rk-tg').length,
+    head: document.querySelectorAll('#rk-body .rk-ch-pay').length,
+    build: (function () { const e = document.getElementById('rk-build'); return !!e && !e.hidden; })(),
+    cols: getComputedStyle(document.querySelector('#rk-body .rk-row')).gridTemplateColumns.split(' ').length,
+    cls: document.getElementById('tab-rankings').classList.contains('rk-owner'),
+    sync: (document.getElementById('rk-sync') || {}).textContent || ''
+  }));
+  ok('(N1) una cuenta corriente no ve columna Pay, ni objetivos, ni barra Build',
+    !neg._err && neg.owner === false && neg.pr === 0 && neg.tg === 0 && neg.head === 0 && !neg.build && neg.cols === 7 && !neg.cls && neg.sync === '',
+    JSON.stringify(neg));
+  ok('(N2) una cuenta corriente no manda ni pide el documento del dueno', puts.length === 0 && gets.length === 0,
+    `PUT=${puts.length} GET=${gets.length}`);
+  ok('(N3) consola limpia sin ser el dueno', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
+// (S) EL SEED, una sola vez. El documento del servidor arranca vacio en esta
+//     corrida, asi que el primer navegador del dueno siembra los objetivos del
+//     plan y la lista Love, lo declara si algo no resuelve, y lo sube. El
+//     segundo navegador NO lo repite: lo dice el documento, no su localStorage.
+let idGibbs = null, idSwift = null;
+{
+  // Las secciones de arriba ya corrieron como el dueno y subieron SU plan al
+  // servidor: para probar el seed desde cero, el documento se borra antes.
+  try { fs.unlinkSync(RK_FILE); } catch (_) { }
+  const { pg, errs, puts } = await nueva(1440, 950);
+  await abrirTab(pg);
+  const s1 = await sincronizado(pg);
+  const seed = await eva(pg, () => {
+    const find = n => TMR.rows.find(r => r.name === n);
+    const g = find('Jahmyr Gibbs'), sw = find("D'Andre Swift");
+    let pref = {};
+    try { pref = (JSON.parse(localStorage.getItem('tm_lv_pref') || 'null') || {}).pref || {}; } catch (_) { }
+    return {
+      flag: localStorage.getItem('tm_rk_seed_v1'),
+      n: Object.keys(TMR.target).filter(k => TMR.target[k]).length,
+      gibbs: g ? { id: g.id, on: !!TMR.target[g.id], love: pref[g.id] } : null,
+      swift: sw ? { id: sw.id, on: !!TMR.target[sw.id], love: pref[sw.id] } : null,
+      missing: TMR.seedMissing,
+      declared: /Could not find on the board/.test((document.getElementById('rk-build') || {}).textContent || ''),
+      tgOn: document.querySelectorAll('#rk-body .rk-tg.on').length
+    };
+  });
+  idGibbs = seed.gibbs && seed.gibbs.id; idSwift = seed.swift && seed.swift.id;
+  ok('(S1) el seed marca los objetivos del plan y la lista Love, y sube al servidor',
+    s1 && !seed._err && seed.flag === '1' && seed.n >= 20 && seed.gibbs && seed.gibbs.on && seed.gibbs.love === 'love'
+    && seed.swift && seed.swift.on && seed.swift.love === 'love' && seed.tgOn === seed.n && puts.length >= 1,
+    JSON.stringify(seed) + ` PUT=${puts.length}`);
+  ok('(S2) lo que no resuelve se declara, nunca se traga',
+    !seed._err && Array.isArray(seed.missing) && (seed.missing.length === 0 || seed.declared),
+    `sin resolver: ${JSON.stringify(seed.missing)}`);
+  ok('(S3) consola limpia con el seed y el PUT', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+
+  // Se quita a Gibbs del plan y se pone un precio a mano en la primera fila:
+  // eso es lo que el OTRO navegador tiene que ver.
+  await eva(pg, g => { tmrToggleTarget(g); tmrSetPrice(TMR.rows[0].id, 77); }, idGibbs);
+  const s2 = await sincronizado(pg);
+  ok('(S4) el cambio llega al servidor con debounce (un PUT por rafaga)', s2 && puts.length >= 2, `PUT=${puts.length}`);
+
+  // (R) IDA Y VUELTA ENTRE DOS NAVEGADORES con la llave del dueno. Es la razon
+  //     de la feature: editar desde el celular y verlo en la computadora.
+  const B = await nueva(390, 844);
+  await abrirTab(B.pg);
+  await B.pg.waitForFunction(() => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing, { timeout: 30000 }).catch(() => { });
+  const enB = await eva(B.pg, g => {
+    const b = document.querySelector('#rk-body .rk-pr');
+    return {
+      txt: b ? b.textContent.trim() : null, manual: !!(b && b.classList.contains('is-manual')),
+      price: TMR.manual[TMR.rows[0].id], gibbs: !!TMR.target[g], flag: localStorage.getItem('tm_rk_seed_v1'),
+      n: Object.keys(TMR.target).filter(k => TMR.target[k]).length,
+      desborde: document.documentElement.scrollWidth > window.innerWidth,
+      tgBox: (function () { const e = document.querySelector('#rk-body .rk-tg'); if (!e) return null; const r = e.getBoundingClientRect(); return Math.round(r.width) + 'x' + Math.round(r.height); })()
+    };
+  }, idGibbs);
+  ok('(R1) el segundo navegador (390px) recibe el precio a mano y el plan del primero',
+    !enB._err && enB.txt === '$77' && enB.manual && enB.price === 77 && enB.n >= 19 && !enB.desborde, JSON.stringify(enB));
+  ok('(R2) el seed NO se repite en el segundo navegador: Gibbs sigue fuera del plan y la bandera viene del documento',
+    !enB._err && enB.gibbs === false && enB.flag === '1', JSON.stringify({ gibbs: enB.gibbs, flag: enB.flag }));
+
+  // Vuelta: el telefono cambia el precio y la computadora lo ve al volver el foco
+  await eva(B.pg, () => tmrSetPrice(TMR.rows[0].id, 66));
+  const s3 = await sincronizado(B.pg);
+  await eva(pg, () => window.dispatchEvent(new Event('focus')));
+  await pg.waitForFunction(() => TMR.manual[TMR.rows[0].id] === 66, { timeout: 10000 }).catch(() => { });
+  const enA = await eva(pg, () => ({
+    txt: (document.querySelector('#rk-body .rk-pr') || {}).textContent, price: TMR.manual[TMR.rows[0].id]
+  }));
+  ok('(R3) la vuelta: el primer navegador recibe al volver el foco lo que el segundo edito',
+    s3 && !enA._err && enA.price === 66 && String(enA.txt).trim() === '$66', JSON.stringify(enA));
+  ok('(R4) consola limpia en los dos navegadores', errs.length === 0 && B.errs.length === 0,
+    errs.concat(B.errs).slice(0, 3).join(' | ') || 'sin errores');
+  await B.pg.close();
+  await pg.close();
+}
+
+// (O) el endpoint del dueno responde 200 a todos y solo dice si a la llave listada
+{
+  const h = k => ({ 'x-tm-acct': k });
+  const a = await fetch(BASE + '/api/perfil/owner', { headers: h(OWNER_KEY) }).then(r => r.json()).catch(() => null);
+  const o = await fetch(BASE + '/api/perfil/owner', { headers: h(OTHER_KEY) }).then(r => r.json()).catch(() => null);
+  const anon = await fetch(BASE + '/api/perfil/rankings').then(r => r.status).catch(() => 0);
+  const ajeno = await fetch(BASE + '/api/perfil/rankings', { headers: h(OTHER_KEY) }).then(r => r.status).catch(() => 0);
+  const gordo = await fetch(BASE + '/api/perfil/rankings', { method: 'PUT', headers: { ...h(OWNER_KEY), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: [], pad: 'x'.repeat(210 * 1024) }) }).then(r => r.status).catch(() => 0);
+  const malo = await fetch(BASE + '/api/perfil/rankings', { method: 'PUT', headers: { ...h(OWNER_KEY), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: 'no' }) }).then(r => r.status).catch(() => 0);
+  ok('(O1) /api/perfil/owner: true para el dueno, false para el resto', !!a && a.owner === true && !!o && o.owner === false, JSON.stringify({ a, o }));
+  ok('(O2) /api/perfil/rankings: 401 anonimo, 403 ajeno, 413 por encima del tope, 400 con forma mala',
+    anon === 401 && ajeno === 403 && (gordo === 413) && malo === 400, JSON.stringify({ anon, ajeno, gordo, malo }));
 }
 
 await b.close();

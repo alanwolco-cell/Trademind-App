@@ -2115,6 +2115,9 @@ html{scroll-padding-top:76px}
 .rk-sub{margin:0;font-size:12.5px;line-height:1.5;color:var(--muted);max-width:56ch}
 .rk-head-r{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .rk-saved{font-size:11px;color:var(--accent-bright);opacity:0;transition:opacity .25s ease}
+.rk-sync{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rk-sync:empty{display:none}
+.rk-sync.is-warn{color:#e8705f;font-weight:600}
 .rk-use{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
 .rk-use input{accent-color:var(--accent-btn);width:15px;height:15px;cursor:pointer}
 
@@ -2153,15 +2156,22 @@ html{scroll-padding-top:76px}
    con ancho FIJO y no auto, porque la cabecera no tiene botones y con auto su
    ultima columna medía cero y descuadraba todas las demas. */
 .rk-row,.rk-colhead{
-  --rk-acts:110px;
+  --rk-acts:98px;
   display:grid;
+  grid-template-columns:34px 34px minmax(96px,1fr) 74px 62px 62px var(--rk-acts);
+  align-items:center;column-gap:12px}
+/* Las columnas del dinero (Pay y el objetivo) existen SOLO para el dueno: el
+   tab lleva .rk-owner cuando el servidor lo confirma, y hasta entonces la
+   rejilla es la de siempre, identica para cualquier otra cuenta. */
+.rk-owner .rk-row,.rk-owner .rk-colhead{
+  --rk-acts:110px;
   grid-template-columns:34px 34px minmax(96px,1fr) 70px 52px 52px 68px 34px var(--rk-acts);
-  align-items:center;column-gap:11px}
+  column-gap:11px}
 
 /* La cabecera repite las MISMAS areas que la fila y cada rotulo declara la
    suya. El padding lateral incluye el borde de 1px de la fila, que si no
    desplaza las dos rejillas una respecto de la otra. */
-.rk-colhead{grid-template-areas:"num pic name pr adp vs pay tg acts";
+.rk-colhead{grid-template-areas:"num pic name pr adp vs acts";
   padding:0 11px 7px;font-size:10px;font-weight:700;letter-spacing:.10em;
   text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);margin-bottom:6px}
 .rk-ch-num{grid-area:num;text-align:right}
@@ -2178,7 +2188,9 @@ html{scroll-padding-top:76px}
 .rk-tier::after{content:'';order:1;flex:1;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
 .rk-tier-c{order:2;flex:0 0 auto;color:var(--muted);letter-spacing:.04em;font-weight:600;text-transform:none;font-size:11px}
 
-.rk-row{grid-template-areas:"num pic name pr adp vs pay tg acts" "num pic team pr adp vs pay tg acts";
+.rk-owner .rk-colhead{grid-template-areas:"num pic name pr adp vs pay tg acts"}
+.rk-owner .rk-row{grid-template-areas:"num pic name pr adp vs pay tg acts" "num pic team pr adp vs pay tg acts"}
+.rk-row{grid-template-areas:"num pic name pr adp vs acts" "num pic team pr adp vs acts";
   row-gap:1px;padding:7px 10px;border:1px solid var(--border);
   border-radius:9px;background:var(--surface,rgba(255,255,255,.02));cursor:grab;transition:border-color .15s,transform .12s}
 .rk-row:hover{border-color:var(--accent)}
@@ -2295,8 +2307,8 @@ html{scroll-padding-top:76px}
 
 /* Skeleton, nunca spinner: la forma es la de la fila que va a llegar */
 .rk-skel-wrap{display:flex;flex-direction:column;gap:4px}
-.rk-skel-row{display:grid;grid-template-columns:34px 34px minmax(96px,1fr) 70px 52px 52px 68px 34px 110px;
-  align-items:center;column-gap:11px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;height:50px}
+.rk-skel-row{display:grid;grid-template-columns:34px 34px minmax(96px,1fr) 74px 62px 62px 98px;
+  align-items:center;column-gap:12px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;height:50px}
 .rk-skel-num{width:22px;height:13px;border-radius:4px;justify-self:end}
 .rk-skel-pic{width:34px;height:34px;border-radius:50%}
 .rk-skel-name{height:13px;border-radius:4px;max-width:210px}
@@ -2311,7 +2323,10 @@ html{scroll-padding-top:76px}
    segunda linea bajo el nombre, que es como ya se leia esta pantalla. */
 @media (max-width:760px){
   .rk-colhead{display:none}
-  .rk-row{grid-template-columns:24px 32px minmax(96px,1fr) var(--rk-acts);
+  /* .rk-owner .rk-row va aqui tambien: pesa mas que .rk-row y sin esto la
+     plantilla de escritorio del dueno (con Pay y objetivo) se impondria en
+     el telefono y sacaria las cifras del viewport (medido: right=715 en 390). */
+  .rk-row,.rk-owner .rk-row{grid-template-columns:24px 32px minmax(96px,1fr) var(--rk-acts);
     grid-template-areas:"num pic name acts" "num pic meta acts";column-gap:9px;row-gap:3px}
   .rk-nums{grid-area:meta;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
   .rk-team,.rk-posrank,.rk-adp,.rk-vs,.rk-pay,.rk-tg{grid-area:auto}
@@ -2334,7 +2349,7 @@ html{scroll-padding-top:76px}
   .rk-vs::before{content:'vs ';font-weight:600;opacity:.7}
   .rk-vs{justify-self:auto;min-width:0;padding:2px 6px}
   .rk-num{font-size:12.5px}
-  .rk-skel-row{grid-template-columns:24px 32px minmax(96px,1fr) 140px}
+  .rk-skel-row{grid-template-columns:24px 32px minmax(96px,1fr) 110px}
   .rk-skel-row>.rk-skel-tag:nth-of-type(2),.rk-skel-row>.rk-skel-tag:nth-of-type(3),
   .rk-skel-row>.rk-skel-tag:nth-of-type(4){display:none}
 }

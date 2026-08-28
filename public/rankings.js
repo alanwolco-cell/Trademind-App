@@ -34,7 +34,14 @@ var TMR = {
   _curva: null,    // los precios de la sala ordenados de mayor a menor
   _firma: '',      // firma de la sala: si cambia, hay que volver a calcular
   _edit: null,     // id que se esta editando ahora mismo
-  _cancel: false   // Escape: el blur que viene detras NO debe guardar
+  _cancel: false,  // Escape: el blur que viene detras NO debe guardar
+  // ── el dueno y su sincronizacion ──────────────────────────────────────
+  owner: null,     // null = sin preguntar, true/false = lo que dijo el servidor
+  _ownerP: null,   // la promesa de esa pregunta: se hace UNA vez
+  _dirty: false,   // hay cambios locales que el servidor todavia no tiene
+  _syncT: null,    // el debounce del PUT
+  _syncing: false,
+  seedMissing: []  // nombres del seed que no resolvieron: se declaran
 };
 
 var TMR_KEY = 'tm_rankings_v1';
@@ -43,6 +50,9 @@ var TMR_USE_KEY = 'tm_rankings_use';
  * la del orden: "Reset to consensus" borra el orden y los tiers, y perder
  * ademas los precios que uno escribio a mano no es lo que anuncia ese boton. */
 var TMR_PLAN_KEY = 'tm_rankings_plan_v1';
+var TMR_SEED_KEY = 'tm_rk_seed_v1';     // el seed corre UNA vez por dispositivo y por documento
+var TMR_SYNC_AT_KEY = 'tm_rk_sync_at';  // updatedAt del ultimo estado que el servidor confirmo
+var TMR_SYNC_MS = 800;                  // debounce del PUT
 var TMR_LIMIT = 200; // top 200: mas abajo el ADP es ruido y la lista se vuelve inmanejable
 
 function _tmrNorm(s) {
@@ -97,6 +107,7 @@ function tmrPlanSave() {
     clearTimeout(TMR._stT);
     TMR._stT = setTimeout(function () { st.style.opacity = '0'; }, 1400);
   }
+  tmrSyncQueue();
 }
 
 function tmrPlanLoad() {
@@ -266,10 +277,13 @@ async function renderRankings() {
   if (!host) return;
   if (TMR.loaded) {
     tmrPaint();
-    // Reabrir el tab es el momento de volver a preguntar: un intento anterior
-    // pudo quedarse sin precios (sala viva, feed caido) y, sobre todo, el
-    // usuario pudo cambiar la sala en Mock Draft desde la ultima vez. tmrPrices
-    // se corta sola por firma si nada cambio, asi que reintentarlo es gratis.
+    if (!(await tmrOwner())) return;
+    // Reabrir el tab es el momento de volver a preguntar: por el servidor (el
+    // telefono pudo editar la lista mientras tanto) y por los precios, porque
+    // un intento anterior pudo quedarse sin ellos (sala viva, feed caido) y el
+    // usuario pudo cambiar la sala en Mock Draft. tmrPrices se corta sola por
+    // firma si nada cambio, asi que reintentarlo es gratis.
+    try { await tmrSyncPull(); } catch (_) { }
     try { await tmrPrices(); } catch (_) { }
     tmrPaint();
     return;
@@ -319,14 +333,266 @@ async function renderRankings() {
   TMR.rows = list;
   TMR.loaded = true;
 
-  // La lista se pinta YA, con la columna del dinero en skeleton: esperar al
-  // feed de subasta para ensenar doscientos nombres que ya estan en memoria
+  // La lista se pinta YA. Lo que sigue (precios, objetivos, sincronizacion) es
+  // SOLO del dueno: para cualquier otra cuenta My Rankings termina aqui y queda
+  // identico a como estaba, con una sola pregunta al servidor que responde 200.
+  tmrPaint();
+  if (!(await tmrOwner())) return;
+
+  // El servidor primero: si el telefono guardo una version mas nueva, es esa la
+  // que se pinta, no la cache de este navegador. Y el seed va DESPUES de leer
+  // el servidor, porque el documento dice si ya corrio en el otro dispositivo.
+  try { await tmrSyncPull(); } catch (_) { }
+  try { tmrSeed(); } catch (_) { }
+
+  // La columna del dinero en skeleton mientras llega el feed de subasta:
+  // esperar al feed para ensenar doscientos nombres que ya estan en memoria
   // seria cambiar una pantalla instantanea por una en blanco.
   TMR.pricing = true;
   tmrPaint();
   try { await tmrPrices(); } catch (_) { }
   TMR.pricing = false;
   tmrPaint();
+}
+
+/* ── el dueno ───────────────────────────────────────────────────────────────
+ * Una sola pregunta por carga, con la MISMA regla del servidor (permitido() de
+ * server/routes/perfil.js): aqui no hay una segunda lista de duenos. Mientras
+ * no conteste, o si contesta que no, la pantalla es la de siempre. */
+function tmrOwner() {
+  if (TMR._ownerP) return TMR._ownerP;
+  TMR._ownerP = (async function () {
+    var own = false;
+    try {
+      var r = await fetch('/api/perfil/owner', { cache: 'no-store' });
+      if (r.ok) { var j = await r.json(); own = !!(j && j.owner); }
+    } catch (_) { own = false; }
+    TMR.owner = own;
+    var tab = document.getElementById('tab-rankings');
+    if (tab) tab.classList.toggle('rk-owner', own);
+    return own;
+  })();
+  return TMR._ownerP;
+}
+
+/* ── sincronizacion por servidor ────────────────────────────────────────────
+ * Un documento del dueno en /api/perfil/rankings, compartido por sus dos
+ * navegadores (computadora y celular). localStorage sigue siendo la cache y
+ * lo que se pinta al instante; el servidor decide quien tiene la version mas
+ * nueva por updatedAt. El PUT va con debounce, y si falla queda marcado como
+ * pendiente: se reintenta con el siguiente cambio y al volver el foco. */
+function tmrSyncDoc() {
+  var pref = null;
+  try {
+    if (window.LV && LV.pref) pref = LV.pref;
+    else { var d = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); pref = (d && d.pref) || {}; }
+  } catch (_) { pref = {}; }
+  var seeded = false;
+  try { seeded = localStorage.getItem(TMR_SEED_KEY) === '1'; } catch (_) { }
+  var order = null;
+  var saved = tmrLoadSaved();
+  if (TMR.loaded && TMR.rows.length) order = TMR.rows.map(function (r) { return r.id; });
+  else if (saved) order = saved.order;
+  return {
+    v: 1,
+    fmt: TMR.fmt || (saved && saved.fmt) || null,
+    order: order || [],
+    breaks: Object.keys(TMR.breakAfter || {}).filter(function (k) { return TMR.breakAfter[k]; }),
+    prices: TMR.manual,
+    targets: Object.keys(TMR.target).filter(function (k) { return TMR.target[k]; }),
+    pref: pref || {},
+    seeded: seeded,
+    updatedAt: Date.now()
+  };
+}
+
+function tmrSyncAt() {
+  try { return Number(localStorage.getItem(TMR_SYNC_AT_KEY)) || 0; } catch (_) { return 0; }
+}
+
+function tmrSyncStatus(txt, keep) {
+  var el = document.getElementById('rk-sync');
+  if (!el) return;
+  el.textContent = txt || '';
+  el.className = 'rk-sync' + (keep ? ' is-warn' : '');
+}
+
+/* Aplica el documento del servidor: cache local, memoria y pantalla. */
+function tmrSyncApply(doc) {
+  if (!doc || typeof doc !== 'object') return;
+  try {
+    if (Array.isArray(doc.order) && doc.order.length) {
+      localStorage.setItem(TMR_KEY, JSON.stringify({ fmt: doc.fmt || TMR.fmt, order: doc.order, breaks: doc.breaks || [], updated: Date.now() }));
+    }
+    localStorage.setItem(TMR_PLAN_KEY, JSON.stringify({ prices: doc.prices || {}, targets: doc.targets || [], updated: Date.now() }));
+    if (doc.pref && typeof doc.pref === 'object') {
+      var d = null;
+      try { d = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); } catch (_) { }
+      d = d || {};
+      d.pref = doc.pref;
+      localStorage.setItem('tm_lv_pref', JSON.stringify(d));
+      if (window.LV) LV.pref = doc.pref;
+    }
+    if (doc.seeded) localStorage.setItem(TMR_SEED_KEY, '1');
+  } catch (_) { }
+  TMR.manual = {};
+  TMR.target = {};
+  tmrPlanLoad();
+  if (TMR.loaded && TMR.rows.length && Array.isArray(doc.order) && doc.order.length) {
+    var byId = {}, out = [], seen = {};
+    TMR.rows.forEach(function (r) { byId[r.id] = r; });
+    doc.order.forEach(function (id) { if (byId[id] && !seen[id]) { out.push(byId[id]); seen[id] = 1; } });
+    TMR.rows.forEach(function (r) { if (!seen[r.id]) out.push(r); });
+    TMR.rows = out;
+    TMR._idx = null; TMR._idxN = -1;
+    TMR.breakAfter = {};
+    (doc.breaks || []).forEach(function (id) { TMR.breakAfter[id] = true; });
+  }
+}
+
+async function tmrSyncPull() {
+  if (TMR.owner !== true) return false;
+  var r;
+  try { r = await fetch('/api/perfil/rankings', { cache: 'no-store' }); } catch (_) { tmrSyncStatus('Offline', true); return false; }
+  if (!r.ok) { tmrSyncStatus('Offline', true); return false; }
+  var j = null;
+  try { j = await r.json(); } catch (_) { return false; }
+  var at = Number(j && j.updatedAt) || 0;
+  var mio = tmrSyncAt();
+  if (j && j.doc && at > mio && !TMR._dirty) {
+    tmrSyncApply(j.doc);
+    try { localStorage.setItem(TMR_SYNC_AT_KEY, String(at)); } catch (_) { }
+    tmrSyncStatus('Synced from your other device');
+    setTimeout(function () { if (!TMR._dirty) tmrSyncStatus(''); }, 2200);
+    if (TMR.loaded) tmrPaint();
+    return true;
+  }
+  if (!j || !j.doc) {
+    // El servidor no tiene nada todavia: lo que hay aqui es la version buena
+    if (mio === 0 && (tmrLoadSaved() || Object.keys(TMR.manual).length || Object.keys(TMR.target).length)) tmrSyncQueue();
+  }
+  if (TMR._dirty) tmrSyncQueue();
+  else tmrSyncStatus(j && j.store && j.store !== 'blob' ? 'Synced (' + j.store + ')' : 'Synced');
+  return false;
+}
+
+function tmrSyncQueue() {
+  if (TMR.owner !== true) return;
+  TMR._dirty = true;
+  tmrSyncStatus('Saving');
+  clearTimeout(TMR._syncT);
+  TMR._syncT = setTimeout(tmrSyncPush, TMR_SYNC_MS);
+}
+
+async function tmrSyncPush() {
+  if (TMR.owner !== true || TMR._syncing) return;
+  TMR._syncing = true;
+  var doc = tmrSyncDoc();
+  var ok = false, store = '';
+  try {
+    var r = await fetch('/api/perfil/rankings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc)
+    });
+    if (r.ok) {
+      var j = null;
+      try { j = await r.json(); } catch (_) { }
+      ok = true; store = (j && j.store) || '';
+      try { localStorage.setItem(TMR_SYNC_AT_KEY, String((j && j.updatedAt) || doc.updatedAt)); } catch (_) { }
+    }
+  } catch (_) { ok = false; }
+  TMR._syncing = false;
+  if (ok) {
+    TMR._dirty = false;
+    tmrSyncStatus(store && store !== 'blob' ? 'Synced (' + store + ')' : 'Synced');
+  } else {
+    // Se queda pendiente: se reintenta con el siguiente cambio y al volver el foco
+    tmrSyncStatus('Offline, will retry', true);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', function () {
+    if (TMR.owner !== true) return;
+    if (TMR._dirty) { tmrSyncPush(); return; }
+    if (TMR.loaded) tmrSyncPull().catch(function () { });
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || TMR.owner !== true) return;
+    if (TMR._dirty) tmrSyncPush();
+    else if (TMR.loaded) tmrSyncPull().catch(function () { });
+  });
+  // Editar y cerrar la pestana en menos de 800 ms no puede perder el cambio:
+  // el PUT pendiente sale con keepalive, que sobrevive a la descarga de la
+  // pagina. (sendBeacon no sirve: no lleva la cabecera de cuenta.)
+  window.addEventListener('pagehide', function () {
+    if (TMR.owner !== true || !TMR._dirty) return;
+    clearTimeout(TMR._syncT);
+    try {
+      fetch('/api/perfil/rankings', {
+        method: 'PUT', keepalive: true, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tmrSyncDoc())
+      }).catch(function () { });
+    } catch (_) { }
+  });
+}
+
+/* ── el seed: una sola vez ──────────────────────────────────────────────────
+ * Los objetivos del plan que el dueno aprobo el 2026-08-28 y su lista Love de
+ * Draft Day. Corre UNA vez: la bandera va en localStorage y TAMBIEN en el
+ * documento del servidor, para que el otro dispositivo no lo repita encima de
+ * lo que el dueno ya cambio. Nunca pisa nada que exista, y los nombres que no
+ * resuelven contra el board se DECLARAN en la barra Build, no se tragan. */
+var TMR_SEED_TARGETS = ['Jahmyr Gibbs', 'Ashton Jeanty', "De'Von Achane", 'Derrick Henry', 'Kyren Williams',
+  "D'Andre Swift", 'Breece Hall', 'Travis Etienne', 'Cam Skattebo', 'Javonte Williams', 'Quinshon Judkins',
+  'TreVeyon Henderson', 'Chris Olave', 'Ladd McConkey', 'DeVonta Smith', 'Emeka Egbuka', 'Zay Flowers',
+  'Tee Higgins', 'Tetairoa McMillan', 'Colston Loveland', 'Tyler Warren', 'Tucker Kraft', 'Jalen Hurts',
+  'Jayden Daniels', 'Drake Maye'];
+var TMR_SEED_LOVE = ["D'Andre Swift", 'Breece Hall', 'Travis Etienne', 'Cam Skattebo', 'Javonte Williams',
+  'Quinshon Judkins', 'TreVeyon Henderson', 'Jahmyr Gibbs'];
+
+function tmrSeedFind(name) {
+  var n = _tmrNorm(name);
+  for (var i = 0; i < TMR.rows.length; i++) if (_tmrNorm(TMR.rows[i].name) === n) return TMR.rows[i];
+  // el board a veces trae el nombre sin sufijo o con inicial: se acepta el
+  // apellido completo con la misma inicial de pila, si es unico
+  var partes = n.split(' '), ap = partes[partes.length - 1], cands = [];
+  for (var k = 0; k < TMR.rows.length; k++) {
+    var m = _tmrNorm(TMR.rows[k].name);
+    if (m.split(' ').pop() === ap && m.charAt(0) === n.charAt(0)) cands.push(TMR.rows[k]);
+  }
+  return cands.length === 1 ? cands[0] : null;
+}
+
+function tmrSeed() {
+  if (TMR.owner !== true || !TMR.loaded || !TMR.rows.length) return false;
+  try { if (localStorage.getItem(TMR_SEED_KEY) === '1') return false; } catch (_) { }
+  var missing = [];
+  TMR_SEED_TARGETS.forEach(function (nm) {
+    var r = tmrSeedFind(nm);
+    if (!r) { missing.push(nm); return; }
+    if (!TMR.target[r.id]) TMR.target[r.id] = true;
+  });
+  var pref = null;
+  try { var d = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); pref = (d && d.pref) || {}; } catch (_) { pref = {}; }
+  if (window.LV && LV.pref) pref = LV.pref;
+  TMR_SEED_LOVE.forEach(function (nm) {
+    var r = tmrSeedFind(nm);
+    if (!r) { if (missing.indexOf(nm) < 0) missing.push(nm); return; }
+    if (!pref[r.id]) pref[r.id] = 'love';   // sin pisar lo que ya exista
+  });
+  try {
+    if (window.LV && typeof lvSavePref === 'function') { LV.pref = pref; lvSavePref(); }
+    else {
+      var d2 = null;
+      try { d2 = JSON.parse(localStorage.getItem('tm_lv_pref') || 'null'); } catch (_) { }
+      d2 = d2 || {}; d2.pref = pref;
+      localStorage.setItem('tm_lv_pref', JSON.stringify(d2));
+    }
+    localStorage.setItem(TMR_SEED_KEY, '1');
+  } catch (_) { }
+  TMR.seedMissing = missing;
+  tmrPlanSave();   // guarda y encola el PUT con seeded:true
+  return true;
 }
 
 // El esqueleto tiene que tener la FORMA de lo que va a llegar: circulo de la
@@ -456,8 +722,9 @@ function tmrPaint() {
       + '<span class="rk-posn">' + posRk[i] + '</span></span>'
       + '<span class="rk-adp">' + r.adp.toFixed(1) + '</span>'
       + '<span class="rk-vs' + dCls + '" title="How far you move him off the consensus">' + dTxt + '</span>'
-      + '<span class="rk-pay" data-id="' + tmrEsc(r.id) + '">' + tmrPriceCell(r.id) + '</span>'
-      + tmrTargetBtn(r)
+      + (TMR.owner === true
+        ? '<span class="rk-pay" data-id="' + tmrEsc(r.id) + '">' + tmrPriceCell(r.id) + '</span>' + tmrTargetBtn(r)
+        : '')
       + '</span>'
       + '<span class="rk-acts">'
       + '<button type="button" class="rk-ib" title="Move up" aria-label="Move up ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',-1)">' + TMR_SVG_UP + '</button>'
@@ -481,7 +748,7 @@ function tmrPaint() {
       + '<span class="rk-ch-pr">Pos</span>'
       + '<span class="rk-ch-adp">ADP</span>'
       + '<span class="rk-ch-vs">Vs ADP</span>'
-      + '<span class="rk-ch-pay">Pay</span>'
+      + (TMR.owner === true ? '<span class="rk-ch-pay">Pay</span>' : '')
       + '</div>' + html;
   }
 
@@ -524,6 +791,7 @@ function tmrBuildData() {
 function tmrBuildPaint() {
   var el = document.getElementById('rk-build');
   if (!el) return;
+  if (TMR.owner !== true) { el.hidden = true; el.innerHTML = ''; return; }
   var d = tmrBuildData(), cfg = d.cfg;
   var room = ((typeof _mdFz26On === 'function' && _mdFz26On()) ? 'Fantazy 2026 · ' : '')
     + cfg.teams + ' teams · $' + cfg.budget + ' · ' + cfg.rounds + ' rounds';
@@ -552,6 +820,9 @@ function tmrBuildPaint() {
         + (d.sinPrecio === 1 ? ' target has no room price yet and is not in the total.'
           : ' targets have no room price yet and are not in the total.') + '</div>';
     }
+  }
+  if (TMR.seedMissing && TMR.seedMissing.length) {
+    h += '<div class="rk-bd-warn is-soft">Could not find on the board: ' + tmrEsc(TMR.seedMissing.join(', ')) + '.</div>';
   }
   el.className = 'rk-build' + (d.over ? ' is-over' : '');
   el.hidden = false;
@@ -691,7 +962,10 @@ function tmrReset() {
   try { localStorage.removeItem(TMR_KEY); } catch (_) { }
   TMR.breakAfter = {};
   TMR.loaded = false;
-  renderRankings();
+  // Un reset es un cambio local: el servidor NO puede devolver el orden viejo
+  // al recargar la lista. Se marca sucio antes y se empuja despues.
+  TMR._dirty = (TMR.owner === true);
+  renderRankings().then(function () { if (TMR.owner === true) tmrSyncQueue(); });
 }
 
 /* Exportar en texto plano: es lo que la gente pega en su chat de liga o en una
@@ -777,7 +1051,7 @@ function tmrToggleUse(on) {
  * leyendo los puestos viejos. Se invalida donde se guarda, que es el unico
  * punto por el que pasan TODAS las ediciones. */
 var _tmrSaveInner = tmrSave;
-tmrSave = function () { TMR._idx = null; TMR._idxN = -1; _tmrSaveInner(); };
+tmrSave = function () { TMR._idx = null; TMR._idxN = -1; _tmrSaveInner(); tmrSyncQueue(); };
 
 /* El plan se carga al ARRANCAR el modulo, no al abrir el tab: Draft Day
  * pregunta por los precios a mano sin pasar por esta pantalla, y una lectura
@@ -807,6 +1081,12 @@ if (typeof window !== 'undefined') {
   window.tmrPriceOf = tmrPriceOf;
   window.tmrPlanPrices = tmrPlanPrices;
   window.tmrPrices = tmrPrices;
+  window.tmrOwner = tmrOwner;
+  window.tmrSyncQueue = tmrSyncQueue;
+  window.tmrSyncPush = tmrSyncPush;
+  window.tmrSyncPull = tmrSyncPull;
+  window.tmrSyncDoc = tmrSyncDoc;
+  window.tmrSeed = tmrSeed;
   window.tmMyRankOf = tmMyRankOf;
   window.tmRankingsActivos = tmRankingsActivos;
   window.tmrHydrate = tmrHydrate;
