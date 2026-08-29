@@ -139,6 +139,13 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
     ok('(e) ' + quien + ': cajon > My Rankings llega a la lista',
       c === 'clicado' && d.pantalla === 'screen-research' && d.tab === 'tab-rankings' && !d.heroEnPantalla,
       c + ' | ' + JSON.stringify(d));
+    // La lista sale de una fetch al board de Sleeper: leerla en el mismo
+    // instante del clic mide la red, no el producto. Medido el 2026-08-28:
+    // tarda ~3 s con la cache fria y este check fallaba al azar TAMBIEN contra
+    // el codigo de HEAD, o sea que llevaba tiempo mintiendo en las dos
+    // direcciones. Se espera a que pinte; si no pinta nunca, sigue fallando.
+    await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-row').length > 100,
+      { timeout: 30000 }).catch(() => { });
     const filas = await pg.$$eval('#rk-body .rk-row', r => r.length).catch(() => 0);
     ok('(f) ' + quien + ': la lista pinta jugadores al llegar por el cajon', filas > 100, filas + ' filas');
     await pg.close();

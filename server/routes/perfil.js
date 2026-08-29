@@ -311,6 +311,20 @@ router.put('/rankings', async (req, res) => {
   const doc = req.body;
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return res.status(400).json({ error: 'Send a JSON object.' });
   if (doc.order != null && !Array.isArray(doc.order)) return res.status(400).json({ error: '`order` must be an array of ids.' });
+  // Las respuestas del Tier Game. Se valida la FORMA de cada una, no su
+  // contenido: una respuesta mal formada no rompe nada visible (la inferencia
+  // la descarta), pero entra al documento y se sincroniza a los dos
+  // dispositivos, y ahi ya es basura que sobrevive a un reinicio.
+  if (doc.game != null) {
+    if (!Array.isArray(doc.game)) return res.status(400).json({ error: '`game` must be an array of answers.' });
+    for (const a of doc.game) {
+      if (!a || typeof a !== 'object' || Array.isArray(a)
+        || typeof a.a !== 'string' || typeof a.b !== 'string' || a.a === a.b
+        || ![-2, -1, 0, 1, 2].includes(Number(a.v))) {
+        return res.status(400).json({ error: '`game` entries must be {a, b, v} with v in -2..2 and a !== b.' });
+      }
+    }
+  }
   for (const k of ['prices', 'targets', 'pref', 'breaks']) {
     if (doc[k] != null && typeof doc[k] !== 'object') return res.status(400).json({ error: '`' + k + '` must be an object or array.' });
   }

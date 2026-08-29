@@ -2368,6 +2368,168 @@ html{scroll-padding-top:76px}
 .md-bd-my{color:var(--muted);font-variant-numeric:tabular-nums}
 .md-bd-my.hit{color:#5fd08a;font-weight:700}
 
+/* ── Tier Game y cheat sheet ──────────────────────────────────────────────
+   Los dos viven DENTRO del tab y se turnan con la lista: el tab lleva
+   .rk-gaming o .rk-sheeting y aqui se esconde lo que sobra. Un solo arbol de
+   DOM, la misma decision que .rk-nums y que los dos ejes del perfil.
+   Movil primero: el juego es un gesto de pulgar, cinco botones de 46px en
+   columna, y en escritorio la unica diferencia es que caben en una fila. */
+.rk-owner-tools{display:contents}
+.rk-gaming .rk-tools,.rk-gaming .rk-build,.rk-gaming .rk-list,.rk-gaming .rk-export,
+.rk-sheeting .rk-tools,.rk-sheeting .rk-build,.rk-sheeting .rk-list,.rk-sheeting .rk-export,
+.rk-sheeting .rk-game{display:none}
+/* La cabecera del tab tampoco pinta nada aqui: el juego trae su propio titulo
+   y la hoja el suyo, y dos titulos seguidos se leen como un error. */
+.rk-gaming .rk-head,.rk-sheeting .rk-head{display:none}
+
+.rk-game{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;
+  padding:14px;background:var(--surface,rgba(255,255,255,.02))}
+.rk-gm-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rk-gm-t{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rk-gm-t b{font-size:16px;font-family:var(--font-head,inherit)}
+.rk-gm-t span{font-size:11.5px;color:var(--muted);line-height:1.45;max-width:44ch}
+
+/* La barra de progreso mide parejas RESUELTAS, no respuestas contestadas: por
+   eso puede saltar mas de un punto con una sola respuesta. */
+.rk-gm-prog{margin:12px 0 4px;display:flex;flex-direction:column;gap:5px}
+.rk-gm-bar{height:5px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.rk-gm-bar i{display:block;height:100%;border-radius:99px;background:var(--accent-bright);
+  transition:width .3s ease}
+@media (prefers-reduced-motion:reduce){.rk-gm-bar i{transition:none}}
+.rk-gm-prog span{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.rk-gm-pair{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:8px;margin:14px 0 4px}
+.rk-gm-card{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+  padding:12px 8px;border:1px solid var(--border);border-radius:11px;background:var(--bg);min-width:0}
+.rk-gm-card .rk-pic{width:52px;height:52px;flex:0 0 52px}
+.rk-gm-nm{font-size:13.5px;line-height:1.25;overflow-wrap:break-word;min-width:0}
+.rk-gm-meta{font-size:11px;color:var(--muted)}
+.rk-gm-meta em{font-style:normal;font-weight:800;color:currentColor}
+.rk-gm-pay{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent-bright)}
+.rk-gm-vs{align-self:center;font-size:10px;font-weight:800;letter-spacing:.10em;
+  text-transform:uppercase;color:var(--muted);opacity:.7}
+
+/* La escalada se anuncia. Sin esto, ver de golpe a un RB de $13 contra uno de
+   $53 parece que el juego perdio el hilo, cuando es justo lo que se le pidio. */
+.rk-gm-why{margin:12px 0 0;padding:7px 10px;border-radius:8px;font-size:11.5px;line-height:1.5;
+  background:var(--accent-dim);border:1px solid var(--accent);color:var(--text)}
+/* Contradicciones: A > B > C > A. Se ensenan en amarillo, no en rojo: no es un
+   error, es lo que pasa comparando de a dos durante media hora. */
+.rk-gm-cyc{margin-top:14px;padding:10px 12px;border-radius:10px;
+  background:rgba(232,165,95,.10);border:1px solid rgba(232,165,95,.32)}
+.rk-gm-cyc>b{display:block;font-size:11.5px;margin-bottom:6px}
+.rk-gm-cyc-r{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:5px 0;font-size:11.5px;flex-wrap:wrap}
+.rk-gm-cyc-r span{min-width:0;overflow-wrap:break-word}
+.rk-gm-cyc-r .rk-btn{min-height:36px;flex:0 0 auto}
+.rk-gm-q{margin:14px 0 9px;text-align:center;font-size:13px;font-weight:600;color:var(--text)}
+/* Cinco botones en columna, 46px de alto: el gesto es el pulgar contestando
+   cuarenta veces seguidas, no un formulario. "Same tier" va en el medio y en
+   acento porque es la respuesta que mas informa y la que un si/no perderia. */
+.rk-gm-btns{display:flex;flex-direction:column;gap:7px;max-width:430px;margin:0 auto}
+.rk-gm-b{min-height:46px;padding:10px 14px;border-radius:10px;cursor:pointer;
+  background:transparent;border:1px solid var(--border);color:var(--text);
+  font:inherit;font-size:13px;font-weight:600;text-align:center}
+.rk-gm-b:hover{border-color:var(--accent);background:var(--accent-dim)}
+.rk-gm-b:active{transform:scale(.99)}
+.rk-gm-v0{border-color:var(--accent);background:var(--accent-dim);color:var(--accent-bright);font-weight:700}
+.rk-gm-v2,.rk-gm-vm2{font-weight:700}
+
+.rk-gm-done{margin:16px 0;padding:14px;border:1px dashed var(--border);border-radius:10px;
+  font-size:12.5px;color:var(--muted);text-align:center;line-height:1.5}
+.rk-gm-foot{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;
+  margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.rk-gm-foot .rk-btn{min-height:40px}
+.rk-gm-prev{margin-top:12px;padding:11px 13px;border:1px solid var(--accent);
+  border-radius:10px;background:var(--accent-dim)}
+.rk-gm-prev-t{font-size:12.5px;line-height:1.5;color:var(--text)}
+.rk-gm-prev-a{margin-top:6px;font-size:11.5px;color:var(--muted);line-height:1.45}
+.rk-gm-prev-b{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.rk-gm-prev-b .rk-btn{min-height:40px}
+
+/* ── la cheat sheet ──────────────────────────────────────────────────────
+   Es papel: se lee con una mano mientras la sala puja, o se imprime. Nada que
+   tocar y nada que esperar. */
+.rk-sheet{border:1px solid var(--border);border-radius:12px;padding:14px;
+  background:var(--surface,rgba(255,255,255,.02))}
+.rk-sh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;padding-bottom:11px;border-bottom:1px solid var(--border)}
+.rk-sh-top b{display:block;font-size:16px;font-family:var(--font-head,inherit)}
+.rk-sh-top span{display:block;margin-top:2px;font-size:11px;color:var(--muted)}
+.rk-sh-top-b{display:flex;gap:8px}
+
+.rk-sh-plan{margin:13px 0 6px;padding:11px 13px;border:1px solid var(--border);
+  border-left:3px solid var(--accent);border-radius:10px}
+.rk-sh-plan-k,.rk-sh-tk{font-size:10px;font-weight:800;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent-bright)}
+.rk-sh-plan-f{display:flex;gap:26px;flex-wrap:wrap;margin-top:8px}
+.rk-sh-plan-f span{display:flex;flex-direction:column;gap:2px}
+.rk-sh-plan-f b{font-size:21px;line-height:1;font-variant-numeric:tabular-nums}
+.rk-sh-plan-f i{font-style:normal;font-size:11px;color:var(--muted);line-height:1.35}
+.rk-sh-note{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.5}
+.rk-sh-warn{margin-top:9px;font-size:12px;font-weight:600;color:#e8705f;line-height:1.45}
+
+.rk-sh-sec{margin-top:18px}
+.rk-sh-h{margin:0 0 8px;font-size:13px;font-weight:800;letter-spacing:.10em;text-transform:uppercase}
+.rk-sh-tier{margin-bottom:12px;padding-left:10px;border-left:2px solid var(--border)}
+.rk-sh-ul{list-style:none;margin:5px 0 0;padding:0}
+/* Rejilla compartida por todas las filas de la hoja: nombre, equipo y precio
+   caen a plomo. Es la misma leccion que .rk-row y .rk-colhead. */
+.rk-sh-li{display:grid;grid-template-columns:minmax(0,1fr) 34px 46px;gap:8px;align-items:baseline;
+  padding:3px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04)}
+.rk-sh-nm{min-width:0;overflow-wrap:break-word}
+.rk-sh-tm{font-size:10.5px;color:var(--muted);letter-spacing:.02em}
+.rk-sh-pay{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+/* Un objetivo se marca con la regla de acento y la negrita, no con un icono:
+   en papel un icono suelto no dice de que va. */
+.rk-sh-li.is-target{font-weight:700;box-shadow:inset 2px 0 0 var(--accent-bright);padding-left:7px}
+.rk-sh-li.is-target .rk-sh-pay{color:var(--accent-bright)}
+/* La linea que justifica la hoja entera: dos jugadores de TU mismo tier valen
+   lo mismo para ti, asi que la diferencia de precio es dinero tirado. */
+.rk-sh-deal{margin-top:7px;padding:7px 9px;border-radius:8px;font-size:11.5px;line-height:1.5;
+  background:rgba(95,211,154,.10);border:1px solid rgba(95,211,154,.30)}
+/* El hallazgo de mercado: un jugador de un tier alto SUYO que el mercado tiene
+   abajo. Es lo que decide la subasta, asi que sube al plan y va marcado. */
+.rk-sh-deal.is-market{background:rgba(155,114,232,.12);border-color:var(--accent)}
+.rk-sh-gaps{margin-top:11px;padding:10px 12px;border-radius:10px;
+  background:rgba(155,114,232,.10);border:1px solid var(--accent)}
+.rk-sh-gaps ul{margin:6px 0 0;padding-left:17px}
+.rk-sh-gaps li{font-size:11.5px;line-height:1.55}
+.rk-sh-notes{margin-top:20px;padding-top:12px;border-top:1px solid var(--border)}
+.rk-sh-notes ul{margin:7px 0 0;padding-left:18px}
+.rk-sh-notes li{font-size:12px;line-height:1.6;color:var(--text)}
+.rk-sh-notes p{margin:8px 0 0;font-size:10.5px;color:var(--muted)}
+
+@media (min-width:700px){
+  /* En escritorio los cinco botones caben en una fila y la hoja en dos
+     columnas. Es el unico cambio: mismo DOM, mismo orden de lectura. */
+  .rk-gm-btns{flex-direction:row;max-width:none}
+  .rk-gm-b{flex:1 1 0;min-width:0;font-size:12.5px;padding:10px 8px}
+  .rk-gm-card{padding:16px 12px}
+  .rk-gm-card .rk-pic{width:64px;height:64px;flex:0 0 64px}
+  .rk-gm-nm{font-size:15px}
+}
+
+/* IMPRESION. La hoja se saca en blanco y negro y sin los botones, que en papel
+   no hacen nada. visibility en vez de display para no rehacer el layout de la
+   app entera, y position para que la hoja no salga empujada por el hueco de
+   todo lo que quedo invisible. */
+@media print{
+  body{background:#fff}
+  body *{visibility:hidden!important}
+  #rk-sheet,#rk-sheet *{visibility:visible!important}
+  #rk-sheet{position:absolute;left:0;top:0;width:100%;margin:0;padding:0;
+    border:0;background:#fff;color:#111}
+  #rk-sheet .rk-sh-top-b{display:none!important}
+  #rk-sheet .rk-sh-tm,#rk-sheet .rk-sh-note,#rk-sheet .rk-sh-plan-f i,
+  #rk-sheet .rk-sh-notes p,#rk-sheet .rk-sh-top span{color:#555}
+  #rk-sheet .rk-sh-deal,#rk-sheet .rk-sh-gaps{background:#f2f2f2;border-color:#999;color:#111}
+  #rk-sheet .rk-sh-deal.is-market{background:#e8e8e8;border-color:#444;font-weight:600}
+  #rk-sheet .rk-sh-li{border-bottom-color:#ddd}
+  #rk-sheet .rk-sh-sec{break-inside:avoid;page-break-inside:avoid}
+}
+
+
 /* ── Draft Day: el panel de la subasta en vivo ─────────────────────────────
  * UN solo arbol de DOM y dos repartos, como .rk-nums y los dos ejes del
  * perfil: en escritorio flota sobre la sala y se arrastra; en el telefono es

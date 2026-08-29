@@ -83,6 +83,9 @@ async function nueva(w, h, opts) {
   opts = opts || {};
   const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
   await ctx.addInitScript(k => { try { localStorage.setItem('tm_acct', k); } catch (_) { } }, opts.key || OWNER_KEY);
+  // Memoria de sala del mock: sirve para probar que la columna Pay del dueno
+  // NO la escucha, porque su liga es una sola.
+  if (opts.mock) await ctx.addInitScript(m => { try { localStorage.setItem('tm_mock_settings', m); } catch (_) { } }, JSON.stringify(opts.mock));
   const pg = await ctx.newPage();
   const errs = [], puts = [], gets = [];
   pg.on('console', m => { if (m.type() === 'error' && !KNOWN.some(r => r.test(m.text()))) errs.push(m.text().slice(0, 140)); });
@@ -571,7 +574,7 @@ for (const [tag, w, h] of [['escritorio', 1440, 950], ['movil', 390, 844]]) {
   });
   ok('(B2-' + tag + ') sin memoria de sala, precia una subasta normal y lo declara',
     !sala._err && sala.room && sala.room.teams === 10 && sala.room.budget === 200 && sala.room.rounds === 15 && sala.room.scoring === 0.5
-    && /10 teams · \$200 · 15 rounds/.test(sala.bar),
+    && /10 teams, \$200, half PPR, 1QB, 15 rounds/.test(sala.bar),
     JSON.stringify(sala.room) + ' | ' + sala.bar.slice(0, 90));
   ok('(B-' + tag + ') llegando por clic, la lista y la columna Pay estan puestas',
     !st._err && st.pantalla === 'screen-research' && st.tab === 'tab-rankings' && st.filas > 100
@@ -599,13 +602,22 @@ console.log('\n=== My Rankings: solo el dueno, y su documento en el servidor ===
     build: (function () { const e = document.getElementById('rk-build'); return !!e && !e.hidden; })(),
     cols: getComputedStyle(document.querySelector('#rk-body .rk-row')).gridTemplateColumns.split(' ').length,
     cls: document.getElementById('tab-rankings').classList.contains('rk-owner'),
-    sync: (document.getElementById('rk-sync') || {}).textContent || ''
+    sync: (document.getElementById('rk-sync') || {}).textContent || '',
+    // Los botones del dueno no pueden estar NI escondidos: se comprueba el DOM,
+    // no la visibilidad. Un boton con display:none sigue estando ahi para quien
+    // abra el inspector, y "solo para el" tiene que aguantar eso.
+    tools: document.querySelectorAll('#rk-owner-tools .rk-btn').length,
+    juego: (function () { const g = document.getElementById('rk-game'); return !!g && !g.hidden; })(),
+    hoja: (function () { const h = document.getElementById('rk-sheet'); return !!h && !h.hidden; })()
   }));
   ok('(N1) una cuenta corriente no ve columna Pay, ni objetivos, ni barra Build',
     !neg._err && neg.owner === false && neg.pr === 0 && neg.tg === 0 && neg.head === 0 && !neg.build && neg.cols === 7 && !neg.cls && neg.sync === '',
     JSON.stringify(neg));
   ok('(N2) una cuenta corriente no manda ni pide el documento del dueno', puts.length === 0 && gets.length === 0,
     `PUT=${puts.length} GET=${gets.length}`);
+  ok('(N4) una cuenta corriente no tiene Tier Game ni Cheat Sheet, ni escondidos',
+    !neg._err && neg.tools === 0 && !neg.juego && !neg.hoja,
+    JSON.stringify({ tools: neg.tools, juego: neg.juego, hoja: neg.hoja }));
   ok('(N3) consola limpia sin ser el dueno', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.close();
 }
@@ -703,6 +715,581 @@ let idGibbs = null, idSwift = null;
   ok('(O1) /api/perfil/owner: true para el dueno, false para el resto', !!a && a.owner === true && !!o && o.owner === false, JSON.stringify({ a, o }));
   ok('(O2) /api/perfil/rankings: 401 anonimo, 403 ajeno, 413 por encima del tope, 400 con forma mala',
     anon === 401 && ajeno === 403 && (gordo === 413) && malo === 400, JSON.stringify({ anon, ajeno, gordo, malo }));
+}
+
+
+console.log('\n=== Tier Game: la inferencia, como funcion pura ===');
+// (G) La inferencia NO se prueba pintando: se prueba con casos armados a mano,
+//     que es para lo que tmrTiersInfer es pura y esta exportada. Un universo de
+//     mentira de doce jugadores hace visible lo que en la lista real de 200 se
+//     esconde. Corre dentro de la pagina porque ahi vive la funcion, no porque
+//     necesite el DOM: no toca ni uno.
+{
+  const { pg, errs } = await nueva(1440, 950);
+  const r = await eva(pg, () => {
+    const rows = [
+      { id: 'r1', name: 'A Uno', pos: 'RB', team: 'X' }, { id: 'w1', name: 'B Dos', pos: 'WR', team: 'X' },
+      { id: 'r2', name: 'C Tres', pos: 'RB', team: 'X' }, { id: 'w2', name: 'D Cuatro', pos: 'WR', team: 'X' },
+      { id: 'r3', name: 'E Cinco', pos: 'RB', team: 'X' }, { id: 'w3', name: 'F Seis', pos: 'WR', team: 'X' },
+      { id: 'q1', name: 'G Siete', pos: 'QB', team: 'X' }, { id: 'r4', name: 'H Ocho', pos: 'RB', team: 'X' },
+      { id: 't1', name: 'I Nueve', pos: 'TE', team: 'X' }, { id: 'w4', name: 'J Diez', pos: 'WR', team: 'X' },
+      { id: 'q2', name: 'K Once', pos: 'QB', team: 'X' }, { id: 't2', name: 'L Doce', pos: 'TE', team: 'X' }
+    ];
+    const base = rows.map(x => x.id).join(',');
+    const entre = (res, x, y) => {
+      const A = res.order.indexOf(x), B = res.order.indexOf(y);
+      for (let q = Math.min(A, B); q < Math.max(A, B); q++) if (res.breaks[res.order[q]]) return true;
+      return false;
+    };
+    const vacio = tmrTiersInfer(rows, []);
+    const same = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 0 }]);
+    const claro = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 2 }]);
+    const gana = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 2 }, { a: 'r1', b: 'w1', v: 0 }]);
+    const poco = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 1 }]);
+    const tr = tmrTiersInfer(rows, [{ a: 'r3', b: 'r1', v: 2 }, { a: 'r1', b: 'r2', v: 2 }]);
+    const quieto = tmrTiersInfer(rows, [{ a: 'r4', b: 'r1', v: 2 }]);
+    // el juego, jugado entero: ni una pareja repetida
+    let ans = [], visto = {}, repes = 0, cruces = 0, n = 0;
+    for (let i = 0; i < 60; i++) {
+      const p = tmrGameNext(rows, ans);
+      if (!p) break;
+      const k = [p.a, p.b].sort().join('|');
+      if (visto[k]) repes++;
+      visto[k] = 1;
+      if (p.cross) cruces++;
+      ans.push({ a: p.a, b: p.b, v: 1 });
+      n++;
+    }
+    return {
+      base,
+      vacio: { ord: vacio.order.join(','), cortes: vacio.cuts.length, movidos: vacio.moved },
+      sameCorta: entre(same, 'r1', 'w1'),
+      claroCorta: entre(claro, 'r1', 'w1'),
+      ganaSame: entre(gana, 'r1', 'w1'),
+      pocoCorta: entre(poco, 'r1', 'w1'),
+      tr: { ok: tr.order.indexOf('r3') < tr.order.indexOf('r1') && tr.order.indexOf('r1') < tr.order.indexOf('r2'),
+        c1: entre(tr, 'r3', 'r1'), c2: entre(tr, 'r1', 'r2'), ord: tr.order.join(',') },
+      // r4 y r1 se comparan; los que no juegan conservan su puesto relativo
+      quieto: { t2: quieto.order.indexOf('t2') === 11, q2: quieto.order.indexOf('q2') === 10, ord: quieto.order.join(',') },
+      juego: { n, repes, cruces, prog: tmrGameProgress(rows, ans).pct }
+    };
+  });
+  ok('(G1) sin respuestas la lista no se mueve y no aparece ni un corte',
+    !r._err && r.vacio.ord === r.base && r.vacio.cortes === 0 && r.vacio.movidos === 0, JSON.stringify(r.vacio));
+  ok('(G2) un "same tier" declarado NUNCA corta entre esos dos', !r._err && r.sameCorta === false, JSON.stringify({ same: r.sameCorta }));
+  ok('(G3) un "clearly" SIEMPRE deja un corte entre los dos', !r._err && r.claroCorta === true, JSON.stringify({ claro: r.claroCorta }));
+  ok('(G4) el "same tier" gana al "clearly" cuando el dueno se contradice', !r._err && r.ganaSame === false, JSON.stringify({ gana: r.ganaSame }));
+  ok('(G5) un "slightly" ordena pero no corta', !r._err && r.pocoCorta === false, JSON.stringify({ poco: r.pocoCorta }));
+  ok('(G6) transitividad: r3 > r1 > r2, con su corte en cada escalon',
+    !r._err && r.tr.ok && r.tr.c1 && r.tr.c2, JSON.stringify(r.tr));
+  ok('(G7) el que no aparece en ninguna respuesta conserva su puesto',
+    !r._err && r.quieto.t2 && r.quieto.q2, JSON.stringify(r.quieto));
+  ok('(G8) el juego no repite una pareja y llega a resolver los tiers',
+    !r._err && r.juego.n > 20 && r.juego.repes === 0 && r.juego.prog === 100, JSON.stringify(r.juego));
+  ok('(G9) consola limpia con la inferencia', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
+console.log('\n=== Tier Game: jugando, entrando por la puerta de entrada ===');
+// (J) Se entra CLICANDO el boton, no llamando tmrGameOpen(): la leccion del
+//     2026-08-26 es que un gate que entra por la puerta de servicio deja pasar
+//     una feature a la que no se puede llegar.
+let juegoIds = null;
+{
+  const { pg, errs, puts } = await nueva(1440, 950);
+  await abrirTab(pg);
+  await esperar(pg, () => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing
+    && Object.keys(TMR.price || {}).length > 0, 45000);
+  const hayBtn = await eva(pg, () => {
+    const b = Array.from(document.querySelectorAll('#rk-owner-tools .rk-btn')).map(x => x.textContent.trim());
+    return { btns: b };
+  });
+  ok('(J1) el dueno tiene los botones Tier Game y Cheat Sheet en las herramientas',
+    !hayBtn._err && hayBtn.btns.indexOf('Tier Game') >= 0 && hayBtn.btns.indexOf('Cheat Sheet') >= 0,
+    JSON.stringify(hayBtn.btns));
+
+  await pg.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#rk-owner-tools .rk-btn')).find(x => /Tier Game/.test(x.textContent));
+    if (b) b.click();
+  });
+  await esperar(pg, () => { const g = document.getElementById('rk-game'); return g && !g.hidden && g.querySelectorAll('.rk-gm-b').length === 5; }, 15000);
+  const abierto = await eva(pg, () => {
+    const g = document.getElementById('rk-game');
+    const btns = Array.from(g.querySelectorAll('.rk-gm-b'));
+    const cartas = Array.from(g.querySelectorAll('.rk-gm-card')).map(c => ({
+      nm: (c.querySelector('.rk-gm-nm') || {}).textContent,
+      pay: (c.querySelector('.rk-gm-pay') || {}).textContent,
+      foto: !!c.querySelector('img[src*="sleepercdn"]')
+    }));
+    return {
+      visible: !g.hidden,
+      lista: (document.querySelector('#tab-rankings .rk-list') || {}).offsetParent === null,
+      n: btns.length,
+      chico: btns.filter(b => b.getBoundingClientRect().height < 44).length,
+      txt: btns.map(b => b.textContent.trim()),
+      cartas,
+      prog: (document.getElementById('rk-gm-pg') || {}).textContent || '',
+      pareja: TMR.gamePair ? [TMR.gamePair.a, TMR.gamePair.b] : null
+    };
+  });
+  ok('(J2) el juego abre con la pareja, sus dos precios y cinco respuestas de 44px+',
+    !abierto._err && abierto.visible && abierto.lista && abierto.n === 5 && abierto.chico === 0
+    && abierto.cartas.length === 2 && abierto.cartas.every(c => c.nm && c.foto && /^\$/.test(c.pay || ''))
+    && /Same tier/.test(abierto.txt[2] || '')
+    && /^\d+ answers? · \d+ of \d+ tier boundaries resolved$/.test(abierto.prog.trim()),
+    JSON.stringify({ n: abierto.n, chico: abierto.chico, txt: abierto.txt, cartas: abierto.cartas, prog: abierto.prog }));
+
+  // Se contestan cinco parejas clicando de verdad. La pareja tiene que cambiar
+  // en cada respuesta y el progreso tiene que subir: una barra decorativa se
+  // quedaria quieta y este check no lo veria.
+  const antes = abierto.pareja;
+  const vistas = [];
+  for (let i = 0; i < 5; i++) {
+    const p = await eva(pg, () => TMR.gamePair ? TMR.gamePair.a + '|' + TMR.gamePair.b : null);
+    vistas.push(p);
+    await pg.evaluate(i2 => {
+      const b = document.querySelectorAll('#rk-game .rk-gm-b')[i2];
+      if (b) b.click();
+    }, [0, 2, 4, 1, 3][i]);
+    await pg.waitForTimeout(120);
+  }
+  const tras = await eva(pg, () => ({
+    n: TMR.game.length,
+    pareja: TMR.gamePair ? TMR.gamePair.a + '|' + TMR.gamePair.b : null,
+    prog: tmrGameProgress(TMR.rows, TMR.game),
+    v: TMR.game.map(x => x.v)
+  }));
+  const repetidas = vistas.filter((x, i) => vistas.indexOf(x) !== i).length;
+  ok('(J3) contestar guarda la respuesta, cambia de pareja y mueve el progreso',
+    !tras._err && tras.n === 5 && repetidas === 0 && tras.prog.answered === 5 && tras.prog.resolved > 0
+    && JSON.stringify(tras.v) === JSON.stringify([2, 0, -2, 1, -1]),
+    JSON.stringify({ n: tras.n, repetidas, prog: tras.prog, v: tras.v }));
+
+  await pg.evaluate(() => { const b = document.getElementById('rk-gm-undo'); if (b) b.click(); });
+  await pg.waitForTimeout(150);
+  const undo = await eva(pg, () => ({ n: TMR.game.length, pareja: TMR.gamePair ? TMR.gamePair.a + '|' + TMR.gamePair.b : null }));
+  ok('(J4) Undo borra la ultima respuesta y devuelve ESA pareja, no otra',
+    !undo._err && undo.n === 4 && undo.pareja === vistas[4], JSON.stringify({ undo, esperaba: vistas[4] }));
+
+  // Se dejan respuestas de sobra para que el Apply tenga algo que hacer, y se
+  // apunta el estado ANTES para poder comprobar que de verdad cambio.
+  await eva(pg, () => {
+    for (let i = 0; i < 40; i++) {
+      const p = tmrGameNext(TMR.rows, TMR.game);
+      if (!p) break;
+      TMR.game.push({ a: p.a, b: p.b, v: (i % 5) - 2, t: Date.now() });
+    }
+    TMR.gamePair = tmrGameNext(TMR.rows, TMR.game);
+    tmrGameSave(); tmrGamePaint();
+  });
+  const prevN = puts.length;
+  const previo = await eva(pg, () => ({
+    orden: TMR.rows.slice(0, 100).map(r => r.id).join(','),
+    cortes: Object.keys(TMR.breakAfter).filter(k => TMR.breakAfter[k]).length,
+    espera: tmrTiersInfer(TMR.rows, TMR.game)
+  }));
+  // Nunca se lee dentro de un eva que pudo fallar sin red: un acceso crudo
+  // aqui tumba la corrida entera contra el codigo roto, que es exactamente
+  // para lo que existe este bloque.
+  const esp = (previo && previo.espera) || { moved: -1, cuts: [], order: [] };
+  await pg.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#rk-game .rk-btn')).find(x => /Build tiers/.test(x.textContent));
+    if (b) b.click();
+  });
+  await esperar(pg, () => { const p = document.getElementById('rk-gm-prev'); return p && !p.hidden && /moves/.test(p.textContent); }, 10000);
+  const vistaPrevia = await eva(pg, () => (document.getElementById('rk-gm-prev') || {}).textContent || '');
+  ok('(J5) antes de aplicar, la vista previa DICE cuanto se mueve y cuantos cortes deja',
+    typeof vistaPrevia === 'string' && new RegExp('moves ' + esp.moved + ' of').test(vistaPrevia.replace(/\s+/g, ' '))
+    && new RegExp('leaves ' + esp.cuts.length + ' tier').test(vistaPrevia.replace(/\s+/g, ' ')),
+    JSON.stringify(String(vistaPrevia).replace(/\s+/g, ' ').slice(0, 190)));
+
+  await pg.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#rk-gm-prev .rk-btn')).find(x => /Apply tiers/.test(x.textContent));
+    if (b) b.click();
+  });
+  await esperar(pg, () => { const g = document.getElementById('rk-game'); return !g || g.hidden; }, 10000);
+  const aplicado = await eva(pg, () => ({
+    orden: TMR.rows.slice(0, 100).map(r => r.id).join(','),
+    cortes: Object.keys(TMR.breakAfter).filter(k => TMR.breakAfter[k]).length,
+    bandas: document.querySelectorAll('#rk-body .rk-tier').length,
+    lista: document.querySelectorAll('#rk-body .rk-row').length,
+    guardado: (JSON.parse(localStorage.getItem('tm_rankings_v1') || '{}').order || []).slice(0, 100).join(',')
+  }));
+  ok('(J6) Apply reordena la lista de verdad, pone los cortes inferidos y los guarda',
+    !aplicado._err && aplicado.orden === esp.order.join(',') && aplicado.orden !== previo.orden
+    && aplicado.cortes === esp.cuts.length && aplicado.bandas > 1 && aplicado.lista > 100
+    && aplicado.guardado === aplicado.orden,
+    JSON.stringify({ cortes: aplicado.cortes, esperaba: esp.cuts.length, bandas: aplicado.bandas, movio: aplicado.orden !== previo.orden }));
+
+  const s = await sincronizado(pg);
+  ok('(J7) el juego y los tiers aplicados suben al servidor', s && puts.length > prevN, `PUT ${prevN} -> ${puts.length}`);
+  juegoIds = await eva(pg, () => TMR.game.map(x => x.a + '|' + x.b + '|' + x.v).join(','));
+  ok('(J8) consola limpia jugando y aplicando', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
+// (K) Retomar desde el OTRO dispositivo. Es la razon de guardar el juego en el
+//     documento del servidor y no solo en localStorage: el dueno contesta
+//     parejas en el celular en la cola del banco y sigue en la computadora.
+{
+  const { pg, errs } = await nueva(390, 844);
+  await abrirTab(pg);
+  await esperar(pg, () => typeof TMR !== 'undefined' && TMR.owner === true && Array.isArray(TMR.game) && TMR.game.length > 0, 25000);
+  await pg.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#rk-owner-tools .rk-btn')).find(x => /Tier Game/.test(x.textContent));
+    if (b) b.click();
+  });
+  await esperar(pg, () => { const g = document.getElementById('rk-game'); return g && !g.hidden; }, 15000);
+  const seg = await eva(pg, () => {
+    const btns = Array.from(document.querySelectorAll('#rk-game .rk-gm-b'));
+    return {
+      juego: TMR.game.map(x => x.a + '|' + x.b + '|' + x.v).join(','),
+      n: TMR.game.length,
+      desborde: document.documentElement.scrollWidth > window.innerWidth,
+      chico: btns.filter(b => b.getBoundingClientRect().height < 44).length,
+      fuera: btns.filter(b => { const r = b.getBoundingClientRect(); return r.right > window.innerWidth + 1 || r.left < -1; }).length,
+      prog: (document.getElementById('rk-gm-pg') || {}).textContent || ''
+    };
+  });
+  ok('(K1) el segundo navegador (390px) retoma el juego exactamente donde quedo',
+    !seg._err && seg.juego === juegoIds && seg.n > 40, `${seg.n} respuestas, iguales: ${seg.juego === juegoIds}`);
+  ok('(K2) a 390px el juego no desborda y sus botones se tocan',
+    !seg._err && !seg.desborde && seg.chico === 0 && seg.fuera === 0, JSON.stringify(seg).slice(0, 160));
+  ok('(K3) consola limpia retomando en el telefono', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
+console.log('\n=== Tier Game: el prior del mercado, la escalada y las contradicciones ===');
+// (M) La parte "inteligente", probada como funcion pura sobre un universo con
+//     PRECIOS: sin dinero el eje del corte no existe y estos casos no se ven.
+//     Los precios son la curva real de FZ26 que documenta CLAUDE.md.
+{
+  const { pg, errs } = await nueva(1440, 950);
+  const _r = await eva(pg, () => {
+    const precios = [77, 75, 68, 65, 64, 61, 61, 59, 54, 53, 53, 51, 45, 42, 40, 39, 39, 36, 36, 36, 35, 34, 33, 32, 32, 31,
+      27, 26, 26, 25, 24, 23, 22, 21, 20, 19, 19, 18, 17, 17, 17, 16, 15, 15, 14, 13, 13, 12, 11, 11, 11, 10, 7, 6, 5, 4, 3, 2, 2, 1];
+    const pos = ['RB', 'RB', 'WR', 'WR', 'RB', 'RB', 'WR', 'WR', 'RB', 'RB', 'WR', 'WR', 'RB', 'RB', 'RB', 'RB', 'RB', 'QB', 'WR', 'RB',
+      'WR', 'TE', 'TE', 'WR', 'WR', 'RB', 'QB', 'RB', 'WR', 'WR', 'WR', 'RB', 'RB', 'WR', 'WR', 'QB', 'RB', 'WR', 'WR', 'WR',
+      'WR', 'RB', 'WR', 'TE', 'RB', 'RB', 'RB', 'RB', 'QB', 'TE', 'RB', 'QB', 'QB', 'RB', 'WR', 'TE', 'QB', 'RB', 'WR', 'TE'];
+    const rows = [], pay = {};
+    precios.forEach((v, i) => { const id = 'p' + i; rows.push({ id, name: 'Jug' + i, pos: pos[i], team: 'X' }); pay[id] = v; });
+    const O = { pay, budget: 200 };
+    const entre = (res, x, y) => {
+      const A = res.order.indexOf(x), B = res.order.indexOf(y);
+      for (let q = Math.min(A, B); q < Math.max(A, B); q++) if (res.breaks[res.order[q]]) return true;
+      return false;
+    };
+    const tierDe = res => { let t = 1, m = {}; res.order.forEach(id => { m[id] = t; if (res.breaks[id]) t++; }); return m; };
+
+    // PRIOR: sin una sola respuesta ya hay tiers, y salen del escalon de precio
+    const cero = tmrTiersInfer(rows, [], O);
+    const tc = tierDe(cero);
+    const porPos = {};
+    cero.order.forEach(id => { const p = rows.find(x => x.id === id).pos; (porPos[p] = porPos[p] || {})[tc[id]] = 1; });
+
+    // y se RINDE ante una sola respuesta suya (p8 $54 y p20 $35)
+    const juntos = tmrTiersInfer(rows, [{ a: 'p8', b: 'p20', v: 0 }], O);
+
+    // ESCALADA: p46 ($13) gana clearly a p32 ($22), que esta por encima
+    const e1 = tmrGameNext(rows, [{ a: 'p46', b: 'p32', v: 2 }], O);
+    const rival1 = e1 && (e1.a === 'p46' ? e1.b : e1.a);
+    const e2 = tmrGameNext(rows, [{ a: 'p46', b: 'p32', v: 2 }, { a: 'p46', b: rival1, v: 2 }], O);
+    const rival2 = e2 && (e2.a === 'p46' ? e2.b : e2.a);
+    const eEmp = tmrGameNext(rows, [{ a: 'p46', b: 'p32', v: 2 }, { a: 'p46', b: rival1, v: 0 }], O);
+
+    // GANANCIA DE INFORMACION: la primera pregunta cae en el umbral y arriba
+    const n0 = tmrGameNext(rows, [], O);
+    const gap0 = Math.abs(cero.money[n0.a] - cero.money[n0.b]);
+
+    // TRANSITIVIDAD CON CONFIANZA: nunca pregunta A vs C con A>B>C en clearly
+    let ans = [{ a: 'p0', b: 'p4', v: 2 }, { a: 'p4', b: 'p8', v: 2 }], vioAC = false;
+    for (let i = 0; i < 40; i++) {
+      const nx = tmrGameNext(rows, ans, O);
+      if (!nx) break;
+      if ([nx.a, nx.b].sort().join('|') === 'p0|p8') vioAC = true;
+      ans.push({ a: nx.a, b: nx.b, v: 1 });
+    }
+
+    // CONTRADICCIONES
+    const cy = tmrGameCycles(rows, [{ a: 'p0', b: 'p4', v: 2 }, { a: 'p4', b: 'p8', v: 2 }, { a: 'p8', b: 'p0', v: 2 }], O);
+    const sinCy = tmrGameCycles(rows, [{ a: 'p0', b: 'p4', v: 2 }, { a: 'p4', b: 'p8', v: 2 }], O);
+
+    // SESION CORTA: 30 respuestas dan tiers coherentes
+    let a30 = [];
+    for (let i = 0; i < 30; i++) {
+      const nx = tmrGameNext(rows, a30, O);
+      if (!nx) break;
+      a30.push({ a: nx.a, b: nx.b, v: [2, 1, 0, -1, 1][i % 5] });
+    }
+    const r30 = tmrTiersInfer(rows, a30, O), t30 = tierDe(r30);
+    const pos30 = {};
+    r30.order.forEach(id => { const p = rows.find(x => x.id === id).pos; (pos30[p] = pos30[p] || {})[t30[id]] = 1; });
+
+    return {
+      prior: {
+        cortes: cero.cuts.length, movidos: cero.moved, umbral: cero.umbral,
+        tiersPorPos: Object.keys(porPos).map(p => p + ':' + Object.keys(porPos[p]).length).join(' '),
+        cortadosSin: entre(cero, 'p8', 'p20'), cortadosCon: entre(juntos, 'p8', 'p20')
+      },
+      esc: {
+        e1, rival1, sube1: !!rival1 && cero.order.indexOf(rival1) < cero.order.indexOf('p32'),
+        posRival1: rival1 && rows.find(x => x.id === rival1).pos,
+        e2, rival2, sube2: !!rival2 && !!rival1 && cero.order.indexOf(rival2) < cero.order.indexOf(rival1),
+        empateCorta: !!eEmp && !eEmp.why
+      },
+      gan: { n0, gap0, umbral: cero.umbral, peorPuesto: Math.max(cero.order.indexOf(n0.a), cero.order.indexOf(n0.b)) },
+      vioAC,
+      cy: { n: cy.length, ids: cy[0] && cy[0].ids, rep: cy[0] && cy[0].repreguntar, sin: sinCy.length },
+      corta: {
+        n: a30.length, cortes: r30.cuts.length, cortesCero: cero.cuts.length,
+        minTiers: Math.min.apply(null, Object.keys(pos30).map(p => Object.keys(pos30[p]).length)),
+        bandasTop20: new Set(r30.order.slice(0, 20).map(id => t30[id])).size,
+        prog: tmrGameProgress(rows, a30)
+      }
+    };
+  });
+
+  const r = Object.assign({ prior: {}, esc: {}, gan: {}, cy: {}, corta: {} }, _r || {});
+  ok('(M1) PRIOR: sin una sola respuesta ya hay tiers, sacados del escalon de precio',
+    !r._err && r.prior.cortes >= 5 && r.prior.movidos === 0 && r.prior.umbral > 0,
+    JSON.stringify(r.prior));
+  ok('(M2) y el prior se RINDE: un "same tier" suyo borra un escalon de mercado de $19',
+    !r._err && r.prior.cortadosSin === true && r.prior.cortadosCon === false,
+    `mercado los separa: ${r.prior.cortadosSin}, tras su respuesta: ${r.prior.cortadosCon}`);
+  ok('(M3) ESCALADA: tras ganar clearly desde abajo, lo prueba contra uno de MAS arriba',
+    !r._err && r.esc.e1 && r.esc.e1.why === 'up' && r.esc.sube1 && r.esc.posRival1 === 'RB',
+    JSON.stringify({ e1: r.esc.e1, sube: r.esc.sube1, pos: r.esc.posRival1 }));
+  ok('(M4) y si sigue ganando sigue subiendo; un empate la corta',
+    !r._err && r.esc.e2 && r.esc.e2.why === 'up' && r.esc.sube2 && r.esc.empateCorta,
+    JSON.stringify({ e2: r.esc.e2, sube2: r.esc.sube2, empateCorta: r.esc.empateCorta }));
+  ok('(M5) GANANCIA: la primera pregunta cae en el umbral de corte y arriba, no en un abismo',
+    !r._err && r.gan.gap0 <= r.gan.umbral * 2.5 && r.gan.peorPuesto < 20,
+    `salto $${r.gan.gap0} contra umbral $${r.gan.umbral}, peor puesto ${r.gan.peorPuesto}`);
+  ok('(M6) nunca gasta un turno en A vs C teniendo A>B>C con dos "clearly"',
+    !r._err && r.vioAC === false);
+  ok('(M7) detecta la contradiccion A>B>C>A y ofrece que pareja re-preguntar',
+    !r._err && r.cy.n === 1 && r.cy.ids && r.cy.ids.length === 3 && r.cy.rep && r.cy.rep.length === 2,
+    JSON.stringify(r.cy));
+  ok('(M8) CONTROL NEGATIVO: sin ciclo no inventa una contradiccion', !r._err && r.cy.sin === 0, 'ciclos: ' + r.cy.sin);
+  ok('(M9) una sesion de 30 respuestas ya deja tiers coherentes',
+    !r._err && r.corta.n === 30 && r.corta.minTiers >= 2 && r.corta.bandasTop20 >= 3
+    && r.corta.cortes >= r.corta.cortesCero && r.corta.prog.resolved > 0 && r.corta.prog.total > 0,
+    JSON.stringify(r.corta));
+  ok('(M10) consola limpia con el motor nuevo', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
+console.log('\n=== Fantazy 2026: los settings de SU liga mandan ===');
+// (F) Regla del dueno: "toma en cuenta los league settings y format de la liga".
+//     El check que importa no es que los numeros salgan bonitos, es que NO
+//     cambien cuando el se pone a probar otra sala en Mock Draft. Por eso el
+//     segundo navegador arranca con memoria de una sala de 12 equipos PPR de 8
+//     rondas: si el Pay se moviera, sus precios del domingo dependerian de con
+//     que estuvo jugando el sabado.
+{
+  const leer = async mock => {
+    const { pg, errs } = await nueva(1440, 950, mock ? { mock } : {});
+    await abrirTab(pg);
+    await esperar(pg, () => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing
+      && Object.keys(TMR.price || {}).length > 0, 45000);
+    const d = await eva(pg, () => {
+      const r = TMR.rows.find(x => /Gibbs/.test(x.name)) || TMR.rows[0];
+      return {
+        room: TMR.room, fmt: TMR.fmt,
+        jugador: r.name, pay: tmrPriceOf(r.id), sticker: TMR.sticker ? TMR.sticker[r.id] : null,
+        bar: (document.getElementById('rk-build') || {}).textContent.replace(/\s+/g, ' ').trim(),
+        shape: tmrRosterShape(TMR.room || tmrRoomCfg()),
+        // el espejo del formato de board, contra los cuatro casos
+        fmts: [
+          tmrAdpFmt({ sf: false, scoring: 0.5 }), tmrAdpFmt({ sf: false, scoring: 1 }),
+          tmrAdpFmt({ sf: false, scoring: 0 }), tmrAdpFmt({ sf: true, scoring: 0.5 })
+        ]
+      };
+    });
+    return { d, errs, pg };
+  };
+  const A = await leer(null);
+  const B = await leer({ 'md-teams': '12', 'md-scoring': '1', 'md-rounds': '8', 'md-budget': '300', 'md-format': 'sf', 'md-dtype': 'auction' });
+
+  ok('(F1) la sala del dueno es SU liga: 10 equipos, $200, 15 rondas, half PPR, 1QB',
+    !A.d._err && A.d.room && A.d.room.teams === 10 && A.d.room.budget === 200 && A.d.room.rounds === 15
+    && A.d.room.scoring === 0.5 && A.d.room.sf === false && A.d.room.fz26 === true,
+    JSON.stringify(A.d.room));
+  ok('(F2) y NO se mueve porque el mock este puesto en 12 equipos PPR de 8 rondas',
+    !B.d._err && B.d.room && B.d.room.teams === 10 && B.d.room.rounds === 15 && B.d.room.scoring === 0.5
+    && B.d.pay === A.d.pay && B.d.sticker === A.d.sticker && A.d.pay > 0,
+    `${A.d.jugador}: sin memoria $${A.d.pay}, con memoria de otra sala $${B.d.pay} (sticker ${A.d.sticker}/${B.d.sticker})`);
+  ok('(F3) el board es el de SU formato (half PPR), no el de PPR entero',
+    !A.d._err && A.d.fmt === 'half-ppr' && B.d.fmt === 'half-ppr', `A ${A.d.fmt} / B ${B.d.fmt}`);
+  ok('(F4) la barra Build declara la liga entera, con scoring y 1QB',
+    !A.d._err && /Fantazy 2026: 10 teams, \$200, half PPR, 1QB, 15 rounds/.test(A.d.bar),
+    String(A.d.bar || '').slice(0, 110));
+  ok('(F5) el roster es el de la liga: 9 titulares (QB, 2RB, 2WR, TE, FLEX, K, DEF) y 6 de banca',
+    !A.d._err && A.d.shape && A.d.shape.QB === 1 && A.d.shape.RB === 2 && A.d.shape.WR === 2
+    && A.d.shape.TE === 1 && A.d.shape.FLEX === 1 && A.d.shape.titulares === 9 && A.d.shape.banca === 6,
+    JSON.stringify(A.d.shape));
+  // ANTI-DERIVA: el mapa formato->board es un ESPEJO de app.js. Se extrae del
+  // otro archivo y se compara caso por caso, que es la vacuna que este repo ya
+  // usa para tmClasificarLiga. Sin esto los dos se separan en silencio y el
+  // precio se calcula con el board de otra liga.
+  const appSrc = fs.readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
+  const mAdp = appSrc.match(/var\s+_adpFmt\s*=\s*([^;]+);/);
+  let espejo = null;
+  if (mAdp) {
+    const f = new Function('MD', 'return ' + mAdp[1] + ';');
+    espejo = [f({ sf: false, scoring: 0.5 }), f({ sf: false, scoring: 1 }), f({ sf: false, scoring: 0 }), f({ sf: true, scoring: 0.5 })];
+  }
+  ok('(F6) el mapa formato->board de rankings.js sigue siendo el MISMO que el de app.js',
+    !!espejo && !A.d._err && JSON.stringify(espejo) === JSON.stringify(A.d.fmts),
+    'app.js ' + JSON.stringify(espejo) + ' vs rankings.js ' + JSON.stringify(A.d.fmts));
+  ok('(F7) consola limpia con la sala forzada', A.errs.length === 0 && B.errs.length === 0,
+    A.errs.concat(B.errs).slice(0, 3).join(' | ') || 'sin errores');
+  await A.pg.close();
+  await B.pg.close();
+}
+
+console.log('\n=== Cheat Sheet ===');
+// (H) El caso que el dueno escribio con sus palabras: Swift en el tier de Hall
+//     significa "quemate la plata en Gibbs y agarras a Swift en vez de Cook".
+//     Se arma ese tier a mano (los tres RB juntos y un corte por cada lado) y
+//     se comprueba que la hoja saca la cuenta bien, no que diga algo parecido.
+{
+  const { pg, errs } = await nueva(1440, 950);
+  await eva(pg, () => { try { mdFantazy26Toggle(true); } catch (_) { } });
+  await abrirTab(pg);
+  await esperar(pg, () => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing && Object.keys(TMR.price || {}).length > 0);
+
+  // CONTROL NEGATIVO de la hoja: sin un solo corte de tier, "Cheapest in" no
+  // puede decir nada (el "tier" seria la lista entera) y tiene que callarse y
+  // explicar por que. Sin este check, H2 pasaria igual con la linea diciendo
+  // cualquier cosa sobre un tier de cuarenta jugadores.
+  await eva(pg, () => { TMR.breakAfter = {}; tmrSave(); tmrPaint(); tmrSheetOpen(); });
+  await esperar(pg, () => { const s = document.getElementById('rk-sheet'); return s && !s.hidden; }, 15000);
+  const mudo = await eva(pg, () => ({
+    deals: document.querySelectorAll('#rk-sheet .rk-sh-deal').length,
+    nota: !!document.getElementById('rk-sh-notiers'),
+    secs: document.querySelectorAll('#rk-sheet .rk-sh-sec').length
+  }));
+  ok('(H-0) CONTROL NEGATIVO: sin cortes de tier la hoja no inventa una ganga y lo dice',
+    !mudo._err && mudo.deals === 0 && mudo.nota && mudo.secs > 0, JSON.stringify(mudo));
+  await eva(pg, () => tmrSheetClose());
+
+  const armado = await eva(pg, () => {
+    const buscar = ap => TMR.rows.findIndex(r => r.pos === 'RB' && new RegExp('\\b' + ap, 'i').test(r.name));
+    let iCook = buscar('Cook'), iHall = buscar('Hall'), iSwift = buscar('Swift');
+    if (iCook < 0 || iHall < 0 || iSwift < 0) return { falta: { iCook, iHall, iSwift } };
+    const cook = TMR.rows[iCook], hall = TMR.rows[iHall], swift = TMR.rows[iSwift];
+    // Los tres pegados, en ese orden, y un corte a cada lado: el tier queda
+    // siendo exactamente esos tres y nada mas.
+    TMR.rows = TMR.rows.filter(r => r !== hall && r !== swift);
+    const j = TMR.rows.indexOf(cook);
+    TMR.rows.splice(j + 1, 0, hall, swift);
+    TMR.breakAfter = {};
+    if (j > 0) TMR.breakAfter[TMR.rows[j - 1].id] = true;
+    TMR.breakAfter[swift.id] = true;
+    tmrSave(); tmrPaint();
+    const pay = id => tmrPriceOf(id);
+    return {
+      cook: { id: cook.id, nm: cook.name, pay: pay(cook.id) },
+      hall: { id: hall.id, nm: hall.name, pay: pay(hall.id) },
+      swift: { id: swift.id, nm: swift.name, pay: pay(swift.id) }
+    };
+  });
+  ok('(H0) el caso se pudo armar: Cook, Hall y Swift en un tier, con su precio',
+    !!armado && !armado._err && !armado.falta && armado.cook && armado.cook.pay > 0
+    && armado.hall && armado.hall.pay > 0 && armado.swift && armado.swift.pay > 0,
+    JSON.stringify(armado));
+
+  await pg.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#rk-owner-tools .rk-btn')).find(x => /Cheat Sheet/.test(x.textContent));
+    if (b) b.click();
+  });
+  await esperar(pg, () => { const s = document.getElementById('rk-sheet'); return s && !s.hidden && s.querySelectorAll('.rk-sh-sec').length > 0; }, 15000);
+
+  const hoja = await eva(pg, () => {
+    const s = document.getElementById('rk-sheet');
+    const d = tmrSheetData();
+    const deals = Array.from(s.querySelectorAll('.rk-sh-deal')).map(x => x.textContent.replace(/\s+/g, ' ').trim());
+    return {
+      visible: !s.hidden,
+      lista: (document.querySelector('#tab-rankings .rk-list') || {}).offsetParent === null,
+      plan: (s.querySelector('.rk-sh-plan') || {}).textContent.replace(/\s+/g, ' ').trim(),
+      total: d.plan.total, left: d.plan.left, huecos: d.plan.huecos, rondas: d.plan.cfg.rounds,
+      secs: Array.from(s.querySelectorAll('.rk-sh-h')).map(x => x.textContent.trim()),
+      deals,
+      notas: Array.from(s.querySelectorAll('.rk-sh-notes li')).map(x => x.textContent.trim()),
+      liga: (s.querySelector('#rk-sh-liga') || {}).textContent || '',
+      cab: (s.querySelector('.rk-sh-top') || {}).textContent.replace(/\s+/g, ' ').trim(),
+      gaps: Array.from(s.querySelectorAll('.rk-sh-gaps li')).map(x => x.textContent.replace(/\s+/g, ' ').trim()),
+      mkData: (d.market || []).map(m => m.pos + '/' + m.tier + '/' + m.cheap.r.name + '/$' + m.cheap.pay),
+      market: s.querySelectorAll('.rk-sh-deal.is-market').length,
+      objetivos: s.querySelectorAll('.rk-sh-li.is-target').length,
+      top: d.top ? { nm: d.top.r.name, pay: d.top.pay } : null
+    };
+  });
+  const arm = (armado && armado.cook && armado.swift) ? armado : null;
+  const esperado = !arm ? null
+    : 'Cheapest in: ' + arm.swift.nm + ' $' + arm.swift.pay
+    + ', saves $' + (arm.cook.pay - arm.swift.pay) + ' vs ' + arm.cook.nm + '.';
+  const linea = (hoja.deals || []).find(x => !!esperado && x.indexOf(esperado) === 0);
+  ok('(H1) la hoja abre a pantalla completa, con el plan y una seccion por posicion',
+    !hoja._err && hoja.visible && hoja.lista && hoja.secs.indexOf('RB') >= 0 && hoja.secs.indexOf('WR') >= 0
+    && String(hoja.plan || '').indexOf('$' + hoja.total) >= 0 && new RegExp(hoja.huecos + ' spots? at \\$1').test(String(hoja.plan || '')),
+    JSON.stringify({ secs: hoja.secs, plan: String(hoja.plan || '').slice(0, 120) }));
+  ok('(H2) "Cheapest in" saca la cuenta correcta: Swift contra Cook, con SU ahorro',
+    !!linea, JSON.stringify({ esperado, salio: (hoja.deals || []).slice(0, 3) }));
+  ok('(H3) con un ahorro de $20 o mas, la hoja dice en que gastarlo, y es un objetivo real',
+    !!linea && !!arm && (arm.cook.pay - arm.swift.pay >= 20)
+    && !!hoja.top && linea.indexOf('Spend it on ' + hoja.top.nm + '.') > 0,
+    JSON.stringify({ ahorro: arm ? arm.cook.pay - arm.swift.pay : null, top: hoja.top, linea }));
+  ok('(H4) los objetivos van marcados en la hoja', !hoja._err && hoja.objetivos > 0, hoja.objetivos + ' marcados');
+  // Las notas son cuentas del fixture de la subasta real, no adornos: si alguien
+  // les cambia una cifra sin volver a medir, esto se pone rojo.
+  const nq = (hoja.notas || []).join(' | ');
+  ok('(H5) las notas de la sala real traen sus cifras medidas',
+    /\$86, 43% of one budget/.test(nq) && /38 of the 130 lots/.test(nq)
+    && /C\. Brown \$56, Walker \$55, Hampton \$53/.test(nq) && /Allen \$38, Burrow \$30/.test(nq),
+    nq.slice(0, 200));
+  ok('(H9) la hoja DECLARA contra que esta calculada: la liga con sus numeros',
+    !hoja._err && /Fantazy 2026: 10 teams, \$200, half PPR, 1QB, 15 rounds/.test(hoja.liga)
+    && /9 starters \(QB, 2 RB, 2 WR, TE, FLEX, K, DEF\) \+ 6 bench/.test(String(hoja.cab || ''))
+    && /6 pt passing TDs/.test(String(hoja.cab || '')),
+    JSON.stringify({ liga: hoja.liga, cab: String(hoja.cab || '').slice(0, 150) }));
+  // La regla del dueno: en subasta no se "alcanza" a nadie, se paga. Un jugador
+  // de un tier alto SUYO que el mercado tiene abajo es el hallazgo, y sube al
+  // plan. Y en ningun sitio puede aparecer la palabra reach.
+  ok('(H10) el hallazgo de mercado se marca y sube al plan, sin llamarlo nunca un reach',
+    !!arm && !hoja._err && hoja.market > 0 && hoja.gaps.length > 0
+    && !!linea && /Market has him lower: pay \$/.test(linea)
+    && (hoja.mkData || []).some(g => g.indexOf(arm.swift.nm) >= 0)
+    && !/reach|above value|overpay/i.test(String(hoja.cab || '') + ' ' + (hoja.deals || []).join(' ') + ' ' + (hoja.gaps || []).join(' ')),
+    JSON.stringify({ marcados: hoja.market, mkData: (hoja.mkData || []).slice(0, 3) }));
+  ok('(H6) consola limpia con la hoja abierta', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
+// (H7) La hoja en el telefono, que es donde se va a leer el domingo.
+{
+  const { pg, errs } = await nueva(390, 844);
+  await abrirTab(pg);
+  await esperar(pg, () => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing);
+  await pg.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#rk-owner-tools .rk-btn')).find(x => /Cheat Sheet/.test(x.textContent));
+    if (b) b.click();
+  });
+  await esperar(pg, () => { const s = document.getElementById('rk-sheet'); return s && !s.hidden; }, 15000);
+  const m = await eva(pg, () => {
+    const s = document.getElementById('rk-sheet');
+    const fuera = Array.from(s.querySelectorAll('*')).filter(e => {
+      const r = e.getBoundingClientRect();
+      return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
+    }).map(e => e.className || e.tagName);
+    return { desborde: document.documentElement.scrollWidth, fuera: fuera.slice(0, 4), filas: s.querySelectorAll('.rk-sh-li').length };
+  });
+  ok('(H7) la hoja a 390px no desborda y ninguna fila se sale', !m._err && m.desborde <= 390 && m.fuera.length === 0 && m.filas > 20,
+    JSON.stringify(m));
+  ok('(H8) consola limpia con la hoja en el telefono', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
 }
 
 await b.close();
