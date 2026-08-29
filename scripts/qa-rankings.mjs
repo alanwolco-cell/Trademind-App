@@ -111,7 +111,18 @@ async function nueva(w, h, opts) {
   });
   const _close = pg.close.bind(pg);
   pg.close = async () => { try { await _close(); } catch (_) { } try { await ctx.close(); } catch (_) { } };
-  await pg.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60000 });
+  /* La carga, con red de seguridad. 'networkidle' espera a que callen TODAS
+   * las peticiones, y la pagina pide feeds de fuera (Sleeper, ESPN): con la
+   * conexion floja eso LANZA y se lleva por delante la corrida entera a mitad,
+   * que es lo que paso dos veces el 2026-08-28. Se reintenta una vez y luego se
+   * cae a 'domcontentloaded': lo que de verdad prueba que la app cargo son los
+   * checks, que ya esperan por su cuenta a que aparezcan las filas. */
+  try {
+    await pg.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60000 });
+  } catch (_) {
+    try { await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 }); }
+    catch (e2) { errs.push('CARGA ' + String(e2.message || e2).slice(0, 90)); }
+  }
   return { pg, errs, puts, gets, ctx };
 }
 // Espera a que el ultimo cambio haya llegado al servidor
@@ -424,11 +435,14 @@ const teclear = async (pg, sel, v) => { try { await pg.fill(sel, v, { timeout: 3
     return {
       txt: b ? b.textContent.trim() : null, manual: !!(b && b.classList.contains('is-manual')),
       guardado: (typeof TMR !== 'undefined' && TMR.manual) ? TMR.manual[i] == null : false,
-      calc: (typeof TMR !== 'undefined' && TMR.price) ? TMR.price[i] : null
+      calc: (typeof TMR !== 'undefined' && TMR.price) ? TMR.price[i] : null,
+      // la celda pinta el TECHO, no el precio de sala pelado
+      techo: (typeof tmrCeilOf === 'function') ? tmrCeilOf(i) : null
     };
   }, idPrim);
   ok('(y) se puede volver al precio del motor',
-    nMan === 1 && nX === 1 && !vuelta._err && !vuelta.manual && vuelta.guardado && vuelta.txt === '$' + vuelta.calc,
+    nMan === 1 && nX === 1 && !vuelta._err && !vuelta.manual && vuelta.guardado
+    && vuelta.txt === '$' + vuelta.techo && vuelta.techo === Math.round(vuelta.calc * 1.2),
     `precios a mano=${nMan}, botones de vuelta=${nX}, ${JSON.stringify(vuelta)}`);
 
   // (z) La barra Build: la suma tiene que cuadrar CONTANDO el dolar de cada
@@ -1293,11 +1307,11 @@ console.log('\n=== Tier Game: el prior del mercado, la escalada y las contradicc
   await pg.close();
 }
 
-console.log('\n=== El Pay sale de SU ORDEN, no de que el sepa cuanto valen ===');
-// (P) Correccion del dueno: "yo no se cuanto deberian valer. yo quiero que tu
-//     me digas basado en los rankings que yo haga". El check que lo prueba es
-//     mover un jugador y ver que su precio se va al puesto al que lo movio: si
-//     no, la columna estaria pintando el mercado con otro nombre.
+console.log('\n=== El precio es el de la SALA; su orden decide a quien, no cuanto ===');
+// (P) Correccion del dueno, textual: "no quiero que me ponga a pagar mas por
+//     Swift porque todavia puedo pagar menos". El check que lo prueba es el
+//     CONTRARIO del que habia: subir a un jugador en su lista NO puede
+//     encarecerlo. Lo que si cambia es a quien persigue y donde esta la ganga.
 {
   const { pg, errs } = await nueva(1440, 950);
   await abrirTab(pg);
@@ -1305,75 +1319,63 @@ console.log('\n=== El Pay sale de SU ORDEN, no de que el sepa cuanto valen ===')
     && Object.keys(TMR.price || {}).length > 0, 45000);
 
   const mov = await eva(pg, () => {
-    // La curva de RB de la sala, que es contra lo que se compara
-    const curvaRB = Object.keys(TMR.sticker).filter(id => TMR._stPos && TMR._stPos[id] === 'RB')
-      .map(id => TMR.sticker[id]).sort((a, b) => b - a);
+    const buscar = ap => TMR.rows.findIndex(r => r.pos === 'RB' && new RegExp('\\b' + ap, 'i').test(r.name));
+    const iSwift = buscar('Swift');
     const rbs = TMR.rows.filter(r => r.pos === 'RB');
-    if (rbs.length < 9 || curvaRB.length < 9) return { falta: true, rbs: rbs.length, curva: curvaRB.length };
-    const rb1 = rbs[0], victima = rbs[7];          // el RB8 de SU lista
-    // El precio a mano manda sobre todo, asi que aqui estorba: se quita de los
-    // dos. (Una seccion anterior le puso $66 al primero de la lista.)
-    delete TMR.manual[victima.id]; delete TMR.manual[rb1.id];
-    tmrPaint();
-    const antes = tmrPriceOf(victima.id);
-    // Se mueve al puesto de RB2 de SU lista, justo detras del RB1
-    TMR.rows = TMR.rows.filter(r => r !== victima);
-    TMR.rows.splice(TMR.rows.indexOf(rb1) + 1, 0, victima);
-    // Cada uno solo en su tier: asi se mide la regla cruda, sin el suavizado
-    // del tier encima (un grupo de uno no se suaviza).
-    TMR.breakAfter = {};
-    TMR.breakAfter[rb1.id] = true;
-    TMR.breakAfter[victima.id] = true;
-    tmrSave(); tmrPaint();
-    const fila = document.querySelector('#rk-body .rk-row[data-id="' + victima.id + '"] .rk-pr');
-    return {
-      nombre: victima.name, antes, antesEsperado: curvaRB[7],
-      despues: tmrPriceOf(victima.id), esperado: curvaRB[1],
-      rb1: tmrPriceOf(rb1.id), rb1Esperado: curvaRB[0],
-      pintado: fila ? fila.textContent.trim() : null
-    };
-  });
-  ok('(P1) mover un RB del puesto 8 al 2 de su lista le pone el precio del segundo RB de la sala',
-    !mov._err && !mov.falta && mov.despues === mov.esperado
-    && mov.despues !== mov.antes && mov.rb1 === mov.rb1Esperado && mov.pintado === '$' + mov.esperado,
-    JSON.stringify(mov));
-
-  // (P2) El suavizado del tier: dos del mismo tier y misma posicion se acercan,
-  //      porque para el son intercambiables, y el dinero del grupo no cambia.
-  const suave = await eva(pg, () => {
+    if (iSwift < 0 || rbs.length < 9) return { falta: true, iSwift, rbs: rbs.length };
+    const swift = TMR.rows[iSwift], rb1 = rbs[0];
     TMR.manual = {};
-    const corte = TMR.rows.filter(r => r.pos === 'RB')[5];
-    TMR.breakAfter = {};
-    TMR.breakAfter[corte.id] = true;
+    tmrPaint();
+    const puestoAntes = TMR.rows.filter(r => r.pos === 'RB').indexOf(swift) + 1;
+    const antes = { pay: tmrPriceOf(swift.id), techo: tmrCeilOf(swift.id), mercado: TMR.sticker[swift.id] };
+    // se sube a RB2 de SU lista
+    TMR.rows = TMR.rows.filter(r => r !== swift);
+    TMR.rows.splice(TMR.rows.indexOf(rb1) + 1, 0, swift);
     tmrSave(); tmrPaint();
-    // El grupo del tier 1 tal y como lo ve el codigo: los RB desde el principio
-    // hasta el corte, ambos incluidos.
-    const grupo = [];
-    for (const r of TMR.rows) { if (r.pos === 'RB') grupo.push(r); if (TMR.breakAfter[r.id]) break; }
-    const curvaRB = Object.keys(TMR.sticker).filter(id => TMR._stPos && TMR._stPos[id] === 'RB')
-      .map(id => TMR.sticker[id]).sort((a, b) => b - a);
-    const crudos = curvaRB.slice(0, grupo.length);
-    const conSuave = grupo.map(r => tmrPriceOf(r.id));
-    const rango = a => Math.max.apply(null, a) - Math.min.apply(null, a);
+    const puestoDespues = TMR.rows.filter(r => r.pos === 'RB').indexOf(swift) + 1;
+    const fila = document.querySelector('#rk-body .rk-row[data-id="' + swift.id + '"] .rk-pr');
     return {
-      crudos, conSuave, rangoCrudo: rango(crudos), rangoSuave: rango(conSuave),
-      sumaCruda: crudos.reduce((a, b) => a + b, 0), sumaSuave: conSuave.reduce((a, b) => a + b, 0)
+      nombre: swift.name, puestoAntes, puestoDespues,
+      antes, despues: { pay: tmrPriceOf(swift.id), techo: tmrCeilOf(swift.id), mercado: TMR.sticker[swift.id] },
+      pintado: fila ? fila.textContent.trim() : null,
+      tip: fila ? fila.getAttribute('title') : null
     };
   });
-  ok('(P2) dentro de un tier los precios se acercan, y el dinero del grupo se conserva',
-    !suave._err && suave.rangoSuave < suave.rangoCrudo && suave.rangoSuave > 0
-    && Math.abs(suave.sumaSuave - suave.sumaCruda) <= suave.conSuave.length / 2 + 1,
-    JSON.stringify(suave));
+  ok('(P1) subirlo de RB8 a RB2 en su lista NO le sube el precio: la sala cobra lo que cobra',
+    !mov._err && !mov.falta && mov.puestoAntes > 4 && mov.puestoDespues === 2
+    && mov.despues.pay === mov.antes.pay && mov.despues.pay === mov.antes.mercado
+    && mov.despues.techo === mov.antes.techo,
+    JSON.stringify(mov));
+  ok('(P2) la columna pinta el TECHO y el tooltip declara lo que paga la sala y SU puesto',
+    !mov._err && !mov.falta && mov.pintado === '$' + mov.despues.techo
+    && /The room pays about \$\d+/.test(mov.tip || '') && /Your RB2\./.test(mov.tip || ''),
+    JSON.stringify({ pintado: mov.pintado, tip: mov.tip }));
+  ok('(P3) el techo es un margen corto sobre el mercado, nunca su valoracion',
+    !mov._err && !mov.falta && mov.despues.techo === Math.round(mov.despues.mercado * 1.2),
+    JSON.stringify({ mercado: mov.despues.mercado, techo: mov.despues.techo }));
 
-  // (P3) CONTROL: el precio escrito a mano sigue mandando sobre todo lo anterior
+  // NINGUN precio de la pantalla puede pasarse del mercado x 1.2
+  const tope = await eva(pg, () => {
+    const malos = [];
+    TMR.rows.forEach(r => {
+      if (TMR.manual[r.id] != null) return;          // lo que el escribe manda
+      const m = TMR.sticker[r.id], c = tmrCeilOf(r.id);
+      if (m == null || c == null) return;
+      if (c > Math.round(m * 1.2)) malos.push(r.name + ' $' + c + ' sobre $' + m);
+    });
+    return { malos: malos.slice(0, 4), n: TMR.rows.length };
+  });
+  ok('(P4) ningun techo de la lista supera el mercado x 1.2',
+    !tope._err && tope.malos.length === 0, JSON.stringify(tope));
+
   const man = await eva(pg, () => {
     const r = TMR.rows.filter(x => x.pos === 'RB')[3];
     tmrSetPrice(r.id, 91);
-    return { id: r.id, pay: tmrPriceOf(r.id), calc: TMR.price[r.id] };
+    return { pay: tmrPriceOf(r.id), techo: tmrCeilOf(r.id), mercado: TMR.sticker[r.id] };
   });
-  ok('(P3) el precio que el escribe a mano sigue mandando sobre el deducido',
-    !man._err && man.pay === 91 && man.calc !== 91, JSON.stringify(man));
-  ok('(P4) consola limpia con el precio deducido de su orden', errs.length === 0,
+  ok('(P5) el precio que el escribe a mano sigue mandando, y ES su techo',
+    !man._err && man.pay === 91 && man.techo === 91 && man.mercado !== 91, JSON.stringify(man));
+  ok('(P6) consola limpia con el precio de sala', errs.length === 0,
     errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.close();
 }
@@ -1519,9 +1521,9 @@ console.log('\n=== Cheat Sheet ===');
       liga: (s.querySelector('#rk-sh-liga') || {}).textContent || '',
       cab: (s.querySelector('.rk-sh-top') || {}).textContent.replace(/\s+/g, ' ').trim(),
       gaps: Array.from(s.querySelectorAll('.rk-sh-gaps li')).map(x => x.textContent.replace(/\s+/g, ' ').trim()),
-      mkData: (d.market || []).map(m => (m && m.gap)
-        ? (m.pos + '/' + m.tier + '/' + m.gap.r.name + '/sala $' + m.gap.mercado + ' -> yo $' + m.gap.pay)
-        : 'sin hueco de mercado'),
+      mkData: (d.market || []).map(m => (m && m.cheap)
+        ? (m.pos + '/' + m.tier + '/' + m.cheap.r.name + ' $' + m.cheap.pay + ' vs $' + m.exp.pay)
+        : 'sin ganga'),
       market: s.querySelectorAll('.rk-sh-deal.is-market').length,
       objetivos: s.querySelectorAll('.rk-sh-li.is-target').length,
       top: d.top ? { nm: d.top.r.name, pay: d.top.pay } : null
@@ -1532,21 +1534,22 @@ console.log('\n=== Cheat Sheet ===');
    * al tier de Hall, Mac le pone precio de RB de arriba, pero la SALA lo sigue
    * vendiendo barato. Ese hueco es el hallazgo, y es literalmente lo que el
    * describio: "quemate todo en Gibbs y agarras a Swift en vez de Cook". */
-  const hueco = arm && arm.swift.pay != null && arm.swift.mercado != null
-    ? arm.swift.pay - arm.swift.mercado : null;
-  const rx = arm && hueco != null
-    ? new RegExp('Market has him lower: ' + arm.swift.nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      + ' goes for about \\$' + arm.swift.mercado + ' and you would pay up to \\$'
-      + arm.swift.pay + ' for a tier-\\d+ player\\.')
+  // El ahorro va en dolares de SALA: los dos estan en el mismo tier SUYO, asi
+  // que le dan igual, y la diferencia de precio es dinero tirado. Es la frase
+  // del dueno tal cual: "Swift te da el tier de Hall por $13 en vez de $53".
+  const hueco = arm && arm.swift.pay != null && arm.cook.pay != null
+    ? arm.cook.pay - arm.swift.pay : null;
+  const esperado = arm && hueco != null
+    ? 'Cheapest in: ' + arm.swift.nm + ' $' + arm.swift.pay + ', saves $' + hueco + ' vs ' + arm.cook.nm + '.'
     : null;
-  const linea = (hoja.deals || []).find(x => !!rx && rx.test(x));
+  const linea = (hoja.deals || []).find(x => !!esperado && x.indexOf(esperado) === 0);
   ok('(H1) la hoja abre a pantalla completa, con el plan y una seccion por posicion',
     !hoja._err && hoja.visible && hoja.lista && hoja.secs.indexOf('RB') >= 0 && hoja.secs.indexOf('WR') >= 0
     && String(hoja.plan || '').indexOf('$' + hoja.total) >= 0 && new RegExp(hoja.huecos + ' spots? at \\$1').test(String(hoja.plan || '')),
     JSON.stringify({ secs: hoja.secs, plan: String(hoja.plan || '').slice(0, 120) }));
-  ok('(H2) subido Swift al tier de Cook, la hoja dice que la sala lo vende mas barato, con la cuenta exacta',
-    !!linea && hueco >= 8, JSON.stringify({ swift: arm && arm.swift, hueco, salio: (hoja.deals || []).slice(0, 3) }));
-  ok('(H3) con un hueco de $20 o mas contra la sala, la hoja dice en que gastarlo, y es un objetivo real',
+  ok('(H2) subido Swift al tier de Cook, la hoja saca el ahorro exacto en dolares de sala',
+    !!linea && hueco >= 8, JSON.stringify({ swift: arm && arm.swift, cook: arm && arm.cook, hueco, salio: (hoja.deals || []).slice(0, 2) }));
+  ok('(H3) con $20 o mas de ahorro la hoja dice en que gastarlo, y es un objetivo real',
     !!linea && hueco >= 20 && !!hoja.top && linea.indexOf('Spend it on ' + hoja.top.nm + '.') > 0,
     JSON.stringify({ hueco, top: hoja.top, linea }));
   ok('(H4) los objetivos van marcados en la hoja', !hoja._err && hoja.objetivos > 0, hoja.objetivos + ' marcados');
@@ -1565,8 +1568,9 @@ console.log('\n=== Cheat Sheet ===');
   // La regla del dueno: en subasta no se "alcanza" a nadie, se paga. Un jugador
   // de un tier alto SUYO que el mercado tiene abajo es el hallazgo, y sube al
   // plan. Y en ningun sitio puede aparecer la palabra reach.
-  ok('(H10) el hallazgo de mercado se marca y sube al plan, sin llamarlo nunca un reach',
+  ok('(H10) la ganga se marca y sube al plan, sin llamarlo nunca un reach',
     !!arm && !hoja._err && hoja.market > 0 && hoja.gaps.length > 0 && !!linea
+    && /Target: the room has him cheap\./.test(linea)
     && (hoja.mkData || []).some(g => g.indexOf(arm.swift.nm) >= 0)
     && !/reach|above value|overpay/i.test(String(hoja.cab || '') + ' ' + (hoja.deals || []).join(' ') + ' ' + (hoja.gaps || []).join(' ')),
     JSON.stringify({ marcados: hoja.market, mkData: (hoja.mkData || []).slice(0, 3) }));

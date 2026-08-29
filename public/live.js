@@ -180,38 +180,18 @@ function lvMisValores() {
   // lista. Las llaves que no correspondan a nadie del pool no molestan.
   if (man) Object.keys(man).forEach(function (id) { if (man[id] != null) LV.manual[id] = man[id]; });
   if (typeof TMR === 'undefined' || !TMR.loaded || !TMR.rows.length) return 0;
-  /* La conversion la hace My Rankings (tmrPreciosDeSala) y este archivo la
-   * LLAMA: es una sola formula con dos clientes. Antes estaba escrita aqui con
-   * una curva GLOBAL y alla con otra, y ya se habian separado en el peso.
-   * Ahora las dos dicen lo mismo: el puesto k de MI lista DENTRO DE SU POSICION
-   * cobra lo que la sala paga por su k-esimo mas caro de esa posicion, con los
-   * precios de un mismo tier acercados entre si.
-   *
-   * El puesto se cuenta sobre la lista ENTERA, incluidos los ya vendidos, a
-   * proposito: si no, vender al RB1 le subiria el precio a todos los RB de
-   * golpe en mitad de la subasta y el techo del panel bailaria sin que el
-   * dueno hubiera cambiado nada. */
-  var posDe = {};
-  (MD.pool || []).forEach(function (q) { if (q && q.id) posDe[String(q.id)] = q.pos; });
-  var precios = (typeof tmrPreciosDeSala === 'function')
-    ? tmrPreciosDeSala(AU.val || {}, posDe, TMR.rows, TMR.breakAfter) : null;
-  if (!precios) return 0;
+  var curva = Object.keys(AU.val || {}).map(function (k) { return AU.val[k]; })
+    .sort(function (a, b) { return b - a; });
+  if (!curva.length) return 0;
   var n = 0;
   TMR.rows.forEach(function (r, i) {
     var p = lvOne(r.name);
     if (!p) return;                       // vendido ya, o fuera del pool de la sala
     LV.myRank[p.id] = i + 1;
-    if (precios[r.id] == null) return;    // sin precio no se inventa uno
-    LV.mine[p.id] = precios[r.id];
+    LV.mine[p.id] = curva[Math.min(i, curva.length - 1)];
     if (man && man[r.id] != null) LV.manual[p.id] = man[r.id];
     n++;
   });
-  /* Su lista manda ENTERA. El 0.5 de antes era medio mercado y medio el, o sea
-   * que la app le contestaba a medias justo donde el ya habia decidido. Y con
-   * el modelo nuevo `mio` YA es el precio final de la sala repartido por su
-   * orden, asi que volver a promediarlo con el mercado seria diluirlo dos
-   * veces. Sin lista cargada, LV.peso no se toca y manda el mercado. */
-  if (n) LV.peso = 1;
   return n;
 }
 

@@ -2517,7 +2517,9 @@ html{scroll-padding-top:76px}
   padding:3px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04)}
 .rk-sh-nm{min-width:0;overflow-wrap:break-word}
 .rk-sh-tm{font-size:10.5px;color:var(--muted);letter-spacing:.02em}
-.rk-sh-pay{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.rk-sh-pay{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
+.rk-sh-pay i{display:block;font-style:normal;font-weight:600;font-size:9.5px;color:var(--muted);letter-spacing:.01em}
+.rk-sh-regla{display:block;margin-top:5px;font-size:10.5px;color:var(--accent-bright);line-height:1.45;max-width:56ch}
 /* Un objetivo se marca con la regla de acento y la negrita, no con un icono:
    en papel un icono suelto no dice de que va. */
 .rk-sh-li.is-target{font-weight:700;box-shadow:inset 2px 0 0 var(--accent-bright);padding-left:7px}
