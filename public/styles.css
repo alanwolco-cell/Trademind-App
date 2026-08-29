@@ -2444,7 +2444,6 @@ html{scroll-padding-top:76px}
 .rk-gm-nm{font-size:13.5px;line-height:1.25;overflow-wrap:break-word;min-width:0}
 .rk-gm-meta{font-size:11px;color:var(--muted)}
 .rk-gm-meta em{font-style:normal;font-weight:800;color:currentColor}
-.rk-gm-pay{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent-bright)}
 .rk-gm-vs{align-self:center;font-size:10px;font-weight:800;letter-spacing:.10em;
   text-transform:uppercase;color:var(--muted);opacity:.7}
 
@@ -2514,7 +2513,7 @@ html{scroll-padding-top:76px}
 .rk-sh-ul{list-style:none;margin:5px 0 0;padding:0}
 /* Rejilla compartida por todas las filas de la hoja: nombre, equipo y precio
    caen a plomo. Es la misma leccion que .rk-row y .rk-colhead. */
-.rk-sh-li{display:grid;grid-template-columns:minmax(0,1fr) 34px 46px;gap:8px;align-items:baseline;
+.rk-sh-li{display:grid;grid-template-columns:minmax(0,1fr) 32px 72px;gap:8px;align-items:baseline;
   padding:3px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04)}
 .rk-sh-nm{min-width:0;overflow-wrap:break-word}
 .rk-sh-tm{font-size:10.5px;color:var(--muted);letter-spacing:.02em}

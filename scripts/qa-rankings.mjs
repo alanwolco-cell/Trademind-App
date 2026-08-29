@@ -1028,7 +1028,8 @@ let juegoIds = null;
     const btns = Array.from(g.querySelectorAll('.rk-gm-b'));
     const cartas = Array.from(g.querySelectorAll('.rk-gm-card')).map(c => ({
       nm: (c.querySelector('.rk-gm-nm') || {}).textContent,
-      pay: (c.querySelector('.rk-gm-pay') || {}).textContent,
+      txt: c.textContent.replace(/\s+/g, ' ').trim(),
+      dinero: /\$/.test(c.textContent) || !!c.querySelector('.rk-gm-pay'),
       foto: !!c.querySelector('img[src*="sleepercdn"]')
     }));
     return {
@@ -1039,15 +1040,18 @@ let juegoIds = null;
       txt: btns.map(b => b.textContent.trim()),
       cartas,
       prog: (document.getElementById('rk-gm-pg') || {}).textContent || '',
+      sub: (g.querySelector('.rk-gm-t span') || {}).textContent || '',
+      dineroEnPantalla: /\$/.test(g.textContent),
       pareja: TMR.gamePair ? [TMR.gamePair.a, TMR.gamePair.b] : null
     };
   });
-  ok('(J2) el juego abre con la pareja, sus dos precios y cinco respuestas de 44px+',
+  ok('(J2) el juego abre con la pareja y cinco respuestas de 44px+, y SIN un solo precio',
     !abierto._err && abierto.visible && abierto.lista && abierto.n === 5 && abierto.chico === 0
-    && abierto.cartas.length === 2 && abierto.cartas.every(c => c.nm && c.foto && /^\$/.test(c.pay || ''))
+    && abierto.cartas.length === 2 && abierto.cartas.every(c => c.nm && c.foto && !c.dinero)
+    && !abierto.dineroEnPantalla && /Mac turns your order into what to pay/.test(abierto.sub)
     && /Same tier/.test(abierto.txt[2] || '')
     && /^\d+ answers? · \d+ of \d+ tier boundaries resolved$/.test(abierto.prog.trim()),
-    JSON.stringify({ n: abierto.n, chico: abierto.chico, txt: abierto.txt, cartas: abierto.cartas, prog: abierto.prog }));
+    JSON.stringify({ n: abierto.n, chico: abierto.chico, cartas: abierto.cartas, sub: abierto.sub, prog: abierto.prog }));
 
   // Se contestan cinco parejas clicando de verdad. La pareja tiene que cambiar
   // en cada respuesta y el progreso tiene que subir: una barra decorativa se
@@ -1289,6 +1293,91 @@ console.log('\n=== Tier Game: el prior del mercado, la escalada y las contradicc
   await pg.close();
 }
 
+console.log('\n=== El Pay sale de SU ORDEN, no de que el sepa cuanto valen ===');
+// (P) Correccion del dueno: "yo no se cuanto deberian valer. yo quiero que tu
+//     me digas basado en los rankings que yo haga". El check que lo prueba es
+//     mover un jugador y ver que su precio se va al puesto al que lo movio: si
+//     no, la columna estaria pintando el mercado con otro nombre.
+{
+  const { pg, errs } = await nueva(1440, 950);
+  await abrirTab(pg);
+  await esperar(pg, () => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing
+    && Object.keys(TMR.price || {}).length > 0, 45000);
+
+  const mov = await eva(pg, () => {
+    // La curva de RB de la sala, que es contra lo que se compara
+    const curvaRB = Object.keys(TMR.sticker).filter(id => TMR._stPos && TMR._stPos[id] === 'RB')
+      .map(id => TMR.sticker[id]).sort((a, b) => b - a);
+    const rbs = TMR.rows.filter(r => r.pos === 'RB');
+    if (rbs.length < 9 || curvaRB.length < 9) return { falta: true, rbs: rbs.length, curva: curvaRB.length };
+    const rb1 = rbs[0], victima = rbs[7];          // el RB8 de SU lista
+    // El precio a mano manda sobre todo, asi que aqui estorba: se quita de los
+    // dos. (Una seccion anterior le puso $66 al primero de la lista.)
+    delete TMR.manual[victima.id]; delete TMR.manual[rb1.id];
+    tmrPaint();
+    const antes = tmrPriceOf(victima.id);
+    // Se mueve al puesto de RB2 de SU lista, justo detras del RB1
+    TMR.rows = TMR.rows.filter(r => r !== victima);
+    TMR.rows.splice(TMR.rows.indexOf(rb1) + 1, 0, victima);
+    // Cada uno solo en su tier: asi se mide la regla cruda, sin el suavizado
+    // del tier encima (un grupo de uno no se suaviza).
+    TMR.breakAfter = {};
+    TMR.breakAfter[rb1.id] = true;
+    TMR.breakAfter[victima.id] = true;
+    tmrSave(); tmrPaint();
+    const fila = document.querySelector('#rk-body .rk-row[data-id="' + victima.id + '"] .rk-pr');
+    return {
+      nombre: victima.name, antes, antesEsperado: curvaRB[7],
+      despues: tmrPriceOf(victima.id), esperado: curvaRB[1],
+      rb1: tmrPriceOf(rb1.id), rb1Esperado: curvaRB[0],
+      pintado: fila ? fila.textContent.trim() : null
+    };
+  });
+  ok('(P1) mover un RB del puesto 8 al 2 de su lista le pone el precio del segundo RB de la sala',
+    !mov._err && !mov.falta && mov.despues === mov.esperado
+    && mov.despues !== mov.antes && mov.rb1 === mov.rb1Esperado && mov.pintado === '$' + mov.esperado,
+    JSON.stringify(mov));
+
+  // (P2) El suavizado del tier: dos del mismo tier y misma posicion se acercan,
+  //      porque para el son intercambiables, y el dinero del grupo no cambia.
+  const suave = await eva(pg, () => {
+    TMR.manual = {};
+    const corte = TMR.rows.filter(r => r.pos === 'RB')[5];
+    TMR.breakAfter = {};
+    TMR.breakAfter[corte.id] = true;
+    tmrSave(); tmrPaint();
+    // El grupo del tier 1 tal y como lo ve el codigo: los RB desde el principio
+    // hasta el corte, ambos incluidos.
+    const grupo = [];
+    for (const r of TMR.rows) { if (r.pos === 'RB') grupo.push(r); if (TMR.breakAfter[r.id]) break; }
+    const curvaRB = Object.keys(TMR.sticker).filter(id => TMR._stPos && TMR._stPos[id] === 'RB')
+      .map(id => TMR.sticker[id]).sort((a, b) => b - a);
+    const crudos = curvaRB.slice(0, grupo.length);
+    const conSuave = grupo.map(r => tmrPriceOf(r.id));
+    const rango = a => Math.max.apply(null, a) - Math.min.apply(null, a);
+    return {
+      crudos, conSuave, rangoCrudo: rango(crudos), rangoSuave: rango(conSuave),
+      sumaCruda: crudos.reduce((a, b) => a + b, 0), sumaSuave: conSuave.reduce((a, b) => a + b, 0)
+    };
+  });
+  ok('(P2) dentro de un tier los precios se acercan, y el dinero del grupo se conserva',
+    !suave._err && suave.rangoSuave < suave.rangoCrudo && suave.rangoSuave > 0
+    && Math.abs(suave.sumaSuave - suave.sumaCruda) <= suave.conSuave.length / 2 + 1,
+    JSON.stringify(suave));
+
+  // (P3) CONTROL: el precio escrito a mano sigue mandando sobre todo lo anterior
+  const man = await eva(pg, () => {
+    const r = TMR.rows.filter(x => x.pos === 'RB')[3];
+    tmrSetPrice(r.id, 91);
+    return { id: r.id, pay: tmrPriceOf(r.id), calc: TMR.price[r.id] };
+  });
+  ok('(P3) el precio que el escribe a mano sigue mandando sobre el deducido',
+    !man._err && man.pay === 91 && man.calc !== 91, JSON.stringify(man));
+  ok('(P4) consola limpia con el precio deducido de su orden', errs.length === 0,
+    errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
 console.log('\n=== Fantazy 2026: los settings de SU liga mandan ===');
 // (F) Regla del dueno: "toma en cuenta los league settings y format de la liga".
 //     El check que importa no es que los numeros salgan bonitos, es que NO
@@ -1398,12 +1487,11 @@ console.log('\n=== Cheat Sheet ===');
     if (j > 0) TMR.breakAfter[TMR.rows[j - 1].id] = true;
     TMR.breakAfter[swift.id] = true;
     tmrSave(); tmrPaint();
-    const pay = id => tmrPriceOf(id);
-    return {
-      cook: { id: cook.id, nm: cook.name, pay: pay(cook.id) },
-      hall: { id: hall.id, nm: hall.name, pay: pay(hall.id) },
-      swift: { id: swift.id, nm: swift.name, pay: pay(swift.id) }
-    };
+    const uno = r => ({
+      id: r.id, nm: r.name, pay: tmrPriceOf(r.id),
+      mercado: (TMR.sticker && TMR.sticker[r.id] != null) ? TMR.sticker[r.id] : null
+    });
+    return { cook: uno(cook), hall: uno(hall), swift: uno(swift) };
   });
   ok('(H0) el caso se pudo armar: Cook, Hall y Swift en un tier, con su precio',
     !!armado && !armado._err && !armado.falta && armado.cook && armado.cook.pay > 0
@@ -1431,27 +1519,36 @@ console.log('\n=== Cheat Sheet ===');
       liga: (s.querySelector('#rk-sh-liga') || {}).textContent || '',
       cab: (s.querySelector('.rk-sh-top') || {}).textContent.replace(/\s+/g, ' ').trim(),
       gaps: Array.from(s.querySelectorAll('.rk-sh-gaps li')).map(x => x.textContent.replace(/\s+/g, ' ').trim()),
-      mkData: (d.market || []).map(m => m.pos + '/' + m.tier + '/' + m.cheap.r.name + '/$' + m.cheap.pay),
+      mkData: (d.market || []).map(m => (m && m.gap)
+        ? (m.pos + '/' + m.tier + '/' + m.gap.r.name + '/sala $' + m.gap.mercado + ' -> yo $' + m.gap.pay)
+        : 'sin hueco de mercado'),
       market: s.querySelectorAll('.rk-sh-deal.is-market').length,
       objetivos: s.querySelectorAll('.rk-sh-li.is-target').length,
       top: d.top ? { nm: d.top.r.name, pay: d.top.pay } : null
     };
   });
   const arm = (armado && armado.cook && armado.swift) ? armado : null;
-  const esperado = !arm ? null
-    : 'Cheapest in: ' + arm.swift.nm + ' $' + arm.swift.pay
-    + ', saves $' + (arm.cook.pay - arm.swift.pay) + ' vs ' + arm.cook.nm + '.';
-  const linea = (hoja.deals || []).find(x => !!esperado && x.indexOf(esperado) === 0);
+  /* La frase del dueno, ahora que el Pay sale de SU orden: si el sube a Swift
+   * al tier de Hall, Mac le pone precio de RB de arriba, pero la SALA lo sigue
+   * vendiendo barato. Ese hueco es el hallazgo, y es literalmente lo que el
+   * describio: "quemate todo en Gibbs y agarras a Swift en vez de Cook". */
+  const hueco = arm && arm.swift.pay != null && arm.swift.mercado != null
+    ? arm.swift.pay - arm.swift.mercado : null;
+  const rx = arm && hueco != null
+    ? new RegExp('Market has him lower: ' + arm.swift.nm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      + ' goes for about \\$' + arm.swift.mercado + ' and you would pay up to \\$'
+      + arm.swift.pay + ' for a tier-\\d+ player\\.')
+    : null;
+  const linea = (hoja.deals || []).find(x => !!rx && rx.test(x));
   ok('(H1) la hoja abre a pantalla completa, con el plan y una seccion por posicion',
     !hoja._err && hoja.visible && hoja.lista && hoja.secs.indexOf('RB') >= 0 && hoja.secs.indexOf('WR') >= 0
     && String(hoja.plan || '').indexOf('$' + hoja.total) >= 0 && new RegExp(hoja.huecos + ' spots? at \\$1').test(String(hoja.plan || '')),
     JSON.stringify({ secs: hoja.secs, plan: String(hoja.plan || '').slice(0, 120) }));
-  ok('(H2) "Cheapest in" saca la cuenta correcta: Swift contra Cook, con SU ahorro',
-    !!linea, JSON.stringify({ esperado, salio: (hoja.deals || []).slice(0, 3) }));
-  ok('(H3) con un ahorro de $20 o mas, la hoja dice en que gastarlo, y es un objetivo real',
-    !!linea && !!arm && (arm.cook.pay - arm.swift.pay >= 20)
-    && !!hoja.top && linea.indexOf('Spend it on ' + hoja.top.nm + '.') > 0,
-    JSON.stringify({ ahorro: arm ? arm.cook.pay - arm.swift.pay : null, top: hoja.top, linea }));
+  ok('(H2) subido Swift al tier de Cook, la hoja dice que la sala lo vende mas barato, con la cuenta exacta',
+    !!linea && hueco >= 8, JSON.stringify({ swift: arm && arm.swift, hueco, salio: (hoja.deals || []).slice(0, 3) }));
+  ok('(H3) con un hueco de $20 o mas contra la sala, la hoja dice en que gastarlo, y es un objetivo real',
+    !!linea && hueco >= 20 && !!hoja.top && linea.indexOf('Spend it on ' + hoja.top.nm + '.') > 0,
+    JSON.stringify({ hueco, top: hoja.top, linea }));
   ok('(H4) los objetivos van marcados en la hoja', !hoja._err && hoja.objetivos > 0, hoja.objetivos + ' marcados');
   // Las notas son cuentas del fixture de la subasta real, no adornos: si alguien
   // les cambia una cifra sin volver a medir, esto se pone rojo.
@@ -1469,8 +1566,7 @@ console.log('\n=== Cheat Sheet ===');
   // de un tier alto SUYO que el mercado tiene abajo es el hallazgo, y sube al
   // plan. Y en ningun sitio puede aparecer la palabra reach.
   ok('(H10) el hallazgo de mercado se marca y sube al plan, sin llamarlo nunca un reach',
-    !!arm && !hoja._err && hoja.market > 0 && hoja.gaps.length > 0
-    && !!linea && /Market has him lower: pay \$/.test(linea)
+    !!arm && !hoja._err && hoja.market > 0 && hoja.gaps.length > 0 && !!linea
     && (hoja.mkData || []).some(g => g.indexOf(arm.swift.nm) >= 0)
     && !/reach|above value|overpay/i.test(String(hoja.cab || '') + ' ' + (hoja.deals || []).join(' ') + ' ' + (hoja.gaps || []).join(' ')),
     JSON.stringify({ marcados: hoja.market, mkData: (hoja.mkData || []).slice(0, 3) }));

@@ -32,6 +32,7 @@ var TMR = {
   room: null,      // la sala con la que se calculo, declarada en pantalla
   pricing: false,  // mientras el motor no responde, la columna va en skeleton
   _curva: null,    // los precios de la sala ordenados de mayor a menor
+  _stPos: null,    // id -> posicion, de la sala: la curva del precio va POR posicion
   _firma: '',      // firma de la sala: si cambia, hay que volver a calcular
   _edit: null,     // id que se esta editando ahora mismo
   _cancel: false,  // Escape: el blur que viene detras NO debe guardar
@@ -295,6 +296,7 @@ async function tmrPrices() {
   if (AU.active) {
     if (AU.val && Object.keys(AU.val).length) {
       TMR.sticker = AU.val;
+      TMR._stPos = _tmrPosDe(MD.pool);
       TMR._curva = Object.keys(AU.val).map(function (k) { return AU.val[k]; }).sort(function (a, b) { return b - a; });
       TMR._firma = firma;
       TMR.room = cfg;
@@ -332,6 +334,7 @@ async function tmrPrices() {
   if (!val) return false;
 
   TMR.sticker = val;
+  TMR._stPos = _tmrPosDe(pool);
   TMR._curva = Object.keys(val).map(function (k) { return val[k]; }).sort(function (a, b) { return b - a; });
   TMR._firma = firma;
   TMR.room = cfg;
@@ -339,23 +342,93 @@ async function tmrPrices() {
   return true;
 }
 
-/* La mezcla, que es barata y se rehace en cada pintado: el jugador que YO
- * tengo en el puesto k vale lo que esta sala paga por su k-esimo mas caro. Es
- * la MISMA conversion que usa Draft Day (lvMisValores), con el mismo peso, y
- * por eso mover a alguien en la lista le mueve el precio en el acto. A quien
- * no este en mi lista no se le aplica nada: se queda con el precio de sala. */
-function tmrBlend() {
-  var st = TMR.sticker, curva = TMR._curva;
-  if (!st || !curva || !curva.length) return;
-  var peso = (window.LV && typeof LV.peso === 'number') ? LV.peso : 0.5;
-  var pr = {};
-  for (var i = 0; i < TMR.rows.length; i++) {
-    var r = TMR.rows[i], sk = st[r.id];
-    if (sk == null) continue;
-    var mio = curva[Math.min(i, curva.length - 1)];
-    pr[r.id] = Math.max(1, Math.round(sk * (1 - peso) + mio * peso));
+/* ── de MI ORDEN a dolares ──────────────────────────────────────────────────
+ * Correccion del dueno, textual: "yo no se cuanto deberian valer. yo quiero
+ * que tu me digas basado en los rankings que yo haga". Asi que el precio NO se
+ * le pregunta: se deduce de su orden, que es lo unico que el afirma.
+ *
+ * La regla, y es la misma que Draft Day ya declaraba en pantalla: el jugador
+ * que YO tengo en el puesto k DE SU POSICION vale lo que esta sala paga por su
+ * k-esimo RB (o WR, o QB) mas caro. Si su lista pone a Swift de RB2, Swift
+ * cuesta lo que la sala paga por el segundo RB, aunque el mercado lo tenga de
+ * RB20. No es un precio inventado: es la curva que auPoolInit ya normalizo al
+ * dinero exacto de la sala, solo que repartida segun SU orden.
+ *
+ * Por posicion y no global, que es el cambio: una curva global mezcla al RB1
+ * con el WR1 y devolvia el precio del puesto general, no el de la posicion. Su
+ * decision del domingo es "cuanto pago por MI RB2", no "por mi jugador 14".
+ *
+ * Peso 100% para quien esta en su lista: antes era la mitad mercado y mitad
+ * suya, o sea que la app le contestaba a medias. A quien NO este en su lista no
+ * se le aplica nada y se queda con el mercado puro, en vez de castigarlo por
+ * ausencia.
+ *
+ * Y dentro de un tier suyo los precios se acercan al promedio del grupo: un
+ * tier ES un grupo de jugadores intercambiables para el, y pagar distinto por
+ * dos que le dan igual es tirar la diferencia. Se acercan, no se igualan, para
+ * que la hoja pueda seguir diciendo cual es el barato del tier. El tiron es
+ * lineal hacia la media, asi que la suma del grupo NO cambia (y con ella la de
+ * la posicion): el dinero se conserva, salvo el medio dolar del redondeo.
+ *
+ * UNA sola formula y dos clientes: esta pantalla y lvMisValores de Draft Day.
+ * La version anterior tenia la conversion escrita en los dos sitios y ya se
+ * habian separado en el peso. */
+var TMR_TIER_SUAVE = 0.6;   // cuanto se acerca cada precio al promedio de su tier
+
+function _tmrPosDe(pool) {
+  var m = {};
+  (pool || []).forEach(function (p) { if (p && p.id) m[String(p.id)] = p.pos; });
+  return m;
+}
+
+function tmrPreciosDeSala(val, posDe, filas, breaks) {
+  var out = {};
+  if (!val || !filas || !filas.length) return out;
+  // La curva de la sala, partida por posicion y de mayor a menor
+  var curvas = {}, id, p;
+  var ids = Object.keys(val);
+  for (var j = 0; j < ids.length; j++) {
+    id = ids[j];
+    p = posDe && posDe[id];
+    if (!p) continue;
+    (curvas[p] = curvas[p] || []).push(val[id]);
   }
-  TMR.price = pr;
+  Object.keys(curvas).forEach(function (k) { curvas[k].sort(function (a, b) { return b - a; }); });
+
+  // El puesto k de MI lista dentro de su posicion cobra el k-esimo mas caro
+  var cuenta = {}, tier = 1, grupos = {};
+  for (var i = 0; i < filas.length; i++) {
+    var r = filas[i], c = curvas[r.pos];
+    if (c && c.length) {
+      var idx = cuenta[r.pos] || 0;
+      cuenta[r.pos] = idx + 1;
+      // Si su lista tiene mas jugadores de esa posicion que la sala precios,
+      // los ultimos repiten el mas barato. No pasa con el pool de 260 contra
+      // una lista de 200, pero un dia pasara y es mejor que salga el suelo de
+      // la subasta que un hueco.
+      out[r.id] = c[Math.min(idx, c.length - 1)];
+      var g = tier + '|' + r.pos;
+      (grupos[g] = grupos[g] || []).push(r.id);
+    }
+    if (breaks && breaks[r.id]) tier++;
+  }
+
+  // Suavizado dentro del tier, conservando la suma del grupo
+  Object.keys(grupos).forEach(function (g) {
+    var lista = grupos[g];
+    if (lista.length < 2) return;
+    var suma = 0;
+    lista.forEach(function (x) { suma += out[x]; });
+    var media = suma / lista.length;
+    lista.forEach(function (x) { out[x] = out[x] + TMR_TIER_SUAVE * (media - out[x]); });
+  });
+  Object.keys(out).forEach(function (x) { out[x] = Math.max(1, Math.round(out[x])); });
+  return out;
+}
+
+function tmrBlend() {
+  if (!TMR.sticker) return;
+  TMR.price = tmrPreciosDeSala(TMR.sticker, TMR._stPos, TMR.rows, TMR.breakAfter);
 }
 
 /* ── carga ──────────────────────────────────────────────────────────────── */
@@ -1728,14 +1801,18 @@ function tmrGameClose() {
   tmrPaint();
 }
 
+/* NI UN PRECIO en la tarjeta. Correccion del dueno, textual: "yo no se cuanto
+ * deberian valer. yo quiero que tu me digas basado en los rankings que yo
+ * haga". Ensenarle el Pay mientras elige es pedirle justo lo que dijo que no
+ * sabe, y ademas contamina la respuesta: si ve $67 al lado de un nombre, deja
+ * de contestar a quien prefiere y empieza a contestar quien vale mas. Foto,
+ * nombre, posicion y equipo, y nada mas. */
 function tmrGameCard(r) {
-  var v = tmrPriceOf(r.id);
   return '<div class="rk-gm-card">'
     + '<span class="rk-pic rk-ring-' + r.pos + '"><img src="https://sleepercdn.com/content/nfl/players/thumb/'
     + tmrEsc(r.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></span>'
     + '<b class="rk-gm-nm">' + tmrEsc(r.name) + '</b>'
     + '<span class="rk-gm-meta"><em class="rk-' + r.pos + '">' + r.pos + '</em> ' + tmrEsc(r.team || 'FA') + '</span>'
-    + '<span class="rk-gm-pay">' + (v == null ? '$-' : '$' + v) + '</span>'
     + '</div>';
 }
 
@@ -1753,7 +1830,8 @@ function tmrGamePaint() {
 
   var h = '<div class="rk-gm-top">'
     + '<div class="rk-gm-t"><b>Tier Game</b>'
-    + '<span>Top ' + uniN + ' of your list. Answer a few, then let the tiers fall out.</span></div>'
+    + '<span>Top ' + uniN + ' of your list. Just say who you prefer.'
+    + ' Mac turns your order into what to pay.</span></div>'
     + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrGameClose()">Back to list</button>'
     + '</div>'
     + '<div class="rk-gm-prog"><div class="rk-gm-bar"><i style="width:' + pg.pct + '%"></i></div>'
@@ -1933,6 +2011,13 @@ function tmrLigaTxt(cfg) {
 
 var TMR_SH_MIN = 5;     // por debajo de $5 el ahorro no cambia ninguna decision
 var TMR_SH_PLAN = 20;   // a partir de $20 el ahorro compra otro jugador entero
+/* El hueco contra el mercado. Ahora que el Pay sale de SU orden y no de una
+ * mezcla con el mercado, comparar el Pay de dos jugadores suyos ya no dice
+ * nada del mercado: los dos son suyos. El hallazgo real es la distancia entre
+ * lo que EL pagaria y lo que la SALA va a cobrar, y eso vive en TMR.sticker.
+ * Es literalmente la frase del dueno: si el pone a Swift en el tier de Hall y
+ * la sala lo vende a $12, ahi estan los dolares para quemarse en Gibbs. */
+var TMR_SH_GAP = 8;     // dolares de hueco contra la sala para que sea noticia
 
 /* Notas de una subasta REAL, medidas sobre
  * scripts/fixtures/auction-nfl-divas-2026-08-27.json (10 equipos, $200, 13
@@ -1956,7 +2041,11 @@ function tmrSheetData() {
     // El universo del papel: el top 100 mas cualquier objetivo que viva por
     // debajo. Un objetivo fuera de la hoja seria justo el que se olvida.
     if (i < uniN || TMR.target[r.id]) {
-      filas.push({ r: r, i: i, tier: t, pay: tmrPriceOf(r.id), target: !!TMR.target[r.id] });
+      filas.push({
+        r: r, i: i, tier: t, pay: tmrPriceOf(r.id), target: !!TMR.target[r.id],
+        // lo que la SALA cobra por el, que es otra cosa que lo que EL pagaria
+        mercado: (TMR.sticker && TMR.sticker[r.id] != null) ? TMR.sticker[r.id] : null
+      });
     }
     if (TMR.breakAfter[r.id]) t++;
   }
@@ -1982,6 +2071,14 @@ function tmrSheetData() {
     var tiers = Object.keys(g).map(Number).sort(function (a, b) { return a - b; }).map(function (tn) {
       var men = g[tn], conPrecio = men.filter(function (x) { return x.pay != null; });
       var linea = null;
+      // El de mayor hueco contra el mercado dentro de este tier
+      var ganga = null;
+      men.forEach(function (x) {
+        if (x.pay == null || x.mercado == null) return;
+        var h = x.pay - x.mercado;
+        if (h < TMR_SH_GAP) return;
+        if (!ganga || h > ganga.hueco) ganga = { x: x, hueco: h };
+      });
       /* Si el dueno nunca corto esta posicion, su unico "tier" son todos los
        * jugadores de la lista, y ahi la linea diria "el RB mas barato te ahorra
        * $85 contra Gibbs": es cierto y no significa nada. Lo destapo el gate
@@ -1994,19 +2091,28 @@ function tmrSheetData() {
         });
         var ahorro = caro.pay - barato.pay;
         if (ahorro >= TMR_SH_MIN) {
-          linea = { cheap: barato, exp: caro, saves: ahorro, spend: null, market: false };
-          /* EL HALLAZGO PRINCIPAL, y es la regla del dueno: "no tengo que picar
-           * a un jugador por valor, puedo solo pagar por los que me gustan
-           * aunque esten mas abajo". Si alguien de SU tier cuesta menos de la
-           * mitad que el mas caro del tier, es que el mercado lo tiene mas
-           * abajo que el. Eso no es un reach: en subasta pagas el precio y ya.
-           * Aqui no se dice "reach" ni "por encima del valor" en ningun sitio. */
-          if (barato.pay <= caro.pay * 0.6) linea.market = true;
+          linea = { cheap: barato, exp: caro, saves: ahorro, spend: null, market: false, gap: null };
           // La linea de plan es derivada y determinista: sin modelo, sin LLM.
           if ((pos === 'RB' || pos === 'WR') && ahorro >= TMR_SH_PLAN && top && top.r.id !== barato.r.id) {
             linea.spend = top;
           }
         }
+      }
+      /* EL HALLAZGO PRINCIPAL, y es la regla del dueno: "no tengo que picar a
+       * un jugador por valor, puedo solo pagar por los que me gustan aunque
+       * esten mas abajo". Si el lo tiene en un tier alto y la sala lo vende
+       * barato, esa diferencia es dinero libre. No es un reach: en subasta
+       * pagas el precio y ya. Aqui no se dice "reach" ni "por encima del
+       * valor" en ningun sitio. */
+      // El mismo candado que la linea de arriba, y por la misma razon: si el
+      // nunca corto esta posicion, su unico "tier" son todos, y decir "es un
+      // tier-1" no significa nada. Lo cazo el control negativo del gate.
+      if (ganga && nT >= 2) {
+        linea = linea || { cheap: ganga.x, exp: ganga.x, saves: 0, spend: null, market: false, gap: null };
+        linea.market = true;
+        linea.gap = { r: ganga.x.r, pay: ganga.x.pay, mercado: ganga.x.mercado, hueco: ganga.hueco };
+        // El ahorro que de verdad se puede gastar en otro sitio es ese hueco
+        if (ganga.hueco >= TMR_SH_PLAN && top && top.r.id !== ganga.x.r.id) linea.spend = top;
       }
       return { tier: tn, men: men, deal: linea };
     });
@@ -2015,7 +2121,7 @@ function tmrSheetData() {
   var market = [];
   secciones.forEach(function (s2) {
     s2.tiers.forEach(function (t) {
-      if (t.deal && t.deal.market) market.push({ pos: s2.pos, tier: t.tier, cheap: t.deal.cheap, exp: t.deal.exp, saves: t.deal.saves });
+      if (t.deal && t.deal.gap) market.push({ pos: s2.pos, tier: t.tier, gap: t.deal.gap, saves: t.deal.gap.hueco });
     });
   });
   market.sort(function (a, b) { return b.saves - a.saves; });
@@ -2083,8 +2189,9 @@ function tmrSheetPaint() {
   if (d.market && d.market.length) {
     h += '<div class="rk-sh-gaps"><div class="rk-sh-tk">Where the market is under you</div><ul>';
     d.market.slice(0, 5).forEach(function (m) {
-      h += '<li><b>' + tmrEsc(m.cheap.r.name) + ' $' + m.cheap.pay + '</b> sits in your '
-        + m.pos + ' tier ' + m.tier + ' with ' + tmrEsc(m.exp.r.name) + ' at $' + m.exp.pay + '.</li>';
+      h += '<li><b>' + tmrEsc(m.gap.r.name) + '</b> is in your ' + m.pos + ' tier ' + m.tier
+        + '. The room pays about $' + m.gap.mercado + ', you would pay up to $' + m.gap.pay
+        + ': $' + m.gap.hueco + ' free.</li>';
     });
     h += '</ul></div>';
   }
@@ -2100,20 +2207,32 @@ function tmrSheetPaint() {
   d.secciones.forEach(function (s) {
     h += '<section class="rk-sh-sec"><h4 class="rk-sh-h rk-' + s.pos + '">' + s.pos + '</h4>';
     s.tiers.forEach(function (t) {
-      h += '<div class="rk-sh-tier"><div class="rk-sh-tk">Tier ' + t.tier + '</div><ul class="rk-sh-ul">';
+      // El rango del tier: lo que cuesta el mas caro y el mas barato de un
+      // grupo que para el es intercambiable. Es la cifra que decide cuanto
+      // puede ahorrarse sin cambiar de jugador.
+      var conP = t.men.filter(function (x) { return x.pay != null; });
+      var rango = '';
+      if (conP.length) {
+        var lo = conP[0].pay, hi = conP[0].pay;
+        conP.forEach(function (x) { if (x.pay < lo) lo = x.pay; if (x.pay > hi) hi = x.pay; });
+        rango = ' · pay up to ' + (lo === hi ? '$' + hi : '$' + lo + '-$' + hi);
+      }
+      h += '<div class="rk-sh-tier"><div class="rk-sh-tk">Tier ' + t.tier + tmrEsc(rango) + '</div><ul class="rk-sh-ul">';
       t.men.forEach(function (x) {
         h += '<li class="rk-sh-li' + (x.target ? ' is-target' : '') + '">'
           + '<span class="rk-sh-nm">' + tmrEsc(x.r.name) + '</span>'
           + '<span class="rk-sh-tm">' + tmrEsc(x.r.team || 'FA') + '</span>'
-          + '<span class="rk-sh-pay">' + (x.pay == null ? '$-' : '$' + x.pay) + '</span></li>';
+          + '<span class="rk-sh-pay">' + (x.pay == null ? '$-' : 'up to $' + x.pay) + '</span></li>';
       });
       h += '</ul>';
       if (t.deal) {
         h += '<div class="rk-sh-deal' + (t.deal.market ? ' is-market' : '') + '">'
-          + 'Cheapest in: <b>' + tmrEsc(t.deal.cheap.r.name) + ' $' + t.deal.cheap.pay
-          + '</b>, saves <b>$' + t.deal.saves + '</b> vs ' + tmrEsc(t.deal.exp.r.name) + '.'
-          + (t.deal.market ? ' Market has him lower: pay $' + t.deal.cheap.pay
-            + ' for a tier-' + t.tier + ' player.' : '')
+          + (t.deal.saves >= TMR_SH_MIN
+            ? 'Cheapest in: <b>' + tmrEsc(t.deal.cheap.r.name) + ' $' + t.deal.cheap.pay
+            + '</b>, saves <b>$' + t.deal.saves + '</b> vs ' + tmrEsc(t.deal.exp.r.name) + '. ' : '')
+          + (t.deal.gap ? 'Market has him lower: <b>' + tmrEsc(t.deal.gap.r.name)
+            + '</b> goes for about $' + t.deal.gap.mercado + ' and you would pay up to $'
+            + t.deal.gap.pay + ' for a tier-' + t.tier + ' player.' : '')
           + (t.deal.spend ? ' Spend it on <b>' + tmrEsc(t.deal.spend.r.name) + '</b>.' : '')
           + '</div>';
       }
@@ -2352,6 +2471,7 @@ if (typeof window !== 'undefined') {
   window.tmrClearPrice = tmrClearPrice;
   window.tmrToggleTarget = tmrToggleTarget;
   window.tmrPriceOf = tmrPriceOf;
+  window.tmrPreciosDeSala = tmrPreciosDeSala;
   window.tmrPlanPrices = tmrPlanPrices;
   window.tmrPrices = tmrPrices;
   window.tmrOwner = tmrOwner;
