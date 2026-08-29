@@ -1000,3 +1000,105 @@ Archivos: `public/rankings.js` (el juego, la inferencia, la hoja, la sala forzad
 Pendiente de gusto, para cuando el juegue de verdad: si 30 preguntas le dejan los tiers
 como los quiere, o hay que mover `TMR_CUT_K` (hoy 2.2) y los margenes de "clearly" y
 "slightly" (8 y 2 puestos, $10 y $2 en una sala de $200).
+
+## Sesion 2026-08-28 (noche): vincular dispositivos con un codigo
+
+**El reporte.** El dueno reinstalo la PWA en el iPhone y dejo de ver lo suyo:
+My Rankings con Pay, Tier Game, Cheat Sheet, el sync y /perfil. No era un bug de
+esas features: la cuenta de esta app es POR NAVEGADOR (`tm_acct`, una llave
+aleatoria del localStorage, `public/app.js:37`), y la app instalada estrena
+almacenamiento, o sea acctId nuevo. Como `permitido()` solo miraba PERFIL_ACCTS,
+y una variable de Vercel solo entra con un deploy, la unica salida era copiar un
+hash a mano y redesplegar. Cada navegador nuevo, un deploy.
+
+**Lo que se hizo.** `permitido(acctId)` pasa a ser la UNION de dos listas:
+- la de env, que no se toca nunca, para que un Blob caido o vacio no deje fuera
+  tambien al dueno de siempre;
+- una segunda en el mismo Vercel Blob (`perfil/extra-accts.json`), que alimenta
+  el propio dueno desde un dispositivo YA vinculado.
+
+Se cachea 60 s en memoria porque `permitido()` es sincrona y la llaman tres
+rutas por peticion; los tres puntos de control (`GET /`, `/owner`, `rkGuard`)
+hacen `await extraSync()` antes. En Vercel cada instancia tiene su copia: la que
+atiende un claim la recarga en el acto (`extraSync(true)`) y las demas se ponen
+al dia dentro del minuto. Eso esta documentado en el codigo, no es un descuido.
+
+De paso, el almacen de documentos se generalizo: `docRead(nombre, archivo)` y
+`docWrite(...)` sirven a los TRES documentos del perfil (rankings, codigos,
+cuentas), con el mismo fallback a archivo de `PERFIL_RK_STORE=local`. `rkRead` y
+`rkWrite` quedan como envoltorios de una linea, asi que el gate que prueba uno
+prueba el mecanismo de los tres.
+
+**Los dos endpoints.**
+- `POST /api/perfil/link/new`: SOLO una cuenta ya permitida reparte codigos. Si
+  no fuera asi, cualquiera se fabricaria su propia llave de entrada. Seis
+  digitos con `crypto.randomInt`, diez minutos, un solo uso.
+- `POST /api/perfil/link/claim {code}`: cualquier cuenta con llave puede
+  intentarlo, el codigo es lo que autoriza. **Primero entra la cuenta y despues
+  se quema el codigo**: al reves, un fallo a mitad de camino dejaria el codigo
+  gastado sin haber vinculado a nadie, y desde el telefono no habria como
+  saberlo.
+
+**Decision que conviene no revertir: un codigo rechazado responde 200 con
+`{owner:false, error}`, no 400.** Chrome imprime en consola CUALQUIER respuesta
+que no sea 2xx, y en este repo un error de consola cuenta como bug. Teclear mal
+seis digitos es un camino normal de usuario, no una averia. Es el mismo criterio
+que ya tenia `/owner`. Lo cazo el gate: con 400, el check de consola limpia
+fallaba. Siguen siendo codigo de error las cosas que el usuario NO puede
+provocar tecleando: 401 sin llave, 400 con el cuerpo mal formado (la UI nunca lo
+manda) y 502 con el almacen caido.
+
+**Por que el limite por cuenta no basta.** Fabricar cuentas nuevas es gratis
+(cualquiera mina llaves), asi que 5 intentos por acctId serian 5.000 tiros cada
+diez minutos con mil cuentas, sobre un millon de combinaciones. Hay ADEMAS un
+tope global de intentos fallidos por ventana (`LINK_TRIES_ALL`). El codigo corto
+solo es seguro con las tres cosas juntas: vida corta, un solo uso, y los dos
+topes.
+
+**La UI, dos puertas.** En My Rankings: "Link another device" en las
+herramientas del dueno (codigo grande, tabular, con el tiempo que queda) y "Have
+a code?" para el que llega, discreto, con casilla numerica de 44px. La segunda
+vive TAMBIEN en la tarjeta del 403 de `/perfil`, que es la pantalla por la que
+el dueno se entera de que algo va mal; el acctId propio sigue saliendo ahi,
+porque esto no reemplaza la salida por env var, la evita. Al vincular NO se
+recarga la pagina: se tira la respuesta cacheada de `tmrOwner` y se rehace la
+cola del arranque que solo corre para el dueno (pull, seed, precios, pintado).
+Si la pregunta no confirma, entonces si se recarga: la pantalla no se queda a
+medias. `tmrOwnerTools()` maneja TRES estados, no dos (dueno, cuenta corriente,
+y "todavia no se"), y por eso lleva `dataset.mode`: con el guard viejo
+(`childElementCount`) el invitado que vinculaba se quedaba con su enlace puesto.
+
+**Gate: qa-rankings pasa de 109 a 119 checks.** L1 a L10: quien puede repartir
+codigos, el panel del dueno (tambien medido a 390px), el aparato nuevo con un
+codigo inventado, el codigo bueno por la UI trayendo la MISMA lista sin recargar,
+que el vinculo sobreviva a recargar, el codigo reutilizado, el corte por
+intentos, el control negativo, la consola, y la puerta de `/perfil`.
+**Verificado que 8 de los 10 fallan contra el codigo anterior** (worktree
+detached de HEAD 6a16264 con el gate nuevo copiado encima, QA_PORT 3219). Los
+otros dos son GUARDAS, y tienen que pasar en las dos versiones: (L8) vincular un
+aparato no vincula a los demas, y (L9) la consola limpia.
+Dos carreras propias que cazo el gate y conviene no repetir: esperar
+`!TMR.pricing` no espera nada, porque arranca en false (hay que esperar a
+`sincronizado()` y a que haya precios); y el mensaje "Linked" de `/perfil` es
+transitorio, porque al vincular se repinta el perfil entero y se lo lleva por
+delante, asi que lo que se mide es el efecto (la casilla ya no esta), no el
+cartel.
+
+**Los cinco gates en verde antes del commit:** qa-rankings 119, qa-perfil 156,
+qa-live 47, qa-nav, qa-board 104. calibrate-room NO se corrio: no se toco el
+motor.
+
+**Desplegado y verificado en produccion** (HEAD 2ce5d6a, `origin/main` al dia):
+rankings.js, app.js, styles.css e index.html sirven el mismo sha256 que el
+local; cache-bust 2026082805 en sus 8 apariciones; `link/claim` y `link/new` sin
+llave 401; `link/new` con cuenta ajena 403 con su acctId; `link/claim` con
+codigo malo 200 y `{owner:false}`. `QA_BASE=https://macdraft.app` qa-nav y
+qa-live 47 en verde contra el bundle desplegado.
+
+**Que le toca al dueno.** En la computadora (que ya esta habilitada): /research >
+My Rankings > Link another device. En el iPhone, en la app instalada: /research >
+My Rankings > Have a code?, teclear los seis digitos. A partir de ahi ese
+telefono ve su lista, sus precios, el Tier Game, la cheat sheet y /perfil, y
+sigue viendolos aunque vuelva a reinstalar? No: reinstalar borra el localStorage
+y con el la llave, asi que ese caso pide un codigo nuevo. Lo que ya no hace
+falta nunca mas es un deploy.
