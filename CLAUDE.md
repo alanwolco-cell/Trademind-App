@@ -857,3 +857,146 @@ un marcador. Arreglado en b3bcd70:
   los dos del entorno local.
 - **El dueno tiene que DESINSTALAR y volver a anadir la app a la pantalla de inicio** para
   que iOS tome el manifest y el modo app.
+
+## Sesion 2026-08-28 (tarde): Tier Game y cheat sheet, con los settings de SU liga
+
+Pedido del dueno, textual: "para los tiers me lo pudieras hacer como un juego y despues
+tu mismo descifras los tiers y desde ahi los edito, para no tener que hacer todo yo. que
+sea solo de los top 100 jugadores. hazme un quien prefieres y por cuanto y asi descifras
+si los tengo en el mismo tier o no y a cual prefiero". Y: "basado en eso quiero que me
+hagas mi cheat sheet para el auction". Las dos piezas son SOLO del dueno, por la misma
+puerta `.rk-owner` / `tmrOwner()`, dentro de My Rankings y en el mismo documento
+sincronizado (`/api/perfil/rankings`, ahora con `game` validado forma a forma).
+
+### El juego, y por que la inferencia tiene DOS ejes
+Cinco respuestas y no dos ("A clearly / A slightly / Same tier / B slightly / B clearly"),
+porque "same tier" es justo el dato que un si/no tira a la basura: un tier ES un grupo de
+jugadores entre los que da igual cual te toque.
+
+`tmrTiersInfer` es PURA (sin DOM, sin TMR; los precios se pueden inyectar con `opts.pay`)
+y resuelve DOS cosas distintas con las mismas respuestas, por Gauss-Seidel sobre un
+sistema diagonalmente dominante:
+- **El orden**, en puestos de lista, con SU lista como prior. El mercado no entra.
+- **El corte**, en dolares, con el Pay del motor como prior.
+
+Por que dos y no uno: regla del dueno, textual, "no tengo que picar a un jugador por
+valor, puedo solo pagar por los que me gustan aunque esten mas abajo". Sus tiers son de
+PREFERENCIA. El prior del dinero solo arranca la conversacion y **se rinde sin
+resistencia** (ancla 0.15 contra el 1 de cada respuesta): medido, un solo "same tier" suyo
+borra un escalon de mercado de $19. Y con CERO respuestas ya salen 9 tiers del escalon de
+precios, que es lo que hace que una sesion de 30 preguntas valga en vez de dejar una lista
+plana. En ningun sitio se dice "reach" ni "por encima del valor": en subasta se paga.
+
+**El corte se autoescala.** Un umbral fijo en dolares daba veinte tiers arriba y ninguno
+abajo: arriba los precios estan densos ($80, $75, $68) y abajo todo vale $2. El umbral es
+`max(1,5% del bote, 2.2 x el salto tipico de la lista)`.
+
+**La pareja se elige por ganancia de informacion**, no por recorrido: la que tiene el salto
+de dinero mas cerca del umbral (donde menos se sabe si van juntos o separados), pesada por
+el dinero en juego (por eso arranca en el top y va bajando sin una regla aparte) y
+penalizada por la evidencia que ya existe. Lo que se deduce con dos "clearly" encadenados
+NO se pregunta. Una de cada siete cruza posiciones dentro del top 30.
+
+**Escalada** (regla suya, textual: "si ve que un jugador me gusta mucho quiero que hasta lo
+pruebe con jugadores de mas arriba"): quien gana clearly contra alguien por encima suyo, o
+encadena dos victorias, se enfrenta al tier de arriba de su posicion, y al de mas arriba,
+hasta que pierda o empate; si ya no le quedan rivales arriba, se prueba al que perdio
+contra alguien de mas abajo. Sube tres tiers en tres preguntas en vez de en quince.
+
+**Contradicciones**: los ciclos A>B>C>A se detectan, se ensenan en el panel y se ofrece
+re-preguntar el eslabon que cierra el circulo. Contestar una pareja otra vez REEMPLAZA la
+respuesta anterior en vez de duplicarla, o el ciclo sobreviviria a su propio arreglo.
+
+**El progreso es real**: "X of Y tier boundaries resolved", con Y = las parejas de vecinos
+dentro de cada posicion del universo (96 en una lista de 100). Puede saltar varios puntos
+con una respuesta, o quedarse quieto si lo que contesto ya se deducia.
+
+"Apply tiers" avisa antes de aplicar (cuantos mueve, cuantos cortes deja) y solo toca el
+top 100: los cortes de mas abajo se conservan porque el juego no pregunto por ellos.
+
+### La cheat sheet
+Vista a pantalla completa dentro del tab, con `@media print`. Arriba el plan (objetivos,
+suma, resto de $200, huecos) y **los hallazgos de mercado**; despues, por posicion, cada
+tier con sus jugadores, su Pay y los objetivos marcados.
+
+- "Cheapest in: X $A, saves $B vs Y" cuando el tier tiene dos o mas y el ahorro llega a $5.
+- Si el ahorro llega a $20 en RB o WR, "Spend it on <su objetivo mas caro>". Es la regla que
+  el escribio: Swift en el tier de Hall significa quemarse la plata en Gibbs.
+- **El hallazgo principal**: si alguien de SU tier cuesta la mitad o menos que el mas caro
+  del tier, "Market has him lower: pay $X for a tier-N player", y sube al plan.
+- **Sin cortes de tier la hoja se CALLA** y dice por que. Lo destapo el gate: sin tiers, el
+  "tier" es la lista entera y la linea decia "el RB mas barato te ahorra $85 contra Gibbs",
+  que es cierto y no significa nada.
+- Las notas de la sala real son cuentas del fixture `auction-nfl-divas-2026-08-27.json`,
+  verificadas al escribirlas: #1 a $86 (43% de un presupuesto), 38 de 130 lotes a $1,
+  C. Brown $56 / Walker $55 / Hampton $53, Allen $38 / Burrow $30 / Jackson $25.
+
+### Los settings de FZ26 mandan, y se FUERZAN
+Regla suya: "toma en cuenta los league settings y format de la liga". `tmrRoomCfg()` para
+el dueno devuelve SIEMPRE Fantazy 2026 (10 equipos, $200, 15 rondas, half PPR, 1QB), sin
+tocar lo que el tenga elegido en Mock Draft. Antes leia la memoria del mock, asi que
+ponerse a probar una sala de 12 equipos le movia los precios del domingo por debajo.
+
+- **El board es el de half PPR.** Medido el 2026-08-28: entre PPR entero y half PPR se
+  mueven 86 de los 100 primeros y hasta 9 puestos (los RB suben, los WR bajan). Preciar en
+  half PPR con el orden de PPR entero es decir "half PPR" y cobrar otra cosa. `tmrAdpFmt`
+  es un ESPEJO de app.js ~10454 y el gate lo extrae de los dos archivos y los compara.
+- **El roster es el de la liga**: `tmrRosterShape` da QB1+RB2+WR2+TE1+FLEX1+K1+DEF1 = 9
+  titulares y 6 de banca. La barra Build y la hoja dicen que titulares faltan por cubrir;
+  K y DEF salen siempre sin cubrir a proposito (no estan en la lista y se compran a $1).
+- **El TD de pase a 6 se DECLARA pero no mueve el Pay**, y se dice en el codigo en vez de
+  fingir: `MD.sixPt` solo entra en `dv` (app.js ~10498), que es la proyeccion de las
+  recomendaciones; `auPoolInit` no lo mira.
+- La cabecera de la hoja y la barra Build declaran la liga entera con sus numeros.
+- El veredicto de dueno se cachea en `tm_rk_owner` para elegir el board desde la primera
+  linea. En la PRIMERA visita de un navegador nuevo la columna ADP sale en PPR entero (el
+  precio ya es correcto en las dos ramas); a partir de la segunda, todo en half PPR. Se
+  intento rehacer la lista al vuelo y salio peor, medido: la pantalla se vaciaba un
+  instante y el gate cazo tres carreras.
+
+### Defectos que cazo el gate, no la lectura
+- Un "clearly" entre dos jugadores que en el orden nuevo dejaban de ser vecinos NO cortaba
+  en ningun sitio. Ahora la separacion se cierra sobre la pareja entera, y un "same tier"
+  declarado borra cualquier corte del tramo (va el ultimo: es la unica respuesta en la que
+  el dueno niega el escalon con todas las letras).
+- **Diez jugadores del top 200 no tienen ADP de half PPR** y salian con "$-". El pool de
+  precios ahora incluye a cualquiera que este en la lista, con el ADP que tenga.
+- La escalada medía el puesto DESPUES de la respuesta: un solo "clearly" ya mueve ocho
+  puestos, asi que el ganador ya estaba arriba y nunca escalaba. Se mide en la lista de
+  antes.
+
+### Gates
+`qa-rankings` pasa de 59 a **109 checks**. Nuevos: G1-G9 (la inferencia como funcion pura),
+M1-M10 (prior del mercado, escalada, ganancia de informacion, contradicciones con su
+control negativo, sesion corta), J1-J8 y K1-K3 (jugar entrando por el boton, y retomar
+entre DOS navegadores), F1-F7 (los settings de FZ26, incluido que el Pay NO se mueve con la
+memoria del mock puesta en 12 equipos PPR, y el espejo anti-deriva contra app.js), H-0 y
+H9-H10 (la hoja), N4 (control negativo: una cuenta ajena no tiene los botones ni escondidos).
+**Verificado que 50 de los 109 fallan contra el codigo previo** (worktree detached de
+7abe208 con el gate nuevo copiado encima), y los 59 restantes siguen pasando.
+
+`qa-live` 47, `qa-board` 104 y `qa-nav` en verde. `calibrate-room` NO se corrio: no se toco
+el motor (VAL_CURVE, auPoolInit y app.js quedan intactos).
+
+**Dos veces hubo que endurecer el gate**: los checks nuevos leian campos de un `eva` que
+contra el codigo roto devuelve `{_err}`, y la corrida REVENTABA en el primer fallo
+llevandose por delante los veinte de detras. Es la misma leccion que este repo ya pago con
+`$eval`. Y de paso, el check (f) de `qa-nav` leia la lista sin esperar a su fetch (~3 s con
+la cache fria) y fallaba al azar TAMBIEN contra HEAD: llevaba tiempo mintiendo en las dos
+direcciones.
+
+### Estado al cerrar: DESPLEGADO Y VERIFICADO
+HEAD 6a7ed17, empujado a main. Verificado por curl contra macdraft.app, no supuesto:
+rankings.js y styles.css byte a byte iguales al local (sha256), index.html igual, el
+cache-bust 2026082804 en sus 8 apariciones, y los marcadores nuevos servidos
+(`_tmrEscalada`, `tmrGameCycles`, "Market has him lower", `rk-owner-tools`, `rk-gm-cyc`,
+`rk-sh-gaps`). Capturas a 390px del juego y de la hoja revisadas a ojo.
+
+Archivos: `public/rankings.js` (el juego, la inferencia, la hoja, la sala forzada),
+`public/styles.css` (`.rk-gm-*`, `.rk-sh-*`, impresion), `public/index.html`
+(`#rk-owner-tools`, `#rk-game`, `#rk-sheet`, cache-bust), `server/routes/perfil.js`
+(validacion de `game`), `scripts/qa-rankings.mjs`, `scripts/qa-nav.mjs`.
+
+Pendiente de gusto, para cuando el juegue de verdad: si 30 preguntas le dejan los tiers
+como los quiere, o hay que mover `TMR_CUT_K` (hoy 2.2) y los margenes de "clearly" y
+"slightly" (8 y 2 puestos, $10 y $2 en una sala de $200).
