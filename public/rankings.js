@@ -2137,10 +2137,163 @@ function tmrSheetPaint() {
 function tmrOwnerTools() {
   var box = document.getElementById('rk-owner-tools');
   if (!box) return;
-  if (TMR.owner !== true) { box.innerHTML = ''; return; }
-  if (box.childElementCount) return;
-  box.innerHTML = '<button type="button" class="rk-btn" onclick="tmrGameOpen()">Tier Game</button>'
-    + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrSheetOpen()">Cheat Sheet</button>';
+  // Tres estados, no dos: dueno, cuenta corriente, y "todavia no se". Mientras
+  // no se sepa no se escribe nada, para que la pantalla no cambie dos veces.
+  var modo = TMR.owner === true ? 'owner' : (TMR.owner === false ? 'guest' : '');
+  if (!modo) { box.innerHTML = ''; box.dataset.mode = ''; return; }
+  if (box.dataset.mode === modo) return;
+  box.dataset.mode = modo;
+  if (modo === 'owner') {
+    box.innerHTML = '<button type="button" class="rk-btn" onclick="tmrGameOpen()">Tier Game</button>'
+      + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrSheetOpen()">Cheat Sheet</button>'
+      + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrLinkOpen()">Link another device</button>';
+  } else {
+    // La puerta de vuelta del propio dueno. NO es un boton suyo escondido: no
+    // descubre nada ni hace nada sin un codigo vivo, y sin ella un telefono que
+    // reinstalo la app no tiene por donde entrar, porque su cuenta es nueva.
+    box.innerHTML = '<button type="button" class="rk-linkq" onclick="tmrLinkAsk()">Have a code?</button>';
+  }
+}
+
+/* ── vincular otro dispositivo ───────────────────────────────────────────────
+ * La cuenta de esta app es POR NAVEGADOR (un secreto aleatorio del
+ * localStorage), asi que reinstalar la PWA o estrenar telefono deja al dueno
+ * fuera de sus propias pantallas. Un dispositivo ya vinculado pide un codigo de
+ * seis digitos y el nuevo lo teclea. Lo autoriza el servidor; aqui solo se
+ * pinta. */
+var TMR_LINK_T = null;
+
+function tmrLinkHost() { return document.getElementById('rk-link'); }
+
+function tmrLinkClose() {
+  if (TMR_LINK_T) { clearInterval(TMR_LINK_T); TMR_LINK_T = null; }
+  var h = tmrLinkHost();
+  if (!h) return;
+  h.hidden = true;
+  h.innerHTML = '';
+}
+
+function tmrLinkMsg(txt, clase) {
+  var m = document.getElementById('lk-msg');
+  if (!m) return;
+  m.textContent = txt || '';
+  m.className = 'lk-msg' + (clase ? ' ' + clase : '');
+}
+
+/* El codigo se pide al ABRIR, no antes: un codigo guardado "por si acaso" es un
+ * codigo vivo mas tiempo del que hace falta. */
+async function tmrLinkOpen() {
+  var h = tmrLinkHost();
+  if (!h) return;
+  if (TMR_LINK_T) { clearInterval(TMR_LINK_T); TMR_LINK_T = null; }
+  h.hidden = false;
+  h.innerHTML = '<div class="lk-box"><div class="lk-k">Link another device</div>'
+    + '<div class="lk-skel" aria-hidden="true"></div>'
+    + '<p class="lk-p">Asking the server for a code.</p></div>';
+  var j = null, err = '';
+  try {
+    var r = await fetch('/api/perfil/link/new', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    try { j = await r.json(); } catch (_) { j = null; }
+    if (!r.ok || !j || !j.code) err = (j && j.error) || ('Could not create a code (' + r.status + ').');
+  } catch (_) { err = 'No connection. Try again in a moment.'; }
+  if (err) {
+    h.innerHTML = '<div class="lk-box"><div class="lk-k">Link another device</div>'
+      + '<p class="lk-p lk-bad">' + tmrEsc(err) + '</p>'
+      + '<div class="lk-form"><button type="button" class="rk-btn rk-btn-quiet" onclick="tmrLinkClose()">Close</button></div></div>';
+    return;
+  }
+  var hasta = Number(j.expiresAt) || (Date.now() + 10 * 60 * 1000);
+  h.innerHTML = '<div class="lk-box"><div class="lk-k">Link another device</div>'
+    + '<div class="lk-code" id="lk-code-out">' + tmrEsc(j.code) + '</div>'
+    + '<p class="lk-p">On the other device: My Rankings &gt; Have a code?</p>'
+    + '<div class="lk-form"><span class="lk-left" id="lk-left" aria-live="polite"></span>'
+    + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrLinkClose()">Done</button></div></div>';
+  tmrLinkTick(hasta);
+  TMR_LINK_T = setInterval(function () { tmrLinkTick(hasta); }, 1000);
+}
+
+function tmrLinkTick(hasta) {
+  var el = document.getElementById('lk-left');
+  if (!el) { if (TMR_LINK_T) { clearInterval(TMR_LINK_T); TMR_LINK_T = null; } return; }
+  var s = Math.max(0, Math.round((hasta - Date.now()) / 1000));
+  if (s <= 0) {
+    el.textContent = 'Expired. Ask for a new one.';
+    if (TMR_LINK_T) { clearInterval(TMR_LINK_T); TMR_LINK_T = null; }
+    return;
+  }
+  var m = Math.floor(s / 60), q = s % 60;
+  el.textContent = 'Expires in ' + m + ':' + (q < 10 ? '0' + q : q);
+}
+
+/* El lado del dispositivo nuevo. */
+function tmrLinkAsk() {
+  var h = tmrLinkHost();
+  if (!h) return;
+  h.hidden = false;
+  h.innerHTML = '<div class="lk-box"><div class="lk-k">Have a code?</div>'
+    + '<p class="lk-p">Get one on a device that is already linked, under My Rankings.</p>'
+    + '<div class="lk-form">'
+    + '<input id="lk-code" class="lk-input" type="text" inputmode="numeric" pattern="[0-9]*" '
+    + 'autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-label="Six digit code" '
+    + 'onkeydown="tmrLinkKey(event)">'
+    + '<button type="button" class="rk-btn" onclick="tmrLinkSubmit()">Link</button>'
+    + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrLinkClose()">Cancel</button>'
+    + '</div><div class="lk-msg" id="lk-msg" aria-live="polite"></div></div>';
+  var i = document.getElementById('lk-code');
+  if (i) try { i.focus(); } catch (_) { }
+}
+
+function tmrLinkKey(e) {
+  if (e && e.key === 'Enter') { e.preventDefault(); tmrLinkSubmit(); }
+}
+
+async function tmrLinkSubmit() {
+  var inp = document.getElementById('lk-code');
+  if (!inp) return;
+  var code = String(inp.value || '').replace(/[^0-9]/g, '').slice(0, 6);
+  if (code.length !== 6) { tmrLinkMsg('Type the six digits.', 'is-bad'); return; }
+  tmrLinkMsg('Checking');
+  var r = null, j = null;
+  try {
+    r = await fetch('/api/perfil/link/claim', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code })
+    });
+    try { j = await r.json(); } catch (_) { j = null; }
+  } catch (_) { r = null; }
+  if (!r || !r.ok || !j || !j.owner) {
+    tmrLinkMsg((j && j.error) || 'Could not link this device.', 'is-bad');
+    return;
+  }
+  tmrLinkMsg('Linked. Bringing your list down.', 'is-ok');
+  await tmrLinkAdopt();
+}
+
+/* Pasar a dueno SIN recargar: se rehace la unica pregunta que decide (tmrOwner)
+ * y detras la cola del arranque que solo corre para el dueno, que es la misma
+ * de renderRankings. Recargar tambien funcionaria, pero perderia el scroll y
+ * parpadearia por algo que ya esta entero en memoria. Si la pregunta no
+ * confirma, entonces si se recarga: nunca se deja la pantalla a medias. */
+async function tmrLinkAdopt() {
+  TMR._ownerP = null;
+  var own = false;
+  try { own = await tmrOwner(); } catch (_) { own = false; }
+  if (!own) { try { location.reload(); } catch (_) { } return; }
+  try { await tmrSyncPull(); } catch (_) { }
+  try { tmrSeed(); } catch (_) { }
+  TMR.pricing = true;
+  tmrPaint();
+  try { await tmrPrices(); } catch (_) { }
+  TMR.pricing = false;
+  tmrPaint();
+  var h = tmrLinkHost();
+  if (h) {
+    h.innerHTML = '<div class="lk-box"><div class="lk-k">Device linked</div>'
+      + '<p class="lk-p">Your list, your prices and Draft Day are on this device now.</p>'
+      + '<div class="lk-form"><button type="button" class="rk-btn rk-btn-quiet" onclick="tmrLinkClose()">Done</button></div></div>';
+  }
+  return true;
 }
 
 /* ── puentes hacia el resto de la app ───────────────────────────────────── */
@@ -2230,6 +2383,12 @@ if (typeof window !== 'undefined') {
   window.tmrSheetPrint = tmrSheetPrint;
   window.tmrSheetData = tmrSheetData;
   window.tmrOwnerTools = tmrOwnerTools;
+  window.tmrLinkOpen = tmrLinkOpen;
+  window.tmrLinkAsk = tmrLinkAsk;
+  window.tmrLinkClose = tmrLinkClose;
+  window.tmrLinkSubmit = tmrLinkSubmit;
+  window.tmrLinkKey = tmrLinkKey;
+  window.tmrLinkAdopt = tmrLinkAdopt;
   window.tmMyRankOf = tmMyRankOf;
   window.tmRankingsActivos = tmRankingsActivos;
   window.tmrHydrate = tmrHydrate;

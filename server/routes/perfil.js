@@ -9,6 +9,9 @@
 // public/privacy.html has to say so before a single event is stored.
 
 const express = require('express');
+const crypto = require('crypto');
+const path = require('path');
+const os = require('os');
 const { requireAcctId, readAcctId } = require('../lib/identity');
 const { construirPerfil, construirPerfiles } = require('../lib/perfil');
 const tendenciasDraft = require('../lib/tendencias-draft');
@@ -30,9 +33,48 @@ const SLEEPER = 'https://api.sleeper.app/v1';
  * proves nothing, which is the rule identity.js exists to enforce.
  */
 function permitido(acctId) {
-  const lista = String(process.env.PERFIL_ACCTS || '')
+  if (!acctId) return false;
+  return acctsEnv().includes(acctId) || _extra.ids.includes(acctId);
+}
+
+/** La lista de env, que es la unica que sobrevive a un Blob caido. */
+function acctsEnv() {
+  return String(process.env.PERFIL_ACCTS || '')
     .split(',').map(s => s.trim()).filter(Boolean);
-  return lista.includes(acctId);
+}
+
+// ── La segunda lista: los dispositivos vinculados con codigo ───────────────
+// PERFIL_ACCTS solo entra con un deploy nuevo, y la cuenta de esta app es POR
+// NAVEGADOR (sha256 de una llave aleatoria del localStorage). Reinstalar la PWA
+// en el telefono crea almacenamiento nuevo, o sea un acctId nuevo, y el dueno
+// se quedaba fuera de sus propias pantallas hasta que alguien redesplegara con
+// el id copiado a mano. Por eso hay una segunda lista, en el mismo Blob que el
+// resto del perfil, que el dueno alimenta desde un dispositivo YA permitido.
+//
+// Se cachea en memoria 60 s porque permitido() es sincrona y la llaman tres
+// rutas por peticion. En Vercel cada instancia tiene su propia copia: tras un
+// claim, la instancia que lo atendio la recarga en el acto (extraSync(true)) y
+// las demas se ponen al dia dentro del minuto. La lista de env NUNCA depende
+// de esto: si el Blob se cae, el dueno de siempre sigue entrando.
+let _extra = { ids: [], at: 0 };
+const EXTRA_TTL = 60 * 1000;
+
+async function extraSync(forzar) {
+  if (!forzar && _extra.at && Date.now() - _extra.at < EXTRA_TTL) return _extra.ids;
+  try {
+    const { doc } = await docRead(EXTRA_PATH, EXTRA_FILE);
+    const ids = ((doc && Array.isArray(doc.accts)) ? doc.accts : [])
+      .map(x => String((x && x.id) || ''))
+      .filter(x => /^[0-9a-f]{32}$/.test(x));
+    _extra = { ids, at: Date.now() };
+  } catch (e) {
+    // Fallar aqui no puede cerrar la puerta: se conserva lo ultimo leido y se
+    // deja pasar el minuto antes de reintentar, para no golpear el Blob en cada
+    // peticion cuando esta caido.
+    _extra.at = Date.now();
+    console.warn('[perfil] extra-accts:', e.message);
+  }
+  return _extra.ids;
 }
 
 const traer = async (ruta) => {
@@ -170,6 +212,7 @@ router.get('/', async (req, res) => {
   try {
     const acct = requireAcctId(req, res);
     if (!acct) return;
+    await extraSync();
     if (!permitido(acct)) {
       // The caller's own hash is echoed back so the owner can enable himself
       // without digging through devtools. It is his own id, shown only to him.
@@ -222,10 +265,14 @@ router.get('/', async (req, res) => {
 // pregunta en cada apertura y una cuenta corriente NO puede ver un 403 en su
 // consola por abrir un tab. La regla es la MISMA permitido() de arriba: no hay
 // una segunda lista de duenos en ningun sitio.
-router.get('/owner', (req, res) => {
+router.get('/owner', async (req, res) => {
   const acct = readAcctId(req);
   res.set('Cache-Control', 'no-store');
-  res.json({ owner: !!acct && permitido(acct) });
+  // El acctId propio viaja SIEMPRE, tambien cuando la respuesta es que no: es
+  // lo que la pantalla necesita para poder decir "vincula este dispositivo" sin
+  // abrir las herramientas de desarrollo. Es su propio hash, mostrado solo a el.
+  if (acct) await extraSync();
+  res.json({ owner: !!acct && permitido(acct), acctId: acct || '' });
 });
 
 // ── El documento de My Rankings del dueno ──────────────────────────────────
@@ -242,19 +289,29 @@ router.get('/owner', (req, res) => {
 const RK_PATH = 'perfil/rankings-owner.json';
 const RK_MAX = 200 * 1024;
 const RK_FILE = process.env.PERFIL_RK_FILE
-  || require('path').join(require('os').tmpdir(), 'macdraft-rankings-owner.json');
-let _rkMem = null;
+  || path.join(os.tmpdir(), 'macdraft-rankings-owner.json');
+// Los codigos de vinculacion y las cuentas que ya se vincularon. Mismo almacen
+// y mismo fallback que el documento de rankings: tres documentos, un solo
+// mecanismo, para que un gate que prueba uno pruebe los tres.
+const LINK_PATH = 'perfil/link-codes.json';
+const LINK_FILE = process.env.PERFIL_LINK_FILE
+  || path.join(os.tmpdir(), 'macdraft-link-codes.json');
+const EXTRA_PATH = 'perfil/extra-accts.json';
+const EXTRA_FILE = process.env.PERFIL_EXTRA_FILE
+  || path.join(os.tmpdir(), 'macdraft-extra-accts.json');
+const _mem = {};
 
 function rkStore() {
   if (process.env.PERFIL_RK_STORE === 'local') return 'file';
   return process.env.BLOB_READ_WRITE_TOKEN ? 'blob' : 'file';
 }
 
-async function rkRead() {
+/** Lee un documento del Blob (o del archivo de respaldo). */
+async function docRead(nombre, archivo) {
   const store = rkStore();
   if (store === 'blob') {
     const { list } = require('@vercel/blob');
-    const { blobs } = await list({ prefix: RK_PATH, limit: 1 });
+    const { blobs } = await list({ prefix: nombre, limit: 1 });
     if (!blobs.length) return { doc: null, store };
     const r = await fetch(blobs[0].url + '?t=' + Date.now());
     if (!r.ok) throw new Error('blob read ' + r.status);
@@ -262,29 +319,33 @@ async function rkRead() {
     return { doc: (doc && typeof doc === 'object') ? doc : null, store };
   }
   try {
-    const raw = require('fs').readFileSync(RK_FILE, 'utf8');
+    const raw = require('fs').readFileSync(archivo, 'utf8');
     const doc = JSON.parse(raw);
     return { doc: (doc && typeof doc === 'object') ? doc : null, store };
   } catch (_) {
-    return { doc: _rkMem, store: _rkMem ? 'memory' : store };
+    return { doc: _mem[nombre] || null, store: _mem[nombre] ? 'memory' : store };
   }
 }
 
-async function rkWrite(doc) {
+async function docWrite(nombre, archivo, doc) {
   const store = rkStore();
   const raw = JSON.stringify(doc);
   if (store === 'blob') {
     const { put } = require('@vercel/blob');
-    await put(RK_PATH, raw, { access: 'public', addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 0 });
+    await put(nombre, raw, { access: 'public', addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 0 });
     return store;
   }
-  try { require('fs').writeFileSync(RK_FILE, raw); return store; }
-  catch (_) { _rkMem = doc; return 'memory'; }
+  try { require('fs').writeFileSync(archivo, raw); return store; }
+  catch (_) { _mem[nombre] = doc; return 'memory'; }
 }
 
-function rkGuard(req, res) {
+const rkRead = () => docRead(RK_PATH, RK_FILE);
+const rkWrite = (doc) => docWrite(RK_PATH, RK_FILE, doc);
+
+async function rkGuard(req, res) {
   const acct = requireAcctId(req, res);
   if (!acct) return '';
+  await extraSync();
   if (!permitido(acct)) {
     res.status(403).json({ error: 'Rankings sync is not enabled for this account.', acctId: acct });
     return '';
@@ -294,7 +355,7 @@ function rkGuard(req, res) {
 
 // GET /api/perfil/rankings -> { doc, updatedAt, store }
 router.get('/rankings', async (req, res) => {
-  if (!rkGuard(req, res)) return;
+  if (!(await rkGuard(req, res))) return;
   res.set('Cache-Control', 'no-store');
   try {
     const r = await rkRead();
@@ -307,7 +368,7 @@ router.get('/rankings', async (req, res) => {
 // PUT /api/perfil/rankings  body: el documento entero. Se valida la forma,
 // no el contenido: es la lista del dueno y el dueno manda.
 router.put('/rankings', async (req, res) => {
-  if (!rkGuard(req, res)) return;
+  if (!(await rkGuard(req, res))) return;
   const doc = req.body;
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return res.status(400).json({ error: 'Send a JSON object.' });
   if (doc.order != null && !Array.isArray(doc.order)) return res.status(400).json({ error: '`order` must be an array of ids.' });
@@ -337,6 +398,123 @@ router.put('/rankings', async (req, res) => {
     res.json({ ok: true, updatedAt, store, size });
   } catch (e) {
     res.status(502).json({ error: 'Could not save the rankings.', detail: String(e.message || e).slice(0, 120) });
+  }
+});
+
+// ── Vincular otro dispositivo con un codigo ────────────────────────────────
+// El problema que resuelve: la cuenta es por navegador, asi que reinstalar la
+// PWA, estrenar telefono o abrir en otro navegador deja al dueno fuera de sus
+// propias pantallas, y la unica salida era copiar un hash a mano dentro de una
+// variable de Vercel y redesplegar. Ahora un dispositivo YA permitido pide un
+// codigo de seis digitos y el dispositivo nuevo lo teclea.
+//
+// Por que un codigo corto es seguro aqui: vive diez minutos, sirve una sola
+// vez, y solo existe mientras el dueno lo tiene en pantalla. Aun asi seis
+// digitos son un millon de combinaciones, y la cuenta que adivina es gratis de
+// fabricar (cualquiera puede minar llaves nuevas), asi que el limite por cuenta
+// no basta: hay ADEMAS un limite global de intentos fallidos por ventana. Sin
+// el, mil cuentas nuevas darian cinco mil tiros cada diez minutos.
+const LINK_TTL = 10 * 60 * 1000;
+const LINK_TRIES = 5;        // intentos por cuenta y ventana
+const LINK_TRIES_ALL = 60;   // ...y de todas las cuentas juntas
+const LINK_MAX = 20;         // codigos que se conservan en el documento
+const _tries = new Map();
+let _triesAll = { n: 0, until: 0 };
+
+/** true cuando este intento NO se permite. Cuenta el intento cuando si. */
+function linkThrottle(acct) {
+  const ahora = Date.now();
+  if (_triesAll.until < ahora) _triesAll = { n: 0, until: ahora + LINK_TTL };
+  let t = _tries.get(acct);
+  if (!t || t.until < ahora) { t = { n: 0, until: ahora + LINK_TTL }; _tries.set(acct, t); }
+  if (t.n >= LINK_TRIES || _triesAll.n >= LINK_TRIES_ALL) return true;
+  t.n++; _triesAll.n++;
+  // El mapa no puede crecer sin fin con cuentas de un solo intento.
+  if (_tries.size > 500) for (const [k, v] of _tries) if (v.until < ahora) _tries.delete(k);
+  return false;
+}
+
+/** Los codigos que todavia importan: los vivos y los usados hace poco. Un
+ *  usado se conserva hasta que expira para poder decir "ya se uso" en vez de
+ *  "no existe", que es la diferencia entre saber que paso y no saberlo. */
+function linkVigentes(doc, ahora) {
+  return ((doc && Array.isArray(doc.codes)) ? doc.codes : [])
+    .filter(c => c && typeof c.code === 'string' && Number(c.exp) > ahora - LINK_TTL);
+}
+
+// POST /api/perfil/link/new -> { code, expiresAt }
+// Solo una cuenta que YA es del dueno reparte codigos. Si esto no fuera asi,
+// cualquiera podria fabricarse su propia llave de entrada.
+router.post('/link/new', async (req, res) => {
+  const acct = requireAcctId(req, res);
+  if (!acct) return;
+  await extraSync();
+  if (!permitido(acct)) {
+    return res.status(403).json({ error: 'Only a linked device can create a code.', acctId: acct });
+  }
+  res.set('Cache-Control', 'no-store');
+  try {
+    const ahora = Date.now();
+    const { doc } = await docRead(LINK_PATH, LINK_FILE);
+    const codes = linkVigentes(doc, ahora);
+    let code = '';
+    do { code = String(crypto.randomInt(0, 1000000)).padStart(6, '0'); }
+    while (codes.some(c => c.code === code && !c.used && Number(c.exp) > ahora));
+    const expiresAt = ahora + LINK_TTL;
+    codes.push({ code, exp: expiresAt, by: acct, at: ahora, used: false });
+    await docWrite(LINK_PATH, LINK_FILE, { v: 1, codes: codes.slice(-LINK_MAX), updatedAt: ahora });
+    res.json({ code, expiresAt, ttl: LINK_TTL });
+  } catch (e) {
+    res.status(502).json({ error: 'Could not create a code.', detail: String(e.message || e).slice(0, 120) });
+  }
+});
+
+// POST /api/perfil/link/claim  body {code} -> { owner:true } | { owner:false, error }
+// Cualquier cuenta con llave puede intentarlo; el codigo es lo que autoriza.
+//
+// Un codigo rechazado responde 200, no 400. No es purismo al reves: Chrome
+// imprime en la consola CUALQUIER fetch que no sea 2xx, y en este repo un error
+// de consola cuenta como bug, no como ruido. Teclear mal seis digitos es un
+// camino normal de usuario, no una averia, y ya hay precedente en /owner, que
+// tambien responde 200 para no ensuciar la consola de quien no es el dueno. Lo
+// que si sigue siendo un codigo de error es lo que el usuario no puede
+// provocar tecleando: sin llave (401), cuerpo mal formado (400) y el almacen
+// caido (502).
+router.post('/link/claim', async (req, res) => {
+  const acct = requireAcctId(req, res);
+  if (!acct) return;
+  res.set('Cache-Control', 'no-store');
+  const rechazo = (error) => res.json({ owner: false, error });
+  const code = String((req.body && req.body.code) || '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(code)) return res.status(400).json({ owner: false, error: 'Enter the 6 digit code.' });
+  if (linkThrottle(acct)) {
+    return rechazo('Too many tries. Wait a few minutes, then ask for a new code.');
+  }
+  try {
+    const ahora = Date.now();
+    const { doc } = await docRead(LINK_PATH, LINK_FILE);
+    const codes = linkVigentes(doc, ahora);
+    const hit = codes.find(c => c.code === code);
+    if (!hit) return rechazo('That code is not valid.');
+    if (hit.used) return rechazo('That code was already used. Ask for a new one.');
+    if (!(Number(hit.exp) > ahora)) return rechazo('That code expired. Ask for a new one.');
+
+    // Primero entra la cuenta, despues se quema el codigo: al reves, un fallo a
+    // mitad de camino dejaria el codigo gastado sin haber vinculado a nadie, y
+    // el dueno no tendria como saberlo desde el telefono.
+    const prev = await docRead(EXTRA_PATH, EXTRA_FILE);
+    const accts = ((prev.doc && Array.isArray(prev.doc.accts)) ? prev.doc.accts : [])
+      .filter(x => x && /^[0-9a-f]{32}$/.test(String(x.id || '')));
+    if (!accts.some(x => x.id === acct)) accts.push({ id: acct, at: ahora, by: hit.by || '' });
+    await docWrite(EXTRA_PATH, EXTRA_FILE, { v: 1, accts, updatedAt: ahora });
+
+    hit.used = true; hit.usedBy = acct; hit.usedAt = ahora;
+    await docWrite(LINK_PATH, LINK_FILE, { v: 1, codes: codes.slice(-LINK_MAX), updatedAt: ahora });
+
+    await extraSync(true);
+    res.json({ owner: true, acctId: acct });
+  } catch (e) {
+    res.status(502).json({ error: 'Could not link this device.', detail: String(e.message || e).slice(0, 120) });
   }
 });
 

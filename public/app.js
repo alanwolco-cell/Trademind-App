@@ -17358,6 +17358,30 @@ setTimeout(function(){try{styleModeButtons(leagueMode);}catch(_){}} ,400);
 var _perfilCargando=false;
 function _perfilFecha(ms){try{return new Date(ms).toISOString().slice(0,10);}catch(_){return '';}}
 
+function _perfilLinkKey(e){if(e&&e.key==='Enter'){e.preventDefault();_perfilLink();}}
+
+/* Vincular este navegador desde la propia pantalla que lo rechazo. El servidor
+   es quien autoriza; aqui solo se manda el codigo y se vuelve a pintar. */
+async function _perfilLink(){
+  var inp=document.getElementById('pf-code'), msg=document.getElementById('pf-msg');
+  if(!inp)return;
+  var poner=function(t,c){if(msg){msg.textContent=t;msg.className='lk-msg'+(c?' '+c:'');}};
+  var code=String(inp.value||'').replace(/[^0-9]/g,'').slice(0,6);
+  if(code.length!==6){poner('Type the six digits.','is-bad');return;}
+  poner('Checking');
+  var r=null,j=null;
+  try{
+    r=await fetch('/api/perfil/link/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})});
+    try{j=await r.json();}catch(_){j=null;}
+  }catch(_){r=null;}
+  if(!r||!r.ok||!j||!j.owner){poner((j&&j.error)||'Could not link this device.','is-bad');return;}
+  poner('Linked. Building your profile.','is-ok');
+  // My Rankings ya pregunto quien eres y cacheo la respuesta: hay que tirarla,
+  // o el tab seguiria pintando la pantalla de una cuenta corriente.
+  try{if(window.TMR){TMR._ownerP=null;} if(typeof tmrOwner==='function')await tmrOwner();}catch(_){}
+  try{renderPerfil();}catch(_){}
+}
+
 function renderPerfil(){
   var cuerpo=document.getElementById('perfil-cuerpo');
   var muestra=document.getElementById('perfil-muestra');
@@ -17396,9 +17420,22 @@ function renderPerfil(){
             +escHtml(res.d.acctId)+'</code>'
             +'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Add it to PERFIL_ACCTS to enable this browser.</div></div>';
         }
+        // Y la puerta de vuelta: la cuenta es POR NAVEGADOR, asi que el 403 en
+        // el telefono del dueno casi siempre significa "reinstale la app", no
+        // "no soy yo". Con un codigo de un dispositivo ya vinculado entra sin
+        // tocar variables de Vercel ni redesplegar.
+        var vinc='<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">'
+          +'<div class="lk-k">Have a code?</div>'
+          +'<p class="lk-p">Get one on a device that is already linked, under My Rankings.</p>'
+          +'<div class="lk-form">'
+          +'<input id="pf-code" class="lk-input" type="text" inputmode="numeric" pattern="[0-9]*" '
+          +'autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-label="Six digit code" '
+          +'onkeydown="_perfilLinkKey(event)">'
+          +'<button type="button" class="rk-btn" onclick="_perfilLink()">Link</button>'
+          +'</div><div class="lk-msg" id="pf-msg" aria-live="polite"></div></div>';
         cuerpo.innerHTML='<div class="card" style="padding:22px 18px"><div style="font-weight:700;margin-bottom:6px">Not available on this account</div>'
           +'<div style="font-size:13px;color:var(--muted)">'+escHtml(res.d&&res.d.error||'Could not build the profile.')+'</div>'
-          +extra+'</div>';
+          +vinc+extra+'</div>';
         return;
       }
       _perfilPintar(res.d,cuerpo,muestra);

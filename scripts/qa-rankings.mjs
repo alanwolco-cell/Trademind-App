@@ -43,21 +43,34 @@ import crypto from 'node:crypto';
 import os from 'node:os';
 const OWNER_KEY = 'qa-rankings-owner-' + 'a'.repeat(40);
 const OTHER_KEY = 'qa-rankings-other-' + 'b'.repeat(40);
+// Los dispositivos que llegan con un codigo. NO estan en PERFIL_ACCTS: entran
+// por el Blob, que es justo lo que la feature tiene que demostrar.
+const NEW_KEY = 'qa-rankings-newdev-' + 'c'.repeat(40);
+const NEW2_KEY = 'qa-rankings-repeat-' + 'd'.repeat(40);
+const RL_KEY = 'qa-rankings-bruto0-' + 'e'.repeat(40);
 const OWNER_ID = crypto.createHash('sha256').update(OWNER_KEY).digest('hex').slice(0, 32);
 // El documento del dueno arranca VACIO en cada corrida: el seed y la ida y
 // vuelta entre navegadores se prueban desde cero, en un archivo temporal, sin
 // tocar el blob de produccion aunque .env.local traiga el token.
 const RK_FILE = path.join(os.tmpdir(), 'qa-rankings-doc-' + process.pid + '.json');
-try { fs.unlinkSync(RK_FILE); } catch (_) { }
+// Los codigos de vinculacion y la lista de cuentas vinculadas: mismos archivos
+// temporales y por la misma razon, que ninguna corrida toque el Blob real.
+const LINK_FILE = path.join(os.tmpdir(), 'qa-link-codes-' + process.pid + '.json');
+const EXTRA_FILE = path.join(os.tmpdir(), 'qa-extra-accts-' + process.pid + '.json');
+for (const f of [RK_FILE, LINK_FILE, EXTRA_FILE]) { try { fs.unlinkSync(f); } catch (_) { } }
 if (!process.env.QA_BASE) {
   srv = spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')],
-    { env: { ...process.env, PORT: String(PORT), PERFIL_ACCTS: OWNER_ID, PERFIL_RK_STORE: 'local', PERFIL_RK_FILE: RK_FILE }, stdio: 'ignore' });
+    { env: { ...process.env, PORT: String(PORT), PERFIL_ACCTS: OWNER_ID, PERFIL_RK_STORE: 'local',
+      PERFIL_RK_FILE: RK_FILE, PERFIL_LINK_FILE: LINK_FILE, PERFIL_EXTRA_FILE: EXTRA_FILE }, stdio: 'ignore' });
   for (let i = 0; i < 40; i++) {
     try { const r = await fetch(BASE + '/'); if (r.ok) break; } catch (_) { }
     await new Promise(r => setTimeout(r, 500));
   }
 }
-const cerrar = () => { if (srv) try { srv.kill(); } catch (_) { } try { fs.unlinkSync(RK_FILE); } catch (_) { } };
+const cerrar = () => {
+  if (srv) try { srv.kill(); } catch (_) { }
+  for (const f of [RK_FILE, LINK_FILE, EXTRA_FILE]) { try { fs.unlinkSync(f); } catch (_) { } }
+};
 
 // Los dos errores de consola del entorno local: el script de insights de Vercel
 // no existe fuera de Vercel y /api/odds/implied necesita ODDS_API_KEY. En
@@ -86,6 +99,9 @@ async function nueva(w, h, opts) {
   // Memoria de sala del mock: sirve para probar que la columna Pay del dueno
   // NO la escucha, porque su liga es una sola.
   if (opts.mock) await ctx.addInitScript(m => { try { localStorage.setItem('tm_mock_settings', m); } catch (_) { } }, JSON.stringify(opts.mock));
+  // /perfil no pinta nada sin un usuario de Sleeper guardado: pide conectar
+  // primero, y entonces no se llega nunca a la tarjeta del 403.
+  if (opts.user) await ctx.addInitScript(u => { try { localStorage.setItem('tm_username', u); } catch (_) { } }, opts.user);
   const pg = await ctx.newPage();
   const errs = [], puts = [], gets = [];
   pg.on('console', m => { if (m.type() === 'error' && !KNOWN.some(r => r.test(m.text()))) errs.push(m.text().slice(0, 140)); });
@@ -717,6 +733,200 @@ let idGibbs = null, idSwift = null;
     anon === 401 && ajeno === 403 && (gordo === 413) && malo === 400, JSON.stringify({ anon, ajeno, gordo, malo }));
 }
 
+
+console.log('\n=== Vincular otro dispositivo con un codigo ===');
+// La cuenta de esta app es POR NAVEGADOR, asi que reinstalar la PWA deja al
+// dueno fuera de sus propias pantallas. Lo que aqui se prueba es el camino
+// entero: el dueno pide el codigo, el aparato nuevo lo teclea, y a partir de
+// ahi ve lo mismo. Y sobre todo lo que NO puede pasar: que reparta codigos
+// quien no es dueno, que un codigo sirva dos veces, o que se pueda adivinar.
+{
+  const cab = k => ({ 'x-tm-acct': k, 'Content-Type': 'application/json' });
+  const nuevo = (k, b) => fetch(BASE + '/api/perfil/link/new',
+    { method: 'POST', headers: k ? cab(k) : { 'Content-Type': 'application/json' }, body: b || '{}' });
+  const reclamar = (k, code) => fetch(BASE + '/api/perfil/link/claim',
+    { method: 'POST', headers: k ? cab(k) : { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+  const esDueno = k => fetch(BASE + '/api/perfil/owner', { headers: { 'x-tm-acct': k } })
+    .then(r => r.json()).then(j => !!(j && j.owner)).catch(() => null);
+
+  const sAjeno = await nuevo(OTHER_KEY).then(r => r.status).catch(() => 0);
+  const sAnon = await nuevo(null).then(r => r.status).catch(() => 0);
+  const cAnon = await reclamar(null, '123456').then(r => r.status).catch(() => 0);
+  ok('(L1) solo un dispositivo ya vinculado reparte codigos: 403 ajeno, 401 anonimo',
+    sAjeno === 403 && sAnon === 401 && cAnon === 401, JSON.stringify({ sAjeno, sAnon, cAnon }));
+
+  // (L2) el dueno pide el codigo POR LA UI, con el boton que ve en pantalla.
+  const A = await nueva(1440, 950);
+  await abrirTab(A.pg);
+  await sincronizado(A.pg);
+  await esperar(A.pg, () => typeof TMR !== 'undefined' && !TMR.pricing && Object.keys(TMR.price || {}).length > 0, 30000);
+  const planA = await eva(A.pg, () => TMR.manual);
+  let clic = true;
+  try { await A.pg.click('#rk-owner-tools button[onclick="tmrLinkOpen()"]', { timeout: 5000 }); }
+  catch (_) { clic = false; }
+  await esperar(A.pg, () => { const e = document.getElementById('lk-code-out'); return !!e && /^[0-9]{6}$/.test((e.textContent || '').trim()); }, 15000);
+  const panel = await eva(A.pg, () => ({
+    code: ((document.getElementById('lk-code-out') || {}).textContent || '').trim(),
+    left: ((document.getElementById('lk-left') || {}).textContent || '').trim(),
+    // El codigo se lee de lejos: si sale con el mismo cuerpo que un parrafo,
+    // el que lo teclea en el otro aparato lo va a leer mal.
+    px: (function () { const e = document.getElementById('lk-code-out'); return e ? Math.round(parseFloat(getComputedStyle(e).fontSize)) : 0; })(),
+    guia: /Have a code/i.test((document.getElementById('rk-link') || {}).textContent || '')
+  }));
+  const code = (panel && panel.code) || '';
+  // El mismo panel en el telefono: el codigo se reparte desde donde uno este,
+  // y este es un producto que se abre desde WhatsApp.
+  await A.pg.setViewportSize({ width: 390, height: 844 });
+  await A.pg.waitForTimeout(200);
+  const enMovil = await eva(A.pg, () => {
+    const e = document.getElementById('lk-code-out');
+    const r = e ? e.getBoundingClientRect() : null;
+    return {
+      desborde: document.documentElement.scrollWidth > window.innerWidth,
+      dentro: !!r && r.left >= 0 && r.right <= window.innerWidth,
+      px: e ? Math.round(parseFloat(getComputedStyle(e).fontSize)) : 0
+    };
+  });
+  await A.pg.setViewportSize({ width: 1440, height: 950 });
+  await A.pg.waitForTimeout(200);
+  ok('(L2) el dueno pide un codigo desde la UI y sale grande, con el tiempo que queda',
+    clic && /^[0-9]{6}$/.test(code) && /Expires in \d+:\d\d/.test(panel.left) && panel.px >= 28 && panel.guia
+    && !enMovil._err && !enMovil.desborde && enMovil.dentro && enMovil.px >= 28,
+    JSON.stringify({ ...panel, movil: enMovil }));
+
+  // (L3) el aparato nuevo: primero un codigo que NO existe. Se deriva del real
+  //      cambiando el ultimo digito, para que nunca choque por azar con el.
+  const malo = code ? code.slice(0, 5) + String((Number(code[5]) + 1) % 10) : '000000';
+  const B = await nueva(390, 844, { key: NEW_KEY });
+  await abrirTab(B.pg);
+  await esperar(B.pg, () => typeof TMR !== 'undefined' && TMR.owner === false, 25000);
+  const antes = await eva(B.pg, () => ({
+    tools: document.querySelectorAll('#rk-owner-tools .rk-btn').length,
+    puerta: document.querySelectorAll('#rk-owner-tools .rk-linkq').length,
+    pr: document.querySelectorAll('#rk-body .rk-pr').length
+  }));
+  let clicB = true;
+  try { await B.pg.click('#rk-owner-tools .rk-linkq', { timeout: 5000 }); } catch (_) { clicB = false; }
+  await teclear(B.pg, '#lk-code', malo);
+  await eva(B.pg, () => tmrLinkSubmit());
+  await esperar(B.pg, () => /not valid|already used|expired/i.test((document.getElementById('lk-msg') || {}).textContent || ''), 12000);
+  const tras = await eva(B.pg, () => ({
+    msg: ((document.getElementById('lk-msg') || {}).textContent || '').trim(),
+    owner: TMR.owner,
+    pr: document.querySelectorAll('#rk-body .rk-pr').length,
+    tools: document.querySelectorAll('#rk-owner-tools .rk-btn').length
+  }));
+  ok('(L3) el aparato nuevo llega sin nada y un codigo inventado no lo deja entrar',
+    !antes._err && antes.tools === 0 && antes.puerta === 1 && antes.pr === 0
+    && clicB && !tras._err && /not valid/i.test(tras.msg) && tras.owner === false && tras.pr === 0 && tras.tools === 0,
+    JSON.stringify({ antes, tras }));
+
+  // (L4) ahora el codigo bueno, tecleado en la misma casilla.
+  await teclear(B.pg, '#lk-code', code);
+  await eva(B.pg, () => tmrLinkSubmit());
+  await esperar(B.pg, () => typeof TMR !== 'undefined' && TMR.owner === true
+    && document.querySelectorAll('#rk-body .rk-pr').length > 0, 30000);
+  await sincronizado(B.pg);
+  const dentro = await eva(B.pg, () => ({
+    owner: TMR.owner,
+    cls: document.getElementById('tab-rankings').classList.contains('rk-owner'),
+    pr: document.querySelectorAll('#rk-body .rk-pr').length,
+    tg: document.querySelectorAll('#rk-body .rk-tg').length,
+    juego: /Tier Game/.test(document.getElementById('rk-owner-tools').textContent || ''),
+    hoja: /Cheat Sheet/.test(document.getElementById('rk-owner-tools').textContent || ''),
+    manual: TMR.manual,
+    dicho: /Device linked/i.test((document.getElementById('rk-link') || {}).textContent || ''),
+    desborde: document.documentElement.scrollWidth > window.innerWidth
+  }));
+  ok('(L4) con el codigo bueno pasa a dueno y le baja la MISMA lista, sin recargar',
+    !dentro._err && dentro.owner === true && dentro.cls && dentro.pr > 0 && dentro.tg > 0
+    && dentro.juego && dentro.hoja && dentro.dicho && !dentro.desborde
+    && JSON.stringify(dentro.manual) === JSON.stringify(planA) && Object.keys(planA || {}).length > 0,
+    JSON.stringify({ ...dentro, manual: Object.keys(dentro.manual || {}).length, planA: Object.keys(planA || {}).length }));
+
+  // Y sobrevive a recargar: el permiso vive en el servidor, no en la pagina.
+  await B.pg.reload({ waitUntil: 'networkidle' });
+  await abrirTab(B.pg);
+  await esperar(B.pg, () => typeof TMR !== 'undefined' && TMR.owner === true, 25000);
+  const otraVez = await eva(B.pg, () => ({ owner: TMR.owner, pr: document.querySelectorAll('#rk-body .rk-pr').length }));
+  ok('(L5) el vinculo sobrevive a recargar el aparato nuevo',
+    !otraVez._err && otraVez.owner === true && otraVez.pr > 0, JSON.stringify(otraVez));
+
+  // (L6) el mismo codigo, otra cuenta: no sirve dos veces.
+  // Un codigo rechazado responde 200 con owner:false a proposito: Chrome
+  // imprime en consola cualquier respuesta que no sea 2xx, y teclear mal seis
+  // digitos es un camino normal de usuario. Lo que se comprueba es que el
+  // rechazo SEA un rechazo, no el codigo HTTP.
+  const rep = await reclamar(NEW2_KEY, code).then(async r => ({ s: r.status, j: await r.json().catch(() => null) })).catch(() => ({ s: 0, j: null }));
+  const dueno2 = await esDueno(NEW2_KEY);
+  ok('(L6) un codigo usado no vuelve a servir, y quien lo intento sigue afuera',
+    rep.s === 200 && rep.j && rep.j.owner === false && /already used/i.test(rep.j.error || '') && dueno2 === false,
+    JSON.stringify({ ...rep, dueno2 }));
+
+  // (L7) adivinar sale caro: cinco intentos por cuenta y ventana, y el sexto ya
+  //      no llega ni a mirar el codigo.
+  const tiros = [];
+  for (let i = 0; i < 6; i++) {
+    tiros.push(await reclamar(RL_KEY, String(100000 + i))
+      .then(async r => ({ s: r.status, e: ((await r.json().catch(() => null)) || {}).error || '' }))
+      .catch(() => ({ s: 0, e: '' })));
+  }
+  const bruto = await esDueno(RL_KEY);
+  ok('(L7) el que adivina se queda sin tiros: 5 rechazos y despues el corte',
+    tiros.every(x => x.s === 200) && tiros.slice(0, 5).every(x => /not valid/i.test(x.e))
+    && /too many tries/i.test(tiros[5].e) && bruto === false,
+    JSON.stringify({ tiros, bruto }));
+
+  // (L8) CONTROL NEGATIVO. Vincular un aparato no abre la puerta a nadie mas:
+  //      una llave cualquiera que nunca tecleo un codigo sigue siendo cuenta
+  //      corriente. Sin esto, (L4) pasaria igual con un permitido() roto que
+  //      dijera que si a todo el mundo.
+  const otro = await esDueno(OTHER_KEY);
+  const rk = await fetch(BASE + '/api/perfil/rankings', { headers: { 'x-tm-acct': OTHER_KEY } }).then(r => r.status).catch(() => 0);
+  ok('(L8) CONTROL NEGATIVO: vincular uno no vincula a los demas',
+    otro === false && rk === 403, JSON.stringify({ otro, rk }));
+
+  ok('(L9) consola limpia vinculando, en los dos aparatos', A.errs.length === 0 && B.errs.length === 0,
+    A.errs.concat(B.errs).slice(0, 3).join(' | ') || 'sin errores');
+
+  // (L10) EL OTRO CAMINO DE ENTRADA. Cuando el dueno reinstala la app, la
+  //       pantalla por la que se entera de que algo va mal es /perfil, que le
+  //       responde 403. Ahi tiene que estar la misma puerta, o el unico camino
+  //       de vuelta seria acordarse de que existe un tab llamado My Rankings.
+  //       Aqui NO se mide la consola: Chrome imprime cualquier 403, y este 403
+  //       es la respuesta correcta a una cuenta que todavia no se vinculo.
+  const code2 = await nuevo(OWNER_KEY).then(r => r.json()).then(j => (j && j.code) || '').catch(() => '');
+  const C = await nueva(390, 844, { key: NEW2_KEY, user: 'qamacdraft' });
+  await eva(C.pg, () => switchScreen('perfil'));
+  await esperar(C.pg, () => !!document.getElementById('pf-code'), 20000);
+  const caja = await eva(C.pg, () => {
+    const i = document.getElementById('pf-code');
+    const r = i ? i.getBoundingClientRect() : null;
+    return {
+      hay: !!i, alto: r ? Math.round(r.height) : 0, modo: i ? i.getAttribute('inputmode') : '',
+      desborde: document.documentElement.scrollWidth > window.innerWidth,
+      // El id propio tiene que seguir saliendo: es la salida de emergencia por
+      // env var, y esta feature no la reemplaza, la evita.
+      id: /[0-9a-f]{32}/.test(document.getElementById('perfil-cuerpo').textContent || '')
+    };
+  });
+  await teclear(C.pg, '#pf-code', code2);
+  await eva(C.pg, () => _perfilLink());
+  // El mensaje "Linked" es transitorio a proposito: al vincular se vuelve a
+  // pintar el perfil entero y con el se va la tarjeta del 403. Lo que se mide
+  // es el efecto, no el cartel: la casilla del codigo ya no esta, y el
+  // servidor da por dueno a esta cuenta.
+  await esperar(C.pg, () => !document.getElementById('pf-code'), 20000);
+  const fuera = await eva(C.pg, () => !document.getElementById('pf-code'));
+  const dueno3 = await esDueno(NEW2_KEY);
+  ok('(L10) la misma puerta esta en /perfil, que es donde el dueno ve el 403',
+    !caja._err && caja.hay && caja.alto >= 44 && caja.modo === 'numeric' && !caja.desborde && caja.id
+    && fuera === true && dueno3 === true,
+    JSON.stringify({ caja, fuera, dueno3 }));
+  await C.pg.close();
+  await B.pg.close();
+  await A.pg.close();
+}
 
 console.log('\n=== Tier Game: la inferencia, como funcion pura ===');
 // (G) La inferencia NO se prueba pintando: se prueba con casos armados a mano,
