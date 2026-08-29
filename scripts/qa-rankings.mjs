@@ -120,11 +120,32 @@ async function nueva(w, h, opts) {
   try {
     await pg.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60000 });
   } catch (_) {
-    try { await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 }); }
-    catch (e2) { errs.push('CARGA ' + String(e2.message || e2).slice(0, 90)); }
+    try {
+      await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+      // Y se espera a que la app este de verdad viva. Sin esto, el respaldo
+      // seguia adelante con la pagina a medio cargar y sembraba fallos
+      // fantasma en checks que no tenian nada que ver: un gate que miente.
+      await pg.waitForFunction(() => typeof window.TMR !== 'undefined' && typeof window.switchScreen === 'function',
+        { timeout: 30000 });
+    } catch (e2) { errs.push('CARGA ' + String(e2.message || e2).slice(0, 90)); }
   }
   return { pg, errs, puts, gets, ctx };
 }
+/* Recargar sin que un feed lento mate la corrida. 'networkidle' espera a que
+ * callen TODAS las peticiones, incluidas las de fuera (Sleeper, ESPN), y con la
+ * conexion floja eso LANZA. Se cae a 'load' y se espera a que la app este viva,
+ * que es lo que los checks necesitan. */
+const recargar = async pg => {
+  try { await pg.reload({ waitUntil: 'networkidle', timeout: 60000 }); }
+  catch (_) {
+    try {
+      await pg.reload({ waitUntil: 'load', timeout: 60000 });
+      await pg.waitForFunction(() => typeof window.TMR !== 'undefined' && typeof window.switchScreen === 'function',
+        { timeout: 30000 });
+    } catch (_2) { /* lo dira el check que venga */ }
+  }
+};
+
 // Espera a que el ultimo cambio haya llegado al servidor
 const sincronizado = pg => pg.waitForFunction(() => typeof TMR !== 'undefined' && TMR.owner === true && !TMR._dirty && !TMR._syncing
   && Number(localStorage.getItem('tm_rk_sync_at')) > 0, { timeout: 15000 }).then(() => true).catch(() => false);
@@ -148,7 +169,7 @@ console.log('\n=== My Rankings: la lista ===');
   ok('(c) reordenar cambia el orden', tras[0] === primeros[2], `${primeros.join(' / ')}  ->  ${tras.join(' / ')}`);
 
   // persistencia: recargar y comprobar que el orden sobrevive
-  await pg.reload({ waitUntil: 'networkidle' });
+  await recargar(pg);
   await pg.evaluate(() => switchScreen('research'));
   await pg.waitForTimeout(300);
   await pg.evaluate(() => {
@@ -409,7 +430,7 @@ const teclear = async (pg, sel, v) => { try { await pg.fill(sel, v, { timeout: 3
   await sincronizado(pg);
   await pg.waitForTimeout(150);
 
-  await pg.reload({ waitUntil: 'networkidle' });
+  await recargar(pg);
   await abrirTab(pg);
   await esperar(pg, () => typeof TMR !== 'undefined' && !TMR.pricing);
   const trasRec = await eva(pg, i => {
@@ -513,7 +534,14 @@ const teclear = async (pg, sel, v) => { try { await pg.fill(sel, v, { timeout: 3
     await route.continue();
   });
   const abre = abrirTab(pg).catch(() => { });
-  await pg.waitForTimeout(3500);
+  /* La premisa del check es "las filas ya estan y la columna del dinero no":
+   * hay que ESPERAR a las filas, no contar 3,5 s. Con la red floja el board de
+   * Sleeper tarda mas que eso y el check media una pantalla vacia, que no es
+   * lo que viene a comprobar. El feed de subasta sigue retenido, que es lo que
+   * de verdad fuerza el skeleton. */
+  await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-row').length > 100,
+    { timeout: 60000 }).catch(() => { });
+  await pg.waitForTimeout(400);
   const skel = await eva(pg, () => ({
     filas: document.querySelectorAll('#rk-body .rk-row').length,
     skel: document.querySelectorAll('#rk-body .rk-pr-skel').length,
@@ -699,7 +727,13 @@ let idGibbs = null, idSwift = null;
   //     de la feature: editar desde el celular y verlo en la computadora.
   const B = await nueva(390, 844);
   await abrirTab(B.pg);
-  await B.pg.waitForFunction(() => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing, { timeout: 30000 }).catch(() => { });
+  // La espera tiene que exigir lo que el check va a MEDIR: la lista pintada,
+  // el precio ya calculado y el documento del otro navegador ya aplicado. Con
+  // la red floja, esperar solo a "owner y no pricing" media una pantalla a
+  // medio hacer y sembraba un fallo que no existia.
+  await B.pg.waitForFunction(() => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing
+    && document.querySelectorAll('#rk-body .rk-pr').length > 0
+    && Object.keys(TMR.manual || {}).length > 0, { timeout: 60000 }).catch(() => { });
   const enB = await eva(B.pg, g => {
     const b = document.querySelector('#rk-body .rk-pr');
     return {
@@ -859,7 +893,7 @@ console.log('\n=== Vincular otro dispositivo con un codigo ===');
     JSON.stringify({ ...dentro, manual: Object.keys(dentro.manual || {}).length, planA: Object.keys(planA || {}).length }));
 
   // Y sobrevive a recargar: el permiso vive en el servidor, no en la pagina.
-  await B.pg.reload({ waitUntil: 'networkidle' });
+  await recargar(B.pg);
   await abrirTab(B.pg);
   await esperar(B.pg, () => typeof TMR !== 'undefined' && TMR.owner === true, 25000);
   const otraVez = await eva(B.pg, () => ({ owner: TMR.owner, pr: document.querySelectorAll('#rk-body .rk-pr').length }));
@@ -1318,7 +1352,7 @@ console.log('\n=== El precio es el de la SALA; su orden decide a quien, no cuant
   await esperar(pg, () => typeof TMR !== 'undefined' && TMR.owner === true && !TMR.pricing
     && Object.keys(TMR.price || {}).length > 0, 45000);
 
-  const mov = await eva(pg, () => {
+  const _mov = await eva(pg, () => {
     const buscar = ap => TMR.rows.findIndex(r => r.pos === 'RB' && new RegExp('\\b' + ap, 'i').test(r.name));
     const iSwift = buscar('Swift');
     const rbs = TMR.rows.filter(r => r.pos === 'RB');
@@ -1341,6 +1375,10 @@ console.log('\n=== El precio es el de la SALA; su orden decide a quien, no cuant
       tip: fila ? fila.getAttribute('title') : null
     };
   });
+  /* Contra el codigo viejo este eva devuelve {_err} y leer .despues.mercado
+   * LANZA, tumbando la corrida entera. Ya paso cuatro veces en esta sesion: el
+   * control tiene que reportar FAIL, no morirse. */
+  const mov = (_mov && _mov.despues) ? _mov : Object.assign({ falta: true, antes: {}, despues: {} }, _mov || {});
   ok('(P1) subirlo de RB8 a RB2 en su lista NO le sube el precio: la sala cobra lo que cobra',
     !mov._err && !mov.falta && mov.puestoAntes > 4 && mov.puestoDespues === 2
     && mov.despues.pay === mov.antes.pay && mov.despues.pay === mov.antes.mercado

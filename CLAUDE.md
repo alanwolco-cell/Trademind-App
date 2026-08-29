@@ -1102,3 +1102,66 @@ telefono ve su lista, sus precios, el Tier Game, la cheat sheet y /perfil, y
 sigue viendolos aunque vuelva a reinstalar? No: reinstalar borra el localStorage
 y con el la llave, asi que ese caso pide un codigo nuevo. Lo que ya no hace
 falta nunca mas es un deploy.
+
+## Sesion 2026-08-28 (noche): el precio es el de la SALA, su orden decide a quien
+
+Dos correcciones seguidas del dueno sobre el Tier Game, y las dos tocaban el
+modelo, no la interfaz. Quedan escritas porque la segunda ANULA a la primera y
+sin eso el codigo no se entiende.
+
+**Primera, textual: "no es el juego que queria. yo no se cuanto deberian valer.
+yo quiero que tu me digas basado en los rankings que yo haga".**
+- El juego dejo de mostrar precios. La tarjeta lleva foto, nombre, posicion y
+  equipo, y nada mas; el gate comprueba que no hay un solo "$" en el DOM del
+  juego. Ensenarle el Pay mientras elige es pedirle justo lo que dijo que no
+  sabe, y ademas contamina la respuesta: viendo $67 al lado de un nombre deja
+  de contestar a quien prefiere y empieza a contestar quien vale mas.
+- El texto lo dice: "Just say who you prefer. Mac turns your order into what to
+  pay."
+
+**Segunda, textual: "no quiero que me ponga a pagar mas por Swift porque todavia
+puedo pagar menos".** Esto anulo el intento intermedio (commit b84f1b2, que
+llego a produccion unas horas), donde el Pay salia de SU ORDEN: subir a alguien
+en la lista lo encarecia, o sea que le cobraba su propio entusiasmo. En una
+subasta se paga lo que cobra la sala.
+
+**La regla definitiva, y gobierna toda la pantalla.** Hay DOS cosas que no se
+mezclan nunca:
+- **EL PRECIO**, del motor sobre la sala FZ26. Dos cifras: lo que la sala paga
+  (`tmrPriceOf`, el `AU.val` de auPoolInit) y el techo (`tmrCeilOf`, un margen
+  corto x1.2 para no perder un lote por un dolar). Ninguna sube por su lista.
+  La columna pinta el TECHO y el tooltip declara las dos cosas mas SU puesto:
+  "The room pays about $13, do not go past $16. Your RB2."
+- **SU ORDEN**, que NO es un precio: es prioridad. Decide a quien perseguir, por
+  donde cortar los tiers, cuales son sus objetivos, el ahorro dentro de un tier
+  y donde esta la ganga. En pantalla aparece como texto, nunca como dolares.
+
+La cabecera de la hoja lo escribe: "Prices are what the room pays. Your ranking
+decides who to chase, never how much to pay." Con el caso armado la hoja dice
+exactamente su frase: "Cheapest in: D'Andre Swift $13, saves $40 vs James Cook.
+Target: the room has him cheap. Spend it on Ashton Jeanty."
+
+Un precio escrito a mano sigue mandando sobre las dos cifras, y ES su techo.
+`public/live.js` volvio como estaba (lvCeiling con auMyWorth y su peso de
+siempre): el dueno pidio explicitamente no tocarlo.
+
+### Lo que se aprendio del gate, que es lo que mas costo
+- **Cuatro veces** los checks nuevos leyeron campos de un `eva` que contra el
+  codigo viejo devuelve `{_err}`, y la corrida REVENTABA en el primer fallo
+  llevandose por delante los veinte de detras. Es la misma leccion que este
+  repo ya pago con `$eval`. Todo bloque nuevo lleva ya su normalizador.
+- **La red del hotspot tumbaba el gate a mitad**: `networkidle` espera a que
+  callen TODAS las peticiones, incluidas las de fuera (Sleeper, ESPN), y con la
+  conexion floja LANZA. La carga y los recargados reintentan y caen a
+  `domcontentloaded`/`load` esperando a que la app este viva.
+- **Dos checks median la red, no el producto**: (z6) contaba 3,5 segundos antes
+  de mirar el skeleton, y la ida y vuelta entre navegadores esperaba solo a
+  "owner y no pricing". Los dos median una pantalla a medio hacer y sembraban
+  fallos que no existian. Ahora esperan lo que van a MEDIR.
+
+### Estado
+qa-rankings 125 checks. Contra b84f1b2, los NUEVE que describen la regla fallan
+en las tres corridas del control: (y), P1-P5, H2, H3 y H10. Otros siete
+(S1, S4, R1, L3, L4, L6, L10) fallan tambien contra ese arbol y NO se logro
+aislar por que; pasan contra el codigo actual, asi que no tapan ninguna
+regresion de lo que se subio, pero queda dicho en vez de contado como ruido.
