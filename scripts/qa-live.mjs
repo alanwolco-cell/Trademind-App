@@ -157,6 +157,12 @@ try {
   ok('h2', /already sold/.test(dobl.err) && dobl.b0 === dobl.b1,
     `vender dos veces al mismo jugador se rechaza sin tocar el dinero ($${dobl.b0} sigue en $${dobl.b1})`);
 
+  // lo tecleado como lo diria el dueno: equipo por nombre, "yo", muletillas
+  const typed = await pg.evaluate(() => [
+    ['gibbs se fue en 86 a ness', 'gibbs', 86, 1], ['jeanty 48 dream team', 'jeanty', 48, 3], ['me lleve olave 19', 'olave', 19, MD.mySlot],
+    ['bowers $36 real madrid', 'bowers', 36, 6], ['st. brown 65 5', 'st. brown', 65, 5]
+  ].map(([t, n, p, s]) => { const r = lvParseTyped(t); return r && r.price === p && r.seat === s && r.name === n; }));
+  ok('t1', typed.every(Boolean), 'la caja entiende "gibbs se fue en 86 a ness", "jeanty 48 dream team", "me lleve olave 19", "bowers $36 real madrid", "st. brown 65 5"');
   const inf = await pg.evaluate(() => {
     // sobreprecio RELATIVO al sticker vigente (1.2x), no dolares fijos: con
     // dolares fijos el check se pudrio al recalibrar VAL_CURVE (2026-08-28),

@@ -966,10 +966,43 @@ function lvOnType(v) {
     + '<span class="lv-ms">' + LV.lastMs.toFixed(1) + 'ms</span>';
 }
 
+/* Lo que teclea el dueno, como lo diria: "gibbs 86 dream team", "gibbs se fue
+ * en 86 a ness", "me lleve jeanty 48", "bowers $36 real madrid", "jeanty 48 yo".
+ * Precio = el primer numero; asiento = un numero 1..N, o el nombre (o prefijo)
+ * de un equipo de FZ26_SEATS, o yo/me/mine/mio; el resto, sin muletillas, es el
+ * jugador. Devuelve null si no hay precio (entonces es una nominacion). */
+function lvParseTyped(v) {
+  var t = String(v || '').trim().replace(/\$/g, '');
+  var pm = t.match(/(?:^|\s)(\d{1,3})(?=\s|$)/);
+  if (!pm) return null;
+  var price = parseInt(pm[1], 10);
+  var rest = (t.slice(0, pm.index) + ' ' + t.slice(pm.index + pm[0].length)).replace(/\s+/g, ' ').trim();
+  var seat = 0, seats = (typeof FZ26_SEATS !== 'undefined' && FZ26_SEATS) || {};
+  var low = ' ' + rest.toLowerCase() + ' ';
+  if (/\s(yo|me|mine|mio|i)\s/.test(low)) { seat = MD.mySlot; rest = rest.replace(/\b(yo|me|mine|mio|i)\b/i, ''); }
+  if (!seat) {
+    var best = null;
+    Object.keys(seats).forEach(function (k) {
+      var nm = String(seats[k].name || '').toLowerCase().replace(/\s*\.\.\.$/, '');
+      var words = nm.split(/\s+/).filter(Boolean);
+      // cualquier tramo contiguo del nombre ("dream team" de "the dream team")
+      for (var a0 = 0; a0 < words.length; a0++) for (var b0 = words.length; b0 > a0; b0--) {
+        var cand = words.slice(a0, b0).join(' ');
+        if (cand.length >= 3 && low.indexOf(' ' + cand + ' ') >= 0 && (!best || cand.length > best.cand.length)) best = { k: k, cand: cand };
+      }
+    });
+    if (best) { seat = parseInt(best.k, 10); rest = rest.replace(new RegExp('\\b' + best.cand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i'), ''); }
+  }
+  if (!seat) { var sm = rest.match(/(?:^|\s)(\d{1,2})(?=\s|$)/); if (sm && +sm[1] >= 1 && +sm[1] <= MD.teams) { seat = +sm[1]; rest = rest.slice(0, sm.index) + ' ' + rest.slice(sm.index + sm[0].length); } }
+  var name = rest.replace(/\b(se fue|se lo llevo|se lo llevó|fue|en|a|al|por|to|for|at|sold|went|vendido|lleve|llevé|con)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+  return { name: name, price: price, seat: seat };
+}
 function lvOnEnter(input) {
   var v = String(input.value || '').trim();
-  var m = v.match(/^(.*?)\s+(\d+)\s+(\d+)$/);
+  var pt = lvParseTyped(v);
+  var m = (pt && pt.name && pt.seat) ? [v, pt.name, String(pt.price), String(pt.seat)] : null;
   var hint = document.getElementById('lv-hint');
+  if (pt && !m) { if (hint) hint.innerHTML = '<i class="lv-err">who bought him? add the team or the seat number (or "me")</i>'; return; }
   if (!m) {
     // sin precio ni asiento: es una nominacion, ponlo en el bloque
     var p = lvOne(v);
