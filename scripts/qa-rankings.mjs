@@ -135,6 +135,10 @@ async function nueva(w, h, opts) {
  * callen TODAS las peticiones, incluidas las de fuera (Sleeper, ESPN), y con la
  * conexion floja eso LANZA. Se cae a 'load' y se espera a que la app este viva,
  * que es lo que los checks necesitan. */
+const eva = async (pg, fn, arg) => { try { return await pg.evaluate(fn, arg); } catch (e) { return { _err: String(e.message || e).slice(0, 90) }; } };
+const esperar = (pg, fn, ms) => pg.waitForFunction(fn, { timeout: ms || 40000 }).catch(() => { });
+const teclear = async (pg, sel, v) => { try { await pg.fill(sel, v, { timeout: 3000 }); return true; } catch (_) { return false; } };
+
 // El filtro se CLICA, que es como llega el usuario. Llamar tmrFilter() a mano
 // probaria la funcion, no el boton.
 const filtrar = async (pg, pos) => {
@@ -201,6 +205,25 @@ console.log('\n=== My Rankings: la lista ===');
   await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-row').length > 0, { timeout: 30000 });
   const trasReload = await pg.$$eval('#rk-body .rk-row .rk-name', r => r.slice(0, 3).map(x => x.textContent));
   ok('(d) el orden sobrevive a recargar', trasReload[0] === tras[0], `esperaba ${tras[0]}, salio ${trasReload[0]}`);
+
+  /* MIGRACION. Un documento guardado antes del 2026-08-29 trae cortes de la
+   * lista MEZCLADA, que no dicen donde cae el escalon de cada posicion. No se
+   * convierten (repartirlos seria inventarle tiers): se DECLARA en pantalla,
+   * con su numero, y se dice donde estan los dos botones que lo arreglan. */
+  const legado = await eva(pg, () => {
+    TMR.breakPos = {}; TMR.legacyBreaks = 3; tmrPaint();
+    const av = document.querySelector('#rk-body .rk-legacy');
+    const conAviso = av ? av.textContent.replace(/\s+/g, ' ').trim() : null;
+    // y en cuanto hay un corte por posicion, el aviso se va solo
+    tmrBreakSet('RB')[TMR.rows.find(r => r.pos === 'RB').id] = true;
+    tmrPaint();
+    const sigue = !!document.querySelector('#rk-body .rk-legacy');
+    TMR.breakPos = {}; TMR.legacyBreaks = 0; tmrSave(); tmrPaint();
+    return { conAviso, sigue, limpio: !!document.querySelector('#rk-body .rk-legacy') };
+  });
+  ok('(m1) un documento viejo con cortes de la lista mezclada lo DICE, y el aviso se va al cortar por posicion',
+    !legado._err && /3 old breaks were cut on the mixed list/.test(legado.conAviso || '')
+    && legado.sigue === false && legado.limpio === false, JSON.stringify(legado));
 
   /* CONTROL NEGATIVO, y va antes del corte a proposito: sin un solo corte no
    * puede haber ni una etiqueta de tier en la lista. Sin este check, el
@@ -404,9 +427,6 @@ console.log('\n=== My Rankings: el dinero ===');
 // TMR.price ni tmrSetPrice, y un evaluate que revienta se lleva por delante
 // todos los checks que vienen detras: el gate se pondria verde por no llegar a
 // mirar. Es la misma leccion que ya se pago con $eval en este mismo archivo.
-const eva = async (pg, fn, arg) => { try { return await pg.evaluate(fn, arg); } catch (e) { return { _err: String(e.message || e).slice(0, 90) }; } };
-const esperar = (pg, fn, ms) => pg.waitForFunction(fn, { timeout: ms || 40000 }).catch(() => { });
-const teclear = async (pg, sel, v) => { try { await pg.fill(sel, v, { timeout: 3000 }); return true; } catch (_) { return false; } };
 {
   const { pg, errs } = await nueva(1440, 950);
   // el preset de SU liga: 10 equipos, $200, 15 rondas, half PPR
@@ -1036,7 +1056,7 @@ console.log('\n=== Tier Game: la inferencia por posicion, como funcion pura ==='
 //     control negativo: no puede crear ni un corte.
 {
   const { pg, errs } = await nueva(1440, 950);
-  const r = await eva(pg, () => {
+  const _g = await eva(pg, () => {
     const rows = [
       { id: 'r1', name: 'A Uno', pos: 'RB', team: 'X' }, { id: 'w1', name: 'B Dos', pos: 'WR', team: 'X' },
       { id: 'r2', name: 'C Tres', pos: 'RB', team: 'X' }, { id: 'w2', name: 'D Cuatro', pos: 'WR', team: 'X' },
@@ -1101,6 +1121,11 @@ console.log('\n=== Tier Game: la inferencia por posicion, como funcion pura ==='
       juego: { n, repes, cruces, prog: tmrGameProgress(rows, ans).pct }
     };
   });
+  /* Nunca se lee un campo crudo de un eva que pudo fallar: contra el codigo
+   * roto, `r.quieto.ord` tumbaba la corrida entera y se llevaba por delante los
+   * cincuenta checks siguientes. Un gate que revienta esconde mas de lo que
+   * ensena, y esa leccion ya esta escrita en este mismo archivo. */
+  const r = Object.assign({ vacio: {}, cruce: {}, tr: {}, quieto: {}, juego: {} }, _g || {});
   ok('(G1) sin respuestas no se mueve nadie, no hay un corte y nadie tiene tier',
     !r._err && r.vacio.ord === r.base && r.vacio.cortes === 0 && r.vacio.movidos === 0
     && r.vacio.conTier === 0 && r.vacio.sinComp === 4, JSON.stringify(r.vacio));
