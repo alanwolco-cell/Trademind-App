@@ -438,7 +438,11 @@ console.log('\n=== My Rankings: el dinero ===');
   //     cifras de verdad. Un "$-" o un cero es una columna que no dice nada.
   const pay = await eva(pg, () => {
     const filas = document.querySelectorAll('#rk-body .rk-row').length;
-    const cif = Array.from(document.querySelectorAll('#rk-body .rk-pr')).map(e => e.textContent.trim());
+    // La cifra grande es el EXPECT y vive en .rk-pr-n; el tope va debajo, en
+    // su propio <i>, asi que leer el textContent del boton entero mezclaria
+    // las dos y este check dejaria de medir nada.
+    const cif = Array.from(document.querySelectorAll('#rk-body .rk-pr'))
+      .map(e => ((e.querySelector('.rk-pr-n') || {}).textContent || '').trim());
     const malos = cif.filter(t => !/^\$\d+$/.test(t) || Number(t.slice(1)) <= 0);
     return { filas, n: cif.length, malos: malos.slice(0, 3), top: cif.slice(0, 3), room: (typeof TMR !== 'undefined' ? TMR.room : null) };
   });
@@ -523,17 +527,41 @@ console.log('\n=== My Rankings: el dinero ===');
   const vuelta = await eva(pg, i => {
     const b = document.querySelector('#rk-body .rk-pr');
     return {
-      txt: b ? b.textContent.trim() : null, manual: !!(b && b.classList.contains('is-manual')),
+      txt: b ? ((b.querySelector('.rk-pr-n') || {}).textContent || '').trim() : null,
+      cap: b ? ((b.querySelector('i') || {}).textContent || '').trim() : null,
+      manual: !!(b && b.classList.contains('is-manual')),
       guardado: (typeof TMR !== 'undefined' && TMR.manual) ? TMR.manual[i] == null : false,
       calc: (typeof TMR !== 'undefined' && TMR.price) ? TMR.price[i] : null,
-      // la celda pinta el TECHO, no el precio de sala pelado
       techo: (typeof tmrCeilOf === 'function') ? tmrCeilOf(i) : null
     };
   }, idPrim);
   ok('(y) se puede volver al precio del motor',
     nMan === 1 && nX === 1 && !vuelta._err && !vuelta.manual && vuelta.guardado
-    && vuelta.txt === '$' + vuelta.techo && vuelta.techo === Math.round(vuelta.calc * 1.2),
+    && vuelta.txt === '$' + vuelta.calc && vuelta.techo === Math.round(vuelta.calc * 1.2),
     `precios a mano=${nMan}, botones de vuelta=${nX}, ${JSON.stringify(vuelta)}`);
+
+  /* (y2) LA COLUMNA PAY DICE EL EXPECT, NO EL TOPE. Defecto que el dueno vio
+   *      en produccion: la fila de Gibbs marcaba $91, que es el techo, cuando
+   *      la sala lo vende en $77. La columna iba un 20% por encima de lo que
+   *      cuesta la subasta y contaminaba cada suma. El tope no desaparece:
+   *      baja a texto secundario, que es lo que es. */
+  const pcell = await eva(pg, () => {
+    const r = TMR.rows.find(x => TMR.manual[x.id] == null && TMR.price[x.id] != null);
+    if (!r) return { falta: true };
+    const el = document.querySelector('#rk-body .rk-row[data-id="' + r.id + '"] .rk-pr');
+    if (!el) return { falta: true };
+    return {
+      nm: r.name,
+      n: ((el.querySelector('.rk-pr-n') || {}).textContent || '').trim(),
+      cap: ((el.querySelector('i') || {}).textContent || '').trim(),
+      expect: tmrPriceOf(r.id), techo: tmrCeilOf(r.id)
+    };
+  });
+  ok('(y2) la columna Pay pinta el expect, con el tope como texto secundario',
+    !pcell._err && !pcell.falta && pcell.expect > 0 && pcell.techo > pcell.expect
+    && pcell.techo === Math.round(pcell.expect * 1.2)
+    && pcell.n === '$' + pcell.expect && pcell.cap === 'up to $' + pcell.techo,
+    pcell.falta ? 'no hay ninguna fila con precio del motor' : JSON.stringify(pcell));
 
   // (z) La barra Build: la suma tiene que cuadrar CONTANDO el dolar de cada
   //     hueco sin objetivo. Sin ese dolar, un plan de tres cracks parece que
@@ -542,8 +570,13 @@ console.log('\n=== My Rankings: el dinero ===');
   //     para que el control negativo del rojo signifique algo.
   await eva(pg, () => {
     Object.keys(TMR.target).forEach(k => { if (TMR.target[k]) tmrToggleTarget(k); });
-    tmrToggleTarget(TMR.rows[60].id);
-    tmrToggleTarget(TMR.rows[61].id);
+    // Un RB y un WR a proposito: los dos entran en el plan mas barato (hay dos
+    // huecos de cada uno), asi que "todos los objetivos" y "el plan" coinciden
+    // y la suma se puede comprobar sin repetir el algoritmo aqui.
+    const rb = TMR.rows.slice(60).find(r => r.pos === 'RB') || TMR.rows[60];
+    const wr = TMR.rows.slice(60).find(r => r.pos === 'WR') || TMR.rows[61];
+    tmrToggleTarget(rb.id);
+    tmrToggleTarget(wr.id);
   });
   await pg.waitForTimeout(150);
   const bd = await eva(pg, () => {
@@ -554,8 +587,9 @@ console.log('\n=== My Rankings: el dinero ===');
       .reduce((a, k) => a + (tmrPriceOf(k) || 0), 0) + Math.max(0, d.cfg.rounds - d.n);
     return { d, esperado, oculto: el.hidden, txt: el.textContent.replace(/\s+/g, ' ').trim(), cls: el.className };
   });
-  ok('(z1) la barra Build suma objetivos mas el relleno a $1',
-    !bd._err && !bd.falta && !bd.oculto && bd.d.total === bd.esperado && bd.d.huecos === bd.d.cfg.rounds - bd.d.n
+  ok('(z1) la barra Build suma el plan mas barato mas el relleno a $1',
+    !bd._err && !bd.falta && !bd.oculto && bd.d.n === bd.d.allN && bd.d.total === bd.esperado
+    && bd.d.huecos === bd.d.cfg.rounds - bd.d.n
     && bd.txt.indexOf('$' + bd.d.total) >= 0 && bd.txt.indexOf('$' + bd.d.left) >= 0,
     bd._err || bd.falta ? 'no hay barra Build' :
       `${bd.d.n} objetivos a $${bd.d.gasto} + ${bd.d.huecos} huecos = $${bd.d.total} (esperado $${bd.esperado}), quedan $${bd.d.left}`);
@@ -563,16 +597,29 @@ console.log('\n=== My Rankings: el dinero ===');
     !bd._err && !bd.falta && !bd.d.over && bd.cls.indexOf('is-over') < 0,
     bd.falta ? 'no hay barra Build' : `total $${bd.d.total} de $${bd.d.cfg.budget}, clase "${bd.cls}"`);
 
-  // control POSITIVO del rojo: se marcan los doce primeros y no cabe
+  /* Control POSITIVO del rojo. Ya NO vale marcar los doce primeros de la
+   * lista: el plan coge lo MAS BARATO de cada hueco y en el top 12 no hay ni
+   * QB ni TE, asi que doce cracks se quedaban en $149 y cabian de sobra. El
+   * caso que de verdad no cabe se arma con precios escritos a mano, para que
+   * el control no dependa del feed del dia: siete huecos de titular a $40 son
+   * $280 mas 8 huecos a $1, o sea $288 contra $200. */
   const over = await eva(pg, () => {
     const el = document.getElementById('rk-build');
     if (!el || typeof tmrBuildData !== 'function') return { falta: true };
-    for (let i = 0; i < 12; i++) if (!TMR.target[TMR.rows[i].id]) tmrToggleTarget(TMR.rows[i].id);
+    Object.keys(TMR.target).forEach(k => { if (TMR.target[k]) tmrToggleTarget(k); });
+    [['QB', 1], ['RB', 3], ['WR', 2], ['TE', 1]].forEach(([ps, n]) => {
+      TMR.rows.filter(r => r.pos === ps).slice(0, n).forEach(r => {
+        tmrSetPrice(r.id, '40');
+        if (!TMR.target[r.id]) tmrToggleTarget(r.id);
+      });
+    });
     return { d: tmrBuildData(), cls: el.className, txt: el.textContent.replace(/\s+/g, ' ').trim() };
   });
-  ok('(z3) pasarse del presupuesto pinta la barra en rojo y lo dice',
-    !over._err && !over.falta && over.d.over && over.cls.indexOf('is-over') >= 0
-    && /Drop a target or lower a price/.test(over.txt) && over.txt.indexOf('-$' + Math.abs(over.d.left)) >= 0,
+  ok('(z3) cuando ni el plan mas barato cabe, la barra va en rojo y lo dice',
+    !over._err && !over.falta && over.d.over && over.d.total === 288 && over.d.left === -88
+    && over.cls.indexOf('is-over') >= 0
+    && /Even the cheapest plan from your targets does not fill 15 spots with \$200/.test(String(over.txt || ''))
+    && /Drop a target or lower a price/.test(String(over.txt || '')) && String(over.txt || '').indexOf('-$' + Math.abs(over.d.left)) >= 0,
     over.falta ? 'no hay barra Build' : `$${over.d.total} de $${over.d.cfg.budget}, clase "${over.cls}"`);
 
   // el desglose por posicion tiene que contar los objetivos, no la lista
@@ -580,14 +627,88 @@ console.log('\n=== My Rankings: el dinero ===');
     if (typeof tmrBuildData !== 'function') return { falta: true };
     const d = tmrBuildData();
     const e = document.querySelector('#rk-build .rk-bd-pos');
-    return { suma: ['QB', 'RB', 'WR', 'TE'].reduce((a, p) => a + (d.pos[p] || 0), 0), n: d.n, txt: e ? e.textContent.trim() : null };
+    return { suma: ['QB', 'RB', 'WR', 'TE'].reduce((a, p) => a + (d.pos[p] || 0), 0), n: d.allN, txt: e ? e.textContent.trim() : null };
   });
   ok('(z4) el desglose por posicion cuenta exactamente los objetivos',
     !pos._err && !pos.falta && pos.n > 0 && pos.suma === pos.n && !!pos.txt,
     pos.falta ? 'no hay barra Build' : `${pos.suma} repartidos de ${pos.n} objetivos: ${pos.txt}`);
 
-  ok('(z5) consola limpia con la columna del dinero', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  /* (z9) EL PLAN MAS BARATO, CON UN CASO ARMADO Y SU SUMA EXACTA.
+   *      El defecto que reporto el dueno: la barra sumaba sus 29 objetivos
+   *      ($555) como si se los fuera a llevar todos y pintaba "-$355" en rojo.
+   *      Un objetivo es un candidato, no una compra. Se arman doce objetivos
+   *      con precio escrito a mano para que la cuenta no dependa del feed del
+   *      dia, y se comprueba una cifra ESCRITA A MANO aqui, no recalculada:
+   *        QB 10 | RB 30, 31 | WR 12, 13 | TE 8 | FLEX = el TE de $25
+   *        = $129 en 7 huecos, mas 8 huecos a $1 = $137, quedan $63.
+   *      Los otros cinco objetivos (20, 50, 60, 40, 41) NO estan en el plan y
+   *      la nota gris los declara: $340 los doce. */
+  const arma = await eva(pg, () => {
+    Object.keys(TMR.target).forEach(k => { if (TMR.target[k]) tmrToggleTarget(k); });
+    Object.keys(TMR.manual).forEach(k => tmrClearPrice(k));
+    const usados = [];
+    [['QB', [10, 20]], ['RB', [30, 31, 50, 60]], ['WR', [12, 13, 40, 41]], ['TE', [8, 25]]]
+      .forEach(([ps, precios]) => {
+        TMR.rows.filter(r => r.pos === ps).slice(0, precios.length).forEach((r, i) => {
+          tmrSetPrice(r.id, String(precios[i]));
+          tmrToggleTarget(r.id);
+          usados.push(ps + ' ' + r.name + ' $' + precios[i]);
+        });
+      });
+    const d = tmrBuildData();
+    const el = document.getElementById('rk-build');
+    return {
+      n: d.n, gasto: d.gasto, huecos: d.huecos, total: d.total, left: d.left, over: d.over,
+      allN: d.allN, allGasto: d.allGasto, faltaN: d.faltaN,
+      pick: (d.pick || []).map(q => q.slot + ' $' + q.x.pay),
+      txt: el ? el.textContent.replace(/\s+/g, ' ').trim() : '', cls: el ? el.className : '', usados
+    };
+  });
+  ok('(z9) la barra arma el plan MAS BARATO de sus objetivos, no la suma de todos',
+    !arma._err && arma.n === 7 && arma.gasto === 129 && arma.huecos === 8 && arma.total === 137
+    && arma.left === 63 && arma.over === false && arma.faltaN === 0
+    && arma.allN === 12 && arma.allGasto === 340
+    && (arma.pick || []).join(' | ') === 'QB $10 | RB $30 | RB $31 | WR $12 | WR $13 | TE $8 | FLEX $25',
+    JSON.stringify({ n: arma.n, gasto: arma.gasto, total: arma.total, left: arma.left, over: arma.over, pick: arma.pick, allGasto: arma.allGasto }));
+  ok('(z9b) lo pinta con su desglose, y la suma de TODOS los objetivos va en gris, no en rojo',
+    !arma._err && /cheapest plan: 7 targets at \$129, 8 spots at \$1/.test(String(arma.txt || ''))
+    && String(arma.txt || '').indexOf('$137') >= 0 && String(arma.txt || '').indexOf('$63') >= 0
+    && /All 12 targets would cost \$340; you will land a few\./.test(String(arma.txt || ''))
+    && String(arma.cls || '').indexOf('is-over') < 0 && !/does not fill/.test(String(arma.txt || '')),
+    JSON.stringify({ cls: arma.cls, txt: String(arma.txt || '').slice(0, 260) }));
+
+  /* (z10) Una posicion sin objetivo NO desaparece: se declara y su hueco cuesta
+   *      $1. Se quitan los dos TE del caso anterior; el FLEX pasa entonces al
+   *      WR de $40, que es el mas barato que queda.
+   *        10 + 30 + 31 + 12 + 13 + 40 = $136 en 6 huecos + 9 a $1 = $145. */
+  const sinTe = await eva(pg, () => {
+    TMR.rows.filter(r => r.pos === 'TE').slice(0, 2).forEach(r => { if (TMR.target[r.id]) tmrToggleTarget(r.id); });
+    const d = tmrBuildData();
+    const el = document.getElementById('rk-build');
+    return {
+      n: d.n, gasto: d.gasto, total: d.total, left: d.left, over: d.over, falta: d.falta, faltaN: d.faltaN,
+      pick: (d.pick || []).map(q => q.slot + ' $' + q.x.pay),
+      txt: el ? el.textContent.replace(/\s+/g, ' ').trim() : ''
+    };
+  });
+  ok('(z10) sin objetivo en una posicion, el hueco va a $1 y se declara',
+    !sinTe._err && sinTe.n === 6 && sinTe.gasto === 136 && sinTe.total === 145 && sinTe.left === 55
+    && sinTe.over === false && sinTe.faltaN === 1 && (sinTe.falta || {}).TE === 1
+    && (sinTe.pick || []).join(' | ') === 'QB $10 | RB $30 | RB $31 | WR $12 | WR $13 | FLEX $40'
+    && /No target for 1 TE: \$1 filler\./.test(String(sinTe.txt || '')),
+    JSON.stringify({ n: sinTe.n, total: sinTe.total, falta: sinTe.falta, pick: sinTe.pick, txt: String(sinTe.txt || '').slice(0, 200) }));
+
+  // La captura se toma AQUI, con el caso armado en pantalla: una barra vacia
+  // no ensena nada de lo que este bloque comprueba.
   await pg.screenshot({ path: '/tmp/qa-rk-build.png' });
+
+  // se deja la pizarra limpia: los checks de abajo arrancan sin este caso
+  await eva(pg, () => {
+    Object.keys(TMR.target).forEach(k => { if (TMR.target[k]) tmrToggleTarget(k); });
+    Object.keys(TMR.manual).forEach(k => tmrClearPrice(k));
+  });
+
+  ok('(z5) consola limpia con la columna del dinero', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.close();
 }
 
@@ -686,7 +807,8 @@ for (const [tag, w, h] of [['escritorio', 1440, 950], ['movil', 390, 844]]) {
       tab: (document.querySelector('.screen.active .tab-content.active') || {}).id || null,
       filas: document.querySelectorAll('#rk-body .rk-row').length,
       cifras: document.querySelectorAll('#rk-body .rk-pr').length,
-      cero: Array.from(document.querySelectorAll('#rk-body .rk-pr')).filter(e => !/^\$\d+$/.test(e.textContent.trim())).length,
+      cero: Array.from(document.querySelectorAll('#rk-body .rk-pr'))
+        .filter(e => !/^\$\d+$/.test(((e.querySelector('.rk-pr-n') || {}).textContent || '').trim())).length,
       build: !!bd && !bd.hidden,
       heroEnPantalla: hr ? (hr.top < window.innerHeight && hr.bottom > 0) : false,
       desborde: document.documentElement.scrollWidth > window.innerWidth
@@ -1573,7 +1695,8 @@ console.log('\n=== El precio es el de la SALA; su orden decide a quien, no cuant
     return {
       nombre: swift.name, puestoAntes, puestoDespues,
       antes, despues: { pay: tmrPriceOf(swift.id), techo: tmrCeilOf(swift.id), mercado: TMR.sticker[swift.id] },
-      pintado: fila ? fila.textContent.trim() : null,
+      pintado: fila ? ((fila.querySelector('.rk-pr-n') || {}).textContent || '').trim() : null,
+      tope: fila ? ((fila.querySelector('i') || {}).textContent || '').trim() : null,
       tip: fila ? fila.getAttribute('title') : null
     };
   });
@@ -1586,10 +1709,11 @@ console.log('\n=== El precio es el de la SALA; su orden decide a quien, no cuant
     && mov.despues.pay === mov.antes.pay && mov.despues.pay === mov.antes.mercado
     && mov.despues.techo === mov.antes.techo,
     JSON.stringify(mov));
-  ok('(P2) la columna pinta el TECHO y el tooltip declara lo que paga la sala y SU puesto',
-    !mov._err && !mov.falta && mov.pintado === '$' + mov.despues.techo
+  ok('(P2) la columna pinta el EXPECT, con el techo debajo, y el tooltip declara SU puesto',
+    !mov._err && !mov.falta && mov.pintado === '$' + mov.despues.pay
+    && mov.tope === 'up to $' + mov.despues.techo
     && /The room pays about \$\d+/.test(mov.tip || '') && /Your RB2\./.test(mov.tip || ''),
-    JSON.stringify({ pintado: mov.pintado, tip: mov.tip }));
+    JSON.stringify({ pintado: mov.pintado, tope: mov.tope, tip: mov.tip }));
   ok('(P3) el techo es un margen corto sobre el mercado, nunca su valoracion',
     !mov._err && !mov.falta && mov.despues.techo === Math.round(mov.despues.mercado * 1.2),
     JSON.stringify({ mercado: mov.despues.mercado, techo: mov.despues.techo }));

@@ -2165,7 +2165,7 @@ html{scroll-padding-top:76px}
    rejilla es la de siempre, identica para cualquier otra cuenta. */
 .rk-owner .rk-row,.rk-owner .rk-colhead{
   --rk-acts:110px;
-  grid-template-columns:34px 34px minmax(96px,1fr) 70px 52px 52px 68px 34px var(--rk-acts);
+  grid-template-columns:34px 34px minmax(96px,1fr) 70px 52px 52px 84px 34px var(--rk-acts);
   column-gap:11px}
 
 /* La cabecera repite las MISMAS areas que la fila y cada rotulo declara la
@@ -2179,7 +2179,7 @@ html{scroll-padding-top:76px}
 .rk-ch-pr{grid-area:pr}
 .rk-ch-adp{grid-area:adp;text-align:right}
 .rk-ch-vs{grid-area:vs;text-align:right}
-.rk-ch-pay{grid-area:pay;width:46px;text-align:right}
+.rk-ch-pay{grid-area:pay;width:60px;text-align:right}
 
 .rk-tier{display:flex;align-items:center;gap:10px;margin:16px 0 6px;font-size:10.5px;font-weight:700;
   letter-spacing:.10em;text-transform:uppercase;color:var(--accent-bright)}
@@ -2256,9 +2256,16 @@ html{scroll-padding-top:76px}
    title y su boton de vuelta atras al lado, porque escribir un precio no puede
    ser una puerta de un solo sentido. */
 .rk-pay{grid-area:pay;display:flex;align-items:center;justify-content:flex-start;gap:2px;min-width:0}
-.rk-pr{min-width:46px;text-align:right;background:transparent;border:1px solid transparent;border-radius:6px;padding:3px 5px;
+/* Dos cifras y no una: arriba lo que la sala PAGA (con lo que se planifica y
+   lo que suma la barra Build) y debajo, en pequeno, hasta donde subir sin
+   arrepentirse. El ancho es fijo para que la cabecera Pay siga cayendo a
+   plomo sobre la cifra, que es lo que mide el gate. */
+.rk-pr{width:60px;min-width:60px;background:transparent;border:1px solid transparent;border-radius:6px;padding:3px 5px;
   font:inherit;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;
-  color:var(--text);cursor:text;white-space:nowrap}
+  color:var(--text);cursor:text;white-space:nowrap;
+  display:inline-flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.15}
+.rk-pr i{font-style:normal;font-size:9px;font-weight:600;letter-spacing:.01em;color:var(--muted)}
+.rk-pr.is-manual i{color:var(--muted)}
 .rk-pr:hover{border-color:var(--accent)}
 .rk-pr:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .rk-pr.is-manual{color:var(--accent-bright);text-decoration:underline;
@@ -2316,6 +2323,15 @@ html{scroll-padding-top:76px}
   align-self:center;white-space:nowrap}
 .rk-bd-warn{margin-top:8px;font-size:12px;font-weight:600;color:#e8705f;line-height:1.45}
 .rk-bd-warn.is-soft{color:var(--muted);font-weight:500}
+/* Quien entra en el plan mas barato, hueco por hueco: la lista que se lleva a
+   la sala. */
+.rk-bd-plan{display:flex;flex-wrap:wrap;gap:5px 7px;margin-top:9px}
+.rk-bd-slot{font-size:11.5px;line-height:1.2;color:var(--text);white-space:nowrap;
+  border:1px solid var(--border);border-radius:999px;padding:3px 8px}
+.rk-bd-slot b{font-size:9.5px;font-weight:800;letter-spacing:.08em;color:var(--accent-bright);margin-right:4px}
+.rk-bd-slot em{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
+/* La suma de TODOS los objetivos: informacion, nunca alarma. */
+.rk-bd-all{margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.45}
 
 /* Skeleton, nunca spinner: la forma es la de la fila que va a llegar */
 .rk-skel-wrap{display:flex;flex-direction:column;gap:4px}
@@ -2344,7 +2360,9 @@ html{scroll-padding-top:76px}
   .rk-team,.rk-posrank,.rk-adp,.rk-vs,.rk-pay,.rk-tg{grid-area:auto}
   /* El precio ya lleva su $ delante, asi que en la linea de la cifra se dice
      solo, sin cabecera que lo explique. */
-  .rk-pr{padding:2px 4px}
+  /* En la linea de cifras del telefono no hay columna que respetar: el techo
+     va al lado y no debajo, para no crecer la fila. */
+  .rk-pr{padding:2px 4px;width:auto;min-width:0;flex-direction:row;align-items:baseline;gap:5px}
   .rk-pr-in{width:56px}
   /* Blanco tactil: el boton se ve de 34px como sus hermanos, pero se toca en
      40x44. El overlay crece SOLO hacia arriba y abajo, para no comerse los
@@ -2517,6 +2535,7 @@ html{scroll-padding-top:76px}
 .rk-sh-plan-f b{font-size:21px;line-height:1;font-variant-numeric:tabular-nums}
 .rk-sh-plan-f i{font-style:normal;font-size:11px;color:var(--muted);line-height:1.35}
 .rk-sh-note{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.5}
+.rk-sh-note.is-quiet{font-size:11px;margin-top:6px}
 .rk-sh-warn{margin-top:9px;font-size:12px;font-weight:600;color:#e8705f;line-height:1.45}
 
 .rk-sh-sec{margin-top:18px}
@@ -2731,3 +2750,10 @@ html{scroll-padding-top:76px}
   background:var(--accent-bright);color:#12101a;text-decoration:none;cursor:grab}
 .lv-yh-warn{margin-top:5px;font-size:11px;color:var(--yellow);line-height:1.5}
 .lv-yh-map{margin-top:5px;font-size:10px;color:var(--muted);line-height:1.5}
+
+/* Draft Day: cerrar la venta con dos toques (equipo, precio, Sold) */
+.lv-sold-row{display:flex;gap:6px;margin-top:9px;align-items:stretch}
+.lv-sold-seat{flex:1 1 auto;min-width:0;min-height:44px;padding:0 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px}
+.lv-sold-price{flex:0 0 84px;min-height:44px;padding:0 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:15px;font-weight:700;text-align:center}
+.lv-sold-btn{flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:9px;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+.lv-sold-btn:active{transform:scale(.98)}

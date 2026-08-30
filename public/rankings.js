@@ -823,17 +823,26 @@ function tmrSkeleton() {
 function tmrPriceCell(id, mio) {
   var man = TMR.manual[id], calc = TMR.price[id];
   if (TMR.pricing && man == null && calc == null) return '<span class="rk-pr-skel"></span>';
-  // Lo que se pinta es el TECHO: hasta donde subir sin arrepentirse. El precio
-  // que la sala va a pagar viaja al lado, en el tooltip, junto a SU puesto, que
-  // es lo que decide si perseguirlo, no cuanto pagar.
-  var v = (man != null) ? man : tmrCeilOf(id);
+  /* La cifra grande es el EXPECT: lo que la sala va a pagar por el, que es el
+   * numero con el que se planifica y el que suma la barra Build. El techo va
+   * DEBAJO, en pequeno, porque es otra decision: hasta donde subir sin
+   * arrepentirse en el segundo en que la puja va viva.
+   *
+   * Correccion del dueno del 2026-08-30, viendo "$91" en la fila de Gibbs: la
+   * celda pintaba el techo como si fuera el precio, asi que la columna entera
+   * iba un 20% por encima de lo que cobra la sala. Un precio escrito a mano
+   * sigue siendo las dos cosas: ese numero ya es una decision tomada y no
+   * lleva margen encima. */
+  var v = (man != null) ? man : tmrPriceOf(id);
+  var techo = (man != null) ? null : tmrCeilOf(id);
   var t = (man != null)
     ? 'Your price. The room pays about $' + (calc == null ? '?' : calc) + '.'
-    : 'The room pays about $' + (calc == null ? '?' : calc) + ', do not go past $' + (v == null ? '?' : v)
+    : 'The room pays about $' + (calc == null ? '?' : calc) + ', do not go past $' + (techo == null ? '?' : techo)
     + (mio ? '. Your ' + mio + '.' : '') + ' Click to set your own.';
   var h = '<button type="button" class="rk-pr' + (man != null ? ' is-manual' : '') + '"'
     + ' title="' + tmrEsc(t) + '" onclick="tmrEditPrice(\'' + id + '\')">'
-    + (v == null ? '$-' : '$' + v) + '</button>';
+    + '<span class="rk-pr-n">' + (v == null ? '$-' : '$' + v) + '</span>'
+    + (techo != null && techo !== v ? '<i>up to $' + techo + '</i>' : '') + '</button>';
   if (man != null) {
     h += '<button type="button" class="rk-prx" title="Back to the room price"'
       + ' aria-label="Back to the room price" onclick="tmrClearPrice(\'' + id + '\')">' + TMR_SVG_BACK + '</button>';
@@ -1007,54 +1016,79 @@ function tmrPaint() {
   tmrBuildPaint();
 }
 
-/* ── la barra Build ─────────────────────────────────────────────────────────
+/* ── la barra Build ─────────────────────────────────────────
  * Lo que el dueno pidio con sus palabras: "de ahi sacar una lista para ver
- * cual es la manera mas eficiente de construir mi equipo". O sea, no la suma
- * de los objetivos a secas: la suma CONTRA su presupuesto, y contando que cada
- * hueco de roster que quede sin objetivo igual cuesta el dolar del suelo de la
- * subasta. Sin ese dolar por hueco, un plan de tres cracks parece que cabe en
- * $200 y el domingo se queda con doce sillas vacias y cero dolares. */
+ * cual es la manera mas eficiente de construir mi equipo".
+ *
+ * CORRECCION del 2026-08-30, reportada por el en produccion: la barra sumaba
+ * los 29 objetivos como si se los fuera a llevar TODOS y gritaba "-$355 past
+ * your $200" sobre un plan que nadie iba a ejecutar. Un objetivo no es una
+ * compra: es un candidato. Lo que decide si su lista cabe en $200 es el plan
+ * MAS BARATO que sus objetivos permiten armar, y ese plan es determinista.
+ * La suma de todos los objetivos sigue a la vista, en gris, como lo que es:
+ * una nota, no una alarma. El rojo queda para lo unico que de verdad es un
+ * problema: que ni el plan mas barato quepa en el presupuesto. */
 function tmrBuildData() {
   var cfg = TMR.room || tmrRoomCfg();
+  var shape = tmrRosterShape(cfg);
   var byId = {};
   TMR.rows.forEach(function (r) { byId[r.id] = r; });
-  var pos = {}, gasto = 0, n = 0, sinPrecio = 0;
+
+  /* Todos los objetivos vivos, con su precio de SALA (expect). Los que todavia
+   * no tienen precio se declaran aparte: no se cuelan en ninguna suma. */
+  var todos = [], allGasto = 0, sinPrecio = 0, pos = {};
   Object.keys(TMR.target).forEach(function (id) {
     if (!TMR.target[id]) return;
     var r = byId[id];
     if (!r) return;                       // ya no esta en la lista: no cuenta
-    n++;
     pos[r.pos] = (pos[r.pos] || 0) + 1;
     var v = tmrPriceOf(id);
     if (v == null) { sinPrecio++; return; }
-    gasto += v;
+    todos.push({ r: r, pay: v });
+    allGasto += v;
   });
-  var huecos = Math.max(0, cfg.rounds - n);
-  var total = gasto + huecos;
-  /* Los huecos ya no son "15 a secas": son los de SU liga. Un plan que cubre
-   * cuatro RB y ningun TE cabe perfectamente en $200 y el domingo se alinea
-   * con un hueco en la alineacion, que es un fallo que la suma no ve. K y DEF
-   * salen siempre sin cubrir a proposito: no estan en la lista (nadie hace
-   * tiers de kickers) y en la sala real se compran a $1 al final. */
-  var shape = tmrRosterShape(cfg);
-  var falta = {}, faltaN = 0;
+  var allN = todos.length + sinPrecio;
+
+  /* El plan MAS BARATO. Por cada hueco de titular de SU liga, el objetivo mas
+   * barato que lo llena; el FLEX se lo lleva el mas barato que quede entre RB,
+   * WR y TE, que es exactamente como se llena en la sala. Lo que el plan no
+   * compra (titular sin objetivo, K, DEF y la banca entera) cuesta el dolar
+   * del suelo de la subasta. */
+  var libres = {};
+  todos.forEach(function (x) { (libres[x.r.pos] = libres[x.r.pos] || []).push(x); });
+  Object.keys(libres).forEach(function (ps) {
+    libres[ps].sort(function (a, b) { return a.pay - b.pay; });
+  });
+  var pick = [], falta = {}, faltaN = 0;
   ['QB', 'RB', 'WR', 'TE'].forEach(function (ps) {
-    var g = (shape[ps] || 0) - (pos[ps] || 0);
-    if (g > 0) { falta[ps] = g; faltaN += g; }
+    var need = shape[ps] || 0, hay = libres[ps] || [];
+    for (var i = 0; i < need; i++) {
+      if (hay.length) pick.push({ slot: ps, x: hay.shift() });
+      else { falta[ps] = (falta[ps] || 0) + 1; faltaN++; }
+    }
   });
-  // El FLEX lo llena lo que sobre de RB, WR o TE por encima de sus titulares
-  var sobra = 0;
-  ['RB', 'WR', 'TE'].forEach(function (ps) { sobra += Math.max(0, (pos[ps] || 0) - (shape[ps] || 0)); });
-  var flexFalta = Math.max(0, (shape.FLEX || 0) - sobra);
-  if (flexFalta) { falta.FLEX = flexFalta; faltaN += flexFalta; }
+  for (var f = 0; f < (shape.FLEX || 0); f++) {
+    var mejor = null, mpos = null;
+    ['RB', 'WR', 'TE'].forEach(function (ps) {
+      var hay = libres[ps] || [];
+      if (hay.length && (mejor === null || hay[0].pay < mejor.pay)) { mejor = hay[0]; mpos = ps; }
+    });
+    if (mejor) { libres[mpos].shift(); pick.push({ slot: 'FLEX', x: mejor }); }
+    else { falta.FLEX = (falta.FLEX || 0) + 1; faltaN++; }
+  }
+
+  var gasto = 0;
+  pick.forEach(function (q) { gasto += q.x.pay; });
+  var huecos = Math.max(0, cfg.rounds - pick.length);
+  var total = gasto + huecos;
   return {
-    n: n, gasto: gasto, huecos: huecos, total: total,
+    n: pick.length, gasto: gasto, huecos: huecos, total: total,
     left: cfg.budget - total, over: total > cfg.budget,
+    pick: pick, allN: allN, allGasto: allGasto,
     pos: pos, cfg: cfg, sinPrecio: sinPrecio,
     shape: shape, falta: falta, faltaN: faltaN
   };
 }
-
 function tmrBuildPaint() {
   var el = document.getElementById('rk-build');
   if (!el) return;
@@ -1067,33 +1101,48 @@ function tmrBuildPaint() {
   var h = '<div class="rk-bd-head"><span class="rk-bd-k">Build</span>'
     + '<span class="rk-bd-room">' + tmrEsc(room) + '</span></div>';
 
-  if (!d.n) {
-    h += '<div class="rk-bd-empty">Target the players you actually want. This adds up what they cost'
-      + ' and what is left of your $' + cfg.budget + '.</div>';
+  if (!d.allN) {
+    h += '<div class="rk-bd-empty">Target the players you actually want. This builds the cheapest team'
+      + ' your targets can fill and tells you what is left of your $' + cfg.budget + '.</div>';
   } else {
     var posTxt = ['QB', 'RB', 'WR', 'TE'].filter(function (p) { return d.pos[p]; })
-      .map(function (p) { return p + ' ' + d.pos[p]; }).join(' · ');
+      .map(function (p) { return p + ' ' + d.pos[p]; }).join(' \u00b7 ');
     h += '<div class="rk-bd-figs">'
-      + '<span class="rk-bd-fig"><b>$' + d.total + '</b><i>' + d.n + (d.n === 1 ? ' target at $' : ' targets at $') + d.gasto
+      + '<span class="rk-bd-fig"><b>$' + d.total + '</b><i>cheapest plan: ' + d.n
+      + (d.n === 1 ? ' target at $' : ' targets at $') + d.gasto
       + ', ' + d.huecos + (d.huecos === 1 ? ' spot at $1' : ' spots at $1') + '</i></span>'
       + '<span class="rk-bd-fig rk-bd-left"><b>' + (d.left < 0 ? '-$' + Math.abs(d.left) : '$' + d.left) + '</b>'
       + '<i>' + (d.over ? 'past your $' + cfg.budget : 'left of $' + cfg.budget) + '</i></span>'
       + (posTxt ? '<span class="rk-bd-pos">' + posTxt + '</span>' : '')
       + '</div>';
+    // Quien entra en ese plan, con su hueco delante: es la lista que se lleva
+    // a la sala, no una suma abstracta.
+    if (d.pick.length) {
+      h += '<div class="rk-bd-plan">' + d.pick.map(function (q) {
+        return '<span class="rk-bd-slot"><b>' + q.slot + '</b> ' + tmrEsc(tmrCorto(q.x.r.name))
+          + ' <em>$' + q.x.pay + '</em></span>';
+      }).join('') + '</div>';
+    }
     if (d.over) {
-      h += '<div class="rk-bd-warn">This plan does not fill ' + cfg.rounds + ' spots with $' + cfg.budget
-        + '. Drop a target or lower a price.</div>';
+      h += '<div class="rk-bd-warn">Even the cheapest plan from your targets does not fill ' + cfg.rounds
+        + ' spots with $' + cfg.budget + '. Drop a target or lower a price.</div>';
     }
     if (d.faltaN) {
-      h += '<div class="rk-bd-warn is-soft">Starters still open: '
+      h += '<div class="rk-bd-warn is-soft">No target for '
         + ['QB', 'RB', 'WR', 'TE', 'FLEX'].filter(function (ps) { return d.falta[ps]; })
-          .map(function (ps) { return d.falta[ps] + ' ' + ps; }).join(' · ')
-        + '. K and DEF go for $1 at the end.</div>';
+          .map(function (ps) { return d.falta[ps] + ' ' + ps; }).join(' \u00b7 ')
+        + ': $1 filler. K and DEF go for $1 at the end.</div>';
     }
     if (d.sinPrecio) {
       h += '<div class="rk-bd-warn is-soft">' + d.sinPrecio
-        + (d.sinPrecio === 1 ? ' target has no room price yet and is not in the total.'
-          : ' targets have no room price yet and are not in the total.') + '</div>';
+        + (d.sinPrecio === 1 ? ' target has no room price yet and is not in the plan.'
+          : ' targets have no room price yet and are not in the plan.') + '</div>';
+    }
+    // La suma de TODO, en gris y en su sitio: es informacion, no una alarma.
+    // Nunca se van a comprar los 29, y decirlo en rojo era mentir dos veces.
+    if (d.allN > d.n) {
+      h += '<div class="rk-bd-all">All ' + d.allN + ' targets would cost $' + d.allGasto
+        + '; you will land a few.</div>';
     }
   }
   if (TMR.seedMissing && TMR.seedMissing.length) {
@@ -1103,7 +1152,6 @@ function tmrBuildPaint() {
   el.hidden = false;
   el.innerHTML = h;
 }
-
 function tmrEsc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -1138,7 +1186,7 @@ function tmrMove(i, dir) {
 function tmrEditPrice(id) {
   var cell = document.querySelector('#rk-body .rk-pay[data-id="' + String(id).replace(/"/g, '') + '"]');
   if (!cell) return;
-  var cur = tmrCeilOf(id);   // se edita desde el techo, que es lo que se ve
+  var cur = tmrPriceOf(id);  // se edita desde el expect, que es la cifra que se ve
   var tope = (TMR.room ? TMR.room.budget : 200);
   TMR._edit = id;
   TMR._cancel = false;
@@ -2375,7 +2423,7 @@ function tmrSheetPaint() {
     + '</div></div>';
 
   h += '<div class="rk-sh-plan"><div class="rk-sh-plan-k">The plan</div><div class="rk-sh-plan-f">'
-    + '<span><b>$' + p.total + '</b><i>' + p.n + (p.n === 1 ? ' target at $' : ' targets at $') + p.gasto
+    + '<span><b>$' + p.total + '</b><i>cheapest plan: ' + p.n + (p.n === 1 ? ' target at $' : ' targets at $') + p.gasto
     + ', ' + p.huecos + (p.huecos === 1 ? ' spot at $1' : ' spots at $1') + '</i></span>'
     + '<span><b>' + (p.left < 0 ? '-$' + Math.abs(p.left) : '$' + p.left) + '</b><i>'
     + (p.over ? 'past your $' + cfg.budget : 'left of $' + cfg.budget) + '</i></span>'
@@ -2383,10 +2431,14 @@ function tmrSheetPaint() {
   if (!p.n) {
     h += '<div class="rk-sh-note">No targets yet. Mark the players you actually want in the list and they show up here.</div>';
   } else if (p.faltaN) {
-    h += '<div class="rk-sh-note">Starters still open: '
+    h += '<div class="rk-sh-note">No target for '
       + ['QB', 'RB', 'WR', 'TE', 'FLEX'].filter(function (ps) { return p.falta[ps]; })
         .map(function (ps) { return p.falta[ps] + ' ' + ps; }).join(' · ')
-      + '. K and DEF go for $1 at the end.</div>';
+      + ': $1 filler. K and DEF go for $1 at the end.</div>';
+  }
+  if (p.allN > p.n) {
+    h += '<div class="rk-sh-note is-quiet">All ' + p.allN + ' targets would cost $' + p.allGasto
+      + '; you will land a few.</div>';
   }
   // Los hallazgos de mercado suben al plan: son lo que de verdad decide la
   // subasta, y en una hoja de cuatro secciones se pierden si viven abajo.
@@ -2400,7 +2452,8 @@ function tmrSheetPaint() {
     h += '</ul></div>';
   }
   if (p.over) {
-    h += '<div class="rk-sh-warn">This plan does not fill ' + cfg.rounds + ' spots with $' + cfg.budget + '.</div>';
+    h += '<div class="rk-sh-warn">Even the cheapest plan from your targets does not fill ' + cfg.rounds
+      + ' spots with $' + cfg.budget + '.</div>';
   }
   if (d.sinCortes) {
     h += '<div class="rk-sh-note" id="rk-sh-notiers">No tier breaks yet, so this sheet cannot tell you who is'
@@ -2432,8 +2485,8 @@ function tmrSheetPaint() {
           + '</span>'
           + '<span class="rk-sh-tm">' + tmrEsc(x.r.team || 'FA') + '</span>'
           + '<span class="rk-sh-pay">' + (x.pay == null ? '$-'
-            : '$' + x.pay + '<i>' + (x.target && esperar != null ? 'expect $' + esperar + ', ' : '')
-              + 'up to $' + (tmrCeilOf(x.r.id) || x.pay) + '</i>') + '</span></li>';
+            : '$' + x.pay + '<i>expect $' + x.pay
+              + ', up to $' + (tmrCeilOf(x.r.id) || x.pay) + '</i>') + '</span></li>';
       });
       h += '</ul>';
       if (t.deal) {
