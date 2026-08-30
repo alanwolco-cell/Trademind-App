@@ -2291,6 +2291,34 @@ function tmrSheetData() {
     });
     secciones.push({ pos: pos, tiers: tiers, sinCortes: nT < 2 });
   });
+
+  /* PREFERENCIA Y OBJETIVO SON DOS COSAS DISTINTAS. Regla del dueno, dictada el
+   * 2026-08-29 sobre sus QB: Allen y Lamar le parecen mejores y van arriba en su
+   * tier, pero NO pagaria por ellos; los que le gustan y por los que si paga son
+   * Herbert, Lawrence, Caleb Williams y Burrow, que estan un tier mas abajo.
+   * O sea: el tier dice a quien prefiere, el objetivo dice a quien le da su
+   * dinero, y meterlos en la misma escala fue el error que el corrigio.
+   * El juego infiere los tiers; los objetivos los marca el a mano.
+   *
+   * Aqui no se nombra a nadie: se DERIVA. Quien esta en un tier mejor que el
+   * mejor de sus objetivos de esa posicion, y no es objetivo, lleva la nota.
+   * Si nunca marco un objetivo en esa posicion no hay nada que decir y calla. */
+  secciones.forEach(function (s2) {
+    var mejorObj = null;
+    s2.tiers.forEach(function (t) {
+      t.men.forEach(function (x) {
+        if (x.target && (mejorObj == null || t.tier < mejorObj)) mejorObj = t.tier;
+      });
+    });
+    s2.objetivos = [];
+    s2.tiers.forEach(function (t) {
+      t.men.forEach(function (x) {
+        if (x.target) s2.objetivos.push(x);
+        else if (mejorObj != null && t.tier < mejorObj) x.sinPagar = true;
+      });
+    });
+    s2.mejorObj = mejorObj;
+  });
   var market = [];
   secciones.forEach(function (s2) {
     s2.tiers.forEach(function (t) {
@@ -2339,7 +2367,8 @@ function tmrSheetPaint() {
     + '<div><b>Auction cheat sheet</b><span id="rk-sh-liga">' + tmrEsc(sala) + '</span>'
     + '<span>' + tmrEsc(linea2) + '</span>'
     + '<span class="rk-sh-regla">Prices are what the room pays.'
-    + ' Your ranking decides who to chase, never how much to pay.</span></div>'
+    + ' Your ranking decides who to chase, never how much to pay.'
+    + ' Your tiers are preference; your targets are who gets the money.</span></div>'
     + '<div class="rk-sh-top-b">'
     + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrSheetPrint()">Print</button>'
     + '<button type="button" class="rk-btn rk-btn-quiet" onclick="tmrSheetClose()">Close</button>'
@@ -2394,11 +2423,17 @@ function tmrSheetPaint() {
       }
       h += '<div class="rk-sh-tier"><div class="rk-sh-tk">Tier ' + t.tier + tmrEsc(rango) + '</div><ul class="rk-sh-ul">';
       t.men.forEach(function (x) {
+        /* En un objetivo la cifra que decide es la de la SALA: es lo que hay
+         * que llevar preparado. El techo sigue al lado, que es donde para. */
+        var esperar = (x.mercado != null) ? x.mercado : x.pay;
         h += '<li class="rk-sh-li' + (x.target ? ' is-target' : '') + '">'
-          + '<span class="rk-sh-nm">' + tmrEsc(x.r.name) + '</span>'
+          + '<span class="rk-sh-nm">' + tmrEsc(x.r.name)
+          + (x.sinPagar ? '<em class="rk-sh-np">you rank him higher but would not pay for him</em>' : '')
+          + '</span>'
           + '<span class="rk-sh-tm">' + tmrEsc(x.r.team || 'FA') + '</span>'
           + '<span class="rk-sh-pay">' + (x.pay == null ? '$-'
-            : '$' + x.pay + '<i>up to $' + (tmrCeilOf(x.r.id) || x.pay) + '</i>') + '</span></li>';
+            : '$' + x.pay + '<i>' + (x.target && esperar != null ? 'expect $' + esperar + ', ' : '')
+              + 'up to $' + (tmrCeilOf(x.r.id) || x.pay) + '</i>') + '</span></li>';
       });
       h += '</ul>';
       if (t.deal) {

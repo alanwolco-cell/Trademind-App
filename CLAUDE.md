@@ -1233,3 +1233,19 @@ Archivos: `public/rankings.js` (`tmrTiersInfer` reescrito, `_tmrPosSolve` nuevo,
 `.rk-tier-none`), `server/routes/perfil.js` (`breaksPos` en la validacion de forma),
 `scripts/qa-rankings.mjs`, `scripts/fixtures/rankings-owner-2026-08-29.json` y
 `scripts/fixtures/tiers-expected-2026-08-29.json` (nuevos).
+
+### Correccion del dueno sobre sus QB (2026-08-30): preferencia y objetivo son cosas distintas
+Dictado suyo: Allen y Lamar le parecen mejores y van arriba en su tier, pero **NO pagaria
+por ellos**. Los que le gustan y por los que si paga son Herbert, Lawrence, Caleb Williams
+y Burrow, que estan un tier mas abajo. O sea: **el tier dice a quien prefiere, el objetivo
+dice a quien le da su dinero**, y meterlos en la misma escala era el error. El juego
+infiere los tiers; los objetivos los marca el a mano.
+
+En la cheat sheet, DERIVADO y sin nombrar a nadie en el codigo: quien esta en un tier mejor
+que el mejor de sus objetivos de esa posicion, y no es objetivo, lleva en su fila la nota
+"you rank him higher but would not pay for him". Sus objetivos declaran ademas
+"expect $N" con el precio de SALA, que es lo que hay que llevar preparado. Si en una
+posicion no marco ningun objetivo no hay con que comparar y la hoja calla.
+
+Gate: 138 checks (H11, H12 y H13 nuevos). Verificado que los tres fallan contra 6628ab1.
+Cache-bust 2026082809.

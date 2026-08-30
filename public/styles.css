@@ -2528,6 +2528,11 @@ html{scroll-padding-top:76px}
 .rk-sh-li{display:grid;grid-template-columns:minmax(0,1fr) 32px 72px;gap:8px;align-items:baseline;
   padding:3px 0;font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04)}
 .rk-sh-nm{min-width:0;overflow-wrap:break-word}
+/* La nota va DEBAJO del nombre, no al lado: la rejilla de la fila tiene tres
+   columnas fijas y meterla en la del nombre la partiria letra a letra, que es
+   el mismo fallo que ya arreglamos en el tablero de subasta. */
+.rk-sh-np{display:block;font-style:normal;font-weight:600;font-size:9.5px;
+  color:var(--muted);letter-spacing:.01em;line-height:1.3;margin-top:1px}
 .rk-sh-tm{font-size:10.5px;color:var(--muted);letter-spacing:.02em}
 .rk-sh-pay{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25}
 .rk-sh-pay i{display:block;font-style:normal;font-weight:600;font-size:9.5px;color:var(--muted);letter-spacing:.01em}

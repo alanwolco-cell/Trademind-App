@@ -1819,6 +1819,62 @@ console.log('\n=== Cheat Sheet ===');
     && (hoja.mkData || []).some(g => g.indexOf(arm.swift.nm) >= 0)
     && !/reach|above value|overpay/i.test(String(hoja.cab || '') + ' ' + (hoja.deals || []).join(' ') + ' ' + (hoja.gaps || []).join(' ')),
     JSON.stringify({ marcados: hoja.market, mkData: (hoja.mkData || []).slice(0, 3) }));
+  /* PREFERENCIA vs OBJETIVO. Regla que el dueno dicto sobre sus QB el
+   * 2026-08-29: Allen y Lamar le parecen mejores y van arriba en su tier, pero
+   * NO pagaria por ellos. La hoja tiene que decirlo en la fila del jugador, y
+   * tiene que DERIVARLO de sus tiers y sus objetivos, sin nombrar a nadie.
+   * Se arma el caso con QB, que es donde el lo dicto: se corta el QB1 solo en
+   * su tier y se marca objetivo a uno de mas abajo. */
+  const prefT = await eva(pg, () => {
+    TMR.target = {};
+    const qbs = TMR.rows.filter(r => r.pos === 'QB');
+    if (qbs.length < 6) return { falta: qbs.length };
+    TMR.breakPos.QB = {};
+    tmrBreakSet('QB')[qbs[0].id] = true;     // QB1 solo en su tier
+    tmrBreakSet('QB')[qbs[3].id] = true;
+    TMR.target[qbs[2].id] = true;            // el objetivo vive en el tier 2
+    tmrSave(); tmrPaint(); tmrSheetPaint();
+    const d = tmrSheetData();
+    const sec = d.secciones.filter(x => x.pos === 'QB')[0];
+    const marcados = [];
+    sec.tiers.forEach(t => t.men.forEach(x => { if (x.sinPagar) marcados.push(x.r.name); }));
+    const li = Array.from(document.querySelectorAll('#rk-sheet .rk-sh-sec')).filter(
+      x => /^QB/.test(x.textContent))[0];
+    const notas = li ? Array.from(li.querySelectorAll('.rk-sh-np')).map(x => x.textContent.trim()) : [];
+    const expect = li ? Array.from(li.querySelectorAll('.rk-sh-li.is-target .rk-sh-pay i')).map(x => x.textContent.trim()) : [];
+    return {
+      mejorObj: sec.mejorObj, objetivos: sec.objetivos.map(x => x.r.name),
+      marcados, qb1: qbs[0].name, qb3: qbs[2].name, notas, expect,
+      // el objetivo NO lleva la nota, y el que esta POR DEBAJO tampoco
+      objetivoMarcado: marcados.indexOf(qbs[2].name) >= 0,
+      abajoMarcado: marcados.indexOf(qbs[4].name) >= 0
+    };
+  });
+  ok('(H11) preferencia y objetivo son cosas distintas: el que rankea mas alto y no pagaria lo lleva escrito en su fila',
+    !prefT._err && !prefT.falta && prefT.mejorObj === 2
+    && prefT.marcados.length === 1 && prefT.marcados[0] === prefT.qb1
+    && prefT.notas.length === 1
+    && /you rank him higher but would not pay for him/.test(prefT.notas[0] || '')
+    && prefT.objetivoMarcado === false && prefT.abajoMarcado === false,
+    JSON.stringify(prefT));
+  ok('(H12) el objetivo declara lo que la SALA cobra, que es lo que hay que llevar preparado',
+    !prefT._err && prefT.expect.length === 1 && /^expect \$\d+, up to \$\d+$/.test(prefT.expect[0] || ''),
+    JSON.stringify({ expect: prefT.expect, objetivos: prefT.objetivos }));
+  // CONTROL NEGATIVO: sin un objetivo en esa posicion no hay con que comparar,
+  // asi que la hoja calla. Sin esto, H11 pasaria aunque la nota se pintara
+  // en todo el que este en el tier 1.
+  const prefN = await eva(pg, () => {
+    TMR.target = {};
+    tmrSave(); tmrPaint(); tmrSheetPaint();
+    const d = tmrSheetData();
+    const sec = d.secciones.filter(x => x.pos === 'QB')[0];
+    let n = 0;
+    sec.tiers.forEach(t => t.men.forEach(x => { if (x.sinPagar) n++; }));
+    return { n, mejorObj: sec.mejorObj, enDom: document.querySelectorAll('#rk-sheet .rk-sh-np').length };
+  });
+  ok('(H13) CONTROL NEGATIVO: sin objetivos en esa posicion no hay nada que comparar y la hoja calla',
+    !prefN._err && prefN.n === 0 && prefN.mejorObj === null && prefN.enDom === 0, JSON.stringify(prefN));
+
   ok('(H6) consola limpia con la hoja abierta', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.close();
 }
