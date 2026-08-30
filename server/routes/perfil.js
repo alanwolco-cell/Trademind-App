@@ -386,7 +386,10 @@ router.put('/rankings', async (req, res) => {
       }
     }
   }
-  for (const k of ['prices', 'targets', 'pref', 'breaks']) {
+  // `breaksPos` son los cortes de tier POR POSICION ({RB:[ids],...}); `breaks`
+  // es el formato viejo, de la lista mezclada, y se sigue aceptando para no
+  // romper un documento guardado antes del 2026-08-29.
+  for (const k of ['prices', 'targets', 'pref', 'breaks', 'breaksPos']) {
     if (doc[k] != null && typeof doc[k] !== 'object') return res.status(400).json({ error: '`' + k + '` must be an object or array.' });
   }
   const updatedAt = Number(doc.updatedAt) || Date.now();

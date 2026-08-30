@@ -32,6 +32,7 @@ var LV = {
   mine: {},        // id -> valor en dolares SEGUN MI lista
   manual: {},      // id -> precio que el dueno ESCRIBIO en My Rankings
   myRank: {},      // id -> mi puesto
+  myTier: {},      // id -> mi tier DENTRO de su posicion (del Tier Game)
   idx: null,       // [{k:nombre normalizado, p:jugador}] para busqueda instantanea
   peso: 0.5,       // cuanto mandan mis rankings frente al mercado (0..1)
   loveP: 0.15,     // Love: pago hasta un 15% por encima de mi numero
@@ -167,7 +168,7 @@ function lvOne(q) { var r = lvFind(q); return r.length ? r[0] : null; }
  * quien no este en ella no se le aplica NADA (se queda con el mercado puro),
  * en vez de castigarlo por ausencia. */
 function lvMisValores() {
-  LV.mine = {}; LV.myRank = {}; LV.manual = {};
+  LV.mine = {}; LV.myRank = {}; LV.manual = {}; LV.myTier = {};
   // EL PRECIO ESCRITO A MANO, primero y aparte. No depende de que la lista
   // este cargada ni de la casilla "Use in mock drafts": escribir "$70 por
   // Gibbs" en My Rankings es una decision tomada, no una opinion que haya que
@@ -183,11 +184,18 @@ function lvMisValores() {
   var curva = Object.keys(AU.val || {}).map(function (k) { return AU.val[k]; })
     .sort(function (a, b) { return b - a; });
   if (!curva.length) return 0;
+  /* SUS tiers, los del Tier Game, por posicion. "El ultimo RB de tu tier" es
+   * su frase y son sus tiers los que la vuelven cierta: los del motor salen del
+   * salto de valor del mercado, que es otra cosa. Si nunca corto una posicion,
+   * ahi no hay tier suyo y el consejo cae al del motor. */
+  var mapaT = null;
+  try { if (window.tmrTierMap && window.tmrBreaksCount && tmrBreaksCount() > 0) mapaT = tmrTierMap(TMR.rows); } catch (_) { }
   var n = 0;
   TMR.rows.forEach(function (r, i) {
     var p = lvOne(r.name);
     if (!p) return;                       // vendido ya, o fuera del pool de la sala
     LV.myRank[p.id] = i + 1;
+    if (mapaT && mapaT.tier[r.id] != null) LV.myTier[p.id] = mapaT.tier[r.id];
     LV.mine[p.id] = curva[Math.min(i, curva.length - 1)];
     if (man && man[r.id] != null) LV.manual[p.id] = man[r.id];
     n++;
@@ -313,12 +321,17 @@ function lvAdvice(p, c, read) {
   if (sl <= 0) return '';
   var ros = {}; (MD.mine || []).forEach(function (x) { ros[x.pos] = (ros[x.pos] || 0) + 1; });
 
-  // cuantos quedan vivos de SU tier, en su posicion
-  var quedan = 0, tier = MD.tierOf && MD.tierOf[p.id];
+  /* Cuantos quedan vivos de SU tier, en su posicion. Mandan los tiers del Tier
+   * Game (LV.myTier), que son suyos y ya son por posicion; los del motor
+   * (MD.tierOf) son el respaldo para las posiciones que nunca corto. Mezclar
+   * los dos mapas en la misma cuenta daria un tier que no es de nadie, asi que
+   * se elige uno y se cuenta entero con ese. */
+  var mapa = (LV.myTier && LV.myTier[p.id] != null) ? LV.myTier : (MD.tierOf || {});
+  var quedan = 0, tier = mapa[p.id];
   if (tier) {
     var tk = {}; (MD.picks || []).forEach(function (k) { if (k && k.p) tk[k.p.id] = 1; });
     quedan = MD.pool.filter(function (x) {
-      return !tk[x.id] && x.pos === p.pos && MD.tierOf[x.id] === tier;
+      return !tk[x.id] && x.pos === p.pos && mapa[x.id] === tier;
     }).length;
   }
 

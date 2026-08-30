@@ -19,7 +19,15 @@
 var TMR = {
   fmt: 'ppr',
   rows: [],        // [{id,name,pos,team,adp,adpRank}]
-  breakAfter: {},  // id -> true: despues de este jugador se corta el tier
+  /* Los cortes viven POR POSICION: pos -> { id: true }, "dentro de esta
+   * posicion, despues de este jugador se corta". Un tier mezclado (el RB4 y el
+   * WR9 juntos) no significa nada en una subasta; el escalon que decide si te
+   * quemas la plata es el que hay entre el RB4 y el RB5. */
+  breakPos: {},
+  // cuantos cortes GENERALES trae un documento viejo. No se convierten (un
+  // corte de la lista mezclada no dice donde cae el de cada posicion): se
+  // cuentan para poder DECIRLO en pantalla en vez de aparentar cero tiers.
+  legacyBreaks: 0,
   filter: 'ALL',
   q: '',
   loaded: false,
@@ -74,13 +82,59 @@ function _tmrNorm(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
 }
 
+/* Los cortes de una posicion, creando el cajon si hace falta. */
+function tmrBreakSet(pos) {
+  if (!TMR.breakPos[pos]) TMR.breakPos[pos] = {};
+  return TMR.breakPos[pos];
+}
+function tmrIsBreak(r) {
+  return !!(r && TMR.breakPos[r.pos] && TMR.breakPos[r.pos][r.id]);
+}
+/* Para guardar: { RB: [ids], WR: [ids] ... }, sin cajones vacios. */
+function tmrBreaksOut() {
+  var out = {};
+  Object.keys(TMR.breakPos || {}).forEach(function (pos) {
+    var ids = Object.keys(TMR.breakPos[pos]).filter(function (k) { return TMR.breakPos[pos][k]; });
+    if (ids.length) out[pos] = ids;
+  });
+  return out;
+}
+function tmrBreaksIn(obj) {
+  TMR.breakPos = {};
+  if (!obj || typeof obj !== 'object') return;
+  Object.keys(obj).forEach(function (pos) {
+    (obj[pos] || []).forEach(function (id) { tmrBreakSet(pos)[id] = true; });
+  });
+}
+function tmrBreaksCount() {
+  var n = 0;
+  Object.keys(TMR.breakPos || {}).forEach(function (pos) {
+    n += Object.keys(TMR.breakPos[pos]).filter(function (k) { return TMR.breakPos[pos][k]; }).length;
+  });
+  return n;
+}
+/* El mapa de tiers de la lista actual, recorrida UNA vez: a que tier pertenece
+ * cada jugador DENTRO de su posicion, y su rank por posicion. Los dos cuentan
+ * desde el principio de MI lista, no del consenso. */
+function tmrTierMap(rows) {
+  var tier = {}, posRk = [], cuenta = {}, tAct = {};
+  (rows || []).forEach(function (r, i) {
+    cuenta[r.pos] = (cuenta[r.pos] || 0) + 1;
+    posRk[i] = cuenta[r.pos];
+    if (tAct[r.pos] == null) tAct[r.pos] = 1;
+    tier[r.id] = tAct[r.pos];
+    if (tmrIsBreak(r)) tAct[r.pos]++;
+  });
+  return { tier: tier, posRk: posRk };
+}
+
 /* ── persistencia ───────────────────────────────────────────────────────── */
 function tmrSave() {
   try {
     localStorage.setItem(TMR_KEY, JSON.stringify({
       fmt: TMR.fmt,
       order: TMR.rows.map(function (r) { return r.id; }),
-      breaks: Object.keys(TMR.breakAfter).filter(function (k) { return TMR.breakAfter[k]; }),
+      breaksPos: tmrBreaksOut(),
       updated: Date.now()
     }));
   } catch (_) { /* modo privado: la sesion sigue funcionando en memoria */ }
@@ -439,8 +493,10 @@ async function renderRankings() {
     });
     list.forEach(function (r) { if (!seen[r.id]) out.push(r); });
     list = out;
-    TMR.breakAfter = {};
-    (saved.breaks || []).forEach(function (id) { TMR.breakAfter[id] = true; });
+    tmrBreaksIn(saved.breaksPos);
+    // Los cortes viejos, los de la lista mezclada, NO se convierten: no hay
+    // manera honesta de repartirlos por posicion. Se cuentan para decirlo.
+    TMR.legacyBreaks = (!saved.breaksPos && Array.isArray(saved.breaks)) ? saved.breaks.length : 0;
   }
 
   TMR.rows = list;
@@ -528,7 +584,7 @@ function tmrSyncDoc() {
     v: 1,
     fmt: TMR.fmt || (saved && saved.fmt) || null,
     order: order || [],
-    breaks: Object.keys(TMR.breakAfter || {}).filter(function (k) { return TMR.breakAfter[k]; }),
+    breaksPos: tmrBreaksOut(),
     prices: TMR.manual,
     targets: Object.keys(TMR.target).filter(function (k) { return TMR.target[k]; }),
     // Las respuestas del Tier Game viajan enteras, no el resultado inferido:
@@ -558,7 +614,7 @@ function tmrSyncApply(doc) {
   if (!doc || typeof doc !== 'object') return;
   try {
     if (Array.isArray(doc.order) && doc.order.length) {
-      localStorage.setItem(TMR_KEY, JSON.stringify({ fmt: doc.fmt || TMR.fmt, order: doc.order, breaks: doc.breaks || [], updated: Date.now() }));
+      localStorage.setItem(TMR_KEY, JSON.stringify({ fmt: doc.fmt || TMR.fmt, order: doc.order, breaksPos: doc.breaksPos || {}, breaks: doc.breaks || [], updated: Date.now() }));
     }
     localStorage.setItem(TMR_PLAN_KEY, JSON.stringify({ prices: doc.prices || {}, targets: doc.targets || [], updated: Date.now() }));
     if (doc.pref && typeof doc.pref === 'object') {
@@ -591,8 +647,8 @@ function tmrSyncApply(doc) {
     TMR.rows.forEach(function (r) { if (!seen[r.id]) out.push(r); });
     TMR.rows = out;
     TMR._idx = null; TMR._idxN = -1;
-    TMR.breakAfter = {};
-    (doc.breaks || []).forEach(function (id) { TMR.breakAfter[id] = true; });
+    tmrBreaksIn(doc.breaksPos);
+    TMR.legacyBreaks = (!doc.breaksPos && Array.isArray(doc.breaks)) ? doc.breaks.length : 0;
   }
 }
 
@@ -824,20 +880,38 @@ function tmrPaint() {
   // pertenece cada jugador, y cuantos VISIBLES tiene ese tier. El conteo va
   // sobre lo visible a proposito: con un filtro puesto, decir "12 players"
   // encima de tres filas seria mentir.
-  var visible = [], tierDe = [], posRk = [], cuenta = {}, porTier = {}, t = 1, shown = 0;
+  var M = tmrTierMap(TMR.rows), posRk = M.posRk;
+  var visible = [], tierDe = [], porTier = {}, shown = 0, conCortes = {};
+  for (i = 0; i < TMR.rows.length; i++) if (tmrIsBreak(TMR.rows[i])) conCortes[TMR.rows[i].pos] = 1;
+  /* Quien no entro en NINGUNA pareja del juego no tiene tier: meterlo en el de
+   * al lado seria afirmar algo que el dueno no dijo. Se marca y se agrupa
+   * aparte, al final de su posicion, que es donde lo deja el juego. Solo cuenta
+   * dentro del universo del juego (los primeros TMR_TIER_POS_N de su posicion):
+   * mas abajo nadie espera tiers. */
+  var conResp = {}, noComp = [], cntPos = {};
+  (TMR.game || []).forEach(function (a) { conResp[a.a] = 1; conResp[a.b] = 1; });
   for (i = 0; i < TMR.rows.length; i++) {
     r = TMR.rows[i];
-    cuenta[r.pos] = (cuenta[r.pos] || 0) + 1;
-    posRk[i] = cuenta[r.pos];
-    tierDe[i] = t;
+    cntPos[r.pos] = (cntPos[r.pos] || 0) + 1;
+    noComp[i] = !!conCortes[r.pos] && !conResp[r.id] && cntPos[r.pos] <= TMR_TIER_POS_N;
+  }
+  for (i = 0; i < TMR.rows.length; i++) {
+    r = TMR.rows[i];
+    tierDe[i] = M.tier[r.id] || 1;
     var pasa = (TMR.filter === 'ALL' || r.pos === TMR.filter)
       && (!q || _tmrNorm(r.name).indexOf(q) >= 0 || _tmrNorm(r.team).indexOf(q) >= 0);
     visible[i] = pasa;
-    if (pasa) { shown++; porTier[t] = (porTier[t] || 0) + 1; }
-    if (TMR.breakAfter[r.id]) t++;
+    // El conteo de la banda va por POSICION Y tier, y solo sobre lo visible:
+    // con un filtro puesto, decir "12 players" encima de tres filas seria
+    // mentir.
+    if (pasa) { shown++; var kk = r.pos + '|' + (noComp[i] ? 'none' : tierDe[i]); porTier[kk] = (porTier[kk] || 0) + 1; }
   }
+  /* Las bandas solo se pintan con una posicion filtrada. En "All" la lista
+   * mezcla posiciones y una banda partiria el tier de RBs en pedazos con WRs
+   * en medio: ahi el tier va como etiqueta en cada fila. */
+  var conBandas = (TMR.filter !== 'ALL');
 
-  var html = '', ultimoTier = 0;
+  var html = '', ultimoTier = null;
   for (i = 0; i < TMR.rows.length; i++) {
     if (!visible[i]) continue;
     r = TMR.rows[i];
@@ -845,11 +919,13 @@ function tmrPaint() {
     // El rotulo del tier se pinta ANTES de su primera fila visible, no despues
     // del corte: asi un filtro que vacia un tier entero no deja el rotulo
     // huerfano colgando de nada.
-    if (tierDe[i] !== ultimoTier) {
-      ultimoTier = tierDe[i];
-      var n = porTier[ultimoTier] || 0;
-      html += '<div class="rk-tier' + (html ? '' : ' rk-tier-first') + '">'
-        + '<span class="rk-tier-n">Tier ' + ultimoTier + '</span>'
+    var claveT = noComp[i] ? 'none' : tierDe[i];
+    if (conBandas && claveT !== ultimoTier) {
+      ultimoTier = claveT;
+      var n = porTier[r.pos + '|' + claveT] || 0;
+      html += '<div class="rk-tier' + (html ? '' : ' rk-tier-first')
+        + (claveT === 'none' ? ' rk-tier-none' : '') + '">'
+        + '<span class="rk-tier-n">' + r.pos + (claveT === 'none' ? ' not compared yet' : ' Tier ' + claveT) + '</span>'
         + '<span class="rk-tier-c">' + n + (n === 1 ? ' player' : ' players') + '</span>'
         + '</div>';
     }
@@ -865,7 +941,12 @@ function tmrPaint() {
       + '<span class="rk-num">' + mine + '</span>'
       + '<span class="rk-pic rk-ring-' + r.pos + '"><img src="https://sleepercdn.com/content/nfl/players/thumb/'
       + tmrEsc(r.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></span>'
-      + '<span class="rk-name">' + tmrEsc(r.name) + '</span>'
+      + '<span class="rk-name">' + tmrEsc(r.name)
+      + (noComp[i]
+        ? '<span class="rk-ttag rk-ttag-none">not compared yet</span>'
+        : (!conBandas && conCortes[r.pos]
+          ? '<span class="rk-ttag">' + r.pos + ' T' + tierDe[i] + '</span>' : ''))
+      + '</span>'
       + '<span class="rk-nums">'
       + '<span class="rk-team">' + (r.team ? tmrEsc(r.team) : 'FA') + '</span>'
       + '<span class="rk-posrank rk-' + r.pos + '"><span class="rk-pos">' + r.pos + '</span>'
@@ -879,7 +960,7 @@ function tmrPaint() {
       + '<span class="rk-acts">'
       + '<button type="button" class="rk-ib" title="Move up" aria-label="Move up ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',-1)">' + TMR_SVG_UP + '</button>'
       + '<button type="button" class="rk-ib" title="Move down" aria-label="Move down ' + tmrEsc(r.name) + '" onclick="tmrMove(' + i + ',1)">' + TMR_SVG_DOWN + '</button>'
-      + '<button type="button" class="rk-ib rk-cut' + (TMR.breakAfter[r.id] ? ' on' : '') + '" title="Tier break after this player" aria-label="Tier break after ' + tmrEsc(r.name) + '" onclick="tmrCut(\'' + r.id + '\')">' + 'TIER' + '</button>'
+      + '<button type="button" class="rk-ib rk-cut' + (tmrIsBreak(r) ? ' on' : '') + '" title="Tier break after this player, inside ' + r.pos + '" aria-label="Tier break after ' + tmrEsc(r.name) + ' inside ' + r.pos + '" onclick="tmrCut(\'' + r.id + '\')">' + 'TIER' + '</button>'
       + '</span></div>';
   }
 
@@ -892,7 +973,16 @@ function tmrPaint() {
     // Cada rotulo declara SU area, no se coloca por orden. Colocandolos por
     // orden, el envoltorio .rk-nums aportaba un hijo mas que la fila y toda la
     // cabecera salia corrida una columna a la derecha: POS encima de los ADP.
-    host.innerHTML = '<div class="rk-colhead">'
+    /* MIGRACION. Un documento viejo trae cortes de la lista MEZCLADA. No se
+     * convierten: un corte entre el RB4 y el WR9 no dice donde cae el escalon
+     * de RBs, y repartirlos por posicion seria inventarle tiers que nunca
+     * declaro. Se dice, y se dice donde estan los dos botones que lo arreglan. */
+    var aviso = (TMR.legacyBreaks > 0 && tmrBreaksCount() === 0)
+      ? '<div class="rk-legacy">Tiers are not set by position yet. Your ' + TMR.legacyBreaks
+        + ' old ' + (TMR.legacyBreaks === 1 ? 'break' : 'breaks') + ' were cut on the mixed list,'
+        + ' so they cannot say where each position steps down. Play the Tier Game or cut them here.</div>'
+      : '';
+    host.innerHTML = aviso + '<div class="rk-colhead">'
       + '<span class="rk-ch-num">Rank</span>'
       + '<span class="rk-ch-name">Player</span>'
       + '<span class="rk-ch-pr">Pos</span>'
@@ -1094,9 +1184,16 @@ function tmrToggleTarget(id) {
   tmrPlanSave();
 }
 
+/* El corte a mano. Ahora edita los cortes de SU posicion: el boton dice
+ * "despues de este RB se corta el tier de RBs", que es lo que el gesto siempre
+ * quiso decir. */
 function tmrCut(id) {
-  if (TMR.breakAfter[id]) delete TMR.breakAfter[id];
-  else TMR.breakAfter[id] = true;
+  var r = null;
+  for (var i = 0; i < TMR.rows.length; i++) if (TMR.rows[i].id === id) { r = TMR.rows[i]; break; }
+  if (!r) return;
+  var set = tmrBreakSet(r.pos);
+  if (set[id]) delete set[id];
+  else set[id] = true;
   tmrSave();
   tmrPaint();
 }
@@ -1135,7 +1232,8 @@ function tmrSearch(v) { TMR.q = v || ''; tmrPaint(); }
 function tmrReset() {
   if (!confirm('This puts the list back in consensus order and clears your tiers. It cannot be undone.')) return;
   try { localStorage.removeItem(TMR_KEY); } catch (_) { }
-  TMR.breakAfter = {};
+  TMR.breakPos = {};
+  TMR.legacyBreaks = 0;
   TMR.loaded = false;
   // Un reset es un cambio local: el servidor NO puede devolver el orden viejo
   // al recargar la lista. Se marca sucio antes y se empuja despues.
@@ -1147,11 +1245,13 @@ function tmrReset() {
  * hoja. Nada de descargas: el visor de artefactos y varios navegadores movil
  * bloquean la descarga que inicia la propia pagina. */
 function tmrExport() {
-  var out = [], tier = 1;
-  out.push('Tier 1');
+  /* Los tiers son de posicion, asi que un rotulo "Tier 3" cada tantas filas de
+   * la lista mezclada mentiria. Cada jugador lleva el suyo al lado. */
+  var out = [], M = tmrTierMap(TMR.rows), hay = {};
+  TMR.rows.forEach(function (r) { if (tmrIsBreak(r)) hay[r.pos] = 1; });
   TMR.rows.forEach(function (r, i) {
-    out.push((i + 1) + '. ' + r.name + ' (' + r.pos + (r.team ? ' ' + r.team : '') + ')');
-    if (TMR.breakAfter[r.id] && i < TMR.rows.length - 1) { tier++; out.push(''); out.push('Tier ' + tier); }
+    out.push((i + 1) + '. ' + r.name + ' (' + r.pos + (r.team ? ' ' + r.team : '') + ')'
+      + (hay[r.pos] ? ' - ' + r.pos + ' tier ' + M.tier[r.id] : ''));
   });
   var txt = out.join('\n');
   var box = document.getElementById('rk-export-box');
@@ -1403,137 +1503,227 @@ function tmrGameCycles(rows, answers, opts) {
   return out.slice(0, 6);
 }
 
-/* ── la inferencia ──────────────────────────────────────────────────────────
+/* ── la inferencia, POR POSICION ────────────────────────────────────────────
  * Funcion PURA: entran la lista, las respuestas y (opcional) los precios; sale
- * el orden, los cortes, los dos puntajes y lo que sigue sin decidir. No toca el
- * DOM ni TMR, y por eso el gate la corre con casos armados a mano. */
+ * el orden, los cortes POR POSICION, los puntajes y lo que sigue sin decidir.
+ * No toca el DOM ni TMR, y por eso el gate la corre con casos armados a mano y
+ * con el documento real del dueno.
+ *
+ * POR QUE POR POSICION, y por que el corte se mide en sus respuestas. Medido el
+ * 2026-08-29 sobre su documento real: 505 parejas contestadas (232 "same", 219
+ * "slightly", 54 "clearly") y la version anterior devolvia UN SOLO corte en
+ * toda la lista. Dos causas, las dos del mismo error de unidad:
+ *
+ *  - Cortaba sobre la lista GENERAL, mezclando posiciones. Entre dos RBs de
+ *    tiers distintos se cuelan seis WRs, asi que los vecinos casi nunca tenian
+ *    respuesta directa y la regla de vecinos no se ejercia nunca. Y un tier
+ *    mezclado no significa nada de todos modos: lo que decide una subasta es
+ *    si hay escalon entre el RB4 y el RB5, no entre el RB4 y el WR9.
+ *  - Medía el escalon en DOLARES del prior de mercado (`dinero`, `umbral`), o
+ *    sea que sus respuestas casi no decidian donde caia el corte. El mercado
+ *    arrancaba la conversacion y tambien la terminaba.
+ *
+ * Su regla, textual: "deberia haber un corte cuando digo slightly tambien", y
+ * "same" es el mismo tier. Asi que:
+ *   - respuesta DIRECTA distinta de same entre dos vecinos: corta, siempre.
+ *   - respuesta DIRECTA "same": NO corta, nunca, ni aunque el puntaje se separe.
+ *     Es la unica respuesta en la que el niega el escalon con todas las letras.
+ *   - sin respuesta directa: corta solo si el puntaje salta TMR_TIER_GAP, que
+ *     es lo unico que aqui se deduce en vez de leerse.
+ *
+ * Un jugador sobre el que no contesto NADA no entra en los tiers: queda al
+ * final de su posicion marcado "not compared yet". Colarlo en un tier seria
+ * afirmar algo que no dijo.
+ *
+ * El eje del dinero (`money`, `umbral`) sigue calculandose: ya no decide
+ * cortes, pero es lo que elige la SIGUIENTE pregunta en tmrGameNext, donde un
+ * escalon de precio si es una buena medida de cuanto esta en juego. */
+
+var TMR_TIER_POS_N = 40;    // el universo de cada posicion: sus primeros 40
+/* Los margenes van en la escala del puntaje, no en puestos: "clearly" pide el
+ * triple de separacion que "slightly". Con el prior a 0.3 por puesto, un
+ * "clearly" vale diez puestos de lista y un "slightly" algo mas de tres. */
+var TMR_M_SLIGHT = 1;
+var TMR_M_CLEAR = 3;
+var TMR_TIER_EPS = 0.02;    // el prior cede casi entero ante UNA sola respuesta
+var TMR_TIER_PRIOR = 0.3;   // su puesto de partida, en la escala del puntaje
+var TMR_TIER_ITER = 400;    // Gauss-Seidel; fijo para que dos telefonos coincidan
+var TMR_TIER_GAP = 0.7;     // sin respuesta directa, el salto que se lee como escalon
+
+/* Minimos cuadrados sobre las distancias que el declaro: se buscan los puntajes
+ * que menos contradigan a TODAS las respuestas a la vez, con un tiron debil
+ * hacia el puesto que ya tenia. Gauss-Seidel converge siempre porque el sistema
+ * es diagonalmente dominante (cada fila suma sus vecinos mas el prior). */
+function _tmrPosSolve(ids, ans) {
+  var n = ids.length, i, k, q;
+  var mg = function (v) {
+    return v === 2 ? TMR_M_CLEAR : v === 1 ? TMR_M_SLIGHT
+      : v === -1 ? -TMR_M_SLIGHT : v === -2 ? -TMR_M_CLEAR : 0;
+  };
+  var prior = [], s = [], pull = [];
+  for (i = 0; i < n; i++) { prior[i] = (n - i) * TMR_TIER_PRIOR; s[i] = prior[i]; pull[i] = []; }
+  var rel = {}, visto = {};
+  ans.forEach(function (a) {
+    var g = mg(a.v);
+    pull[a.i].push({ o: a.j, g: g });
+    pull[a.j].push({ o: a.i, g: -g });
+    rel[a.i + '>' + a.j] = g; rel[a.j + '>' + a.i] = -g;
+    visto[a.i] = 1; visto[a.j] = 1;
+  });
+  for (k = 0; k < TMR_TIER_ITER; k++) {
+    for (i = 0; i < n; i++) {
+      var num = TMR_TIER_EPS * prior[i], den = TMR_TIER_EPS, p = pull[i];
+      for (q = 0; q < p.length; q++) { num += s[p[q].o] + p[q].g; den++; }
+      s[i] = num / den;
+    }
+  }
+  // Orden por puntaje; el desempate es el puesto de partida, nunca el azar: dos
+  // jugadores declarados del mismo tier acaban con el mismo puntaje y sin
+  // desempate estable la lista bailaria en cada pintado.
+  var ord = [];
+  for (i = 0; i < n; i++) if (visto[i]) ord.push(i);
+  ord.sort(function (x, y) { return (s[y] - s[x]) || (x - y); });
+  var fuera = [];
+  for (i = 0; i < n; i++) if (!visto[i]) fuera.push(i);
+
+  var cortes = {}, tiers = [], cur = [];
+  for (k = 0; k < ord.length; k++) {
+    var x = ord[k];
+    cur.push(x);
+    if (k + 1 >= ord.length) break;
+    var y = ord[k + 1], d = rel[x + '>' + y], corta;
+    if (d === 0) corta = false;                    // lo nego con todas las letras
+    else if (d != null) corta = true;              // dijo slightly o clearly
+    else corta = (s[x] - s[y]) >= TMR_TIER_GAP;    // sin respuesta: se deduce
+    if (corta) { cortes[ids[x]] = true; tiers.push(cur); cur = []; }
+  }
+  if (cur.length) tiers.push(cur);
+
+  // Contradicciones: A > B, B > C, C > A. No es un error suyo, es lo que pasa
+  // al comparar de a dos durante media hora. Se cuentan y se muestran; no se
+  // arreglan solas ni rompen nada.
+  var contra = 0;
+  ans.forEach(function (a) {
+    var g = mg(a.v);
+    if (g !== 0 && (s[a.i] - s[a.j]) * g < 0) contra++;
+  });
+  return { s: s, ord: ord, fuera: fuera, cortes: cortes, tiers: tiers, rel: rel, contra: contra };
+}
+
 function tmrTiersInfer(rows, answers, opts) {
   opts = opts || {};
-  var n = Math.min((rows || []).length, opts.n || TMR_GAME_N);
-  var uni = (rows || []).slice(0, n);
-  var i, k, m;
-  var A = _tmrAnsIdx(uni, answers), ans = A.ans;
-  var bote = (opts.budget != null) ? opts.budget : ((TMR.room && TMR.room.budget) || 200);
+  rows = rows || [];
+  var i, k;
+  var posN = opts.posN || TMR_TIER_POS_N;
+  var bote = (opts.budget != null) ? opts.budget : ((typeof TMR !== 'undefined' && TMR.room && TMR.room.budget) || 200);
 
-  // EJE 1, el orden: prior = su puesto en la lista, margenes en puestos.
-  var initR = [], pullR = [], pullD = [], rel = {};
-  for (i = 0; i < uni.length; i++) { initR[i] = uni.length - i; pullR[i] = []; pullD[i] = []; }
-
-  // EJE 2, el corte: prior = el Pay del motor, margenes en dolares.
-  var P = _tmrPayDe(uni, opts);
-  var conDinero = P.faltan < uni.length;
-  var initD = [];
-  for (i = 0; i < uni.length; i++) {
-    // Sin precio, ese jugador se ancla donde le toque por puesto sobre la
-    // misma escala, para no arrastrar al resto hacia cero.
-    initD[i] = (P.pay[i] != null) ? P.pay[i] : (bote * 0.02 * (uni.length - i) / uni.length * 10);
+  /* ── EJE DEL DINERO ────────────────────────────────────────────────────────
+   * Ya no corta nada: alimenta a tmrGameNext, que elige la pregunta por cuanto
+   * dinero hay en juego en esa frontera. Vive sobre el universo general porque
+   * es ahi donde el juego pregunta. */
+  var uniG = rows.slice(0, Math.min(rows.length, opts.n || TMR_GAME_N));
+  var AG = _tmrAnsIdx(uniG, answers), ansG = AG.ans;
+  var P = _tmrPayDe(uniG, opts);
+  var initD = [], pullD = [];
+  for (i = 0; i < uniG.length; i++) {
+    initD[i] = (P.pay[i] != null) ? P.pay[i] : (bote * 0.02 * (uniG.length - i) / uniG.length * 10);
+    pullD[i] = [];
   }
-  var mR = function (v) {
-    return v === 2 ? TMR_G_CLEAR : v === 1 ? TMR_G_SLIGHT
-      : v === -1 ? -TMR_G_SLIGHT : v === -2 ? -TMR_G_CLEAR : 0;
-  };
   var mD = function (v) {
     var claro = bote * 0.05, poco = bote * 0.01;   // $10 y $2 en una sala de $200
     return v === 2 ? claro : v === 1 ? poco : v === -1 ? -poco : v === -2 ? -claro : 0;
   };
-  ans.forEach(function (a) {
-    var w = (a.v === 0) ? TMR_W_SAME : TMR_W_ANS;
-    var gr = mR(a.v), gd = mD(a.v);
-    pullR[a.i].push({ o: a.j, g: gr, w: w }); pullR[a.j].push({ o: a.i, g: -gr, w: w });
+  ansG.forEach(function (a) {
+    var w = (a.v === 0) ? TMR_W_SAME : TMR_W_ANS, gd = mD(a.v);
     pullD[a.i].push({ o: a.j, g: gd, w: w }); pullD[a.j].push({ o: a.i, g: -gd, w: w });
-    rel[a.i + '>' + a.j] = a.v; rel[a.j + '>' + a.i] = -a.v;
   });
-  var score = _tmrResolver(initR, pullR, TMR_ANCLA);
   var dinero = _tmrResolver(initD, pullD, TMR_ANCLA_$);
-
-  // Orden por puntaje. El desempate es el puesto de partida, nunca el azar:
-  // dos jugadores declarados del mismo tier acaban con el mismo puntaje y sin
-  // desempate estable la lista bailaria en cada pintado.
-  var ord = [];
-  for (i = 0; i < uni.length; i++) ord.push(i);
-  ord.sort(function (x, y) { return (score[y] - score[x]) || (x - y); });
-
-  /* EL CORTE. Un escalon de precio no es un numero fijo de dolares: arriba los
-   * precios estan densos ($80, $75, $68) y abajo todo el mundo vale $2. Asi
-   * que el umbral se mide contra el salto TIPICO de esta lista, con un suelo
-   * en dolares para que un pelo de diferencia nunca cuente como escalon.
-   * Un umbral fijo daba veinte tiers arriba y ninguno abajo, o al reves. */
+  var dinById = {};
+  for (i = 0; i < uniG.length; i++) dinById[uniG[i].id] = Math.round(dinero[i] * 100) / 100;
+  var ordD = [];
+  for (i = 0; i < uniG.length; i++) ordD.push(i);
+  ordD.sort(function (x, y) { return dinero[y] - dinero[x]; });
   var saltos = [];
-  for (i = 0; i + 1 < ord.length; i++) saltos.push(dinero[ord[i]] - dinero[ord[i + 1]]);
+  for (i = 0; i + 1 < ordD.length; i++) saltos.push(dinero[ordD[i]] - dinero[ordD[i + 1]]);
   var orden2 = saltos.slice().sort(function (a, b) { return a - b; });
   var mediana = orden2.length ? orden2[Math.floor(orden2.length / 2)] : 0;
   var umbral = Math.max(bote * TMR_CUT_MIN, TMR_CUT_K * Math.max(0, mediana));
 
-  var breaks = {};
-  for (i = 0; i + 1 < ord.length; i++) {
-    var x = ord[i], y = ord[i + 1], d = rel[x + '>' + y];
-    var corta;
-    if (d === 0) corta = false;                              // lo nego con todas las letras
-    else if (d != null && Math.abs(d) === 2) corta = true;   // dijo que hay escalon
-    else corta = conDinero && (dinero[x] - dinero[y] >= umbral);
-    if (corta) breaks[uni[x].id] = true;
-  }
+  /* ── EJE DE LOS TIERS, por posicion ───────────────────────────────────── */
+  var porPos = {}, ordenPos = [];
+  rows.forEach(function (r) {
+    if (!porPos[r.pos]) { porPos[r.pos] = []; ordenPos.push(r.pos); }
+    porPos[r.pos].push(r.id);
+  });
+  var byPos = {}, breaksPos = {}, tierOf = {}, byId = {}, cortesTodos = [];
+  var universo = {}, nUni = 0, contraTot = 0;
+  ordenPos.forEach(function (pos) {
+    var ids = porPos[pos].slice(0, posN);
+    if (!ids.length) return;
+    var uni = ids.map(function (id) { return { id: id }; });
+    var A = _tmrAnsIdx(uni, answers), ans = A.ans;
+    var R = _tmrPosSolve(ids, ans);
+    var t = 1;
+    R.tiers.forEach(function (g, gi) {
+      g.forEach(function (ix) { tierOf[ids[ix]] = gi + 1; });
+    });
+    R.ord.forEach(function (ix) { byId[ids[ix]] = Math.round(R.s[ix] * 1000) / 1000; });
+    breaksPos[pos] = R.cortes;
+    Object.keys(R.cortes).forEach(function (id) { cortesTodos.push(id); });
+    ids.forEach(function (id) { universo[id] = pos; });
+    nUni += ids.length;
+    contraTot += R.contra;
+    byPos[pos] = {
+      pos: pos,
+      order: R.ord.map(function (ix) { return ids[ix]; }),
+      unranked: R.fuera.map(function (ix) { return ids[ix]; }),
+      tiers: R.tiers.map(function (g) { return g.map(function (ix) { return ids[ix]; }); }),
+      answers: ans.length, contra: R.contra, n: ids.length,
+      _s: R.s, _ids: ids, _rel: R.rel, _ord: R.ord
+    };
+    t = t;
+  });
 
-  /* Las dos reglas de vecinos no bastan, y esto salio probandolo, no leyendolo.
-   * Un "clearly" entre dos jugadores que en el orden nuevo dejan de ser vecinos
-   * (se colo un tercero en medio) no cortaba en ningun sitio: el dueno declaraba
-   * un escalon y la hoja se lo tragaba. Asi que se cierra por los dos lados,
-   * sobre la pareja entera y no sobre la casilla de al lado. */
-  var lugar = {};
-  ord.forEach(function (i2, p) { lugar[i2] = p; });
-  var tramo = function (a) {
-    var p1 = lugar[a.i], p2 = lugar[a.j];
-    if (p1 == null || p2 == null) return null;
-    return { lo: Math.min(p1, p2), hi: Math.max(p1, p2) };
-  };
-  // (1) Todo "clearly" queda separado por AL MENOS un corte. Si no hay ninguno
-  //     en el tramo, se corta donde mas se separa el dinero, que es donde menos
-  //     violencia le hace al resto de la lista.
-  ans.forEach(function (a) {
-    if (Math.abs(a.v) !== 2) return;
-    var t = tramo(a);
-    if (!t) return;
-    for (var q = t.lo; q < t.hi; q++) if (breaks[uni[ord[q]].id]) return;
-    var donde = t.lo, mayor = -Infinity;
-    for (var q2 = t.lo; q2 < t.hi; q2++) {
-      var s = dinero[ord[q2]] - dinero[ord[q2 + 1]];
-      if (s > mayor) { mayor = s; donde = q2; }
+  /* El orden nuevo, ESTABLE por posicion: los RB vuelven a ocupar las plazas de
+   * RB, en su orden nuevo; los WR las de WR. Reordenar la lista general con la
+   * concatenacion de las posiciones pondria los cuarenta RBs arriba del todo, y
+   * el orden general del dueno (que mezcla posiciones a proposito) es suyo, no
+   * un derivado de esto. */
+  var cola = {};
+  Object.keys(byPos).forEach(function (pos) {
+    cola[pos] = byPos[pos].order.concat(byPos[pos].unranked);
+  });
+  var puntero = {}, orden = [], movidos = 0;
+  rows.forEach(function (r, ix) {
+    var pos = r.pos, id = r.id;
+    if (universo[id] && cola[pos]) {
+      var p = puntero[pos] || 0;
+      if (p < cola[pos].length) { id = cola[pos][p]; puntero[pos] = p + 1; }
     }
-    breaks[uni[ord[donde]].id] = true;
+    orden.push(id);
+    if (id !== r.id) movidos++;
   });
-  // (2) Un "same tier" declarado manda sobre todo lo anterior, incluido el
-  //     corte que acaba de poner la regla (1) y el que puso el prior del
-  //     mercado: es la unica respuesta en la que el dueno niega el escalon con
-  //     todas las letras, y su palabra vale mas que el precio. Por eso va la
-  //     ultima. Si el se contradice, gana lo que nego.
-  ans.forEach(function (a) {
-    if (a.v !== 0) return;
-    var t = tramo(a);
-    if (!t) return;
-    for (var q = t.lo; q < t.hi; q++) delete breaks[uni[ord[q]].id];
-  });
-  var cortes = [];
-  ord.forEach(function (i2) { if (breaks[uni[i2].id]) cortes.push(uni[i2].id); });
 
-  // Las parejas mas ambiguas: vecinas en el orden nuevo, sin respuesta directa
-  // y con el dinero justo en el umbral, que es donde una respuesta decide si
-  // hay corte o no. Son las que mas mueven el resultado.
+  /* Las parejas mas ambiguas: vecinas en el orden nuevo de SU posicion, sin
+   * respuesta directa y con el puntaje justo en el umbral de corte. Son las que
+   * mas mueve una respuesta. */
   var amb = [];
-  for (i = 0; i + 1 < ord.length; i++) {
-    var u = ord[i], w2 = ord[i + 1];
-    if (rel[u + '>' + w2] != null) continue;
-    amb.push({ a: uni[u].id, b: uni[w2].id, gap: Math.round((dinero[u] - dinero[w2]) * 100) / 100 });
-  }
-  amb.sort(function (p, q) { return Math.abs(p.gap - umbral) - Math.abs(q.gap - umbral); });
+  Object.keys(byPos).forEach(function (pos) {
+    var B = byPos[pos];
+    for (k = 0; k + 1 < B._ord.length; k++) {
+      var x = B._ord[k], y = B._ord[k + 1];
+      if (B._rel[x + '>' + y] != null) continue;
+      amb.push({ a: B._ids[x], b: B._ids[y], pos: pos, gap: Math.round((B._s[x] - B._s[y]) * 100) / 100 });
+    }
+  });
+  amb.sort(function (p, q) { return Math.abs(p.gap - TMR_TIER_GAP) - Math.abs(q.gap - TMR_TIER_GAP); });
 
-  var byId = {}, dinById = {}, orden = [];
-  ord.forEach(function (i2) { byId[uni[i2].id] = Math.round(score[i2] * 1000) / 1000; dinById[uni[i2].id] = Math.round(dinero[i2] * 100) / 100; orden.push(uni[i2].id); });
-  var movidos = 0;
-  orden.forEach(function (id, pos) { if (uni[pos] && uni[pos].id !== id) movidos++; });
   return {
-    order: orden, breaks: breaks, cuts: cortes, score: byId, money: dinById,
+    order: orden, breaksPos: breaksPos, tierOf: tierOf, byPos: byPos,
+    cuts: cortesTodos, score: byId, money: dinById,
     umbral: Math.round(umbral * 100) / 100, sinPrecio: P.faltan,
-    ambiguous: amb.slice(0, 12), moved: movidos, answers: ans.length, n: uni.length,
+    ambiguous: amb.slice(0, 12), moved: movidos, answers: ansG.length,
+    n: nUni, contra: contraTot,
     cycles: tmrGameCycles(rows, answers, opts)
   };
 }
@@ -1590,9 +1780,8 @@ function _tmrKnownFuerte(ans, i, j) {
  * cabe en la cola del banco. */
 function _tmrEscalada(uni, ans, res, opts) {
   if (!ans.length) return null;
-  var lugar = {}, tierDe = {}, t = 1, i;
+  var lugar = {}, tierDe = res.tierOf || {}, i;
   res.order.forEach(function (id, p) { lugar[id] = p; });
-  res.order.forEach(function (id) { tierDe[id] = t; if (res.breaks[id]) t++; });
   var idx = {};
   for (i = 0; i < uni.length; i++) idx[uni[i].id] = i;
   var preg = {};
@@ -1897,7 +2086,7 @@ function tmrTiersPreview() {
   var box = document.getElementById('rk-gm-prev');
   if (!box) return;
   var res = tmrTiersInfer(TMR.rows, TMR.game);
-  var antes = Object.keys(TMR.breakAfter).filter(function (k) { return TMR.breakAfter[k]; }).length;
+  var antes = tmrBreaksCount();
   var n = res.cuts.length;
   if (!res.answers) {
     box.hidden = false;
@@ -1910,9 +2099,25 @@ function tmrTiersPreview() {
     return (A ? tmrCorto(A.name) : '?') + ' vs ' + (B ? tmrCorto(B.name) : '?');
   });
   box.hidden = false;
-  box.innerHTML = '<div class="rk-gm-prev-t">This moves <b>' + res.moved + '</b> of the top ' + res.n
-    + ' and leaves <b>' + n + '</b> tier ' + (n === 1 ? 'break' : 'breaks') + ' (you have ' + antes + ' now).'
-    + ' Your order below the top ' + res.n + ' does not change.</div>'
+  /* El desglose por posicion es el resumen honesto: los tiers son de posicion,
+   * asi que un solo numero total no dice si tus RBs quedaron partidos en
+   * catorce escalones o en uno. Y los que no comparo se declaran: colarlos en
+   * un tier seria afirmar algo que no dijo. */
+  var linea = [], sinResp = 0;
+  ['QB', 'RB', 'WR', 'TE'].forEach(function (pos) {
+    var B = res.byPos[pos];
+    if (!B || !B.tiers.length) return;
+    linea.push(pos + ' ' + B.tiers.length);
+    sinResp += B.unranked.length;
+  });
+  box.innerHTML = '<div class="rk-gm-prev-t">This moves <b>' + res.moved + '</b> players'
+    + ' and leaves <b>' + n + '</b> tier ' + (n === 1 ? 'break' : 'breaks')
+    + ' (you have ' + antes + ' now). Tiers are per position: '
+    + tmrEsc(linea.join(', ')) + '.</div>'
+    + (sinResp ? '<div class="rk-gm-prev-a">' + sinResp + ' players you never compared stay at the'
+      + ' bottom of their position, marked not compared yet.</div>' : '')
+    + (res.contra ? '<div class="rk-gm-prev-a">' + res.contra + ' of your answers contradict the rest'
+      + ' (A over B, B over C, C over A). They are kept, not dropped.</div>' : '')
     + (amb.length ? '<div class="rk-gm-prev-a">Still closest to call: ' + tmrEsc(amb.join(' · ')) + '</div>' : '')
     + '<div class="rk-gm-prev-b">'
     + '<button type="button" class="rk-btn" onclick="tmrTiersApply()">Apply tiers</button>'
@@ -1936,12 +2141,22 @@ function tmrTiersApply() {
   // Los cortes del juego mandan DENTRO del universo; por debajo se conservan
   // los que el dueno ya tenia, porque el juego no llego a preguntar por ellos
   // y borrarselos seria pasarse del encargo.
-  var nuevos = {};
-  Object.keys(TMR.breakAfter).forEach(function (k) {
-    if (TMR.breakAfter[k] && res.score[k] == null) nuevos[k] = true;
+  var enUni = {};
+  Object.keys(res.byPos).forEach(function (pos) {
+    (res.byPos[pos].order || []).forEach(function (id) { enUni[id] = 1; });
+    (res.byPos[pos].unranked || []).forEach(function (id) { enUni[id] = 1; });
   });
-  Object.keys(res.breaks).forEach(function (k) { nuevos[k] = true; });
-  TMR.breakAfter = nuevos;
+  var nuevos = {};
+  Object.keys(TMR.breakPos || {}).forEach(function (pos) {
+    Object.keys(TMR.breakPos[pos]).forEach(function (id) {
+      if (TMR.breakPos[pos][id] && !enUni[id]) { (nuevos[pos] = nuevos[pos] || {})[id] = true; }
+    });
+  });
+  Object.keys(res.breaksPos).forEach(function (pos) {
+    Object.keys(res.breaksPos[pos]).forEach(function (id) { (nuevos[pos] = nuevos[pos] || {})[id] = true; });
+  });
+  TMR.breakPos = nuevos;
+  TMR.legacyBreaks = 0;
   tmrSave();          // invalida el indice del mock y encola el PUT
   tmrGameClose();     // vuelve a la lista, que es donde el dueno los edita a mano
 }
@@ -1984,7 +2199,7 @@ var TMR_SH_NOTES_SRC = 'Measured on a real 10-team $200 auction, Aug 27 2026.';
 function tmrSheetData() {
   var plan = tmrBuildData();
   var uniN = Math.min(TMR_GAME_N, TMR.rows.length);
-  var t = 1, filas = [], byId = {};
+  var M = tmrTierMap(TMR.rows), filas = [], byId = {};
   for (var i = 0; i < TMR.rows.length; i++) {
     var r = TMR.rows[i];
     byId[r.id] = r;
@@ -1992,12 +2207,11 @@ function tmrSheetData() {
     // debajo. Un objetivo fuera de la hoja seria justo el que se olvida.
     if (i < uniN || TMR.target[r.id]) {
       filas.push({
-        r: r, i: i, tier: t, pay: tmrPriceOf(r.id), target: !!TMR.target[r.id],
+        r: r, i: i, tier: M.tier[r.id] || 1, pay: tmrPriceOf(r.id), target: !!TMR.target[r.id],
         // lo que la SALA cobra por el, que es otra cosa que lo que EL pagaria
         mercado: (TMR.sticker && TMR.sticker[r.id] != null) ? TMR.sticker[r.id] : null
       });
     }
-    if (TMR.breakAfter[r.id]) t++;
   }
   // El objetivo mas caro: es donde va el ahorro de un tier. "Sin comprar" antes
   // del draft son todos, asi que manda el precio.
@@ -2421,6 +2635,11 @@ if (typeof window !== 'undefined') {
   // tmrGameProgress son PURAS y se exportan a proposito: el gate las corre con
   // casos armados a mano, sin navegar ni pintar nada.
   window.tmrTiersInfer = tmrTiersInfer;
+  // El mapa de tiers por posicion: lo usa Draft Day para "el ultimo de tu tier"
+  // y el gate para comprobar las bandas sin leer el DOM.
+  window.tmrTierMap = tmrTierMap;
+  window.tmrBreaksCount = tmrBreaksCount;
+  window.tmrBreaksOut = tmrBreaksOut;
   window.tmrGameNext = tmrGameNext;
   window.tmrGameProgress = tmrGameProgress;
   window.tmrGameOpen = tmrGameOpen;

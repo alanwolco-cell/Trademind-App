@@ -2188,6 +2188,18 @@ html{scroll-padding-top:76px}
 .rk-tier::after{content:'';order:1;flex:1;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
 .rk-tier-c{order:2;flex:0 0 auto;color:var(--muted);letter-spacing:.04em;font-weight:600;text-transform:none;font-size:11px}
 
+/* En "All" no hay bandas (la lista mezcla posiciones), asi que el tier viaja
+   pegado al nombre. Va DENTRO de .rk-name a proposito: la rejilla comparte
+   plantilla con la cabecera y un hijo mas de .rk-nums la descuadra entera. */
+.rk-ttag{display:inline-block;margin-left:7px;padding:1px 5px;border-radius:5px;
+  border:1px solid var(--border);color:var(--muted);
+  font-size:9.5px;font-weight:700;letter-spacing:.06em;vertical-align:1px;white-space:nowrap}
+.rk-ttag-none{border-style:dashed;letter-spacing:.02em;text-transform:none;font-weight:600}
+.rk-tier-none{color:var(--muted)}
+.rk-tier-none::after{background:linear-gradient(90deg,var(--border),transparent)}
+.rk-legacy{margin:0 0 10px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;
+  color:var(--muted);font-size:12px;line-height:1.45}
+
 .rk-owner .rk-colhead{grid-template-areas:"num pic name pr adp vs pay tg acts"}
 .rk-owner .rk-row{grid-template-areas:"num pic name pr adp vs pay tg acts" "num pic team pr adp vs pay tg acts"}
 .rk-row{grid-template-areas:"num pic name pr adp vs acts" "num pic team pr adp vs acts";
