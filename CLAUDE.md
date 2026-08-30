@@ -1249,3 +1249,11 @@ posicion no marco ningun objetivo no hay con que comparar y la hoja calla.
 
 Gate: 138 checks (H11, H12 y H13 nuevos). Verificado que los tres fallan contra 6628ab1.
 Cache-bust 2026082809.
+
+### Un objetivo no es una compra (2026-08-30, reportado en produccion)
+La barra Build sumaba los 29 objetivos como si se los fuera a llevar todos (-$355 en rojo);
+ahora arma el plan MAS BARATO que cubren (titular por titular, FLEX al mas barato de RB/WR/TE,
+el resto a $1), declara la posicion sin objetivo y baja la suma de todos a nota gris. Y la
+columna Pay pintaba el TECHO (Gibbs $91) en vez del expect ($77): ahora la cifra grande es
+lo que paga la sala y el tope va debajo. Gate qa-rankings 142 checks, nuevos (y2)(z9)(z9b)(z10);
+24 fallan contra el codigo anterior. Cache-bust 2026082811.
