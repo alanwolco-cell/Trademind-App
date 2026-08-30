@@ -1165,3 +1165,71 @@ en las tres corridas del control: (y), P1-P5, H2, H3 y H10. Otros siete
 (S1, S4, R1, L3, L4, L6, L10) fallan tambien contra ese arbol y NO se logro
 aislar por que; pasan contra el codigo actual, asi que no tapan ninguna
 regresion de lo que se subio, pero queda dicho en vez de contado como ruido.
+
+## Sesion 2026-08-29 (noche): los tiers pasan a ser POR POSICION
+
+**El problema, medido.** El dueno jugo 505 parejas del Tier Game (232 same, 219
+slightly, 54 clearly) y Apply produjo **UN** solo corte. `tmrTiersInfer` cortaba sobre
+la lista GENERAL, mezclando posiciones, y medía el escalon en DOLARES del prior de
+mercado (`dinero`, `umbral`), no en sus respuestas. Dos causas, el mismo error de unidad:
+- Entre dos RBs de tiers distintos se cuelan seis WRs, asi que los vecinos casi nunca
+  tenian respuesta directa y la regla de vecinos no se ejercia. Y un tier mezclado no
+  significa nada: lo que decide una subasta es si hay escalon entre el RB4 y el RB5.
+- El mercado arrancaba la conversacion y tambien la terminaba.
+
+Su regla, textual: **"deberia haber un corte cuando digo slightly tambien"**; same = mismo
+tier.
+
+**El algoritmo, validado contra su documento antes de escribirlo.**
+1. POR POSICION (QB/RB/WR/TE), universo = los primeros `TMR_TIER_POS_N` (40) de cada una.
+2. Puntaje = minimos cuadrados sobre las distancias que declaro (same 0, slightly 1,
+   clearly 3), con prior debil `eps=0.02` hacia su puesto actual `(n-i)*0.3`; Gauss-Seidel
+   400 iteraciones. Orden por puntaje, desempate por puesto previo.
+3. CORTE entre vecinos: respuesta directa distinta de same corta SIEMPRE; un same directo
+   no corta NUNCA; sin respuesta directa, corta un salto de puntaje >= 0.7.
+4. Quien no entro en ninguna pareja no recibe tier: se declara "not compared yet".
+
+**Resultado sobre su documento (congelado en `scripts/fixtures/tiers-expected-2026-08-29.json`):**
+RB 14 tiers, WR 9, TE 5, QB 1. Contradicciones 3, 4, 0 y 1. 25 cortes, no uno.
+
+**Dos defectos propios que cazo el gate, no la lectura del codigo:**
+- Mandar a los no comparados al final de su posicion parecia inofensivo: con dos
+  respuestas, los dos comparados saltaban a RB1 y RB2 por encima de treinta y ocho
+  jugadores sobre los que el no dijo nada, y la escalada se quedaba sin nadie arriba.
+  Ahora el ORDEN va sobre los cuarenta (quien no jugo conserva su puntaje de partida) y
+  solo los TIERS se construyen sobre los comparados.
+- El marcador "not compared yet" salia en una posicion cortada a mano sin haber jugado
+  nunca ahi. Un corte a mano es un tier igual de suyo.
+
+**Lo que cambia en la app.**
+- Los cortes se guardan como `breaksPos` ({RB:[ids], WR:[ids]...}). `TMR.breakPos` y los
+  ayudantes `tmrBreakSet`, `tmrIsBreak`, `tmrBreaksOut/In/Count`, `tmrTierMap`.
+- **Apply es ESTABLE por posicion**: los RB vuelven a ocupar las plazas de RB en su orden
+  nuevo. Concatenar las posiciones pondria los cuarenta RBs arriba del todo y le
+  reescribiria un orden general que es suyo.
+- **Bandas solo con filtro de posicion** ("RB Tier 3, 5 players"); en "All" cada fila lleva
+  su etiqueta `RB T3` DENTRO de `.rk-name` (la rejilla comparte plantilla con la cabecera
+  y un hijo mas de `.rk-nums` la descuadra entera, bug ya conocido del archivo).
+- **El boton TIER manual** edita los cortes de SU posicion.
+- **Cheat Sheet** y **Draft Day** usan `breaksPos`: `LV.myTier` manda en "el ultimo de tu
+  tier" y `MD.tierOf` queda de respaldo donde nunca corto.
+- **MIGRACION**: un documento viejo con `breaks` generales NO se convierte (un corte entre
+  el RB4 y el WR9 no dice donde cae el escalon de RBs). Se declara en pantalla con su
+  numero. El servidor acepta `breaksPos` y sigue aceptando `breaks`.
+- El eje del dinero (`money`, `umbral`) se conserva pero YA NO CORTA: solo elige la
+  siguiente pregunta, que es donde un escalon de precio si mide cuanto hay en juego.
+
+**Consecuencia declarada:** una respuesta que CRUZA posiciones (el juego hace una de cada
+siete) ya no decide ningun tier; solo alimenta el eje del dinero. Tiene su control
+negativo en el gate.
+
+**Gates:** `qa-rankings` pasa de 121 a **135 checks**, ALL GREEN. Verificado que fallan
+contra 3b07588: **32 fallos** (worktree detached, QA_PORT 3219). `qa-live` 47 y `qa-nav`
+16, los dos en verde. Cache-bust a 2026082808.
+
+Archivos: `public/rankings.js` (`tmrTiersInfer` reescrito, `_tmrPosSolve` nuevo,
+`tmrTierMap`, `tmrPaint`, `tmrCut`, `tmrExport`, `tmrTiersPreview/Apply`, `tmrSheetData`),
+`public/live.js` (`LV.myTier`, `lvAdvice`), `public/styles.css` (`.rk-ttag`, `.rk-legacy`,
+`.rk-tier-none`), `server/routes/perfil.js` (`breaksPos` en la validacion de forma),
+`scripts/qa-rankings.mjs`, `scripts/fixtures/rankings-owner-2026-08-29.json` y
+`scripts/fixtures/tiers-expected-2026-08-29.json` (nuevos).
