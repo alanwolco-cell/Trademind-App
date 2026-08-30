@@ -163,6 +163,10 @@ try {
     ['bowers $36 real madrid', 'bowers', 36, 6], ['st. brown 65 5', 'st. brown', 65, 5]
   ].map(([t, n, p, s]) => { const r = lvParseTyped(t); return r && r.price === p && r.seat === s && r.name === n; }));
   ok('t1', typed.every(Boolean), 'la caja entiende "gibbs se fue en 86 a ness", "jeanty 48 dream team", "me lleve olave 19", "bowers $36 real madrid", "st. brown 65 5"');
+  // dos toques: bloque -> desplegable de equipo -> precio -> Sold
+  const MD_TEAMS_FZ26 = 10;
+  const clk = await pg.evaluate(() => { lvBlock('loveland'); const sel = document.getElementById('lv-sold-seat'), inp = document.getElementById('lv-sold-price'); if (!sel || !inp) return { err: 'no row' }; sel.value = '6'; inp.value = '23'; const b0 = AU.budgets[6]; lvSoldClick(); return { b0, b1: AU.budgets[6], opts: sel.options.length }; });
+  ok('t2', !clk.err && clk.b1 === clk.b0 - 23 && clk.opts === MD_TEAMS_FZ26, `el bloque cierra la venta con desplegable de equipo y precio (${JSON.stringify(clk)})`);
   const inf = await pg.evaluate(() => {
     // sobreprecio RELATIVO al sticker vigente (1.2x), no dolares fijos: con
     // dolares fijos el check se pudrio al recalibrar VAL_CURVE (2026-08-28),

@@ -740,6 +740,15 @@ function lvPanel() {
           return '<span>' + lvEsc(t.name) + ' <b>$' + t.max + '</b></span>';
         }).join('') + '</div>';
     }
+    // CERRAR LA VENTA CON DOS TOQUES (dueno, 2026-08-30: "que clickee al
+    // jugador, me de un dropdown de los equipos y despues pongo el precio").
+    var seatOpts = '';
+    for (var si = 1; si <= MD.teams; si++) seatOpts += '<option value="' + si + '"' + (si === MD.mySlot ? ' selected' : '') + '>' + lvEsc(lvSeatName(si)) + (si === MD.mySlot ? ' (me)' : '') + '</option>';
+    h += '<div class="lv-sold-row">'
+      + '<select id="lv-sold-seat" class="lv-sold-seat" aria-label="Who bought him">' + seatOpts + '</select>'
+      + '<input id="lv-sold-price" class="lv-sold-price" type="number" inputmode="numeric" min="1" max="' + MD.budget + '" placeholder="$" aria-label="Final price" onkeydown="if(event.key===\'Enter\')lvSoldClick()">'
+      + '<button type="button" class="lv-sold-btn" onclick="lvSoldClick()">Sold</button>'
+      + '</div>';
     h += '</div>';
   } else {
     h += '<div class="lv-lot lv-empty">Nobody on the block. Type a name to see your number.</div>';
@@ -996,6 +1005,18 @@ function lvParseTyped(v) {
   if (!seat) { var sm = rest.match(/(?:^|\s)(\d{1,2})(?=\s|$)/); if (sm && +sm[1] >= 1 && +sm[1] <= MD.teams) { seat = +sm[1]; rest = rest.slice(0, sm.index) + ' ' + rest.slice(sm.index + sm[0].length); } }
   var name = rest.replace(/\b(se fue|se lo llevo|se lo llevó|fue|en|a|al|por|to|for|at|sold|went|vendido|lleve|llevé|con)\b/gi, ' ').replace(/\s+/g, ' ').trim();
   return { name: name, price: price, seat: seat };
+}
+// El boton Sold del bloque: jugador = el del bloque, equipo del desplegable, precio de la caja.
+function lvSoldClick() {
+  var hint = document.getElementById('lv-hint');
+  var sel = document.getElementById('lv-sold-seat'), inp = document.getElementById('lv-sold-price');
+  if (!AU.lot || !AU.lot.p || !sel || !inp) return;
+  var price = parseInt(inp.value, 10);
+  if (!(price >= 1)) { inp.focus(); if (hint) hint.innerHTML = '<i class="lv-err">final price?</i>'; return; }
+  var r = lvSold(AU.lot.p, price, parseInt(sel.value, 10));
+  if (r.err) { if (hint) hint.innerHTML = '<i class="lv-err">' + lvEsc(r.err) + '</i>'; return; }
+  if (hint) hint.innerHTML = '<i class="lv-ok">' + lvEsc(r.p.name) + ' &rarr; ' + lvEsc(lvSeatName(r.slot)) + ' $' + r.price + '</i>';
+  var box = document.getElementById('lv-in'); if (box) { box.value = ''; box.focus(); }
 }
 function lvOnEnter(input) {
   var v = String(input.value || '').trim();
