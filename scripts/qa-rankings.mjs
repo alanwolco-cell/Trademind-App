@@ -135,6 +135,17 @@ async function nueva(w, h, opts) {
  * callen TODAS las peticiones, incluidas las de fuera (Sleeper, ESPN), y con la
  * conexion floja eso LANZA. Se cae a 'load' y se espera a que la app este viva,
  * que es lo que los checks necesitan. */
+// El filtro se CLICA, que es como llega el usuario. Llamar tmrFilter() a mano
+// probaria la funcion, no el boton.
+const filtrar = async (pg, pos) => {
+  await pg.evaluate(p => {
+    const b = Array.from(document.querySelectorAll('#rk-filters .rk-fb'))
+      .find(x => x.textContent.trim().toUpperCase() === (p === 'ALL' ? 'ALL' : p));
+    if (b) b.click();
+  }, pos);
+  await pg.waitForTimeout(140);
+};
+
 const recargar = async pg => {
   try { await pg.reload({ waitUntil: 'networkidle', timeout: 60000 }); }
   catch (_) {
@@ -158,8 +169,19 @@ console.log('\n=== My Rankings: la lista ===');
   const n = await pg.$$eval('#rk-body .rk-row', r => r.length);
   ok('(a) la lista carga jugadores', n > 100, n + ' filas');
 
+  /* Las bandas de tier son POR POSICION. En "All" la lista mezcla posiciones y
+   * una banda partiria el tier de RBs en pedazos con WRs en medio, asi que ahi
+   * no se pinta ninguna: el tier va como etiqueta en cada fila. Se miran con
+   * el filtro puesto, que es donde significan algo. */
+  await filtrar(pg, 'RB');
   const tiers = await pg.$$eval('#rk-body .rk-tier', r => r.length);
-  ok('(b) arranca con Tier 1 pintado', tiers >= 1, tiers + ' rotulos de tier');
+  const banda1 = await pg.$$eval('#rk-body .rk-tier .rk-tier-n', r => r.length ? r[0].textContent.trim() : '');
+  ok('(b) con RB filtrado la banda dice de que posicion es',
+    tiers >= 1 && /^RB Tier 1$/.test(banda1), tiers + ' bandas, la primera dice ' + JSON.stringify(banda1));
+  await filtrar(pg, 'ALL');
+  const bandasAll = await pg.$$eval('#rk-body .rk-tier', r => r.length);
+  ok('(b2) en All no se pinta ni una banda: partiria los tiers con otras posiciones en medio',
+    bandasAll === 0, bandasAll + ' bandas en All');
 
   const primeros = await pg.$$eval('#rk-body .rk-row .rk-name', r => r.slice(0, 3).map(x => x.textContent));
   // mover el 3ro arriba dos veces y comprobar que queda 1ro
@@ -180,12 +202,55 @@ console.log('\n=== My Rankings: la lista ===');
   const trasReload = await pg.$$eval('#rk-body .rk-row .rk-name', r => r.slice(0, 3).map(x => x.textContent));
   ok('(d) el orden sobrevive a recargar', trasReload[0] === tras[0], `esperaba ${tras[0]}, salio ${trasReload[0]}`);
 
-  // corte de tier
-  const idPrimero = await pg.$eval('#rk-body .rk-row', r => r.getAttribute('data-id'));
+  /* CONTROL NEGATIVO, y va antes del corte a proposito: sin un solo corte no
+   * puede haber ni una etiqueta de tier en la lista. Sin este check, el
+   * siguiente pasaria aunque la etiqueta se pintara siempre. */
+  const tagsAntes = await pg.$$eval('#rk-body .rk-ttag', r => r.length);
+  ok('(e0) control negativo: sin cortes no hay ni una etiqueta de tier',
+    tagsAntes === 0, tagsAntes + ' etiquetas con cero cortes');
+
+  // corte de tier: ahora corta DENTRO de la posicion del jugador
+  const primero = await pg.$$eval('#rk-body .rk-row', r => r.length
+    ? { id: r[0].getAttribute('data-id'), pos: (r[0].querySelector('.rk-pos') || {}).textContent } : null);
+  const idPrimero = primero && primero.id;
   await pg.evaluate(id => tmrCut(id), idPrimero);
   await pg.waitForTimeout(120);
+  await filtrar(pg, primero.pos);
   const tiers2 = await pg.$$eval('#rk-body .rk-tier', r => r.length);
-  ok('(e) cortar tier crea un tier nuevo', tiers2 > tiers, `${tiers} -> ${tiers2}`);
+  ok('(e) cortar tier crea un tier nuevo dentro de esa posicion', tiers2 === 2,
+    `${primero.pos}: ${tiers2} bandas tras un corte`);
+
+  // La banda declara cuantos jugadores tiene, y ese numero es el de filas
+  // VISIBLES: con un filtro puesto, decir 200 encima de tres seria mentir.
+  const conteoPos = await pg.evaluate(() => {
+    const bandas = Array.from(document.querySelectorAll('#rk-body .rk-tier .rk-tier-c'));
+    return {
+      bandas: bandas.length,
+      suma: bandas.reduce((a, e) => a + Number(e.textContent.replace(/\D/g, '') || 0), 0),
+      filas: document.querySelectorAll('#rk-body .rk-row').length
+    };
+  });
+  ok('(v) las bandas de tier declaran su conteo real', conteoPos.bandas > 0 && conteoPos.suma === conteoPos.filas,
+    JSON.stringify(conteoPos));
+
+  // Y en "All", esa misma posicion lleva su tier en la etiqueta de cada fila.
+  await filtrar(pg, 'ALL');
+  const etiq = await pg.evaluate(pos => {
+    const filas = Array.from(document.querySelectorAll('#rk-body .rk-row'));
+    const dePos = filas.filter(f => (f.querySelector('.rk-pos') || {}).textContent === pos);
+    const otras = filas.filter(f => (f.querySelector('.rk-pos') || {}).textContent !== pos);
+    const txt = dePos.map(f => (f.querySelector('.rk-ttag') || {}).textContent || '');
+    return {
+      dePos: dePos.length,
+      conTag: txt.filter(t => new RegExp('^' + pos + ' T\\d+$').test(t)).length,
+      t1: txt.filter(t => t === pos + ' T1').length,
+      t2: txt.filter(t => t === pos + ' T2').length,
+      otrasConTag: otras.filter(f => f.querySelector('.rk-ttag')).length
+    };
+  }, primero.pos);
+  ok('(e2) en All cada fila de esa posicion lleva su etiqueta POS Tn, y ninguna otra posicion la lleva',
+    etiq.dePos > 1 && etiq.conTag === etiq.dePos && etiq.t1 === 1 && etiq.t2 === etiq.dePos - 1
+    && etiq.otrasConTag === 0, JSON.stringify(etiq));
 
   // El delta contra el consenso se pinta en TODAS las filas visibles, no solo
   // en las movidas: antes solo aparecia cuando era distinto de cero, asi que
@@ -247,27 +312,11 @@ console.log('\n=== My Rankings: la lista ===');
   });
   ok('(u) el rank por posicion cuenta sobre mi lista', posRank.length === 0, posRank.join(' | ') || 'correlativo por posicion');
 
-  // La banda de tier declara cuantos jugadores tiene, y ese numero es el de
-  // filas VISIBLES: con un filtro puesto, decir 200 encima de tres seria mentir.
-  // Se suman TODAS las bandas: aqui arriba ya se corto un tier, asi que mirar
-  // solo la primera compararia "1 player" contra las 200 filas de la pantalla.
-  const conteo = await pg.evaluate(() => {
-    const bandas = Array.from(document.querySelectorAll('#rk-body .rk-tier .rk-tier-c'));
-    return {
-      bandas: bandas.length,
-      suma: bandas.reduce((a, e) => a + Number(e.textContent.replace(/\D/g, '') || 0), 0),
-      filas: document.querySelectorAll('#rk-body .rk-row').length
-    };
-  });
-  ok('(v) las bandas de tier declaran su conteo real', conteo.bandas > 0 && conteo.suma === conteo.filas,
-    JSON.stringify(conteo));
-
   // filtro
-  await pg.evaluate(() => tmrFilter('QB', document.querySelector('#rk-filters .rk-fb')));
-  await pg.waitForTimeout(120);
+  await filtrar(pg, 'QB');
   const soloQb = await pg.$$eval('#rk-body .rk-row .rk-pos', r => r.every(x => x.textContent === 'QB') && r.length > 0);
   ok('(g) el filtro por posicion filtra', soloQb);
-  await pg.evaluate(() => tmrFilter('ALL', document.querySelector('#rk-filters .rk-fb')));
+  await filtrar(pg, 'ALL');
 
   ok('(h) consola limpia en escritorio', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.screenshot({ path: '/tmp/qa-rk-desktop.png' });
@@ -976,12 +1025,15 @@ console.log('\n=== Vincular otro dispositivo con un codigo ===');
   await A.pg.close();
 }
 
-console.log('\n=== Tier Game: la inferencia, como funcion pura ===');
+console.log('\n=== Tier Game: la inferencia por posicion, como funcion pura ===');
 // (G) La inferencia NO se prueba pintando: se prueba con casos armados a mano,
 //     que es para lo que tmrTiersInfer es pura y esta exportada. Un universo de
 //     mentira de doce jugadores hace visible lo que en la lista real de 200 se
 //     esconde. Corre dentro de la pagina porque ahi vive la funcion, no porque
 //     necesite el DOM: no toca ni uno.
+//     Todas las parejas de estos casos son de la MISMA posicion, que es donde
+//     un tier significa algo. La pareja cruzada tiene su propio check, y es un
+//     control negativo: no puede crear ni un corte.
 {
   const { pg, errs } = await nueva(1440, 950);
   const r = await eva(pg, () => {
@@ -994,16 +1046,21 @@ console.log('\n=== Tier Game: la inferencia, como funcion pura ===');
       { id: 'q2', name: 'K Once', pos: 'QB', team: 'X' }, { id: 't2', name: 'L Doce', pos: 'TE', team: 'X' }
     ];
     const base = rows.map(x => x.id).join(',');
-    const entre = (res, x, y) => {
-      const A = res.order.indexOf(x), B = res.order.indexOf(y);
-      for (let q = Math.min(A, B); q < Math.max(A, B); q++) if (res.breaks[res.order[q]]) return true;
-      return false;
+    const posDe = {}; rows.forEach(x => posDe[x.id] = x.pos);
+    // "Separados por un corte" es, con tiers de posicion, "tienen tier distinto
+    // DENTRO de su posicion". Si alguno no tiene tier (nunca lo comparo), no se
+    // puede afirmar nada: devuelve null y el check lo distingue de false.
+    const sepa = (res, x, y) => {
+      const a = res.tierOf[x], b = res.tierOf[y];
+      if (a == null || b == null) return null;
+      return a !== b;
     };
     const vacio = tmrTiersInfer(rows, []);
-    const same = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 0 }]);
-    const claro = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 2 }]);
-    const gana = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 2 }, { a: 'r1', b: 'w1', v: 0 }]);
-    const poco = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 1 }]);
+    const same = tmrTiersInfer(rows, [{ a: 'r1', b: 'r2', v: 0 }]);
+    const claro = tmrTiersInfer(rows, [{ a: 'r1', b: 'r2', v: 2 }]);
+    const poco = tmrTiersInfer(rows, [{ a: 'r1', b: 'r2', v: 1 }]);
+    const gana = tmrTiersInfer(rows, [{ a: 'r1', b: 'r2', v: 2 }, { a: 'r1', b: 'r2', v: 0 }]);
+    const cruce = tmrTiersInfer(rows, [{ a: 'r1', b: 'w1', v: 2 }]);
     const tr = tmrTiersInfer(rows, [{ a: 'r3', b: 'r1', v: 2 }, { a: 'r1', b: 'r2', v: 2 }]);
     const quieto = tmrTiersInfer(rows, [{ a: 'r4', b: 'r1', v: 2 }]);
     // el juego, jugado entero: ni una pareja repetida
@@ -1020,31 +1077,112 @@ console.log('\n=== Tier Game: la inferencia, como funcion pura ===');
     }
     return {
       base,
-      vacio: { ord: vacio.order.join(','), cortes: vacio.cuts.length, movidos: vacio.moved },
-      sameCorta: entre(same, 'r1', 'w1'),
-      claroCorta: entre(claro, 'r1', 'w1'),
-      ganaSame: entre(gana, 'r1', 'w1'),
-      pocoCorta: entre(poco, 'r1', 'w1'),
+      vacio: { ord: vacio.order.join(','), cortes: vacio.cuts.length, movidos: vacio.moved,
+        conTier: Object.keys(vacio.tierOf).length,
+        sinComp: (vacio.byPos.RB || {}).unranked ? vacio.byPos.RB.unranked.length : -1 },
+      sameCorta: sepa(same, 'r1', 'r2'),
+      claroCorta: sepa(claro, 'r1', 'r2'),
+      pocoCorta: sepa(poco, 'r1', 'r2'),
+      ganaSame: sepa(gana, 'r1', 'r2'),
+      cruce: { cortes: cruce.cuts.length, ord: cruce.order.join(','),
+        tierR1: cruce.tierOf['r1'] == null ? 'sin tier' : cruce.tierOf['r1'],
+        tierW1: cruce.tierOf['w1'] == null ? 'sin tier' : cruce.tierOf['w1'] },
       tr: { ok: tr.order.indexOf('r3') < tr.order.indexOf('r1') && tr.order.indexOf('r1') < tr.order.indexOf('r2'),
-        c1: entre(tr, 'r3', 'r1'), c2: entre(tr, 'r1', 'r2'), ord: tr.order.join(',') },
-      // r4 y r1 se comparan; los que no juegan conservan su puesto relativo
-      quieto: { t2: quieto.order.indexOf('t2') === 11, q2: quieto.order.indexOf('q2') === 10, ord: quieto.order.join(',') },
+        c1: sepa(tr, 'r3', 'r1'), c2: sepa(tr, 'r1', 'r2'), ord: tr.order.join(',') },
+      // r4 y r1 se comparan; quien no aparece en NINGUNA respuesta queda fuera
+      // de los tiers y se declara, no se cuela en el tier de al lado
+      quieto: { t2: quieto.order.indexOf('t2') === 11, q2: quieto.order.indexOf('q2') === 10,
+        r2Tier: quieto.tierOf['r2'] == null ? 'sin tier' : quieto.tierOf['r2'],
+        sinComp: (quieto.byPos.RB.unranked || []).join(','), ord: quieto.order.join(',') },
+      // ESTABLE POR POSICION: las plazas de RB siguen siendo de RB, las de WR de
+      // WR. Concatenar las posiciones pondria los RBs arriba del todo y le
+      // reescribiria al dueno un orden general que es suyo.
+      estable: quieto.order.map(id => posDe[id]).join(',') === rows.map(x => x.pos).join(','),
       juego: { n, repes, cruces, prog: tmrGameProgress(rows, ans).pct }
     };
   });
-  ok('(G1) sin respuestas la lista no se mueve y no aparece ni un corte',
-    !r._err && r.vacio.ord === r.base && r.vacio.cortes === 0 && r.vacio.movidos === 0, JSON.stringify(r.vacio));
-  ok('(G2) un "same tier" declarado NUNCA corta entre esos dos', !r._err && r.sameCorta === false, JSON.stringify({ same: r.sameCorta }));
-  ok('(G3) un "clearly" SIEMPRE deja un corte entre los dos', !r._err && r.claroCorta === true, JSON.stringify({ claro: r.claroCorta }));
-  ok('(G4) el "same tier" gana al "clearly" cuando el dueno se contradice', !r._err && r.ganaSame === false, JSON.stringify({ gana: r.ganaSame }));
-  ok('(G5) un "slightly" ordena pero no corta', !r._err && r.pocoCorta === false, JSON.stringify({ poco: r.pocoCorta }));
-  ok('(G6) transitividad: r3 > r1 > r2, con su corte en cada escalon',
-    !r._err && r.tr.ok && r.tr.c1 && r.tr.c2, JSON.stringify(r.tr));
-  ok('(G7) el que no aparece en ninguna respuesta conserva su puesto',
-    !r._err && r.quieto.t2 && r.quieto.q2, JSON.stringify(r.quieto));
-  ok('(G8) el juego no repite una pareja y llega a resolver los tiers',
+  ok('(G1) sin respuestas no se mueve nadie, no hay un corte y nadie tiene tier',
+    !r._err && r.vacio.ord === r.base && r.vacio.cortes === 0 && r.vacio.movidos === 0
+    && r.vacio.conTier === 0 && r.vacio.sinComp === 4, JSON.stringify(r.vacio));
+  ok('(G2) un "same tier" directo NUNCA corta entre esos dos', !r._err && r.sameCorta === false, JSON.stringify({ same: r.sameCorta }));
+  ok('(G3) un "clearly" directo SIEMPRE corta', !r._err && r.claroCorta === true, JSON.stringify({ claro: r.claroCorta }));
+  ok('(G4) un "slightly" directo TAMBIEN corta, que es la regla que el pidio',
+    !r._err && r.pocoCorta === true, JSON.stringify({ poco: r.pocoCorta }));
+  ok('(G5) el "same tier" gana al "clearly" cuando el dueno se contradice', !r._err && r.ganaSame === false, JSON.stringify({ gana: r.ganaSame }));
+  ok('(G6) CONTROL NEGATIVO: una respuesta que cruza posiciones no crea ni un tier ni un corte',
+    !r._err && r.cruce.cortes === 0 && r.cruce.ord === r.base
+    && r.cruce.tierR1 === 'sin tier' && r.cruce.tierW1 === 'sin tier', JSON.stringify(r.cruce));
+  ok('(G7) transitividad dentro de la posicion: r3 > r1 > r2, con su corte en cada escalon',
+    !r._err && r.tr.ok && r.tr.c1 === true && r.tr.c2 === true, JSON.stringify(r.tr));
+  ok('(G8) el que no aparece en ninguna respuesta queda FUERA de los tiers y se declara',
+    !r._err && r.quieto.t2 && r.quieto.q2 && r.quieto.r2Tier === 'sin tier'
+    && r.quieto.sinComp === 'r2,r3', JSON.stringify(r.quieto));
+  ok('(G9) el orden nuevo es ESTABLE por posicion: cada plaza conserva su posicion',
+    !r._err && r.estable === true, JSON.stringify({ estable: r.estable, ord: r.quieto.ord }));
+  ok('(G10) el juego no repite una pareja y llega a resolver los tiers',
     !r._err && r.juego.n > 20 && r.juego.repes === 0 && r.juego.prog === 100, JSON.stringify(r.juego));
-  ok('(G9) consola limpia con la inferencia', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  ok('(G11) consola limpia con la inferencia', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
+  await pg.close();
+}
+
+console.log('\n=== Tier Game: el documento REAL del dueno, resultado exacto ===');
+// (T) El caso que motivo todo esto. 505 parejas suyas (232 same, 219 slightly,
+//     54 clearly) y la version anterior devolvia UN corte en toda la lista.
+//     El resultado esperado esta CONGELADO en un fixture y se comparo a mano
+//     contra el analisis de referencia antes de guardarlo: 14 tiers de RB, 9 de
+//     WR, 5 de TE y 1 de QB, con 3, 4, 0 y 1 contradicciones. Si la inferencia
+//     cambia, este check lo dice por nombre y por tier, no con un total.
+//     Los nombres se resuelven por _id contra el board real de /api/stats/adp,
+//     que es el mismo camino por el que la app arma la lista.
+{
+  const DOC = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/fixtures/rankings-owner-2026-08-29.json'), 'utf8'));
+  const ESP = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/fixtures/tiers-expected-2026-08-29.json'), 'utf8'));
+  const { pg, errs } = await nueva(1440, 950);
+  await abrirTab(pg);
+  await esperar(pg, () => typeof TMR !== 'undefined' && TMR.loaded && TMR.rows.length > 100, 45000);
+  const r = await eva(pg, doc => {
+    const N = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+    const byId = {}; TMR.rows.forEach(x => byId[x.id] = x);
+    // Su orden guardado, con los ids que el board de hoy ya no trae fuera: la
+    // funcion se prueba con SU lista, no con la del gate.
+    const rows = doc.order.map(String).filter(id => byId[id]).map(id => byId[id]);
+    const res = tmrTiersInfer(rows, doc.game);
+    const out = { rows: rows.length, moved: res.moved, cuts: res.cuts.length,
+      presentes: rows.map(x => N(x.name)) };
+    ['QB', 'RB', 'WR', 'TE'].forEach(p => {
+      const B = res.byPos[p];
+      out[p] = B ? {
+        contra: B.contra, answers: B.answers,
+        unranked: B.unranked.map(id => N(byId[id].name)),
+        tiers: B.tiers.map(t => t.map(id => N(byId[id].name)))
+      } : null;
+    });
+    return out;
+  }, DOC);
+  /* Los "sin comparar" se comparan contra los que el board de HOY sigue
+   * trayendo: son la cola de cada posicion y Sleeper da de baja a alguno de vez
+   * en cuando. Los tiers no dependen de eso (todos los comparados estan), asi
+   * que se exigen exactos; la cola se exige exacta DENTRO de lo que existe. */
+  const presentes = new Set(((r || {}).presentes) || []);
+  const diff = [];
+  ['QB', 'RB', 'WR', 'TE'].forEach(p => {
+    const a = (r || {})[p], e = ESP[p];
+    if (!a) { diff.push(p + ': no salio nada'); return; }
+    if (a.tiers.length !== e.tiers.length) diff.push(`${p}: ${a.tiers.length} tiers, esperaba ${e.tiers.length}`);
+    if (a.contra !== e.contra) diff.push(`${p}: ${a.contra} contradicciones, esperaba ${e.contra}`);
+    if (a.answers !== e.answers) diff.push(`${p}: ${a.answers} respuestas, esperaba ${e.answers}`);
+    const espSin = e.unranked.filter(n => presentes.has(n)).join(', ');
+    if (a.unranked.join(', ') !== espSin) diff.push(`${p} sin comparar: [${a.unranked.join(', ')}] esperaba [${espSin}]`);
+    e.tiers.forEach((t, i) => {
+      const got = (a.tiers[i] || []).join(', ');
+      if (got !== t.join(', ')) diff.push(`${p} T${i + 1}: [${got}] esperaba [${t.join(', ')}]`);
+    });
+  });
+  ok('(T1) el documento real del dueno da EXACTAMENTE los tiers esperados, jugador por jugador',
+    !r._err && diff.length === 0, r._err ? r._err : (diff.slice(0, 4).join(' | ') || 'RB 14, WR 9, TE 5, QB 1'));
+  ok('(T2) sus 505 respuestas producen 25 cortes, no uno: es el bug que motivo el cambio',
+    !r._err && r.cuts === 25, JSON.stringify({ cuts: r && r.cuts, moved: r && r.moved, rows: r && r.rows }));
+  ok('(T3) consola limpia con el documento real', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.close();
 }
 
@@ -1147,7 +1285,8 @@ let juegoIds = null;
   const prevN = puts.length;
   const previo = await eva(pg, () => ({
     orden: TMR.rows.slice(0, 100).map(r => r.id).join(','),
-    cortes: Object.keys(TMR.breakAfter).filter(k => TMR.breakAfter[k]).length,
+    posiciones: TMR.rows.map(r => r.pos).join(','),
+    cortes: tmrBreaksCount(),
     espera: tmrTiersInfer(TMR.rows, TMR.game)
   }));
   // Nunca se lee dentro de un eva que pudo fallar sin red: un acceso crudo
@@ -1160,28 +1299,52 @@ let juegoIds = null;
   });
   await esperar(pg, () => { const p = document.getElementById('rk-gm-prev'); return p && !p.hidden && /moves/.test(p.textContent); }, 10000);
   const vistaPrevia = await eva(pg, () => (document.getElementById('rk-gm-prev') || {}).textContent || '');
-  ok('(J5) antes de aplicar, la vista previa DICE cuanto se mueve y cuantos cortes deja',
-    typeof vistaPrevia === 'string' && new RegExp('moves ' + esp.moved + ' of').test(vistaPrevia.replace(/\s+/g, ' '))
-    && new RegExp('leaves ' + esp.cuts.length + ' tier').test(vistaPrevia.replace(/\s+/g, ' ')),
-    JSON.stringify(String(vistaPrevia).replace(/\s+/g, ' ').slice(0, 190)));
+  ok('(J5) antes de aplicar, la vista previa DICE cuanto se mueve, cuantos cortes deja y el desglose por posicion',
+    typeof vistaPrevia === 'string' && new RegExp('moves ' + esp.moved + ' players').test(vistaPrevia.replace(/\s+/g, ' '))
+    && new RegExp('leaves ' + esp.cuts.length + ' tier').test(vistaPrevia.replace(/\s+/g, ' '))
+    && /Tiers are per position: (QB|RB|WR|TE) \d/.test(vistaPrevia.replace(/\s+/g, ' ')),
+    JSON.stringify(String(vistaPrevia).replace(/\s+/g, ' ').slice(0, 220)));
 
   await pg.evaluate(() => {
     const b = Array.from(document.querySelectorAll('#rk-gm-prev .rk-btn')).find(x => /Apply tiers/.test(x.textContent));
     if (b) b.click();
   });
   await esperar(pg, () => { const g = document.getElementById('rk-game'); return !g || g.hidden; }, 10000);
-  const aplicado = await eva(pg, () => ({
-    orden: TMR.rows.slice(0, 100).map(r => r.id).join(','),
-    cortes: Object.keys(TMR.breakAfter).filter(k => TMR.breakAfter[k]).length,
-    bandas: document.querySelectorAll('#rk-body .rk-tier').length,
-    lista: document.querySelectorAll('#rk-body .rk-row').length,
-    guardado: (JSON.parse(localStorage.getItem('tm_rankings_v1') || '{}').order || []).slice(0, 100).join(',')
-  }));
-  ok('(J6) Apply reordena la lista de verdad, pone los cortes inferidos y los guarda',
-    !aplicado._err && aplicado.orden === esp.order.join(',') && aplicado.orden !== previo.orden
-    && aplicado.cortes === esp.cuts.length && aplicado.bandas > 1 && aplicado.lista > 100
+  const aplicado = await eva(pg, () => {
+    const g = JSON.parse(localStorage.getItem('tm_rankings_v1') || '{}');
+    const bp = g.breaksPos || {};
+    let guardados = 0;
+    Object.keys(bp).forEach(p => { guardados += (bp[p] || []).length; });
+    return {
+      orden: TMR.rows.slice(0, 100).map(r => r.id).join(','),
+      posiciones: TMR.rows.map(r => r.pos).join(','),
+      cortes: tmrBreaksCount(),
+      // En "All" no hay bandas: el tier va en la etiqueta de cada fila.
+      bandas: document.querySelectorAll('#rk-body .rk-tier').length,
+      tags: document.querySelectorAll('#rk-body .rk-ttag').length,
+      lista: document.querySelectorAll('#rk-body .rk-row').length,
+      // Se guardan POR POSICION, que es la unica forma de volver a pintarlos:
+      // una lista plana de ids no dice de que posicion es cada corte.
+      guardados, posGuardadas: Object.keys(bp).sort().join(','),
+      guardado: (g.order || []).slice(0, 100).join(',')
+    };
+  });
+  ok('(J6) Apply reordena la lista, pone los cortes inferidos por posicion y los guarda como breaksPos',
+    !aplicado._err && aplicado.orden === esp.order.slice(0, 100).join(',') && aplicado.orden !== previo.orden
+    && aplicado.cortes === esp.cuts.length && aplicado.guardados === esp.cuts.length
+    && aplicado.bandas === 0 && aplicado.tags > 0 && aplicado.lista > 100
     && aplicado.guardado === aplicado.orden,
-    JSON.stringify({ cortes: aplicado.cortes, esperaba: esp.cuts.length, bandas: aplicado.bandas, movio: aplicado.orden !== previo.orden }));
+    JSON.stringify({ cortes: aplicado.cortes, esperaba: esp.cuts.length, guardados: aplicado.guardados,
+      posGuardadas: aplicado.posGuardadas, bandas: aplicado.bandas, tags: aplicado.tags,
+      movio: aplicado.orden !== previo.orden }));
+  /* ESTABLE POR POSICION: reordenar dentro de cada posicion NO puede cambiar la
+   * secuencia de posiciones de la lista general. Si la cambia, el Apply le
+   * reescribio al dueno un orden que es suyo (el mezcla posiciones a proposito)
+   * y ademas mandaria los cuarenta RBs arriba del todo. */
+  ok('(J6b) Apply es estable: cada plaza de la lista conserva su posicion',
+    !aplicado._err && !previo._err && aplicado.posiciones === previo.posiciones,
+    aplicado.posiciones === previo.posiciones ? 'la secuencia de posiciones no cambio'
+      : 'la secuencia de posiciones CAMBIO con Apply');
 
   const s = await sincronizado(pg);
   ok('(J7) el juego y los tiers aplicados suben al servidor', s && puts.length > prevN, `PUT ${prevN} -> ${puts.length}`);
@@ -1236,21 +1399,25 @@ console.log('\n=== Tier Game: el prior del mercado, la escalada y las contradicc
     const rows = [], pay = {};
     precios.forEach((v, i) => { const id = 'p' + i; rows.push({ id, name: 'Jug' + i, pos: pos[i], team: 'X' }); pay[id] = v; });
     const O = { pay, budget: 200 };
-    const entre = (res, x, y) => {
-      const A = res.order.indexOf(x), B = res.order.indexOf(y);
-      for (let q = Math.min(A, B); q < Math.max(A, B); q++) if (res.breaks[res.order[q]]) return true;
-      return false;
+    // "Separados por un corte" con tiers de posicion es "tienen tier distinto".
+    // null = alguno no tiene tier todavia, que no es lo mismo que "van juntos".
+    const sepa = (res, x, y) => {
+      const a = res.tierOf[x], b = res.tierOf[y];
+      if (a == null || b == null) return null;
+      return a !== b;
     };
-    const tierDe = res => { let t = 1, m = {}; res.order.forEach(id => { m[id] = t; if (res.breaks[id]) t++; }); return m; };
 
-    // PRIOR: sin una sola respuesta ya hay tiers, y salen del escalon de precio
+    /* SIN RESPUESTAS NO HAY TIERS. Es el cambio del 2026-08-29 y es deliberado:
+     * un tier es un escalon que el DECLARO, no uno que el mercado insinua. La
+     * version anterior sacaba los cortes del escalon de precio, y por eso sus
+     * 505 respuestas movian tan poco: el mercado arrancaba la conversacion y
+     * tambien la terminaba. El eje del dinero sigue vivo, pero solo para elegir
+     * la siguiente pregunta. */
     const cero = tmrTiersInfer(rows, [], O);
-    const tc = tierDe(cero);
-    const porPos = {};
-    cero.order.forEach(id => { const p = rows.find(x => x.id === id).pos; (porPos[p] = porPos[p] || {})[tc[id]] = 1; });
 
-    // y se RINDE ante una sola respuesta suya (p8 $54 y p20 $35)
-    const juntos = tmrTiersInfer(rows, [{ a: 'p8', b: 'p20', v: 0 }], O);
+    // p8 ($54) y p19 ($36) son los dos RB y el mercado los separa por $18.
+    const juntos = tmrTiersInfer(rows, [{ a: 'p8', b: 'p19', v: 0 }], O);
+    const partidos = tmrTiersInfer(rows, [{ a: 'p8', b: 'p19', v: 2 }], O);
 
     // ESCALADA: p46 ($13) gana clearly a p32 ($22), que esta por encima
     const e1 = tmrGameNext(rows, [{ a: 'p46', b: 'p32', v: 2 }], O);
@@ -1283,15 +1450,23 @@ console.log('\n=== Tier Game: el prior del mercado, la escalada y las contradicc
       if (!nx) break;
       a30.push({ a: nx.a, b: nx.b, v: [2, 1, 0, -1, 1][i % 5] });
     }
-    const r30 = tmrTiersInfer(rows, a30, O), t30 = tierDe(r30);
-    const pos30 = {};
-    r30.order.forEach(id => { const p = rows.find(x => x.id === id).pos; (pos30[p] = pos30[p] || {})[t30[id]] = 1; });
+    const r30 = tmrTiersInfer(rows, a30, O);
+    // Los tiers de las posiciones que SI recibieron respuestas. Una posicion
+    // que el juego no toco no tiene tiers, y exigirselos seria exigir que la
+    // inferencia invente.
+    const conResp = Object.keys(r30.byPos).filter(p => r30.byPos[p].answers > 0);
+    const nTiers = conResp.map(p => r30.byPos[p].tiers.length);
+    const top20 = r30.order.slice(0, 20)
+      .filter(id => r30.tierOf[id] != null)
+      .map(id => rows.find(x => x.id === id).pos + '|' + r30.tierOf[id]);
 
     return {
       prior: {
         cortes: cero.cuts.length, movidos: cero.moved, umbral: cero.umbral,
-        tiersPorPos: Object.keys(porPos).map(p => p + ':' + Object.keys(porPos[p]).length).join(' '),
-        cortadosSin: entre(cero, 'p8', 'p20'), cortadosCon: entre(juntos, 'p8', 'p20')
+        conTier: Object.keys(cero.tierOf).length,
+        sinRespuesta: sepa(cero, 'p8', 'p19'),
+        conSame: sepa(juntos, 'p8', 'p19'),
+        conClearly: sepa(partidos, 'p8', 'p19')
       },
       esc: {
         e1, rival1, sube1: !!rival1 && cero.order.indexOf(rival1) < cero.order.indexOf('p32'),
@@ -1304,20 +1479,21 @@ console.log('\n=== Tier Game: el prior del mercado, la escalada y las contradicc
       cy: { n: cy.length, ids: cy[0] && cy[0].ids, rep: cy[0] && cy[0].repreguntar, sin: sinCy.length },
       corta: {
         n: a30.length, cortes: r30.cuts.length, cortesCero: cero.cuts.length,
-        minTiers: Math.min.apply(null, Object.keys(pos30).map(p => Object.keys(pos30[p]).length)),
-        bandasTop20: new Set(r30.order.slice(0, 20).map(id => t30[id])).size,
+        posConResp: conResp.length,
+        minTiers: nTiers.length ? Math.min.apply(null, nTiers) : 0,
+        bandasTop20: new Set(top20).size,
         prog: tmrGameProgress(rows, a30)
       }
     };
   });
 
   const r = Object.assign({ prior: {}, esc: {}, gan: {}, cy: {}, corta: {} }, _r || {});
-  ok('(M1) PRIOR: sin una sola respuesta ya hay tiers, sacados del escalon de precio',
-    !r._err && r.prior.cortes >= 5 && r.prior.movidos === 0 && r.prior.umbral > 0,
+  ok('(M1) sin una sola respuesta NO hay ni un tier: un tier es un escalon que el declaro, no uno que el precio insinua',
+    !r._err && r.prior.cortes === 0 && r.prior.movidos === 0 && r.prior.conTier === 0 && r.prior.umbral > 0,
     JSON.stringify(r.prior));
-  ok('(M2) y el prior se RINDE: un "same tier" suyo borra un escalon de mercado de $19',
-    !r._err && r.prior.cortadosSin === true && r.prior.cortadosCon === false,
-    `mercado los separa: ${r.prior.cortadosSin}, tras su respuesta: ${r.prior.cortadosCon}`);
+  ok('(M2) y una sola respuesta suya lo decide entero: same los junta, clearly los parte, el mercado ya no vota',
+    !r._err && r.prior.sinRespuesta === null && r.prior.conSame === false && r.prior.conClearly === true,
+    `sin respuesta: ${r.prior.sinRespuesta}, con same: ${r.prior.conSame}, con clearly: ${r.prior.conClearly}`);
   ok('(M3) ESCALADA: tras ganar clearly desde abajo, lo prueba contra uno de MAS arriba',
     !r._err && r.esc.e1 && r.esc.e1.why === 'up' && r.esc.sube1 && r.esc.posRival1 === 'RB',
     JSON.stringify({ e1: r.esc.e1, sube: r.esc.sube1, pos: r.esc.posRival1 }));
@@ -1333,9 +1509,10 @@ console.log('\n=== Tier Game: el prior del mercado, la escalada y las contradicc
     !r._err && r.cy.n === 1 && r.cy.ids && r.cy.ids.length === 3 && r.cy.rep && r.cy.rep.length === 2,
     JSON.stringify(r.cy));
   ok('(M8) CONTROL NEGATIVO: sin ciclo no inventa una contradiccion', !r._err && r.cy.sin === 0, 'ciclos: ' + r.cy.sin);
-  ok('(M9) una sesion de 30 respuestas ya deja tiers coherentes',
-    !r._err && r.corta.n === 30 && r.corta.minTiers >= 2 && r.corta.bandasTop20 >= 3
-    && r.corta.cortes >= r.corta.cortesCero && r.corta.prog.resolved > 0 && r.corta.prog.total > 0,
+  ok('(M9) una sesion de 30 respuestas ya deja tiers coherentes en cada posicion que toco',
+    !r._err && r.corta.n === 30 && r.corta.posConResp >= 2 && r.corta.minTiers >= 2
+    && r.corta.bandasTop20 >= 3 && r.corta.cortes > r.corta.cortesCero
+    && r.corta.prog.resolved > 0 && r.corta.prog.total > 0,
     JSON.stringify(r.corta));
   ok('(M10) consola limpia con el motor nuevo', errs.length === 0, errs.slice(0, 3).join(' | ') || 'sin errores');
   await pg.close();
@@ -1502,7 +1679,7 @@ console.log('\n=== Cheat Sheet ===');
   // puede decir nada (el "tier" seria la lista entera) y tiene que callarse y
   // explicar por que. Sin este check, H2 pasaria igual con la linea diciendo
   // cualquier cosa sobre un tier de cuarenta jugadores.
-  await eva(pg, () => { TMR.breakAfter = {}; tmrSave(); tmrPaint(); tmrSheetOpen(); });
+  await eva(pg, () => { TMR.breakPos = {}; TMR.legacyBreaks = 0; tmrSave(); tmrPaint(); tmrSheetOpen(); });
   await esperar(pg, () => { const s = document.getElementById('rk-sheet'); return s && !s.hidden; }, 15000);
   const mudo = await eva(pg, () => ({
     deals: document.querySelectorAll('#rk-sheet .rk-sh-deal').length,
@@ -1523,9 +1700,14 @@ console.log('\n=== Cheat Sheet ===');
     TMR.rows = TMR.rows.filter(r => r !== hall && r !== swift);
     const j = TMR.rows.indexOf(cook);
     TMR.rows.splice(j + 1, 0, hall, swift);
-    TMR.breakAfter = {};
-    if (j > 0) TMR.breakAfter[TMR.rows[j - 1].id] = true;
-    TMR.breakAfter[swift.id] = true;
+    /* Los cortes son POR POSICION: el de arriba va despues del RB anterior a
+     * Cook en la lista de RBs, no despues de la fila anterior de la lista
+     * general, que puede ser un WR y no separaria nada. */
+    TMR.breakPos = {}; TMR.legacyBreaks = 0;
+    const rbs = TMR.rows.filter(r => r.pos === 'RB');
+    const k = rbs.indexOf(cook);
+    if (k > 0) tmrBreakSet('RB')[rbs[k - 1].id] = true;
+    tmrBreakSet('RB')[swift.id] = true;
     tmrSave(); tmrPaint();
     const uno = r => ({
       id: r.id, nm: r.name, pay: tmrPriceOf(r.id),

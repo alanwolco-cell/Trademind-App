@@ -1,0 +1,223 @@
+{
+ "QB": {
+  "contra": 1,
+  "answers": 41,
+  "unranked": [
+   "patrick mahomes",
+   "bo nix",
+   "brock purdy",
+   "jared goff",
+   "baker mayfield",
+   "jordan love",
+   "kyler murray",
+   "sam darnold",
+   "fernando mendoza",
+   "tyler shough",
+   "malik willis",
+   "cj stroud",
+   "daniel jones",
+   "cam ward"
+  ],
+  "tiers": [
+   [
+    "josh allen",
+    "joe burrow",
+    "trevor lawrence",
+    "jayden daniels",
+    "caleb williams",
+    "lamar jackson",
+    "justin herbert",
+    "drake maye",
+    "jalen hurts",
+    "jaxson dart",
+    "dak prescott",
+    "matthew stafford"
+   ]
+  ]
+ },
+ "RB": {
+  "contra": 3,
+  "answers": 153,
+  "unranked": [
+   "jonathon brooks",
+   "kenny gainwell",
+   "jacory croskeymerritt",
+   "jordan mason",
+   "aaron jones"
+  ],
+  "tiers": [
+   [
+    "jahmyr gibbs"
+   ],
+   [
+    "bijan robinson"
+   ],
+   [
+    "james cook",
+    "christian mccaffrey",
+    "jonathan taylor",
+    "saquon barkley",
+    "chase brown"
+   ],
+   [
+    "kenneth walker",
+    "omarion hampton"
+   ],
+   [
+    "devon achane",
+    "jeremiyah love",
+    "breece hall",
+    "ashton jeanty",
+    "derrick henry"
+   ],
+   [
+    "dandre swift"
+   ],
+   [
+    "travis etienne"
+   ],
+   [
+    "javonte williams"
+   ],
+   [
+    "kyren williams",
+    "josh jacobs",
+    "cam skattebo",
+    "jadarian price"
+   ],
+   [
+    "quinshon judkins",
+    "bhayshul tuten",
+    "rhamondre stevenson",
+    "bucky irving",
+    "treveyon henderson"
+   ],
+   [
+    "david montgomery",
+    "blake corum",
+    "rico dowdle"
+   ],
+   [
+    "jk dobbins"
+   ],
+   [
+    "tony pollard"
+   ],
+   [
+    "jaylen warren",
+    "rj harvey",
+    "chuba hubbard",
+    "kyle monangai"
+   ]
+  ]
+ },
+ "WR": {
+  "contra": 4,
+  "answers": 170,
+  "unranked": [],
+  "tiers": [
+   [
+    "jamarr chase",
+    "puka nacua"
+   ],
+   [
+    "jaxon smithnjigba"
+   ],
+   [
+    "amonra st brown",
+    "ceedee lamb",
+    "aj brown",
+    "justin jefferson"
+   ],
+   [
+    "nico collins"
+   ],
+   [
+    "drake london",
+    "malik nabers",
+    "garrett wilson",
+    "chris olave",
+    "ladd mcconkey",
+    "devonta smith",
+    "tetairoa mcmillan",
+    "george pickens",
+    "emeka egbuka",
+    "jaylen waddle"
+   ],
+   [
+    "parker washington",
+    "luther burden"
+   ],
+   [
+    "rashee rice",
+    "tee higgins",
+    "zay flowers",
+    "dj moore",
+    "rome odunze",
+    "carnell tate",
+    "davante adams",
+    "jameson williams",
+    "christian watson",
+    "mike evans",
+    "terry mclaurin",
+    "brian thomas",
+    "marvin harrison",
+    "chris godwin"
+   ],
+   [
+    "makai lemon"
+   ],
+   [
+    "courtland sutton",
+    "jordyn tyson",
+    "michael pittman",
+    "dk metcalf",
+    "michael wilson"
+   ]
+  ]
+ },
+ "TE": {
+  "contra": 0,
+  "answers": 39,
+  "unranked": [
+   "isaiah likely",
+   "dallas goedert",
+   "oronde gadsden",
+   "mark andrews",
+   "hunter henry",
+   "brenton strange",
+   "kenyon sadiq",
+   "tj hockenson",
+   "aj barner",
+   "chig okonkwo",
+   "juwan johnson",
+   "dalton schultz",
+   "terrance ferguson",
+   "david njoku"
+  ],
+  "tiers": [
+   [
+    "brock bowers"
+   ],
+   [
+    "trey mcbride"
+   ],
+   [
+    "colston loveland"
+   ],
+   [
+    "tyler warren"
+   ],
+   [
+    "sam laporta",
+    "tucker kraft",
+    "dalton kincaid",
+    "kyle pitts",
+    "george kittle",
+    "harold fannin",
+    "jake ferguson",
+    "travis kelce"
+   ]
+  ]
+ }
+}

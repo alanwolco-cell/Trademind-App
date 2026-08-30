@@ -888,12 +888,22 @@ function tmrPaint() {
    * aparte, al final de su posicion, que es donde lo deja el juego. Solo cuenta
    * dentro del universo del juego (los primeros TMR_TIER_POS_N de su posicion):
    * mas abajo nadie espera tiers. */
-  var conResp = {}, noComp = [], cntPos = {};
-  (TMR.game || []).forEach(function (a) { conResp[a.a] = 1; conResp[a.b] = 1; });
+  var conResp = {}, noComp = [], cntPos = {}, respPos = {}, posDe = {};
+  TMR.rows.forEach(function (x) { posDe[x.id] = x.pos; });
+  (TMR.game || []).forEach(function (a) {
+    conResp[a.a] = 1; conResp[a.b] = 1;
+    // Solo cuenta para SU posicion: una pareja que cruza posiciones no decide
+    // ningun tier, asi que tampoco declara "aqui ya se jugo".
+    if (posDe[a.a] && posDe[a.a] === posDe[a.b]) respPos[posDe[a.a]] = (respPos[posDe[a.a]] || 0) + 1;
+  });
   for (i = 0; i < TMR.rows.length; i++) {
     r = TMR.rows[i];
     cntPos[r.pos] = (cntPos[r.pos] || 0) + 1;
-    noComp[i] = !!conCortes[r.pos] && !conResp[r.id] && cntPos[r.pos] <= TMR_TIER_POS_N;
+    // Si nunca jugo esa posicion no hay nada que declarar: sus cortes a mano
+    // son tiers igual de suyos. El marcador solo tiene sentido cuando el juego
+    // SI paso por ahi y a este jugador no lo alcanzo.
+    noComp[i] = !!conCortes[r.pos] && (respPos[r.pos] || 0) > 0
+      && !conResp[r.id] && cntPos[r.pos] <= TMR_TIER_POS_N;
   }
   for (i = 0; i < TMR.rows.length; i++) {
     r = TMR.rows[i];
@@ -1577,21 +1587,31 @@ function _tmrPosSolve(ids, ans) {
       s[i] = num / den;
     }
   }
-  // Orden por puntaje; el desempate es el puesto de partida, nunca el azar: dos
-  // jugadores declarados del mismo tier acaban con el mismo puntaje y sin
-  // desempate estable la lista bailaria en cada pintado.
-  var ord = [];
-  for (i = 0; i < n; i++) if (visto[i]) ord.push(i);
+  /* EL ORDEN va sobre los CUARENTA, no solo sobre los comparados. Quien no
+   * entro en ninguna pareja conserva su puntaje de partida, asi que se queda
+   * donde el dueno lo tenia. Mandarlos todos al final de la posicion parecia
+   * inofensivo y no lo era: con dos respuestas, los dos comparados saltaban a
+   * RB1 y RB2 por encima de treinta y ocho jugadores sobre los que el no habia
+   * dicho nada, y la escalada se quedaba sin nadie a quien subir. Lo destapo el
+   * gate, no la lectura del codigo.
+   * El desempate es el puesto de partida, nunca el azar: dos jugadores
+   * declarados del mismo tier acaban con el mismo puntaje y sin desempate
+   * estable la lista bailaria en cada pintado. */
+  var ord = [], ordT = [], fuera = [];
+  for (i = 0; i < n; i++) ord.push(i);
   ord.sort(function (x, y) { return (s[y] - s[x]) || (x - y); });
-  var fuera = [];
-  for (i = 0; i < n; i++) if (!visto[i]) fuera.push(i);
+  ord.forEach(function (ix) { if (visto[ix]) ordT.push(ix); else fuera.push(ix); });
 
+  /* LOS TIERS, en cambio, solo sobre los comparados: un tier es un escalon que
+   * el declaro, y meter en el a quien nunca miro seria afirmar algo que no
+   * dijo. Por eso los vecinos que deciden el corte son los vecinos DENTRO de
+   * los comparados, aunque en la lista haya alguien sin comparar en medio. */
   var cortes = {}, tiers = [], cur = [];
-  for (k = 0; k < ord.length; k++) {
-    var x = ord[k];
+  for (k = 0; k < ordT.length; k++) {
+    var x = ordT[k];
     cur.push(x);
-    if (k + 1 >= ord.length) break;
-    var y = ord[k + 1], d = rel[x + '>' + y], corta;
+    if (k + 1 >= ordT.length) break;
+    var y = ordT[k + 1], d = rel[x + '>' + y], corta;
     if (d === 0) corta = false;                    // lo nego con todas las letras
     else if (d != null) corta = true;              // dijo slightly o clearly
     else corta = (s[x] - s[y]) >= TMR_TIER_GAP;    // sin respuesta: se deduce
@@ -1607,7 +1627,7 @@ function _tmrPosSolve(ids, ans) {
     var g = mg(a.v);
     if (g !== 0 && (s[a.i] - s[a.j]) * g < 0) contra++;
   });
-  return { s: s, ord: ord, fuera: fuera, cortes: cortes, tiers: tiers, rel: rel, contra: contra };
+  return { s: s, ord: ord, ordT: ordT, fuera: fuera, cortes: cortes, tiers: tiers, rel: rel, contra: contra };
 }
 
 function tmrTiersInfer(rows, answers, opts) {
@@ -1668,6 +1688,8 @@ function tmrTiersInfer(rows, answers, opts) {
       g.forEach(function (ix) { tierOf[ids[ix]] = gi + 1; });
     });
     R.ord.forEach(function (ix) { byId[ids[ix]] = Math.round(R.s[ix] * 1000) / 1000; });
+    // `score` declara a TODOS los del universo, comparados o no: Apply lo usa
+    // para saber a quien alcanzo el juego y a quien no.
     breaksPos[pos] = R.cortes;
     Object.keys(R.cortes).forEach(function (id) { cortesTodos.push(id); });
     ids.forEach(function (id) { universo[id] = pos; });
@@ -1675,11 +1697,14 @@ function tmrTiersInfer(rows, answers, opts) {
     contraTot += R.contra;
     byPos[pos] = {
       pos: pos,
+      // el orden nuevo de los cuarenta, comparados y no comparados
       order: R.ord.map(function (ix) { return ids[ix]; }),
+      // los que si tienen tier, en su orden
+      ranked: R.ordT.map(function (ix) { return ids[ix]; }),
       unranked: R.fuera.map(function (ix) { return ids[ix]; }),
       tiers: R.tiers.map(function (g) { return g.map(function (ix) { return ids[ix]; }); }),
       answers: ans.length, contra: R.contra, n: ids.length,
-      _s: R.s, _ids: ids, _rel: R.rel, _ord: R.ord
+      _s: R.s, _ids: ids, _rel: R.rel, _ord: R.ordT
     };
     t = t;
   });
@@ -1690,9 +1715,7 @@ function tmrTiersInfer(rows, answers, opts) {
    * el orden general del dueno (que mezcla posiciones a proposito) es suyo, no
    * un derivado de esto. */
   var cola = {};
-  Object.keys(byPos).forEach(function (pos) {
-    cola[pos] = byPos[pos].order.concat(byPos[pos].unranked);
-  });
+  Object.keys(byPos).forEach(function (pos) { cola[pos] = byPos[pos].order; });
   var puntero = {}, orden = [], movidos = 0;
   rows.forEach(function (r, ix) {
     var pos = r.pos, id = r.id;
@@ -2144,7 +2167,6 @@ function tmrTiersApply() {
   var enUni = {};
   Object.keys(res.byPos).forEach(function (pos) {
     (res.byPos[pos].order || []).forEach(function (id) { enUni[id] = 1; });
-    (res.byPos[pos].unranked || []).forEach(function (id) { enUni[id] = 1; });
   });
   var nuevos = {};
   Object.keys(TMR.breakPos || {}).forEach(function (pos) {
@@ -2640,6 +2662,8 @@ if (typeof window !== 'undefined') {
   window.tmrTierMap = tmrTierMap;
   window.tmrBreaksCount = tmrBreaksCount;
   window.tmrBreaksOut = tmrBreaksOut;
+  window.tmrBreakSet = tmrBreakSet;
+  window.tmrIsBreak = tmrIsBreak;
   window.tmrGameNext = tmrGameNext;
   window.tmrGameProgress = tmrGameProgress;
   window.tmrGameOpen = tmrGameOpen;
