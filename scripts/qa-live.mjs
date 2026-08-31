@@ -127,6 +127,8 @@ try {
   const pg = await br.newPage({ viewport: { width: 1440, height: 900 } });
   await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(2200);
+  // el diario de ventas de los checks anteriores no debe reproducirse aqui
+  await pg.evaluate(() => { try { localStorage.removeItem('tm_lv_journal'); } catch (_) { } });
   await pg.evaluate(async () => await window.lvEnter());
   await pg.waitForTimeout(1200);
 
@@ -162,11 +164,11 @@ try {
     ['gibbs se fue en 86 a ness', 'gibbs', 86, 1], ['jeanty 48 dream team', 'jeanty', 48, 3], ['me lleve olave 19', 'olave', 19, MD.mySlot],
     ['bowers $36 real madrid', 'bowers', 36, 6], ['st. brown 65 5', 'st. brown', 65, 5]
   ].map(([t, n, p, s]) => { const r = lvParseTyped(t); return r && r.price === p && r.seat === s && r.name === n; }));
-  ok('t1', typed.every(Boolean), 'la caja entiende "gibbs se fue en 86 a ness", "jeanty 48 dream team", "me lleve olave 19", "bowers $36 real madrid", "st. brown 65 5"');
+  ok('ty1', typed.every(Boolean), 'la caja entiende "gibbs se fue en 86 a ness", "jeanty 48 dream team", "me lleve olave 19", "bowers $36 real madrid", "st. brown 65 5"');
   // dos toques: bloque -> desplegable de equipo -> precio -> Sold
   const MD_TEAMS_FZ26 = 10;
   const clk = await pg.evaluate(() => { lvBlock('loveland'); const sel = document.getElementById('lv-sold-seat'), inp = document.getElementById('lv-sold-price'); if (!sel || !inp) return { err: 'no row' }; sel.value = '6'; inp.value = '23'; const b0 = AU.budgets[6]; lvSoldClick(); return { b0, b1: AU.budgets[6], opts: sel.options.length }; });
-  ok('t2', !clk.err && clk.b1 === clk.b0 - 23 && clk.opts === MD_TEAMS_FZ26, `el bloque cierra la venta con desplegable de equipo y precio (${JSON.stringify(clk)})`);
+  ok('ty2', !clk.err && clk.b1 === clk.b0 - 23 && clk.opts === MD_TEAMS_FZ26, `el bloque cierra la venta con desplegable de equipo y precio (${JSON.stringify(clk)})`);
   const inf = await pg.evaluate(() => {
     // sobreprecio RELATIVO al sticker vigente (1.2x), no dolares fijos: con
     // dolares fijos el check se pudrio al recalibrar VAL_CURVE (2026-08-28),
@@ -341,6 +343,8 @@ try {
   // ── (r) APLICAR LATIDOS: ventas, idempotencia y diferencia de presupuesto ──
   await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(2200);
+  // el diario de ventas de los checks anteriores no debe reproducirse aqui
+  await pg.evaluate(() => { try { localStorage.removeItem('tm_lv_journal'); } catch (_) { } });
   await pg.evaluate(async () => await window.lvEnter());
   await pg.waitForTimeout(1200);
   const r1 = await pg.evaluate(t => { const r = lvIngest(t); return { sold: r.sold, picks: MD.picks.length, lot: r.lot }; }, fixTxt);
@@ -369,6 +373,8 @@ try {
   // reconstruir el historial y tiene que pedir la pestana, con los numeros
   await pg.goto(BASE, { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(2200);
+  // el diario de ventas de los checks anteriores no debe reproducirse aqui
+  await pg.evaluate(() => { try { localStorage.removeItem('tm_lv_journal'); } catch (_) { } });
   await pg.evaluate(async () => await window.lvEnter());
   await pg.waitForTimeout(1200);
   const r6 = await pg.evaluate(t => { const r = lvIngest(t); return { sold: r.sold, warn: r.warn[0] || '', picks: MD.picks.length }; }, fixTxt.split('Pick\tPlayer')[0]);
@@ -400,6 +406,7 @@ try {
   await yahoo.evaluate(t => { document.getElementById('t').textContent = t; }, fixTxt);
   const bm = await pg.evaluate(b => lvBookmarklet(b), BASE);
   const src = decodeURIComponent(bm.replace(/^javascript:/, ''));
+  await pg.evaluate(() => { try { localStorage.removeItem('tm_lv_journal'); } catch (_) { } });
   const [popup] = await Promise.all([
     yahoo.waitForEvent('popup'),
     yahoo.evaluate(code => { (new Function(code))(); }, src)
@@ -425,6 +432,18 @@ try {
   ok('s3', fed && fed.live, 'el panel marca la conexion como viva');
   await popup.close(); await yahoo.close();
 
+  // diario: una venta sobrevive a reabrir la sala, y undo la quita
+  const b0 = await pg.evaluate(() => { lvClearJournal(); return AU.budgets[2]; });
+  const b1 = await pg.evaluate(() => { lvSold('mcbride', 30, 2); return AU.budgets[2]; });
+  await pg.evaluate(() => { localStorage.setItem('tm_lv_reopen', '1'); }); await pg.reload(); await pg.waitForFunction(() => window.AU && AU.active && AU.sold && AU.sold.length === 1, null, { timeout: 30000 }).catch(() => { });
+  const b2 = await pg.evaluate(() => AU.budgets[2]);
+  await pg.evaluate(() => { lvUndo(); }); await pg.waitForTimeout(500); await pg.waitForFunction(() => window.AU && AU.active && document.getElementById('lv-in'), null, { timeout: 30000 }).catch(() => { }); await pg.waitForTimeout(1500);
+  const b3 = await pg.evaluate(() => { const b = AU.budgets[2]; lvClearJournal(); return b; });
+  const jr = { b1, b2, b3 };
+  // el diario se limpio en b0, asi que el reload reconstruye una sala LIMPIA mas
+  // la venta apuntada ($200-$30); undo la quita y vuelve a los $200 de fabrica
+  ok('jr1', jr.b1 === b0 - 30 && jr.b2 === 170 && jr.b3 === 200, `la venta descuenta en vivo ($${b0}->$${jr.b1}), sobrevive a reabrir en sala limpia ($${jr.b2}) y undo la devuelve ($${jr.b3})`);
+
   await pg.close();
 } finally {
   await br.close();
@@ -433,4 +452,5 @@ try {
 
 console.log('');
 if (fail) { console.log(`LIVE QA: ${fail} FALLOS de ${pass + fail}`); process.exit(1); }
+
 console.log(`LIVE ALL GREEN: ${pass} checks`);

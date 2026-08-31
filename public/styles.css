@@ -2757,3 +2757,6 @@ html{scroll-padding-top:76px}
 .lv-sold-price{flex:0 0 84px;min-height:44px;padding:0 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:15px;font-weight:700;text-align:center}
 .lv-sold-btn{flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:9px;border:0;background:var(--accent);color:#fff;font-weight:700;font-size:13px;cursor:pointer}
 .lv-sold-btn:active{transform:scale(.98)}
+
+.lv-undo{margin-top:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+.lv-undo:hover{color:var(--text);border-color:var(--accent)}

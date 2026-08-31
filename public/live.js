@@ -134,6 +134,10 @@ function lvBuildIndex() {
 function lvFind(q) {
   q = _mdNormName(q || '');
   if (!q) return [];
+  // Recien reabierta la sala el indice aun no existe (el diario reproduce
+  // ventas antes del primer render): armarlo aqui mismo en vez de reventar.
+  if (!LV.idx || !LV.idx.length) { try { lvBuildIndex(); } catch (_) { } }
+  if (!LV.idx || !LV.idx.length) return [];
   if (LV._qc && LV._qc[q]) return LV._qc[q];
   var hits = [];
   for (var i = 0; i < LV.idx.length; i++) {
@@ -553,7 +557,9 @@ async function lvEnter() {
   try { var _dt = document.getElementById('md-dtype'); if (_dt) { _dt.value = 'auction'; mdDtypeSync(); } } catch (_) { }
   AU.live = 1;
   LV.on = true;
+  var _prevPool = MD.pool, _prevSold = AU.sold;
   await startMockDraft();
+  await lvReplayWhenReady();
   // Si la sala no abrio en subasta, no hay nada que pintar: se declara.
   if (!AU.active || !AU.slotsLeft) {
     AU.live = 0; LV.on = false;
@@ -594,6 +600,10 @@ function lvSold(nameOrP, price, slot) {
   if (AU.stepT) clearTimeout(AU.stepT);
   AU.lot = { p: p, bid: price, holder: slot, going: 0, myMax: 0 };
   auSell();
+  // DIARIO DE VENTAS (2026-08-30): la sala no sobrevivia a un reload y no habia
+  // deshacer. Cada venta buena se apunta en localStorage; al reabrir Draft Day
+  // se reproduce entera, y undo quita la ultima y reconstruye la sala.
+  if (!LV._replaying) { try { LV.journal = LV.journal || []; LV.journal.push({ n: p.name, p: price, s: slot }); localStorage.setItem('tm_lv_journal', JSON.stringify(LV.journal)); } catch (_) { } }
   return { ok: true, p: p, price: price, slot: slot };
 }
 
@@ -686,6 +696,7 @@ function lvPanel() {
     + '<input id="lv-in" class="lv-in" autocomplete="off" spellcheck="false"'
     + ' placeholder="Type a name. Add price and seat to log a sale: gibbs 74 3"'
     + ' oninput="lvOnType(this.value)" onkeydown="if(event.key===\'Enter\')lvOnEnter(this)">'
+    + '<button type="button" class="lv-undo" onclick="lvUndo()" title="Undo last sale" aria-label="Undo last sale">Undo last</button>'
     + '<div id="lv-hint" class="lv-hint"></div>'
     + '</div>';
   h += '<!--LV-YH-->';
@@ -1018,7 +1029,53 @@ function lvSoldClick() {
   if (hint) hint.innerHTML = '<i class="lv-ok">' + lvEsc(r.p.name) + ' &rarr; ' + lvEsc(lvSeatName(r.slot)) + ' $' + r.price + '</i>';
   var box = document.getElementById('lv-in'); if (box) { box.value = ''; box.focus(); }
 }
+// La apertura de la sala es asincrona: esperar a que este activa antes de reproducir.
+function lvReplayWhenReady() {
+  // Reintenta hasta que las ventas del diario esten APLICADAS (medido: la sala
+  // se declara activa antes de aceptar ventas, y una sola pasada se perdia).
+  return new Promise(function (res) {
+    var n = 0;
+    (function tick() {
+      var j = []; try { j = JSON.parse(localStorage.getItem('tm_lv_journal') || '[]'); } catch (_) { }
+      if (!j.length) return res();
+      var ready = AU.active && AU.slotsLeft && AU.budgets && MD.pool && MD.pool.length > 50;
+      if (ready && AU.sold && AU.sold.length === 0) { try { lvReplayJournal(); } catch (e) { LV._replayErr = String(e && e.message); } }
+      if (AU.sold && AU.sold.length >= j.length) return res();
+      if (++n > 60) return res();
+      setTimeout(tick, 150);
+    })();
+  });
+}
+function lvReplayJournal() {
+  var j = [];
+  try { j = JSON.parse(localStorage.getItem('tm_lv_journal') || '[]'); } catch (_) { j = []; }
+  LV.journal = Array.isArray(j) ? j : [];
+  if (!LV.journal.length || !AU.active) return;
+  LV._replaying = true; var ok = 0, bad = [];
+  LV.journal.forEach(function (x) { var r = lvSold(x.n, x.p, x.s); if (r && r.err) { bad.push(x.n); LV._replayErr = r.err; } else ok++; });
+  LV._replaying = false;
+  try { lvPaint(); } catch (_) { }
+  var hint = document.getElementById('lv-hint');
+  var und = ''; try { und = localStorage.getItem('tm_lv_undone') || ''; localStorage.removeItem('tm_lv_undone'); } catch (_) { }
+  if (hint) hint.innerHTML = '<i class="lv-ok">' + (und ? 'undone: ' + lvEsc(und) + ' &middot; ' : '') + 'restored ' + ok + ' sale' + (ok === 1 ? '' : 's') + (bad.length ? ' (could not restore: ' + lvEsc(bad.join(', ')) + ')' : '') + '</i>';
+}
+// Deshacer la ultima venta: quita la ultima linea del diario y reconstruye la sala.
+async function lvUndo() {
+  try { LV.journal = JSON.parse(localStorage.getItem('tm_lv_journal') || '[]'); } catch (_) { LV.journal = []; }
+  if (!LV.journal.length) { var h0 = document.getElementById('lv-hint'); if (h0) h0.innerHTML = '<i>nothing to undo</i>'; return; }
+  var last = LV.journal.pop();
+  try { localStorage.setItem('tm_lv_journal', JSON.stringify(LV.journal)); localStorage.setItem('tm_lv_undone', last.n + ' $' + last.p); } catch (_) { }
+  // Reconstruir la sala = recargar: startMockDraft no vuelve a abrir una sala
+  // ya activa (medido: lvEnter volvia en 18 ms sin tocar nada). Con #draftday
+  // la pagina abre la sala sola y reproduce el diario sin la ultima venta.
+  try { localStorage.setItem('tm_lv_reopen', '1'); } catch (_) { }
+  window.location.reload();
+}
+function lvClearJournal() { try { localStorage.removeItem('tm_lv_journal'); } catch (_) { } LV.journal = []; }
 function lvOnEnter(input) {
+  var v0 = String(input.value || '').trim();
+  if (/^(undo|deshacer|borra la ultima)$/i.test(v0)) { input.value = ''; lvUndo(); return; }
+  if (/^(new room|nueva sala|reset room)$/i.test(v0)) { input.value = ''; lvClearJournal(); try { localStorage.setItem('tm_lv_reopen', '1'); } catch (_) { } window.location.reload(); return; }
   var v = String(input.value || '').trim();
   var pt = lvParseTyped(v);
   var m = (pt && pt.name && pt.seat) ? [v, pt.name, String(pt.price), String(pt.seat)] : null;
@@ -1317,7 +1374,10 @@ if (typeof window !== 'undefined') {
   });
   // abrir la sala sola cuando el marcador nos abre con #draftday
   var _lvBoot = function () {
-    if (window.location.hash !== '#draftday') return;
+    // o el flag de reapertura (undo / new room): tras entrar, la URL ya no lleva
+    // el hash porque el router la reescribe, y un reload sin flag no abria nada
+    var _reopen = false; try { _reopen = localStorage.getItem('tm_lv_reopen') === '1'; if (_reopen) localStorage.removeItem('tm_lv_reopen'); } catch (_) { }
+    if (window.location.hash !== '#draftday' && !_reopen) return;
     var tries = 0;
     var t = setInterval(function () {
       tries++;
