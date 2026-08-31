@@ -1299,3 +1299,40 @@ PENDIENTES tras el draft:
    asiento elegido desplaza a otro equipo. Revisar lvSeatName + mdFz26SetMe.
 3. Preguntarle como le fue: que se llevo, contra que precios, y si el panel/consejos
    sirvieron en vivo. De ahi salen los proximos arreglos.
+
+## Sesion 2026-08-31: la subasta real transcrita, y el motor a 1.3
+
+**El dueno ES el equipo "Adrian Peterson"** en la liga Fantazy (lo confirmo el; Falafel
+es OTRO equipo). Su draft: Gibbs $77, AJ Brown $51, Bowers $32, Loveland $12, G. Wilson
+$8, Burrow $4 y nueve lotes de $1-3. $200 exactos.
+
+- **Fixture de la subasta real**: `scripts/fixtures/auction-fantazy-2026-08-30.json`,
+  los 150 picks transcritos de un video del Draft Results de Yahoo (fotogramas con
+  ffmpeg a 1 fps; el video hay que pedirlo GUARDADO en el Escritorio, la miniatura
+  flotante vive en una carpeta TCC que el terminal no puede leer, y el nombre lleva
+  un espacio U+202F antes de "PM": copiar con glob). Commits 5b08718 + 62fb7a1.
+- **Lo que dijo la sala real contra el motor** (compare-real-auction, 40 salas):
+  cima -6% con 1.2; franja RB2 inflada IGUAL que en Divas (C. Brown $58 vs $38,
+  Walker $55 vs $38, Hampton $58 vs $45, AJB $51 vs $39); **QB en direccion OPUESTA
+  a Divas** (real $62 vs $107 simulado: la sala del dueno regala QBs, Divas los
+  pagaba); TE +25%; 51 de 150 lotes a $1.
+- **VAL_CURVE 1.2 -> 1.3** (c3b6c20): cima de su sala -6% -> -1%, $5-14 y $2-4 a 0%,
+  Divas queda neutra. **QB sin descuento a proposito**: dos salas reales, direcciones
+  opuestas; es la posicion mas dependiente de la sala. calibrate-room ALL GREEN,
+  qa-live 50, qa-nav, qa-board, qa-rankings en verde. Cache-bust 2026083101.
+  Verificado en produccion: sha256 iguales en app.js/index.html/live.js/styles.css
+  y qa-nav en verde contra macdraft.app.
+- **Consejo dado sobre su roster** (el lo pidio): tradear a Bowers y quedarse
+  Loveland; candidatos SUCK IT (Javonte), Family Feud (Henry), rana jr (Skattebo).
+  Su hueco es RB2. Decision suya, en curso.
+
+**PENDIENTES:**
+1. **Otro auction la PROXIMA SEMANA (~2026-09-06), mismos settings que Fantazy**: el
+   preset FZ26 sirve tal cual. Lecciones dadas: el "up to" es muro (AJB le costo $12
+   de mas), reservar $35-45 para RB2, QB con moneditas, un solo TE premium.
+2. Cosmetico del asiento en THE ROOM/Sold ("YOU"/"(me)", Falafel ausente, nombre
+   repetido; lvSeatName + mdFz26SetMe): SIGUE sin tocarse porque el dueno aun no
+   contesta si uso el panel o el chat en el draft ni si el marcador de Yahoo se
+   engancho. Preguntar antes de tocar Draft Day. Urge mas ahora: hay draft en una
+   semana.
+3. Viejos no urgentes: lector de Yahoo, traslado de Pro, auGradeBuy generoso.
