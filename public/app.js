@@ -12981,7 +12981,15 @@ function auPoolInit(){
   // 1.2 la clava (Gibbs $80 vs $86, Bijan $77 vs $79, Chase $70 vs $73) con
   // la franja $15-29 en -1%. Sobreescribible con window.AU_VAL_CURVE para
   // barrer sin tocar el archivo.
-  var VAL_CURVE=(typeof window!=='undefined'&&window.AU_VAL_CURVE)||1.2;
+  // AJUSTE 2026-08-31 CON LA SUBASTA REAL DEL DUENO (fixture
+  // scripts/fixtures/auction-fantazy-2026-08-30.json, 150 lotes de Yahoo).
+  // Con 1.2 la cima quedaba corta (-6% en $50+); 1.3 la deja en -1% y clava
+  // $5-14 (0%) y $2-4 (0%). Contra Divas 1.3 queda neutra (+4% arriba, mejor
+  // abajo). Lo que la curva NO corrige, a proposito: el QB fue en direcciones
+  // OPUESTAS en las dos salas reales (Divas lo pago +25% sobre el motor, la
+  // liga del dueno -40%): es la posicion mas dependiente de la sala y un
+  // descuento global mentiria en la mitad de las salas.
+  var VAL_CURVE=(typeof window!=='undefined'&&window.AU_VAL_CURVE)||1.3;
   var discSum=0;
   draftable.forEach(function(v){discSum+=Math.pow(Math.max(0,v.raw-repl),VAL_CURVE);});
   var k=discSum>0?(total-slots)/discSum:0;
