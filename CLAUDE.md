@@ -1257,3 +1257,45 @@ el resto a $1), declara la posicion sin objetivo y baja la suma de todos a nota 
 columna Pay pintaba el TECHO (Gibbs $91) en vez del expect ($77): ahora la cifra grande es
 lo que paga la sala y el tope va debajo. Gate qa-rankings 142 checks, nuevos (y2)(z9)(z9b)(z10);
 24 fallan contra el codigo anterior. Cache-bust 2026082811.
+
+## Sesion 2026-08-30/31: el dia del draft real
+
+La subasta real de la liga Fantazy fue el 2026-08-30 ~1pm. Lo que se construyo y
+desplego ese dia, todo verificado en produccion por sha256 y con qa-live en 50 checks:
+- **Entrada facil en Draft Day**: la caja entiende lo tecleado como se dice ("gibbs se
+  fue en 86 a ness", "me lleve jeanty 48", equipo por nombre con tramo contiguo,
+  `lvParseTyped`), y el bloque cierra la venta con DOS TOQUES (desplegable de equipo,
+  precio, boton Sold, `lvSoldClick`).
+- **Diario de ventas** (`tm_lv_journal` en localStorage): cada venta se apunta, la sala
+  se reconstruye sola al recargar (`lvReplayWhenReady` reintenta hasta que las ventas
+  esten APLICADAS: la sala se declara activa antes de aceptar ventas), `undo` /
+  boton "Undo last" quita la ultima recargando con el flag `tm_lv_reopen` (el router
+  reescribe la URL y el hash #draftday no sobrevive a un reload), y "new room" limpia.
+  `lvFind` arma el indice de nombres el solo si no existe (reventaba con null al
+  reproducir antes del primer render).
+- La barra Build arma el plan MAS BARATO con los objetivos (no la suma de todos), Pay
+  muestra el expect de mercado con el "up to" secundario (agente build-fix, 381f3d3 y
+  913557d).
+- Tiers dictados por el dueno aplicados a su documento (breaksPos QB:1 RB:8 WR:8 TE:3,
+  script de una vez scripts/apply-owner-tiers.mjs, fixture tiers-owner-2026-08-29.json,
+  sus 505 respuestas del Tier Game en rankings-owner-2026-08-29.json).
+- `scripts/draft-chat.mjs`: reproducir por CLI las ventas que el dueno cuenta por chat.
+
+Trampas de gate que costaron horas, para no repetir:
+- El diario contaminaba los checks de Yahoo: el popup del marcador comparte
+  localStorage y REPRODUCIA el diario de checks anteriores. El gate limpia
+  `tm_lv_journal` antes de reabrir sala y antes de abrir el popup.
+- `lvEnter` sobre una sala ya activa NO reabre nada (startMockDraft sale por
+  `MD._starting`/sala activa y vuelve en 18 ms): reconstruir = recargar con el flag.
+- Checks con ids duplicados (dos `t1/t2/t3`) y checks con dolares absolutos sobre una
+  sala que ya gasto dinero: los nuevos van con id propio y presupuestos RELATIVOS.
+
+PENDIENTES tras el draft:
+1. Pedirle al dueno los precios REALES de su subasta del 30-ago, meterlos como fixture
+   (formato de scripts/fixtures/auction-nfl-divas-2026-08-27.json) y recalibrar con
+   scripts/compare-real-auction.mjs (sobre todo el premium de QB y la franja RB2).
+2. Cosmetico reportado por el dueno EN el draft: en THE ROOM / desplegable su asiento
+   sale como "YOU"/"(me)" y "Falafel" no aparece; un nombre se ve repetido cuando su
+   asiento elegido desplaza a otro equipo. Revisar lvSeatName + mdFz26SetMe.
+3. Preguntarle como le fue: que se llevo, contra que precios, y si el panel/consejos
+   sirvieron en vivo. De ahi salen los proximos arreglos.
