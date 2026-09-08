@@ -1035,8 +1035,11 @@ function mlPaintOdds() {
         + '<div class="ml-cell mono ml-champ-pct">' + mlPct(r.title) + '%</div>'
         + '</div>';
     });
-    h += '</div><p class="ml-fine">Playoff odds: '
-      + sim.rows.slice(0, 3).map(function (r) { return mlEsc(mlTeamName(sel, r.rosterId)) + ' ' + mlPct(r.playoff) + '%'; }).join(' · ')
+    // Ordenados por SU propia cifra. Heredar el orden del titulo dejaba
+    // 71.4% delante de 71.6% y se lee como un error de suma.
+    var pl = sim.rows.slice().sort(function (a, b) { return b.playoff - a.playoff; }).slice(0, 3);
+    h += '</div><p class="ml-fine">Best playoff odds: '
+      + pl.map(function (r) { return mlEsc(mlTeamName(sel, r.rosterId)) + ' ' + mlPct(r.playoff) + '%'; }).join(' · ')
       + '</p>';
   }
   h += '</div>';
