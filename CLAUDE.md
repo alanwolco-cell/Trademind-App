@@ -1336,3 +1336,204 @@ $8, Burrow $4 y nueve lotes de $1-3. $200 exactos.
    engancho. Preguntar antes de tocar Draft Day. Urge mas ahora: hay draft en una
    semana.
 3. Viejos no urgentes: lector de Yahoo, traslado de Pro, auGradeBuy generoso.
+
+## Sesion 2026-09-08: All Leagues, el tablero de odds, y Yahoo aprobado
+
+Pedido del dueno, en tres tandas dentro de la misma sesion: (1) subir tu liga y
+mandar un codigo de invitacion para que la liga entera la vea, inspirado en
+pplfantasy.com; (2) que pueda seguir TODAS sus ligas desde un solo sitio, de
+Sleeper y de Yahoo, viendo sus jugadores y contra quien juega; (3) un tab de
+championship odds y de matchup odds "que se vea como en casas de apuestas".
+Y a mitad de sesion: **Yahoo aprobo el API de Fantasy Sports**.
+
+El orden se decidio por dependencias: la pantalla de todas las ligas monta la
+capa de entrada (ingesta, calendario, proyecciones) sobre la que se apoyan
+despues el hub compartido con codigo y el mercado de trades. Eso es la
+**entrega 1**, y es lo que quedo hecho hoy.
+
+### Lo que existe ahora: pantalla `/myleagues`, en el cajon como "All Leagues"
+
+`public/myleagues.js` (modulo aparte, como rankings.js y live.js, porque app.js
+va por 17.400 lineas). Tres pestanas:
+- **Leagues**: una tarjeta por liga con formato, reglamento, tu record y tu duelo
+  de la semana con su linea.
+- **My Players**: tu exposicion agregada (a quien tienes y en cuantas de tus
+  ligas) y **"Rooting against yourself"**, los jugadores que son tuyos en una
+  liga y estan enfrente en otra. Medido con su cuenta real: 104 jugadores en 14
+  ligas, 8 conflictos.
+- **Odds**: tablero de casa de apuestas. Linea, precio americano y total por
+  duelo, mas odds de campeonato por Montecarlo de 4.000 temporadas.
+
+### De donde sale cada numero, que es lo unico que hace creible el tablero
+- **La proyeccion semanal por jugador se RECONSTRUYE con el reglamento de CADA
+  liga**, desde las lineas crudas que ya cachea `/api/odds/implied`. El servidor
+  guardaba una sola proyeccion en PPR entera; usarla en las catorce ligas seria
+  decir "half PPR" y cobrar otra cosa. `mlScoring()` lee `scoring_settings` y
+  `mlProjPlayer()` vuelve a sumar con esos valores.
+- **Los pases de anotacion se estiman aparte** (`ML_PASS_TD_PER_YD`, una cada
+  ~150 yardas). Las props solo traen "anytime TD", que en un QB es su anotacion
+  corriendo: sin esa linea TODOS los QB salian entre 4 y 8 puntos por debajo y
+  el tablero favorecia a quien tiene el QB flojo.
+- **Los titulares sin linea reciben la mediana de su posicion**, no cero: un
+  titular en cero hunde a su equipo entero por un hueco de la casa de apuestas.
+  La cobertura se DECLARA en pantalla ("87% of your starters have a number").
+- **Sin comision**. Son probabilidades derechas, y la pantalla lo dice. Meter
+  vig para que "parezca mas real" seria ensuciar el numero.
+
+### El fallo que aparecio construyendo esto, y que vale como regla
+La primera version pintaba odds de campeonato en una liga **sin draftear**:
+doce equipos con proyeccion cero, y el reparto del titulo (24,7% / 18,4% / ...)
+salia del ORDEN de la lista y de nada mas. Un numero inventado con forma de
+dato. Ahora `mlSimLeague` se niega a correr sin calendario o sin planteles, y la
+pantalla dice por que. Tiene dos controles negativos en el gate.
+
+### Gate: `node scripts/qa-myleagues.mjs`, 28 checks, navegador real
+Entra CLICANDO desde la portada (cajon en escritorio, More en el telefono).
+Mide: la puerta, la aritmetica (los dos lados de un duelo suman 1, la linea de
+uno es la contraria del otro, el total es el mismo en las dos filas, el titulo
+suma 100%), los controles negativos (liga sin draftear, tablero sin lineas), la
+exposicion contra su propio calculo, 390px sin desborde y consola limpia.
+**Verificado: 24 de los 28 fallan contra HEAD** (worktree detached, QA_PORT
+3224). Los 4 que pasan son guardas que tienen que pasar en las dos versiones.
+
+Las proyecciones entran por fixture (`scripts/fixtures/odds-props-2026-09-08.json`,
+171 jugadores capturados de produccion) para que la aritmetica sea
+deterministica y no dependa de una API de pago.
+
+**Tres lecciones que el gate se comio y quedan cerradas en el codigo del gate:**
+- `pg.click()` LANZA si el selector no existe: contra el codigo viejo mataba la
+  corrida en el primer fallo y se llevaba veinte checks por delante. Va envuelto.
+- Un check que solo pide "distinto de cero" PASA contra una funcion que no
+  existe, porque `undefined !== 0`. Ahora exigen tipo numero.
+- Un "todos cumplen" sobre una lista VACIA es cierto: tres checks pasaban contra
+  un codigo que no pintaba nada. Ahora exigen que haya filas.
+
+### Yahoo: aprobado y cableado, SIN verificar con datos reales
+Comprobado el 2026-09-08 contra la app real: `scope=fspt-r` con
+`redirect_uri=https://macdraft.app/api/yahoo/callback` devuelve **302 al login de
+Yahoo**. En agosto ese mismo par devolvia `invalid_scope`. El permiso esta
+concedido y el dominio ya esta registrado.
+
+Lo que se escribio en `server/routes/yahoo.js`: `/leagues`, `/league/:key`
+(reglamento, equipos, standings y planteles), `/league/:key/scoreboard?week=N` y
+`/refresh`. Todos normalizan al MISMO molde que devuelve Sleeper, para que el
+resto del producto no ramifique por plataforma. Guardas verificados por curl:
+401 sin token, 400 con clave de liga mala o semana fuera de rango.
+
+**Donde vive el token, y por que.** En el navegador del usuario, no en nuestro
+almacen. Guardarlo del lado del servidor convertiria el Blob en un cofre de
+credenciales de terceros y una sola fuga se llevaria las cuentas de Yahoo de
+todos; del lado del cliente el peor caso es una cuenta, con permiso de solo
+lectura. El mensaje de la ventana emergente pasa a ir al **propio origen** y no
+a `"*"`, justamente porque ahora lleva un token. Si algun dia hace falta
+refrescar sin el usuario delante (un correo, un resumen nocturno), esta decision
+hay que revisarla.
+
+**La exposicion agregada se indexa por NOMBRE normalizado, no por id de
+plataforma.** Sin eso, el mismo jugador en una liga de Sleeper y en una de Yahoo
+serian dos personas distintas y la pantalla perderia su razon de ser.
+
+**NO VERIFICADO**: el OAuth solo cierra contra `macdraft.app` (es el redirect
+registrado), asi que la ingesta de Yahoo no se puede probar hasta desplegar y
+que el dueno entre una vez. El parseo reutiliza `flattenEntity`/`deepCollect`,
+que si estan probados contra respuestas reales de Yahoo (la importacion de
+rosters vieja). Si Yahoo no devuelve su reglamento, la liga se marca
+`_scoringGuess` y la tarjeta y el tablero lo DECLARAN ("assumed").
+
+### Ruta nueva en Sleeper
+`GET /api/sleeper/league/:leagueId/matchups/:week`. Faltaba y es la que da los
+duelos y el calendario futuro (las semanas por jugar vienen con el
+emparejamiento hecho y los puntos en cero, que es lo que permite simular).
+
+### Otros gates
+`qa-nav` ALL GREEN con un destino nuevo ("All Leagues"). De paso se arreglo su
+medidor: buscaba la entrada del cajon por PREFIJO, asi que "My League" casaba
+tambien con la entrada nueva y acusaba al producto de un fallo que era suyo.
+Ahora busca exacta primero. **Y por eso la entrada se llama "All Leagues" y no
+"My Leagues": dos entradas casi iguales en el mismo menu tampoco las distingue
+una persona.**
+`qa-board` ALL GREEN. `qa-live` da 50/50 en unas corridas y 1 o 2 fallos en
+otras (c1/c2/o): **es intermitencia VIEJA, verificado contra HEAD en tres
+corridas** (green, 2 fallos, green). No es regresion de esta sesion, pero es un
+gate que miente en las dos direcciones y habria que estabilizarlo.
+
+### Lo que NO se hizo, y sigue pendiente de la conversacion
+- **El hub compartido con codigo de invitacion** (entrega 2): reclamar equipo,
+  power rankings narrados por Mac, y la historia completa de la liga caminando
+  `previous_league_id` hacia atras. Las temporadas cerradas no cambian nunca, o
+  sea que se extraen una vez y se congelan.
+- **El mercado** (entrega 3): trades que tu liga deberia hacer, trade block y
+  sala de votos.
+- **La previa de Open Graph** con el power ranking, para que el link pegado en
+  el WhatsApp de la liga se vea como tarjeta. Propuesta, sin respuesta.
+- Bye weeks: la proyeccion de semanas futuras usa el numero de una semana tipica
+  y no descuenta el descanso de cada equipo. Declarado, no simulado.
+
+---
+
+# Rediseño de septiembre 2026 (act. 8-sep)
+
+Este proyecto salió del expediente común de los cinco y ahora se trabaja solo. Todo está en
+`rediseno-2026-09/`:
+
+| Carpeta | Qué es |
+|---|---|
+| `sitio/index.html` | El producto construido, HTML autocontenido de 411 KB, abre con doble clic |
+| `canvas/` | Los artboards de dirección |
+| `referencias/` y `referencias.md` | El board de referencias del rubro |
+| `ficha.md` | Qué es el producto hoy |
+| `decisiones.md` | **Leer primero.** Decisiones cerradas que no se re-discuten |
+
+Publicado en https://claude.ai/code/artifact/9bc2e278-2139-4d73-80ef-2f7fc3efe5e8
+
+## Estado
+
+**Cerrado y verificado**, con cuatro rondas de QA independiente. Dirección A "Cabina de
+transmisión", elegida por Wolco el 7-sep. Draft jugable de punta a punta en snake y en
+subasta, con resumen calculado.
+
+## Reglas duras, no se re-abren
+
+- **Tipografías:** Familjen Grotesk para display, IBM Plex Sans para cuerpo (declarado a
+  propósito, para que nunca caiga a la fuente del sistema), IBM Plex Mono para números.
+- **Radios:** solo 6px, 22px, 999px y 50%. Nada más.
+- **Cero "sage"** en el markup: es residuo del nombre anterior y el build falla si aparece.
+- **Cero em dashes**, y el build también falla si aparece uno.
+- El fondo nunca es #000 puro.
+- **El archivo se construye desde las fuentes del agente**, no se edita a mano el
+  `index.html` o el siguiente build se lleva el cambio por delante.
+
+## Lo que se arregló en el rediseño, para no volver a romperlo
+
+- **La subasta destruía jugadores.** Dejaba planteles incompletos en 7 de cada 10 partidas,
+  y 4 de cada 5 si el usuario pujaba fuerte. La causa: el nominador retenía a un dólar un
+  jugador que no podía alojar, y al cerrar el lote se descartaba del tablero. Ahora
+  `nextNomination()` elige nominador y lote juntos, y `sellLot` lo ofrece al siguiente equipo
+  que quepa antes de descartarlo. **Los dos caminos, el del usuario y el del atajo "Let Mac
+  finish", usan la misma nominación**: que divergieran era la razón de que las pruebas con el
+  botón pasaran y las de a mano no.
+- **El pool subió a 264**, con 32 pateadores y 32 defensas, uno por franquicia. Antes había
+  14 de cada uno y una sala de doce necesita 12: margen de dos.
+- **`fits` cambió:** un segundo pateador o defensa ya no cabe en banca. Además de cerrar el
+  desagüe es la jugada correcta, porque nadie guarda un segundo pateador.
+- **El resumen premiaba un plantel vacío.** Uno de 9 de 15 sacaba B+ y "You held your
+  ground". Ahora se compara por valor efectivo, y sin un titular no se pasa de D porque no
+  hay alineación legal.
+- El presupuesto de subasta está en $300, no $200: con $200 el mercado no cerraba.
+
+**Verificado con 40 partidas completas sin un solo equipo incompleto.**
+
+## Nada abierto
+
+**El loro se queda como está** (decisión de Wolco, 8-sep-2026). El QA lo leía como la única
+cosa del producto que parece ilustración generada por IA: vector plano, ala arcoíris, brillo
+de asset. Wolco decidió no tocarlo. Punto cerrado, no se re-discute: si vuelve a aparecer en
+un informe de QA es observación cerrada, no falla. Dato para quien algún día lo cambie: no es
+una imagen sino cinco usos del mismo PNG en base64 dentro de `sitio/index.html` (arranque,
+logo de la barra, portada a 76px, 404 a 112px, pestaña Recap) más el set de expresiones del
+objeto `MAC` en el JS.
+
+Y una observación menor que quedó anotada: en las últimas rondas, cuando solo faltan K y DEF,
+las cápsulas de las otras posiciones siguen encendidas y llevan a un tablero con las filas
+bloqueadas. El callejón queda rotulado por el contador ("14 on the board, none for you") en
+vez de cerrado.

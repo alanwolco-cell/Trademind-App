@@ -217,7 +217,7 @@ app.all(/^\/api\//, (req, res) => res.status(404).json({ error: 'not found' }));
 // The client routes the SPA can restore from a cold URL. Keep in step with
 // _VALID_SCREENS in public/app.js and SCREENS in scripts/gen-sitemap.mjs.
 const SPA_ROUTES = new Set([
-  '/', '/home', '/mock', '/sage', '/analyze', '/league', '/research',
+  '/', '/home', '/mock', '/sage', '/analyze', '/league', '/myleagues', '/research',
   '/community', '/learn', '/news',
   // /perfil is deliberately NOT in gen-sitemap.mjs and is disallowed in
   // robots.txt: it is a private self-scouting tab for the owner, gated server

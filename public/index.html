@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026083101">
+<link rel="stylesheet" href="/styles.css?v=2026090801">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026083101" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026090801" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026083101">
+<link rel="stylesheet" href="/theme.css?v=2026090801">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026083101">
+<link rel="stylesheet" href="/home.css?v=2026090801">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026083101">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090801">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -258,6 +258,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
            buscarla (leccion del 26-ago: una feature sin puerta no existe). -->
       <button class="mob-menu-item" onclick="mobMenuCloseForNav();lvEnter()">Draft Day (live auction)</button>
       <button class="mob-menu-item" onclick="mobGo('analyze')">Trade Analyzer</button>
+      <button class="mob-menu-item" onclick="mobGo('myleagues')">All Leagues</button>
       <button class="mob-menu-item" onclick="mobGo('league')">My League</button>
       <div class="mob-group">
         <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)">Research<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -819,6 +820,26 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       </div>
     </div>
     </div><!-- end screen-league -->
+
+    <!-- MY LEAGUES SCREEN -->
+    <div class="screen" id="screen-myleagues">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" data-tab="tab-ml-leagues" onclick="switchInnerTab(this,'tab-ml-leagues','screen-myleagues');window.renderMyLeagues&&renderMyLeagues()">Leagues</div>
+        <div class="inner-tab" data-tab="tab-ml-players" onclick="switchInnerTab(this,'tab-ml-players','screen-myleagues');window.renderMyLeagues&&renderMyLeagues()">My Players</div>
+        <div class="inner-tab" data-tab="tab-ml-odds" onclick="switchInnerTab(this,'tab-ml-odds','screen-myleagues');window.renderMyLeagues&&renderMyLeagues()">Odds</div>
+        <div style="margin-left:auto;flex-shrink:0;display:flex;align-items:center"><span id="ml-sub" class="ml-sub"></span></div>
+      </div>
+
+      <div id="tab-ml-leagues" class="tab-content active">
+        <div id="ml-leagues-body"></div>
+      </div>
+      <div id="tab-ml-players" class="tab-content">
+        <div id="ml-players-body"></div>
+      </div>
+      <div id="tab-ml-odds" class="tab-content">
+        <div id="ml-odds-body"></div>
+      </div>
+    </div><!-- end screen-myleagues -->
 
     <!-- RESEARCH SCREEN -->
     <div class="screen" id="screen-research">
@@ -1863,9 +1884,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026083101"></script>
-<script src="/rankings.js?v=2026083101"></script>
-<script src="/live.js?v=2026083101"></script>
+<script src="/app.js?v=2026090801"></script>
+<script src="/rankings.js?v=2026090801"></script>
+<script src="/live.js?v=2026090801"></script>
+<script src="/myleagues.js?v=2026090801"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

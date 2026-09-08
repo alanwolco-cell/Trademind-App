@@ -5567,7 +5567,7 @@ async function checkShareParam(){
   }catch(e){ console.warn("Invalid share param",e); }
 }
 
-var _VALID_SCREENS=['home','analyze','league','research','learn','community','news','mock','sage','perfil'];
+var _VALID_SCREENS=['home','analyze','league','myleagues','research','learn','community','news','mock','sage','perfil'];
 var _heroDismissed=false; // once hidden (league connected), stays hidden
 // ── A10: arranque accesible + el reel del hero ──────────────────────────────
 // Corre una sola vez, en cuanto el DOM existe.
@@ -5594,7 +5594,7 @@ var _heroDismissed=false; // once hidden (league connected), stays hidden
     // 3. Un h1 por pantalla. Van ocultos: el diseno ya tiene su propio titulo
     //    visible, lo que falta es el ancla para lectores de pantalla.
     var T={'screen-mock':'Mock draft','screen-sage':'Ask Mac','screen-analyze':'Trade analyzer',
-      'screen-community':'Community','screen-league':'My league','screen-research':'Research',
+      'screen-community':'Community','screen-league':'My league','screen-myleagues':'My leagues','screen-research':'Research',
       'screen-learn':'Learn','screen-news':'News'};
     Object.keys(T).forEach(function(id){var s=document.getElementById(id);
       if(s&&!s.querySelector('h1')){var h=document.createElement('h1');h.className='sr-only';
@@ -5636,6 +5636,9 @@ function switchScreen(name,_noPush){
   // are navigating away from Community entirely, make sure it is stopped.
   if(name!=='community'){try{_newsPollControl(false);}catch(_){}}
   if(name==='perfil'){try{renderPerfil();}catch(_){}}
+  // El modulo carga despues de app.js: si todavia no llego, el se pinta solo al
+  // terminar (mismo remedio que My Rankings).
+  if(name==='myleagues'){try{window.renderMyLeagues&&renderMyLeagues();}catch(_){}}
   document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
   document.querySelectorAll(".screen-nav").forEach(function(n){n.classList.remove("active");});
   var screen=document.getElementById("screen-"+name);

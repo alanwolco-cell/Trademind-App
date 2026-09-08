@@ -140,6 +140,32 @@ router.get('/league/:leagueId/traded_picks', async (req, res) => {
   }
 });
 
+// GET /api/sleeper/league/:leagueId/matchups/:week
+// Los enfrentamientos de una semana. Sleeper devuelve una fila por roster con su
+// matchup_id: dos filas que comparten matchup_id son el mismo duelo. Las semanas
+// futuras vienen con el emparejamiento ya hecho y los puntos en cero, que es lo
+// que permite simular el resto de la temporada sin inventarse el calendario.
+// La semana viva cambia cada domingo, asi que se cachea corto (el shortCache
+// global es de 5 min) y las semanas cerradas se congelan del lado del cliente.
+router.get('/league/:leagueId/matchups/:week', async (req, res) => {
+  const week = parseInt(req.params.week, 10);
+  // Una semana fuera de rango no es un error del servidor: es una URL mal
+  // formada, y devolver 500 pintaria un error rojo en la consola del visitante.
+  if (!Number.isInteger(week) || week < 1 || week > 22) {
+    return res.status(400).json({ error: 'week must be 1-22' });
+  }
+  const key = `mu_${req.params.leagueId}_${week}`;
+  try {
+    const hit = shortCache.get(key);
+    if (hit) return res.json(hit);
+    const data = await sleeperFetch(`/league/${req.params.leagueId}/matchups/${week}`);
+    shortCache.set(key, data);
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/sleeper/trending-week
 // Most added / dropped players across ALL of Sleeper over the last 7 days, with counts
 router.get('/trending-week', async (req, res) => {

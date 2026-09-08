@@ -88,16 +88,22 @@ const abrirCajon = pg => pg.evaluate(async () => {
 });
 
 const clicEnCajon = (pg, etiqueta) => pg.evaluate(async (et) => {
+  // Exacta primero, y solo despues por prefijo. Con solo prefijo, "My League"
+  // casaba tambien con "All Leagues"/"My Leagues" y el gate acusaba al producto
+  // de un fallo que era del propio medidor.
+  const buscar = () => {
+    const items = Array.from(document.querySelectorAll('#mob-menu .mob-menu-item'));
+    return items.find(x => x.textContent.trim() === et)
+        || items.find(x => x.textContent.trim().startsWith(et));
+  };
   const padres = Array.from(document.querySelectorAll('#mob-menu .mob-parent'));
   for (const p of padres) {
-    const it = Array.from(document.querySelectorAll('#mob-menu .mob-menu-item'))
-      .find(x => x.textContent.trim().startsWith(et));
+    const it = buscar();
     if (it && it.offsetParent) break;
     p.click();
     await new Promise(r => setTimeout(r, 260));
   }
-  const it = Array.from(document.querySelectorAll('#mob-menu .mob-menu-item'))
-    .find(x => x.textContent.trim().startsWith(et));
+  const it = buscar();
   if (!it) return 'NO ESTA EN EL CAJON';
   it.click();
   await new Promise(r => setTimeout(r, 1500));
@@ -117,7 +123,7 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
 
   // (b..d) desde la PORTADA, con el cajon abierto, cada destino tiene que
   // llevarme ahi y sacarme del hero. Este es el caso que estaba roto.
-  for (const [etiqueta, espera] of [['Buy / Sell', 'screen-research'], ['Trade Analyzer', 'screen-analyze'], ['My League', 'screen-league']]) {
+  for (const [etiqueta, espera] of [['Buy / Sell', 'screen-research'], ['Trade Analyzer', 'screen-analyze'], ['My League', 'screen-league'], ['All Leagues', 'screen-myleagues']]) {
     const pg = await nueva(w, h);
     await abrirCajon(pg);
     const c = await clicEnCajon(pg, etiqueta);

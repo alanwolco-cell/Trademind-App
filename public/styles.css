@@ -2760,3 +2760,145 @@ html{scroll-padding-top:76px}
 
 .lv-undo{margin-top:6px;min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
 .lv-undo:hover{color:var(--text);border-color:var(--accent)}
+
+/* ============================================================================
+   MY LEAGUES (.ml-*)
+   Todas las ligas del usuario, su exposicion agregada y el tablero de odds.
+   Movil primero: a 390px el tablero apila el duelo y deja las tres cifras en
+   una tira; de 720 para arriba la fila es una rejilla con su cabecera.
+   Los numeros van tabulares para que las columnas caigan a plomo sin fuente
+   nueva: una tipografia mas seria otro archivo que bajar en el telefono.
+   ============================================================================ */
+#screen-myleagues .mono,#screen-myleagues .ml-cell{font-variant-numeric:tabular-nums;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.01em}
+.ml-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.ml-sub2{font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.5}
+.ml-tools{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.ml-hint{font-size:11.5px;color:var(--muted)}
+.ml-err-line{font-size:12px;color:var(--red);margin-top:8px;min-height:14px}
+
+/* esqueletos, nunca spinner */
+.ml-sk{height:74px;border-radius:14px;margin-bottom:10px;border:1px solid var(--border);
+  background:linear-gradient(100deg,var(--surface) 30%,var(--surface2) 50%,var(--surface) 70%);
+  background-size:220% 100%;animation:mlsk 1.4s linear infinite}
+@keyframes mlsk{to{background-position:-120% 0}}
+
+.ml-empty{border:1px solid var(--border);border-radius:16px;padding:26px 20px;background:var(--surface);text-align:left}
+.ml-empty-h{font-family:var(--font-head);font-size:19px;font-weight:600;margin-bottom:6px}
+.ml-empty p{font-size:13.5px;color:var(--muted);line-height:1.6;margin:0 0 14px;max-width:52ch}
+.ml-conn{display:flex;gap:8px;flex-wrap:wrap}
+.ml-conn input{flex:1 1 190px;min-width:0;min-height:44px;padding:0 14px;border-radius:10px;
+  border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:16px}
+.ml-conn .btn-sm{min-height:44px;padding:0 18px}
+
+/* --- tarjetas de liga --- */
+.ml-grid{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:760px){.ml-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1180px){.ml-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.ml-card{border:1px solid var(--border2);border-radius:16px;background:var(--surface);padding:16px;
+  display:flex;flex-direction:column;gap:10px;min-width:0}
+.ml-card-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.ml-card-h h3{font-family:var(--font-head);font-size:16px;font-weight:600;margin:0;line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ml-rec{font-size:13px;color:var(--muted2);flex-shrink:0;padding-top:1px}
+.ml-flags{display:flex;flex-wrap:wrap;gap:5px}
+.ml-flags span{font-size:10px;font-weight:600;letter-spacing:.03em;color:var(--muted);
+  background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:2px 8px}
+.ml-vs{display:flex;align-items:center;gap:8px;padding:10px 0 2px;border-top:1px solid var(--border)}
+.ml-vs-side{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.ml-vs-opp{text-align:right;align-items:flex-end}
+.ml-vs-lbl{font-size:12px;color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ml-vs-num{font-size:17px;font-weight:600}
+.ml-vs-mid{flex-shrink:0}
+.ml-vs-at{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.ml-vs-odds{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2)}
+.ml-vs-odds.is-fav>.mono:first-child{color:var(--green)}
+.ml-vs-odds.is-dog>.mono:first-child{color:var(--yellow)}
+.ml-vs-none{font-size:12.5px;color:var(--muted);padding:10px 0 2px;border-top:1px solid var(--border)}
+.ml-dot{color:var(--muted);opacity:.6}
+.ml-card-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:8px}
+.ml-team{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-link{background:none;border:0;color:var(--accent-bright);font-size:12.5px;font-weight:600;
+  cursor:pointer;padding:8px 0 8px 10px;min-height:44px}
+
+/* --- exposicion --- */
+.ml-conf{border:1px solid rgba(230,192,122,.28);background:var(--yellow-dim);border-radius:16px;padding:16px;margin-bottom:16px}
+.ml-conf h3,.ml-expo h3{font-family:var(--font-head);font-size:17px;font-weight:600;margin:0}
+.ml-conf-list{display:grid;gap:8px}
+.ml-conf-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:8px 12px}
+.ml-conf-txt{display:flex;flex-direction:column;min-width:0;flex:1}
+.ml-conf-txt b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-conf-txt span{font-size:11.5px;color:var(--muted)}
+.ml-conf-tag{font-size:12px;font-weight:700;color:var(--yellow);flex-shrink:0}
+.ml-face{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--surface2)}
+.ml-rows{display:grid;gap:6px}
+.ml-row{display:grid;grid-template-columns:34px minmax(0,1fr) 64px 52px;align-items:center;gap:10px;
+  padding:7px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.ml-row-main{display:flex;flex-direction:column;min-width:0}
+.ml-row-main b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-row-meta{font-size:11px;color:var(--muted)}
+.ml-row-bar{height:6px;border-radius:100px;background:var(--surface3);overflow:hidden}
+.ml-row-bar i{display:block;height:100%;background:var(--accent-bright);border-radius:100px}
+.ml-row-n{font-size:14px;font-weight:600;text-align:right}
+.ml-row-n span{font-size:11px;color:var(--muted);font-weight:400}
+
+/* --- tablero de odds --- */
+.ml-book-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+#ml-odds-sel{flex:1 1 200px;min-width:0;min-height:44px;padding:0 12px;border-radius:10px;
+  border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:14px}
+.ml-book-tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  border:1px solid var(--border);border-radius:100px;padding:4px 10px;white-space:nowrap}
+.ml-board{border:1px solid var(--border2);border-radius:16px;overflow:hidden;background:var(--surface)}
+.ml-board-h{display:none}
+.ml-board-empty{padding:18px;font-size:13px;color:var(--muted)}
+.ml-game{border-bottom:1px solid var(--border);position:relative}
+.ml-game:last-child{border-bottom:0}
+.ml-game.is-mine{background:var(--accent-dim)}
+.ml-game-tag{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent-bright);padding:8px 14px 0}
+.ml-bd-row{display:grid;grid-template-columns:minmax(0,1fr) 58px 62px 62px;align-items:center;
+  gap:6px;padding:10px 14px}
+.ml-bd-team{display:flex;flex-direction:column;min-width:0}
+.ml-bd-team b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-bd-team span{font-size:11px;color:var(--muted)}
+.ml-cell{font-size:13.5px;text-align:right;color:var(--muted2)}
+.ml-cell.is-fav{color:var(--green);font-weight:600}
+.ml-tot{color:var(--muted)}
+@media(min-width:720px){
+  .ml-board-h{display:grid;grid-template-columns:minmax(0,1fr) 58px 62px 62px;gap:6px;padding:8px 14px;
+    border-bottom:1px solid var(--border);background:var(--surface2)}
+  .ml-board-h span{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right}
+  .ml-board-h span:first-child{text-align:left}
+}
+.ml-champ{margin-top:18px;border:1px solid var(--border2);border-radius:16px;background:var(--surface);padding:16px}
+.ml-champ-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.ml-champ-h h3{font-family:var(--font-head);font-size:17px;font-weight:600;margin:0}
+.ml-champ-rows{display:grid;gap:6px}
+.ml-champ-row{display:grid;grid-template-columns:minmax(0,1fr) 70px 58px 52px;align-items:center;gap:8px;
+  padding:8px 10px;border:1px solid var(--border);border-radius:12px}
+.ml-champ-row.is-mine{border-color:rgba(155,114,232,.4);background:var(--accent-dim)}
+.ml-champ-team{display:flex;flex-direction:column;min-width:0}
+.ml-champ-team b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-champ-team span{font-size:10.5px;color:var(--muted)}
+.ml-champ-bar{height:6px;border-radius:100px;background:var(--surface3);overflow:hidden}
+.ml-champ-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-bright));border-radius:100px}
+.ml-champ-pct{color:var(--text);font-weight:600}
+.ml-fine{font-size:11.5px;color:var(--muted);line-height:1.6;margin:12px 2px 0;max-width:74ch}
+.ml-fine b{color:var(--muted2);font-weight:600}
+
+@media(max-width:520px){
+  .ml-champ-row{grid-template-columns:minmax(0,1fr) 52px 46px;gap:6px}
+  .ml-champ-row .ml-champ-bar{display:none}
+  .ml-row{grid-template-columns:30px minmax(0,1fr) 44px 46px;gap:8px;padding:7px 10px}
+  .ml-bd-row{grid-template-columns:minmax(0,1fr) 48px 54px 52px;gap:4px;padding:9px 10px}
+  .ml-cell{font-size:12.5px}
+}
+/* Yahoo dentro de My Leagues */
+.ml-or{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:12px 0 10px}
+.ml-y{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;
+  border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13.5px;
+  font-weight:600;cursor:pointer}
+.ml-y:hover{border-color:var(--accent-bright)}
+.ml-y.is-on{color:var(--muted2);font-weight:500}
+.ml-y-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}

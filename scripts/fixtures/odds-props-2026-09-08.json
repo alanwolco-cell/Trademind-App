@@ -1,0 +1,695 @@
+{
+ "capturado": "2026-09-08",
+ "fuente": "/api/odds/implied de produccion, semana 1 de 2026",
+ "props": {
+  "drake maye": {
+   "player_pass_yds": 227.5,
+   "player_rush_yds": 24.5
+  },
+  "sam darnold": {
+   "player_pass_yds": 227.5,
+   "player_rush_yds": 5.5
+  },
+  "jaxon smith-njigba": {
+   "player_reception_yds": 81.5,
+   "player_receptions": 6.5
+  },
+  "a.j. brown": {
+   "player_reception_yds": 60.5,
+   "player_receptions": 5.5
+  },
+  "romeo doubs": {
+   "player_reception_yds": 35.5,
+   "player_receptions": 3.5
+  },
+  "hunter henry": {
+   "player_reception_yds": 33.5,
+   "player_receptions": 3.5
+  },
+  "cooper kupp": {
+   "player_reception_yds": 31.5,
+   "player_receptions": 2.5
+  },
+  "rashid shaheed": {
+   "player_reception_yds": 30.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 2.5
+  },
+  "aj barner": {
+   "player_reception_yds": 25.5,
+   "player_receptions": 2.5
+  },
+  "rhamondre stevenson": {
+   "player_reception_yds": 24.5,
+   "player_receptions": 3.5,
+   "player_rush_yds": 54.5
+  },
+  "demario douglas": {
+   "player_reception_yds": 17.5,
+   "player_receptions": 1.5
+  },
+  "george holani": {
+   "player_reception_yds": 12.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 20.5
+  },
+  "jadarian price": {
+   "player_reception_yds": 7.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 51.5
+  },
+  "treveyon henderson": {
+   "player_reception_yds": 7.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 19.5
+  },
+  "matthew stafford": {
+   "player_pass_yds": 267.5
+  },
+  "brock purdy": {
+   "player_pass_yds": 243.5,
+   "player_rush_yds": 18.5
+  },
+  "puka nacua": {
+   "player_reception_yds": 90.5,
+   "player_receptions": 7.5
+  },
+  "davante adams": {
+   "player_reception_yds": 51.5,
+   "player_receptions": 4.5
+  },
+  "mike evans": {
+   "player_reception_yds": 48.5,
+   "player_receptions": 3.5
+  },
+  "christian mccaffrey": {
+   "player_reception_yds": 38.5,
+   "player_receptions": 4.5,
+   "player_rush_yds": 59.5
+  },
+  "george kittle": {
+   "player_reception_yds": 38.5,
+   "player_receptions": 3.5
+  },
+  "deebo samuel": {
+   "player_reception_yds": 30.5,
+   "player_receptions": 2.5
+  },
+  "terrance ferguson": {
+   "player_reception_yds": 24.5,
+   "player_receptions": 1.5
+  },
+  "colby parkinson": {
+   "player_reception_yds": 20.5,
+   "player_receptions": 2.5
+  },
+  "tyler higbee": {
+   "player_reception_yds": 13.5,
+   "player_receptions": 1.5
+  },
+  "kyren williams": {
+   "player_reception_yds": 11.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 56.5
+  },
+  "blake corum": {
+   "player_rush_yds": 36.5
+  },
+  "aaron rodgers": {
+   "player_pass_yds": 215.5
+  },
+  "tua tagovailoa": {
+   "player_pass_yds": 208.5
+  },
+  "drake london": {
+   "player_reception_yds": 64.5,
+   "player_receptions": 5.5
+  },
+  "dk metcalf": {
+   "player_reception_yds": 46.5,
+   "player_receptions": 3.5
+  },
+  "kyle pitts": {
+   "player_reception_yds": 42.5,
+   "player_receptions": 4.5
+  },
+  "michael pittman jr.": {
+   "player_reception_yds": 42.5,
+   "player_receptions": 4.5
+  },
+  "bijan robinson": {
+   "player_reception_yds": 36.5,
+   "player_receptions": 4.5,
+   "player_rush_yds": 74.5
+  },
+  "pat freiermuth": {
+   "player_reception_yds": 25.5,
+   "player_receptions": 2.5
+  },
+  "jahan dotson": {
+   "player_reception_yds": 19.5,
+   "player_receptions": 1.5
+  },
+  "jaylen warren": {
+   "player_reception_yds": 16.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 41.5
+  },
+  "rico dowdle": {
+   "player_reception_yds": 10.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 50.5
+  },
+  "daniel jones": {
+   "player_pass_yds": 232.5
+  },
+  "lamar jackson": {
+   "player_pass_yds": 218.5,
+   "player_rush_yds": 35.5
+  },
+  "zay flowers": {
+   "player_reception_yds": 64.5,
+   "player_receptions": 4.5
+  },
+  "alec pierce": {
+   "player_reception_yds": 45.5,
+   "player_receptions": 3.5
+  },
+  "tyler warren": {
+   "player_reception_yds": 44.5,
+   "player_receptions": 4.5
+  },
+  "josh downs": {
+   "player_reception_yds": 44.5,
+   "player_receptions": 3.5
+  },
+  "mark andrews": {
+   "player_reception_yds": 34.5,
+   "player_receptions": 3.5
+  },
+  "rashod bateman": {
+   "player_reception_yds": 25.5,
+   "player_receptions": 1.5
+  },
+  "derrick henry": {
+   "player_reception_yds": 6.5,
+   "player_rush_yds": 79.5
+  },
+  "jonathan taylor": {
+   "player_rush_yds": 79.5
+  },
+  "josh allen": {
+   "player_pass_yds": 223.5,
+   "player_rush_yds": 33.5
+  },
+  "c.j. stroud": {
+   "player_pass_yds": 218.5,
+   "player_rush_yds": 9.5
+  },
+  "nico collins": {
+   "player_reception_yds": 69.5,
+   "player_receptions": 5.5
+  },
+  "dj moore": {
+   "player_reception_yds": 45.5,
+   "player_receptions": 3.5
+  },
+  "khalil shakir": {
+   "player_reception_yds": 37.5,
+   "player_receptions": 3.5
+  },
+  "dalton kincaid": {
+   "player_reception_yds": 37.5,
+   "player_receptions": 3.5
+  },
+  "dalton schultz": {
+   "player_reception_yds": 33.5,
+   "player_receptions": 3.5
+  },
+  "kayshon boutte": {
+   "player_reception_yds": 22.5,
+   "player_receptions": 1.5
+  },
+  "dawson knox": {
+   "player_reception_yds": 14.5,
+   "player_receptions": 1.5
+  },
+  "james cook": {
+   "player_reception_yds": 13.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 74.5
+  },
+  "woody marks": {
+   "player_reception_yds": 8.5,
+   "player_rush_yds": 32.5
+  },
+  "david montgomery": {
+   "player_reception_yds": 8.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 54.5
+  },
+  "caleb williams": {
+   "player_pass_yds": 226.5,
+   "player_rush_yds": 18.5
+  },
+  "bryce young": {
+   "player_pass_yds": 208.5,
+   "player_rush_yds": 14.5
+  },
+  "tetairoa mcmillan": {
+   "player_reception_yds": 57.5,
+   "player_receptions": 4.5
+  },
+  "luther burden iii": {
+   "player_reception_yds": 54.5,
+   "player_receptions": 4.5
+  },
+  "colston loveland": {
+   "player_reception_yds": 51.5,
+   "player_receptions": 4.5
+  },
+  "rome odunze": {
+   "player_reception_yds": 47.5,
+   "player_receptions": 3.5
+  },
+  "jalen coker": {
+   "player_reception_yds": 38.5,
+   "player_receptions": 3.5
+  },
+  "xavier legette": {
+   "player_reception_yds": 19.5,
+   "player_receptions": 2.5
+  },
+  "cole kmet": {
+   "player_reception_yds": 14.5,
+   "player_receptions": 1.5
+  },
+  "joe burrow": {
+   "player_pass_yds": 268.5,
+   "player_rush_yds": 6.5
+  },
+  "baker mayfield": {
+   "player_pass_yds": 231.5,
+   "player_rush_yds": 14.5
+  },
+  "ja'marr chase": {
+   "player_reception_yds": 88.5,
+   "player_receptions": 7.5
+  },
+  "tee higgins": {
+   "player_reception_yds": 64.5,
+   "player_receptions": 4.5
+  },
+  "emeka egbuka": {
+   "player_reception_yds": 55.5,
+   "player_receptions": 4.5
+  },
+  "cade otton": {
+   "player_reception_yds": 29.5,
+   "player_receptions": 3.5
+  },
+  "chase brown": {
+   "player_reception_yds": 22.5,
+   "player_receptions": 3.5,
+   "player_rush_yds": 58.5
+  },
+  "kenny gainwell": {
+   "player_reception_yds": 21.5,
+   "player_receptions": 3.5,
+   "player_rush_yds": 21.5
+  },
+  "bucky irving": {
+   "player_reception_yds": 14.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 57.5
+  },
+  "samaje perine": {
+   "player_rush_yds": 19.5
+  },
+  "trevor lawrence": {
+   "player_pass_yds": 232.5,
+   "player_rush_yds": 17.5
+  },
+  "deshaun watson": {
+   "player_pass_yds": 178.5,
+   "player_rush_yds": 19.5
+  },
+  "parker washington": {
+   "player_reception_yds": 53.5,
+   "player_receptions": 4.5
+  },
+  "jakobi meyers": {
+   "player_reception_yds": 37.5,
+   "player_receptions": 3.5
+  },
+  "brian thomas jr": {
+   "player_reception_yds": 36.5,
+   "player_receptions": 2.5
+  },
+  "harold fannin jr.": {
+   "player_reception_yds": 35.5,
+   "player_receptions": 4.5
+  },
+  "kc concepcion": {
+   "player_reception_yds": 35.5,
+   "player_receptions": 3.5
+  },
+  "brenton strange": {
+   "player_reception_yds": 35.5,
+   "player_receptions": 3.5
+  },
+  "jerry jeudy": {
+   "player_reception_yds": 31.5,
+   "player_receptions": 2.5
+  },
+  "denzel boston": {
+   "player_reception_yds": 23.5,
+   "player_receptions": 2.5
+  },
+  "bhayshul tuten": {
+   "player_reception_yds": 11.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 49.5
+  },
+  "quinshon judkins": {
+   "player_reception_yds": 10.5,
+   "player_receptions": 1.5,
+   "player_rush_yds": 59.5
+  },
+  "chris rodriguez jr.": {
+   "player_rush_yds": 34.5
+  },
+  "jared goff": {
+   "player_pass_yds": 263.5
+  },
+  "tyler shough": {
+   "player_pass_yds": 246.5,
+   "player_rush_yds": 17.5
+  },
+  "amon-ra st. brown": {
+   "player_reception_yds": 76.5,
+   "player_receptions": 6.5
+  },
+  "chris olave": {
+   "player_reception_yds": 75.5,
+   "player_receptions": 6.5
+  },
+  "jameson williams": {
+   "player_reception_yds": 56.5,
+   "player_receptions": 3.5
+  },
+  "sam laporta": {
+   "player_reception_yds": 41.5,
+   "player_receptions": 3.5
+  },
+  "juwan johnson": {
+   "player_reception_yds": 41.5,
+   "player_receptions": 4.5
+  },
+  "devaughn vele": {
+   "player_reception_yds": 38.5,
+   "player_receptions": 3.5
+  },
+  "jahmyr gibbs": {
+   "player_reception_yds": 29.5,
+   "player_receptions": 4.5,
+   "player_rush_yds": 83.5
+  },
+  "travis etienne jr.": {
+   "player_reception_yds": 18.5,
+   "player_receptions": 3.5,
+   "player_rush_yds": 55.5
+  },
+  "isaac teslaa": {
+   "player_reception_yds": 16.5
+  },
+  "cam ward": {
+   "player_pass_yds": 208.5,
+   "player_rush_yds": 9.5
+  },
+  "geno smith": {
+   "player_pass_yds": 204.5,
+   "player_rush_yds": 6.5
+  },
+  "garrett wilson": {
+   "player_reception_yds": 59.5,
+   "player_receptions": 5.5
+  },
+  "wan'dale robinson": {
+   "player_reception_yds": 44.5,
+   "player_receptions": 4.5
+  },
+  "carnell tate": {
+   "player_reception_yds": 39.5,
+   "player_receptions": 3.5
+  },
+  "adonai mitchell": {
+   "player_reception_yds": 31.5,
+   "player_receptions": 2.5
+  },
+  "calvin ridley": {
+   "player_reception_yds": 26.5,
+   "player_receptions": 2.5
+  },
+  "gunnar helm": {
+   "player_reception_yds": 23.5,
+   "player_receptions": 2.5
+  },
+  "breece hall": {
+   "player_reception_yds": 18.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 65.5
+  },
+  "tony pollard": {
+   "player_rush_yds": 56.5
+  },
+  "tyjae spears": {
+   "player_rush_yds": 20.5
+  },
+  "braelon allen": {
+   "player_rush_yds": 18.5
+  },
+  "justin herbert": {
+   "player_pass_yds": 238.5,
+   "player_rush_yds": 21.5
+  },
+  "jacoby brissett": {
+   "player_pass_yds": 223.5
+  },
+  "trey mcbride": {
+   "player_reception_yds": 57.5,
+   "player_receptions": 6.5
+  },
+  "ladd mcconkey": {
+   "player_reception_yds": 53.5,
+   "player_receptions": 4.5
+  },
+  "marvin harrison jr.": {
+   "player_reception_yds": 47.5,
+   "player_receptions": 4.5
+  },
+  "michael wilson": {
+   "player_reception_yds": 42.5,
+   "player_receptions": 3.5
+  },
+  "quentin johnston": {
+   "player_reception_yds": 41.5,
+   "player_receptions": 3.5
+  },
+  "tre harris": {
+   "player_reception_yds": 26.5,
+   "player_receptions": 2.5
+  },
+  "omarion hampton": {
+   "player_rush_yds": 67.5
+  },
+  "jordan love": {
+   "player_pass_yds": 238.5,
+   "player_rush_yds": 10.5
+  },
+  "kyler murray": {
+   "player_pass_yds": 222.5,
+   "player_rush_yds": 22.5
+  },
+  "justin jefferson": {
+   "player_reception_yds": 75.5,
+   "player_receptions": 5.5
+  },
+  "christian watson": {
+   "player_reception_yds": 56.5,
+   "player_receptions": 3.5
+  },
+  "tucker kraft": {
+   "player_reception_yds": 46.5,
+   "player_receptions": 4.5
+  },
+  "jordan addison": {
+   "player_reception_yds": 43.5,
+   "player_receptions": 3.5
+  },
+  "matthew golden": {
+   "player_reception_yds": 40.5,
+   "player_receptions": 3.5
+  },
+  "jayden reed": {
+   "player_reception_yds": 39.5,
+   "player_receptions": 3.5
+  },
+  "t.j. hockenson": {
+   "player_reception_yds": 27.5,
+   "player_receptions": 3.5
+  },
+  "jauan jennings": {
+   "player_reception_yds": 23.5,
+   "player_receptions": 2.5
+  },
+  "marshawn lloyd": {
+   "player_receptions": 1.5,
+   "player_rush_yds": 51.5
+  },
+  "jordan mason": {
+   "player_rush_yds": 43.5
+  },
+  "aaron jones": {
+   "player_rush_yds": 30.5
+  },
+  "kirk cousins": {
+   "player_pass_yds": 212.5
+  },
+  "malik willis": {
+   "player_pass_yds": 180.5,
+   "player_rush_yds": 37.5
+  },
+  "brock bowers": {
+   "player_reception_yds": 62.5,
+   "player_receptions": 5.5
+  },
+  "tre tucker": {
+   "player_reception_yds": 39.5,
+   "player_receptions": 3.5
+  },
+  "de'von achane": {
+   "player_reception_yds": 31.5,
+   "player_receptions": 4.5,
+   "player_rush_yds": 68.5
+  },
+  "malik washington": {
+   "player_reception_yds": 27.5,
+   "player_receptions": 2.5
+  },
+  "caleb douglas": {
+   "player_reception_yds": 26.5,
+   "player_receptions": 2.5
+  },
+  "jalen hurts": {
+   "player_pass_yds": 212.5,
+   "player_rush_yds": 27.5
+  },
+  "jayden daniels": {
+   "player_pass_yds": 202.5,
+   "player_rush_yds": 39.5
+  },
+  "devonta smith": {
+   "player_reception_yds": 64.5,
+   "player_receptions": 5.5
+  },
+  "terry mclaurin": {
+   "player_reception_yds": 50.5,
+   "player_receptions": 3.5
+  },
+  "stefon diggs": {
+   "player_reception_yds": 40.5,
+   "player_receptions": 3.5
+  },
+  "dallas goedert": {
+   "player_reception_yds": 33.5,
+   "player_receptions": 3.5
+  },
+  "saquon barkley": {
+   "player_reception_yds": 18.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 78.5
+  },
+  "jacory croskey-merritt": {
+   "player_rush_yds": 42.5
+  },
+  "dak prescott": {
+   "player_pass_yds": 261.5,
+   "player_rush_yds": 7.5
+  },
+  "jaxson dart": {
+   "player_pass_yds": 211.5,
+   "player_rush_yds": 31.5
+  },
+  "ceedee lamb": {
+   "player_reception_yds": 76.5,
+   "player_receptions": 6.5
+  },
+  "george pickens": {
+   "player_reception_yds": 67.5,
+   "player_receptions": 4.5
+  },
+  "malik nabers": {
+   "player_reception_yds": 60.5,
+   "player_receptions": 5.5
+  },
+  "isaiah likely": {
+   "player_reception_yds": 35.5,
+   "player_receptions": 3.5
+  },
+  "jake ferguson": {
+   "player_reception_yds": 30.5,
+   "player_receptions": 3.5
+  },
+  "cam skattebo": {
+   "player_reception_yds": 15.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 49.5
+  },
+  "javonte williams": {
+   "player_reception_yds": 9.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 73.5
+  },
+  "odell beckham jr.": {
+   "player_reception_yds": 7.5,
+   "player_receptions": 1.5
+  },
+  "patrick mahomes": {
+   "player_pass_yds": 229.5,
+   "player_rush_yds": 14.5
+  },
+  "bo nix": {
+   "player_pass_yds": 224.5,
+   "player_rush_yds": 17.5
+  },
+  "rashee rice": {
+   "player_reception_yds": 60.5,
+   "player_receptions": 5.5
+  },
+  "jaylen waddle": {
+   "player_reception_yds": 55.5,
+   "player_receptions": 4.5
+  },
+  "courtland sutton": {
+   "player_reception_yds": 43.5,
+   "player_receptions": 4.5
+  },
+  "travis kelce": {
+   "player_reception_yds": 40.5,
+   "player_receptions": 3.5
+  },
+  "xavier worthy": {
+   "player_reception_yds": 35.5,
+   "player_receptions": 3.5
+  },
+  "kenneth walker iii": {
+   "player_reception_yds": 15.5,
+   "player_receptions": 2.5,
+   "player_rush_yds": 61.5
+  },
+  "j.k. dobbins": {
+   "player_rush_yds": 49.5
+  }
+ }
+}

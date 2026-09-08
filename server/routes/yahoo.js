@@ -87,7 +87,9 @@ function popupReply(res, payload) {
     '<!doctype html><html><body style="font-family:sans-serif;background:#111;color:#eee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">' +
     '<div id="msg">Finishing up...</div>' +
     '<script>var p=' + json + ';' +
-    'if(window.opener){window.opener.postMessage({type:"trademind-yahoo",payload:p},"*");' +
+    // Al propio origen y no a "*": desde que el mensaje lleva un token de
+    // Yahoo, mandarlo a cualquier ventana seria repartirlo.
+    'if(window.opener){window.opener.postMessage({type:"trademind-yahoo",payload:p},window.location.origin);' +
     'document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster imported. You can close this window.";' +
     'setTimeout(function(){window.close();},1200);}' +
     'else{document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster loaded. Open Mac Draft and try the Yahoo login again.";}' +
@@ -172,11 +174,246 @@ router.get('/callback', async (req, res) => {
         }
       } catch (_) { /* skip teams whose roster call fails */ }
     }
-    if (!results.length) return popupReply(res, { error: 'Could not read any rosters from Yahoo.' });
-    popupReply(res, { teams: results });
+    // El token viaja al navegador del usuario, que es donde vive (ver la nota
+    // larga mas abajo). Sin esto, My Leagues tendria que mandarlo a loguearse
+    // otra vez en cada visita.
+    const credenciales = {
+      access_token: token,
+      refresh_token: tokenData.refresh_token || null,
+      expires_at: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000
+    };
+    if (!results.length) return popupReply(res, { error: 'Could not read any rosters from Yahoo.', token: credenciales });
+    popupReply(res, { teams: results, token: credenciales });
   } catch (e) {
     popupReply(res, { error: e.message });
   }
+});
+
+
+/* ============================================================================
+   LIGAS DE YAHOO (aprobado el 2026-09-08, despues de un mes de espera)
+
+   Comprobado ese dia contra la app real: scope=fspt-r con
+   redirect_uri=https://macdraft.app/api/yahoo/callback devuelve 302 al login de
+   Yahoo. En agosto ese mismo par devolvia invalid_scope: el permiso de Fantasy
+   Sports ya esta concedido.
+
+   DONDE VIVE EL TOKEN, Y POR QUE. El token se queda en el NAVEGADOR del
+   usuario, no en nuestro almacen. Guardarlo del lado del servidor convertiria
+   nuestro Blob en un cofre de credenciales de terceros: una sola fuga se
+   llevaria las cuentas de Yahoo de todos. Del lado del cliente, el peor caso es
+   una cuenta, y el permiso es de SOLO LECTURA de fantasy. El token viaja en la
+   cabecera a nuestro proxy y NUNCA se escribe en un log.
+   Si algun dia hace falta refrescar sin el usuario presente (un aviso por
+   correo, un resumen nocturno), esta decision hay que revisarla.
+   ============================================================================ */
+
+// El token entra por cabecera, nunca por la URL: las URLs se quedan escritas en
+// los logs del servidor, del proxy y del navegador.
+function tokenDe(req) {
+  const h = req.headers['x-yahoo-token'];
+  return (typeof h === 'string' && h.length > 20) ? h : null;
+}
+function exigeToken(req, res) {
+  const t = tokenDe(req);
+  if (!t) { res.status(401).json({ error: 'not connected to Yahoo' }); return null; }
+  return t;
+}
+// Un token caducado no es un fallo nuestro ni del usuario: es el ciclo normal
+// de OAuth, y el cliente sabe rehacerlo. Se responde 401 con una senal clara.
+function respondeYahoo(res, e) {
+  const msg = String(e && e.message || e);
+  if (/ 401|token/i.test(msg)) return res.status(401).json({ error: 'yahoo session expired', expired: true });
+  res.status(502).json({ error: msg.slice(0, 200) });
+}
+
+// Yahoo entrega numeros como cadenas y anida cada entidad en una lista de
+// objetos sueltos. Estas dos aplanan sin perder lo que importa.
+const numY = (v, d) => { const x = Number(v); return isFinite(x) ? x : d; };
+
+// De las "stat modifiers" de Yahoo al mismo vocabulario que ya usa Sleeper,
+// para que el resto del producto no tenga que saber de que plataforma vino la
+// liga. Los stat_id son los de NFL en Yahoo.
+const YSTAT = {
+  4: 'pass_yd', 5: 'pass_td', 6: 'pass_int',
+  9: 'rush_yd', 10: 'rush_td',
+  11: 'rec', 12: 'rec_yd', 13: 'rec_td'
+};
+function scoringDeYahoo(modifiers) {
+  const out = {};
+  (modifiers || []).forEach(m => {
+    const st = m && (m.stat || m);
+    if (!st) return;
+    const k = YSTAT[numY(st.stat_id, -1)];
+    if (k) out[k] = numY(st.value, 0);
+  });
+  return out;
+}
+
+// GET /api/yahoo/leagues - todas las ligas de NFL del usuario, normalizadas al
+// mismo molde que devuelve Sleeper, que es lo que hace que My Leagues no tenga
+// que ramificar por plataforma.
+router.get('/leagues', async (req, res) => {
+  const token = exigeToken(req, res); if (!token) return;
+  try {
+    const j = await yahooGet('/users;use_login=1/games;game_keys=nfl/leagues', token);
+    const ligas = deepCollect(j, 'league', []).map(l => flattenEntity(l)).filter(l => l.league_key);
+    // Las ligas repetidas salen dos veces por como Yahoo anida su respuesta.
+    const vistas = {};
+    const out = [];
+    for (const l of ligas) {
+      if (vistas[l.league_key]) continue;
+      vistas[l.league_key] = 1;
+      out.push({
+        league_key: l.league_key,
+        league_id: l.league_id,
+        name: typeof l.name === 'object' ? l.name.full : l.name,
+        season: String(l.season || ''),
+        num_teams: numY(l.num_teams, 0),
+        scoring_type: l.scoring_type || '',
+        current_week: numY(l.current_week, 0),
+        start_week: numY(l.start_week, 1),
+        end_week: numY(l.end_week, 17),
+        playoff_start_week: numY(l.playoff_start_week, 15),
+        is_finished: numY(l.is_finished, 0) === 1,
+        draft_status: l.draft_status || ''
+      });
+    }
+    res.json({ leagues: out });
+  } catch (e) { respondeYahoo(res, e); }
+});
+
+// GET /api/yahoo/league/:key - reglamento, equipos, standings y planteles.
+// Es la llamada cara (una por liga), asi que trae todo de una vez.
+router.get('/league/:key', async (req, res) => {
+  const token = exigeToken(req, res); if (!token) return;
+  const key = String(req.params.key || '');
+  if (!/^[\w.-]{3,40}$/.test(key)) return res.status(400).json({ error: 'bad league key' });
+  try {
+    const [ajustes, equipos] = await Promise.all([
+      yahooGet(`/league/${key}/settings`, token),
+      yahooGet(`/league/${key}/teams`, token)
+    ]);
+    const liga = flattenEntity(deepCollect(ajustes, 'league', [])[0] || {});
+    const set = flattenEntity(deepCollect(ajustes, 'settings', [])[0] || {});
+    const roster_positions = deepCollect(ajustes, 'roster_position', [])
+      .map(rp => flattenEntity(rp))
+      .filter(rp => rp.position)
+      .flatMap(rp => Array(Math.max(1, numY(rp.count, 1))).fill(String(rp.position)));
+
+    const eqs = deepCollect(equipos, 'team', []).map(t => flattenEntity(t)).filter(t => t.team_key);
+    const vistos = {};
+    const teams = [];
+    for (const t of eqs) {
+      if (vistos[t.team_key]) continue;
+      vistos[t.team_key] = 1;
+      teams.push({
+        team_key: t.team_key,
+        team_id: numY(t.team_id, 0),
+        name: typeof t.name === 'object' ? t.name.full : t.name,
+        is_owned_by_current_login: numY(t.is_owned_by_current_login, 0) === 1,
+        wins: null, losses: null, ties: null, points_for: null,
+        players: []
+      });
+    }
+
+    // Standings y planteles, en paralelo pero acotado: una liga de doce son doce
+    // llamadas y Yahoo corta al que se le echa encima.
+    const standings = await yahooGet(`/league/${key}/standings`, token).catch(() => null);
+    if (standings) {
+      deepCollect(standings, 'team', []).map(t => flattenEntity(t)).forEach(t => {
+        const dest = teams.filter(x => x.team_key === t.team_key)[0];
+        if (!dest) return;
+        const out = flattenEntity(t.team_standings || {});
+        const rec = (t.team_standings && t.team_standings.outcome_totals) || out.outcome_totals || {};
+        dest.wins = numY(rec.wins, null);
+        dest.losses = numY(rec.losses, null);
+        dest.ties = numY(rec.ties, null);
+        dest.points_for = numY(out.points_for != null ? out.points_for : (t.team_points && t.team_points.total), null);
+      });
+    }
+
+    const tanda = 4;
+    for (let i = 0; i < teams.length; i += tanda) {
+      const trozo = teams.slice(i, i + tanda);
+      await Promise.all(trozo.map(async t => {
+        try {
+          const rj = await yahooGet(`/team/${t.team_key}/roster`, token);
+          t.players = deepCollect(rj, 'player', []).map(p => flattenEntity(p))
+            .filter(p => p.name && p.name.full)
+            .map(p => ({
+              player_key: p.player_key,
+              name: p.name.full,
+              pos: p.display_position || (p.primary_position || ''),
+              team: p.editorial_team_abbr || 'FA',
+              status: p.status || ''
+            }));
+        } catch (_) { /* un plantel que falla no tumba la liga entera */ }
+      }));
+    }
+
+    res.json({
+      league: {
+        league_key: key,
+        name: typeof liga.name === 'object' ? liga.name.full : liga.name,
+        num_teams: numY(liga.num_teams, teams.length),
+        season: String(liga.season || ''),
+        current_week: numY(liga.current_week, 0),
+        playoff_start_week: numY(set.playoff_start_week || liga.playoff_start_week, 15),
+        num_playoff_teams: numY(set.num_playoff_teams, 6),
+        draft_status: liga.draft_status || set.draft_status || '',
+        roster_positions,
+        scoring_settings: scoringDeYahoo(deepCollect(ajustes, 'stat_modifiers', [])
+          .flatMap(sm => deepCollect(sm, 'stat', []).map(x => ({ stat: flattenEntity(x) }))))
+      },
+      teams
+    });
+  } catch (e) { respondeYahoo(res, e); }
+});
+
+// GET /api/yahoo/league/:key/scoreboard?week=N - los duelos de una semana.
+router.get('/league/:key/scoreboard', async (req, res) => {
+  const token = exigeToken(req, res); if (!token) return;
+  const key = String(req.params.key || '');
+  const week = parseInt(req.query.week, 10);
+  if (!/^[\w.-]{3,40}$/.test(key)) return res.status(400).json({ error: 'bad league key' });
+  if (!Number.isInteger(week) || week < 1 || week > 22) return res.status(400).json({ error: 'week must be 1-22' });
+  try {
+    const j = await yahooGet(`/league/${key}/scoreboard;week=${week}`, token);
+    const duelos = deepCollect(j, 'matchup', []).map(m => {
+      const eq = deepCollect(m, 'team', []).map(t => flattenEntity(t)).filter(t => t.team_key);
+      const claves = [];
+      eq.forEach(t => { if (claves.indexOf(t.team_key) === -1) claves.push(t.team_key); });
+      return { week, teams: claves.slice(0, 2) };
+    }).filter(d => d.teams.length === 2);
+    // El mismo duelo puede venir repetido por el anidamiento de Yahoo.
+    const vistos = {}, out = [];
+    duelos.forEach(d => {
+      const k = d.teams.slice().sort().join('|');
+      if (vistos[k]) return;
+      vistos[k] = 1; out.push(d);
+    });
+    res.json({ week, matchups: out });
+  } catch (e) { respondeYahoo(res, e); }
+});
+
+// POST /api/yahoo/refresh - un token de acceso dura una hora. El de refresco lo
+// guarda el navegador y se cambia aqui, que es donde vive el secreto de la app.
+router.post('/refresh', async (req, res) => {
+  if (!configured()) return res.status(503).json({ error: 'not configured' });
+  const rt = req.body && req.body.refresh_token;
+  if (!rt || typeof rt !== 'string') return res.status(400).json({ error: 'missing refresh_token' });
+  try {
+    const basic = Buffer.from(`${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`).toString('base64');
+    const r = await fetch(YAHOO_TOKEN, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: rt, redirect_uri: redirectUri(req) })
+    });
+    const d = await r.json();
+    if (!d.access_token) return res.status(401).json({ error: 'refresh failed', expired: true });
+    res.json({ access_token: d.access_token, refresh_token: d.refresh_token || rt, expires_in: numY(d.expires_in, 3600) });
+  } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 200) }); }
 });
 
 module.exports = router;
