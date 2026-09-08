@@ -54,7 +54,10 @@ const PROPS = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/fixtures/odds-
 let srv = null;
 if (!process.env.QA_BASE) {
   srv = spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')],
-    { env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
+    { env: { ...process.env, PORT: String(PORT) },
+      // QA_SRV_LOG=1 deja ver el servidor: sin eso, un 500 del backend es una
+      // caja negra y uno acaba adivinando.
+      stdio: process.env.QA_SRV_LOG ? 'inherit' : 'ignore' });
   for (let i = 0; i < 40; i++) {
     try { const r = await fetch(BASE + '/'); if (r.ok) break; } catch (_) { }
     await new Promise(r => setTimeout(r, 500));
@@ -228,6 +231,45 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     await pg.waitForTimeout(500);
   }
 
+  // El tablero abre en TODAS las ligas: una fila por duelo tuyo. Primero se
+  // mide esa vista, y despues se filtra a UNA liga, que es donde existen los
+  // dos lados y la tabla de campeonato.
+  const slate = await seguro(pg, () => {
+    const filas = [...document.querySelectorAll('.ml-game')];
+    const resumen = [...document.querySelectorAll('.ml-slate-n b')].map(x => x.textContent.trim());
+    const pct = filas.map(f => {
+      const c = f.querySelectorAll('.ml-cell');
+      return parseFloat((c[2] || {}).textContent || 'NaN');
+    });
+    return { filas: filas.length, resumen, pct, ligas: (ML.leagues || []).filter(mlDrafted).length };
+  });
+  ok('(l3) el tablero abre con TUS duelos de todas las ligas',
+    slate.filas > 0 && slate.filas <= slate.ligas, JSON.stringify(slate).slice(0, 200));
+  ok('(l4) el resumen del domingo trae sus tres cifras',
+    Array.isArray(slate.resumen) && slate.resumen.length === 3 && slate.resumen.every(x => x && x.length),
+    JSON.stringify(slate.resumen));
+  ok('(l5) los duelos van del peor al mejor, que es donde puedes hacer algo',
+    Array.isArray(slate.pct) && slate.pct.length > 0
+    && slate.pct.every((v, i) => i === 0 || slate.pct[i - 1] <= v + 0.05),
+    JSON.stringify(slate.pct));
+
+  // filtrar a una liga concreta
+  const filtro = await seguro(pg, async () => {
+    const L = (ML.leagues || []).filter(x => mlDrafted(x) && x._hyd && x._hyd.opp != null)[0];
+    if (!L) return { salta: true };
+    mlOpenOdds(L.id);
+    await new Promise(r => setTimeout(r, 1200));
+    return { salta: false, liga: L.name };
+  });
+  ok('(l6) elegir una liga filtra el mismo tablero', filtro.salta === true || !!filtro.liga,
+    JSON.stringify(filtro));
+  for (let i = 0; i < 40; i++) {
+    const listo = await seguro(pg, () => document.querySelectorAll('.ml-champ-row').length > 0
+      || !!document.querySelector('.ml-champ .ml-sub2'));
+    if (listo === true) break;
+    await pg.waitForTimeout(500);
+  }
+
   const board = await seguro(pg, () => {
     const juegos = [...document.querySelectorAll('.ml-game')].map(g => {
       const filas = [...g.querySelectorAll('.ml-bd-row')].map(f => {
@@ -243,12 +285,15 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     });
     return { n: juegos.length, juegos };
   });
-  const dosFilas = board.juegos && board.juegos.every(g => g.length === 2);
-  const signosOpuestos = board.juegos && board.juegos.every(g =>
+  // Nada de indexar a ciegas: contra un tablero de una sola fila esto reventaba
+  // la corrida entera en vez de reportar el fallo. Otra vez la misma leccion.
+  const juegos = Array.isArray(board.juegos) ? board.juegos : [];
+  const dosFilas = juegos.length > 0 && juegos.every(g => Array.isArray(g) && g.length === 2);
+  const signosOpuestos = dosFilas && juegos.every(g =>
     (g[0].spread.startsWith('-') && g[1].spread.startsWith('+')) ||
     (g[0].spread.startsWith('+') && g[1].spread.startsWith('-')));
-  const totalIgual = board.juegos && board.juegos.every(g => g[0].total === g[1].total);
-  const spreadIgual = board.juegos && board.juegos.every(g =>
+  const totalIgual = dosFilas && juegos.every(g => g[0].total === g[1].total);
+  const spreadIgual = dosFilas && juegos.every(g =>
     Math.abs(parseFloat(g[0].spread) + parseFloat(g[1].spread)) < 1e-9);
   ok('(m) el tablero pinta duelos con sus dos lados', board.n > 0 && dosFilas === true,
     'juegos=' + board.n);

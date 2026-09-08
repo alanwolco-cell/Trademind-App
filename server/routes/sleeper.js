@@ -27,10 +27,29 @@ function writePlayerCache(data) {
   } catch (_) {}
 }
 
+// Sleeper devuelve 5xx a ratos sin motivo. Pasarselo al navegador tal cual
+// pinta un error rojo en la consola de un visitante que no hizo nada mal, y en
+// este repo un error de consola cuenta como bug. Se reintenta una vez con una
+// espera corta.
+// NO se reintenta un 429: si nos estan limitando, insistir es empeorarlo. Y
+// tampoco los 4xx, que son peticiones mal formadas nuestras.
 async function sleeperFetch(urlPath) {
-  const res = await fetch(SLEEPER + urlPath);
-  if (!res.ok) throw new Error(`Sleeper returned ${res.status} for ${urlPath}`);
-  return res.json();
+  let ultimo = null;
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      const res = await fetch(SLEEPER + urlPath);
+      if (res.ok) return res.json();
+      if (res.status < 500 || res.status === 429) {
+        throw new Error(`Sleeper returned ${res.status} for ${urlPath}`);
+      }
+      ultimo = new Error(`Sleeper returned ${res.status} for ${urlPath}`);
+    } catch (e) {
+      if (/returned 4/.test(e.message)) throw e;
+      ultimo = e;
+    }
+    if (intento === 0) await new Promise(r => setTimeout(r, 350));
+  }
+  throw ultimo;
 }
 
 // GET /api/sleeper/state/nfl

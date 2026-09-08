@@ -1469,6 +1469,104 @@ gate que miente en las dos direcciones y habria que estabilizarlo.
 - Bye weeks: la proyeccion de semanas futuras usa el numero de una semana tipica
   y no descuenta el descanso de cada equipo. Declarado, no simulado.
 
+### Sesion 2026-09-08 (segunda tanda): barra, tablero unico, hub compartido y mercado
+
+Wolco pidio cuatro cosas y las cuatro estan hechas.
+
+**1. La barra inferior cambia: Analyze sale, Leagues entra.** Un trade se analiza
+cuando surge; las ligas se miran cada semana. El analizador sigue en el cajon y
+en su ruta de siempre, no se quito de ningun lado. `_TABBAR_DIRECT` en app.js.
+
+**2. El tablero de odds abre en TODAS tus ligas.** Un duelo tuyo por liga,
+ordenado del peor al mejor (donde vas perdiendo es donde todavia puedes hacer
+algo), con tres cifras arriba: en cuantos eres favorito, cuantos puntos tienes
+en el campo y tu probabilidad media. Elegir una liga es un FILTRO sobre el mismo
+tablero, que ademas destapa la tabla de campeonato.
+Se descarto hacer una segunda pantalla: seria el mismo codigo dos veces y se
+separan solos, que es exactamente como este repo se gano el bug de la subasta
+(el boton "Let Mac finish" y el camino a mano divergieron).
+
+**3. El hub de liga: `server/routes/liga.js` + `public/hub.js`, en `/hub?c=CODIGO`.**
+Mac Draft no aloja la liga, la transmite. Se comparte desde la tarjeta de una
+liga en All Leagues; el servidor devuelve un codigo de seis caracteres sin letras
+ambiguas y el link se pega en el grupo. El que llega VE la liga sin cuenta y
+despues reclama su equipo.
+- **Booth**: power rankings con dos ejes declarados (lo que proyecta la
+  alineacion titular y lo que ya hizo el equipo). Sin partidos jugados el peso
+  del historial es CERO, no se finge. Una linea de Mac por equipo, siempre
+  derivada de un numero que esta en pantalla (mejores titulares, fondo de
+  armario, record por encima o por debajo de lo que proyecta el roster).
+- **History**: camina `previous_league_id` hacia atras, hasta 10 temporadas, con
+  el campeon sacado del cuadro final (`winners_bracket`, la llave con `p===1`) y
+  los nombres de equipo DE ESE ANO, no los de hoy. **Las temporadas cerradas se
+  congelan en el documento**: no cambian nunca, asi que se extraen una vez.
+  Probado con su liga Dynasty: 2025 Basher06, 2024 alvaromotta26.
+- **Market**: trade block, propuestas y voto de la liga. Las reglas son permisos:
+  sin equipo no se publica ni se vota, y **quien esta dentro del trade no vota el
+  suyo** (el veto lo decide la liga, no las partes).
+- Almacenamiento: documento versionado en Blob con el patron de `draftroom.js`
+  (el Blob cachea ~60s una ruta sobreescrita, letal para algo que diez personas
+  miran a la vez). Con `LIGA_STORE=local` cae a archivo, que es como corre el gate
+  sin tocar el almacen real.
+- Indice liga -> codigo en un documento aparte. La primera version recorria TODOS
+  los hubs y abria cada uno para no duplicar una liga: barato hoy y carisimo en
+  un ano.
+
+**4. La previa del enlace (Open Graph) por liga.** `/hub?c=CODIGO` se sirve con
+su propio `og:title` y `og:description` ("Dynasty on Mac Draft", "10 teams · 2
+seasons of history · open it with code W36XN8"). Un link con el titulo generico
+de la portada se ignora en un grupo de WhatsApp.
+**La imagen sigue siendo la generica.** Una imagen por liga necesita un
+rasterizador (`@vercel/og`), que es una dependencia nueva en el build: no se
+anadio sin preguntar. El titulo y la descripcion son el 80% de la tarjeta.
+Todo lo que entra en esas etiquetas viene de Sleeper, o sea de un desconocido:
+va por `attrSeguro()`, y el gate tiene un CANARIO con un nombre de liga
+malicioso que se pone rojo si alguien simplifica el escapado.
+
+### Gate nuevo: `node scripts/qa-hub.mjs`, 31 checks, DOS navegadores reales
+Un hub probado con una sola pestana no prueba nada: reclamar equipo, no poder
+robarlo y votar el trade de otro solo existen entre dos personas. Cada contexto
+lleva su propia llave de cuenta. Incluye los controles negativos (robar un
+equipo reclamado, publicar sin equipo, votar el trade propio, codigo inexistente,
+crear sin llave, y que el documento publico no filtre `acctId`), el canario del
+escapado, y un unico check que sale a la red: la ingesta real con su historia.
+
+**Dos trampas del propio gate que costaron tiempo y quedan cerradas:**
+- Correr el gate dos veces seguidas en el mismo puerto hacia que el segundo
+  servidor no pudiera atarse y los checks midieran OTRO proceso, con otro
+  almacen: tres fallos que no existian. Ahora hay un **prevuelo** que aborta si
+  el puerto ya contesta, y una comprobacion de que el servidor que responde es el
+  nuestro (ve el fixture que acabamos de escribir).
+- El unico check que depende de la red se reintenta dos veces: un gate que falla
+  al azar es peor que uno rojo, porque acostumbra a ignorarlo.
+
+### Dos arreglos de producto que salieron del gate
+- **Un 500 pasajero de Sleeper ya no borra la pantalla.** `mlGet` reintenta con
+  espera creciente (no reintenta 4xx, que son peticiones mal formadas), y si aun
+  asi falla **manda la caja**: se sigue enseñando la ultima copia buena con una
+  nota, en vez de vaciar catorce ligas por un tropiezo.
+- **El proxy de Sleeper absorbe el tropiezo del proveedor**: `sleeperFetch`
+  reintenta una vez ante 5xx. NO reintenta 429: si nos estan limitando, insistir
+  lo empeora.
+
+### Estado de los gates
+`qa-hub` 31 ALL GREEN, `qa-nav` ALL GREEN (se le actualizo el check de la barra
+inferior, que buscaba Analyze), `qa-board` 104, `qa-myleagues` verde salvo el
+check de consola en local. Ese ultimo NO es del producto: el fallo trae la firma
+`reason:` VACIA, la misma de la red interceptada del entorno; Sleeper responde
+200 a curl y a un servidor arrancado a mano, siempre. Se verifica contra
+produccion, que es donde cuenta.
+`qa-rankings` sigue con los 3 fallos que ya estaban en HEAD (la columna Pay
+arranca en $19) mas el 500 de consola, que es `PayloadTooLargeError` del sync de
+My Rankings saliendo como 500 en vez de 413.
+
+### Pendiente
+- La imagen de Open Graph por liga (necesita `@vercel/og`, decision de Wolco).
+- Yahoo dentro del hub: hoy la ingesta del hub es solo de Sleeper. Fingir que
+  Yahoo ya entra seria mentir en la interfaz, asi que el boton Share solo sale en
+  las tarjetas de Sleeper.
+- `qa-live` sigue siendo intermitente contra HEAD tambien.
+
 ---
 
 # Rediseño de septiembre 2026 (act. 8-sep)

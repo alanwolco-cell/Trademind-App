@@ -51,10 +51,26 @@ function mlEsc(s) {
 function mlN(n, d) { var v = Number(n); return isFinite(v) ? v.toFixed(d == null ? 1 : d) : '-'; }
 function mlPct(p) { return Math.round(p * 1000) / 10; }
 
-async function mlGet(path) {
-  var r = await fetch('/api/sleeper' + path);
-  if (!r.ok) throw new Error('Sleeper ' + r.status);
-  return r.json();
+// Sleeper se cae a ratos y devuelve 500 sin motivo. Un tropiezo de una llamada
+// no puede tumbar una pantalla que junta catorce ligas: se reintenta con espera
+// creciente. Los errores del CLIENTE (400, 404) no se reintentan, porque
+// repetir una peticion mal formada solo gasta tiempo.
+async function mlGet(path, intentos) {
+  var max = intentos == null ? 3 : intentos;
+  var ultimo = null;
+  for (var i = 0; i < max; i++) {
+    try {
+      var r = await fetch('/api/sleeper' + path);
+      if (r.ok) return r.json();
+      if (r.status < 500) throw new Error('Sleeper ' + r.status);
+      ultimo = new Error('Sleeper ' + r.status);
+    } catch (e) {
+      if (/Sleeper 4/.test(e.message)) throw e;
+      ultimo = e;
+    }
+    if (i < max - 1) await new Promise(function (x) { setTimeout(x, 400 + i * 900); });
+  }
+  throw ultimo || new Error('Sleeper unreachable');
 }
 
 // Concurrencia acotada: catorce ligas por tres llamadas son cuarenta y dos
@@ -602,10 +618,19 @@ async function mlBoot(force) {
     ML.yahooErr = null;
     var deYahoo = await mlIngestYahoo(players).catch(function () { return []; });
     ML.leagues = mias.concat(deYahoo || []);
+    ML.stale = null;
     ML.ready = true; ML.err = null;
     mlCacheWrite();
   } catch (e) {
-    ML.err = e.message || String(e);
+    // Con datos en la caja, un fallo de red no borra la pantalla: se sigue
+    // enseñando lo ultimo bueno y se dice que no se pudo actualizar. Vaciar
+    // catorce ligas por un 500 pasajero es la peor respuesta posible.
+    if (ML.leagues && ML.leagues.length) {
+      ML.err = null;
+      ML.stale = e.message || String(e);
+    } else {
+      ML.err = e.message || String(e);
+    }
     ML.ready = true;
   }
   ML.loading = false;
@@ -778,6 +803,7 @@ function mlPaintLeagues() {
 
   var h = '<div class="ml-tools"><button class="btn-sm" onclick="mlRefresh()">Refresh</button>'
     + mlYahooBtn()
+    + (ML.stale ? '<span class="ml-hint">Showing your last saved copy: could not reach Sleeper just now.</span>' : '')
     + '<span class="ml-hint">Cached so it opens instantly. Refresh pulls new scores.</span></div>'
     + (ML.yahooErr ? '<div class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</div>' : '')
     + '<div class="ml-grid">';
@@ -818,6 +844,8 @@ function mlPaintLeagues() {
       + '<div class="ml-flags">' + flags.map(function (f) { return '<span>' + mlEsc(f) + '</span>'; }).join('') + '</div>'
       + line
       + '<div class="ml-card-f"><span class="ml-team">' + mlEsc(mlTeamName(L, mine.roster_id)) + '</span>'
+      + (L.plat === 'sleeper'
+        ? '<button class="ml-link" onclick="mlShare(\'' + L.id + '\',this)">Share →</button>' : '')
       + '<button class="ml-link" onclick="mlOpenOdds(\'' + L.id + '\')">Odds →</button></div>'
       + '</article>';
   });
@@ -937,6 +965,57 @@ function mlOpenOdds(id) {
   mlRunSim(id);
 }
 
+// Tu domingo entero en una pantalla: un duelo por liga, el tuyo, ordenado por
+// donde estas en problemas. Es la vista que ninguna app da, porque todas asumen
+// que juegas una sola liga.
+function mlTableroTodas() {
+  var filas = [];
+  ML.leagues.forEach(function (L) {
+    if (!mlDrafted(L)) return;
+    var H = L._hyd;
+    if (!H || !H.mine || H.opp == null) return;
+    var mio = (H.proj[H.mine.roster_id] || {}).total || 0;
+    var suyo = (H.proj[H.opp] || {}).total || 0;
+    filas.push({
+      L: L, mio: mio, suyo: suyo, wp: mlWinProb(mio, suyo),
+      rival: mlTeamName(L, H.opp), yo: mlTeamName(L, H.mine.roster_id)
+    });
+  });
+  if (!filas.length) {
+    return '<div class="ml-board"><div class="ml-board-empty">'
+      + 'None of your leagues has a matchup posted for week ' + ML.week + ' yet.</div></div>';
+  }
+  // De peor a mejor: donde vas perdiendo es donde todavia puedes hacer algo.
+  filas.sort(function (a, b) { return a.wp - b.wp; });
+  var favorito = filas.filter(function (f) { return f.wp >= 0.5; }).length;
+  var puntos = filas.reduce(function (a, f) { return a + f.mio; }, 0);
+
+  var h = '<div class="ml-slate"><div class="ml-slate-n"><b>' + favorito + '</b><span>of ' + filas.length
+    + ' games favored</span></div>'
+    + '<div class="ml-slate-n"><b class="mono">' + mlN(puntos, 0) + '</b><span>points on the field</span></div>'
+    + '<div class="ml-slate-n"><b class="mono">'
+    + mlPct(filas.reduce(function (a, f) { return a + f.wp; }, 0) / filas.length)
+    + '%</b><span>average shot</span></div></div>';
+
+  h += '<div class="ml-board"><div class="ml-board-h"><span>Your matchup</span><span>Spread</span><span>Money</span><span>Win</span></div>';
+  filas.forEach(function (f) {
+    var fav = f.mio >= f.suyo;
+    var tot = Math.round((f.mio + f.suyo) * 2) / 2;
+    h += '<div class="ml-game' + (f.wp < 0.4 ? ' is-cold' : (f.wp > 0.6 ? ' is-hot' : '')) + '">'
+      + '<div class="ml-game-tag">' + mlEsc(f.L.name) + '</div>'
+      + '<div class="ml-bd-row">'
+      + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + ' vs ' + mlEsc(f.rival) + '</b>'
+      + '<span class="mono">' + mlN(f.mio) + ' - ' + mlN(f.suyo) + '</span></div>'
+      + '<div class="ml-cell mono">' + (fav ? '-' : '+') + mlSpread(Math.abs(f.mio - f.suyo)) + '</div>'
+      + '<div class="ml-cell mono ' + (f.wp >= 0.5 ? 'is-fav' : '') + '">' + mlAmerican(f.wp) + '</div>'
+      + '<div class="ml-cell mono ml-tot">' + mlPct(f.wp) + '%</div>'
+      + '</div>'
+      + '<button class="ml-link ml-game-go" onclick="mlOpenOdds(\'' + mlEsc(f.L.id) + '\')">Full board and title odds →</button>'
+      + '</div>';
+  });
+  return h + '</div>';
+}
+
 function mlPaintOdds() {
   var box = document.getElementById('ml-odds-body');
   if (!box) return;
@@ -949,18 +1028,22 @@ function mlPaintOdds() {
     return;
   }
 
-  var sel = ML.oddsLeague && ML.leagues.filter(function (L) { return L.id === ML.oddsLeague; })[0];
-  // Por defecto, la primera liga que de verdad juega esta semana. Abrir el
-  // tablero en una liga sin draftear ensena un tablero vacio y parece roto.
-  if (!sel) sel = ML.leagues.filter(mlDrafted)[0] || ML.leagues[0];
-  ML.oddsLeague = sel.id;
+  // El tablero abre en TODAS tus ligas: el domingo no juegas una, juegas las que
+  // tengas. Elegir una liga es un filtro sobre el mismo tablero, no otra
+  // pantalla: dos tableros serian el mismo codigo dos veces y se separan solos.
+  var todas = !ML.oddsLeague || ML.oddsLeague === 'all';
+  var sel = !todas && ML.leagues.filter(function (L) { return L.id === ML.oddsLeague; })[0];
+  if (!todas && !sel) { todas = true; ML.oddsLeague = 'all'; }
 
   var h = '<div class="ml-book">';
   h += '<div class="ml-book-top"><select id="ml-odds-sel" onchange="mlOpenOdds(this.value)" aria-label="League">'
+    + '<option value="all"' + (todas ? ' selected' : '') + '>All leagues</option>'
     + ML.leagues.map(function (L) {
-      return '<option value="' + mlEsc(L.id) + '"' + (L.id === sel.id ? ' selected' : '') + '>' + mlEsc(L.name) + '</option>';
+      return '<option value="' + mlEsc(L.id) + '"' + (!todas && L.id === sel.id ? ' selected' : '') + '>' + mlEsc(L.name) + '</option>';
     }).join('') + '</select>'
     + '<span class="ml-book-tag">Week ' + ML.week + '</span></div>';
+
+  if (todas) { box.innerHTML = h + mlTableroTodas() + '</div>'; return; }
 
   // ---- tablero de duelos
   var H = sel._hyd;
@@ -1074,6 +1157,33 @@ async function mlRunSim(id) {
   } finally { _mlSimming[id] = 0; }
 }
 
+/* ------------------------------------------------------------- compartir */
+// Crear el hub tarda: trae la liga y camina todas sus temporadas viejas. El
+// boton dice lo que esta pasando en vez de quedarse mudo, y si la liga ya
+// estaba compartida el servidor devuelve el MISMO codigo en vez de partir la
+// conversacion de una liga en dos hubs.
+async function mlShare(id, btn) {
+  var L = ML.leagues.filter(function (x) { return x.id === id; })[0];
+  if (!L) return;
+  var txt = btn && btn.textContent;
+  if (btn) { btn.textContent = 'Reading past seasons...'; btn.disabled = true; }
+  try {
+    var r = await fetch('/api/liga/new', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leagueId: L.id })
+    });
+    var d = await r.json();
+    if (!r.ok || !d.code) throw new Error(d.error || 'could not share');
+    if (btn) { btn.textContent = txt || 'Share'; btn.disabled = false; }
+    if (window.hbGo) {
+      if (typeof switchScreen === 'function') switchScreen('hub');
+      hbGo(d.code);
+    }
+  } catch (e) {
+    if (btn) { btn.textContent = 'Could not share'; btn.disabled = false; }
+  }
+}
+
 /* -------------------------------------------------------------- entrada */
 function renderMyLeagues() {
   mlPaint();
@@ -1094,3 +1204,4 @@ window.mlRefresh = mlRefresh;
 window.mlOpenOdds = mlOpenOdds;
 window.mlYahooConnect = mlYahooConnect;
 window.mlYahooDisconnect = mlYahooDisconnect;
+window.mlShare = mlShare;

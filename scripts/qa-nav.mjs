@@ -176,7 +176,9 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
 // camino que rompia, por otra puerta.
 {
   console.log('\n=== barra inferior del telefono ===');
-  for (const [etiqueta, espera] of [['Analyze', 'screen-analyze'], ['Draft', 'screen-mock']]) {
+  // La barra cambio el 2026-09-08: Analyze salio de la barra (sigue en el
+  // cajon y en su ruta) y entro Leagues, que es lo que se mira cada semana.
+  for (const [etiqueta, espera] of [['Leagues', 'screen-myleagues'], ['Draft', 'screen-mock']]) {
     const pg = await nueva(390, 844);
     await abrirCajon(pg);
     const r = await pg.evaluate(async (et) => {

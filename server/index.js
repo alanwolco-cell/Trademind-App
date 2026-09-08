@@ -79,6 +79,7 @@ app.use('/api/scout', require('./routes/scout'));
 app.use('/api/room', require('./routes/draftroom'));
 app.use('/api/billing', require('./routes/billing'));
 app.use('/api/perfil', require('./routes/perfil'));
+app.use('/api/liga', require('./routes/liga'));
 
 // Serve frontend
 // Static assets: a short TTL so repeat views skip the revalidation round-trip,
@@ -216,8 +217,46 @@ app.all(/^\/api\//, (req, res) => res.status(404).json({ error: 'not found' }));
 
 // The client routes the SPA can restore from a cold URL. Keep in step with
 // _VALID_SCREENS in public/app.js and SCREENS in scripts/gen-sitemap.mjs.
+// Nada de lo que entra aqui es nuestro: el nombre de la liga y los de los
+// equipos los escribe un desconocido en Sleeper. Se escapa para atributo HTML,
+// se recortan los caracteres de control y se limita el largo. Este repo ya
+// tuvo un XSS almacenado; el sitio donde vuelve a aparecer es exactamente uno
+// como este.
+function attrSeguro(v, max) {
+  return String(v == null ? '' : v)
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .slice(0, max || 120)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+let _htmlCache = null;
+function htmlBase() {
+  if (!_htmlCache) _htmlCache = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+  return _htmlCache;
+}
+function htmlConPrevia(hub, code) {
+  const equipos = (hub.rosters || []).length || (hub.source && hub.source.teams) || 0;
+  const jugados = (hub.rosters || []).reduce((a, r) => a + (r.wins || 0) + (r.losses || 0) + (r.ties || 0), 0);
+  const lider = (hub.rosters || []).slice().sort((a, b) =>
+    (b.wins - a.wins) || (b.fpts - a.fpts))[0];
+  const temporadas = (hub.historia || []).length;
+  const partes = [equipos + ' teams'];
+  if (jugados && lider) partes.push(lider.owner + ' leads at ' + lider.wins + '-' + lider.losses);
+  if (temporadas) partes.push(temporadas + ' season' + (temporadas === 1 ? '' : 's') + ' of history');
+  partes.push('open it with code ' + code);
+  const titulo = attrSeguro(hub.name + ' on Mac Draft', 90);
+  const desc = attrSeguro('Power rankings, past champions and the trade market. ' + partes.join(' · '), 200);
+  const url = attrSeguro('https://macdraft.app/hub?c=' + code, 120);
+  return htmlBase()
+    .replace(/<meta property="og:title"[^>]*>/, '<meta property="og:title" content="' + titulo + '">')
+    .replace(/<meta property="og:description"[^>]*>/, '<meta property="og:description" content="' + desc + '">')
+    .replace(/<meta property="og:url"[^>]*>/, '<meta property="og:url" content="' + url + '">')
+    .replace(/<meta name="twitter:title"[^>]*>/, '<meta name="twitter:title" content="' + titulo + '">')
+    .replace(/<meta name="twitter:description"[^>]*>/, '<meta name="twitter:description" content="' + desc + '">');
+}
+
 const SPA_ROUTES = new Set([
-  '/', '/home', '/mock', '/sage', '/analyze', '/league', '/myleagues', '/research',
+  '/', '/home', '/mock', '/sage', '/analyze', '/league', '/myleagues', '/hub', '/research',
   '/community', '/learn', '/news',
   // /perfil is deliberately NOT in gen-sitemap.mjs and is disallowed in
   // robots.txt: it is a private self-scouting tab for the owner, gated server
@@ -231,7 +270,7 @@ const SPA_ROUTES = new Set([
 // error in every visitor's console.
 const ASSET_EXT = /\.(css|js|mjs|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|eot|mp4|webm|mp3|json|txt|xml)$/i;
 
-app.use((req, res) => {
+app.use(async (req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return res.status(404).json({ error: 'not found' });
   }
@@ -242,6 +281,19 @@ app.use((req, res) => {
   }
   const route = '/' + req.path.replace(/^\/+|\/+$/g, '').toLowerCase();
   if (SPA_ROUTES.has(route)) {
+    // El hub de liga sirve SU PROPIA previa de enlace. Un link pegado en el
+    // grupo de WhatsApp con el titulo generico de la portada se ignora; con el
+    // nombre de la liga y lo que hay dentro, se abre. Es el canal por el que
+    // esto crece, asi que vale una lectura extra antes de servir el HTML.
+    if (route === '/hub') {
+      const c = String((req.query && req.query.c) || '').toUpperCase();
+      if (/^[A-Z2-9]{6}$/.test(c)) {
+        try {
+          const hub = await require('./routes/liga').hubPorCodigo(c);
+          if (hub) return res.type('html').send(htmlConPrevia(hub, c));
+        } catch (_) { /* si falla, se sirve el HTML de siempre */ }
+      }
+    }
     return res.sendFile(path.join(__dirname, '../public/index.html'));
   }
   // Anything else is a wrong link. Our own page, an honest status, and two ways
