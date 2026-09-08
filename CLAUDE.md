@@ -1560,6 +1560,21 @@ produccion, que es donde cuenta.
 arranca en $19) mas el 500 de consola, que es `PayloadTooLargeError` del sync de
 My Rankings saliendo como 500 en vez de 413.
 
+### Desplegado y verificado en produccion (2026-09-08)
+HEAD f911e43. hub.js, myleagues.js, app.js, index.html y styles.css sirven el
+mismo sha256 que el local; `/myleagues` y `/hub` responden 200; `liga/new` sin
+llave 401. **El camino del usuario, no una llamada suelta**: en un navegador de
+telefono contra macdraft.app se toco Share en la tarjeta de la liga Dynasty y
+aterrizo en `/hub?c=RESUMP` con sus 10 equipos, sus 2 temporadas de historia,
+sin desborde a 390px y con la consola limpia. La previa del enlace sale con el
+nombre de la liga y su codigo.
+**El hub de su liga Dynasty ya existe en produccion: codigo RESUMP.** Compartir
+esa misma liga otra vez devuelve ese codigo, no uno nuevo.
+
+`QA_BASE=https://macdraft.app qa-myleagues` ALL GREEN **incluida la consola
+limpia**, que es la prueba de que los fallos de consola en local eran de la red
+interceptada del entorno y no del producto. `qa-nav` ALL GREEN contra produccion.
+
 ### Pendiente
 - La imagen de Open Graph por liga (necesita `@vercel/og`, decision de Wolco).
 - Yahoo dentro del hub: hoy la ingesta del hub es solo de Sleeper. Fingir que
