@@ -49,10 +49,10 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link rel="apple-touch-startup-image" href="/splash/1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="/splash/1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="/splash/1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<title>Mac Draft - The Mock Draft That Drafts Like Your League</title>
-<meta name="description" content="Fantasy football mock drafts personalized to your league. Describe how your room drafts, or connect Sleeper, and practice against bots that reach, wait and snipe like the real thing. Mac advises every pick.">
-<meta property="og:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
-<meta property="og:description" content="Mock drafts personalized to your league. Describe your room or connect Sleeper, then draft with Mac advising every pick.">
+<title>Mac Draft - Every League You Play, One Screen</title>
+<meta name="description" content="Track every fantasy football league you play, Sleeper and Yahoo together: your record, who you face this week, every player you own across all of them, and a betting board priced with your own league's rules.">
+<meta property="og:title" content="Mac Draft - Every League You Play, One Screen">
+<meta property="og:description" content="Sleeper and Yahoo in one screen. Your record, this week's matchup, your exposure across every league, and odds priced with your league's own rules.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://macdraft.app/">
 <meta property="og:image" content="https://macdraft.app/og.png?v=2026078546">
@@ -60,8 +60,8 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Mac Draft - The Mock Draft That Drafts Like Your League">
-<meta name="twitter:description" content="Mock drafts that behave like YOUR league, with Mac advising every pick.">
+<meta name="twitter:title" content="Mac Draft - Every League You Play, One Screen">
+<meta name="twitter:description" content="Every league you play in one screen, with a betting board priced by your league's own rules.">
 <meta name="twitter:image" content="https://macdraft.app/og.png?v=2026078546">
 <link rel="canonical" href="https://macdraft.app/">
 <script defer src="/_vercel/insights/script.js"></script>
@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026090902">
+<link rel="stylesheet" href="/styles.css?v=2026090903">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026090902" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026090903" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026090902">
+<link rel="stylesheet" href="/theme.css?v=2026090903">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026090902">
+<link rel="stylesheet" href="/home.css?v=2026090903">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090902">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090903">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -1552,7 +1552,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <p style="margin-bottom:14px">The tools out there show you a number. Two players, two values, a green check or a red X. But nobody plays in a vacuum. The number doesn't know your roster, your league, or whose window is closing.</p>
           <p style="margin-bottom:14px">So Mac learned to read the situation first - your team, your league, the manager across the table - for trades, and then for the nights leagues are actually won: the draft. Mock rooms that behave like your real league, bots with your friends' habits, auctions with real dollar values, and Mac advising every pick.</p>
           <p style="margin-bottom:14px">One promise matters more to me than any feature: accuracy. I would rather show you nothing than show you something wrong, because real people make real decisions with this.</p>
-          <p style="margin-bottom:14px"><a href="#" onclick="event.preventDefault();goMock()" style="color:var(--accent-bright);font-weight:700">Build a mock draft &rarr;</a> &nbsp;&middot;&nbsp; <a href="#" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')" style="color:var(--accent-bright);font-weight:700">Open the Trade Analyzer &rarr;</a></p>
+          <p style="margin-bottom:14px"><a href="#" onclick="event.preventDefault();switchScreen('myleagues')" style="color:var(--accent-bright);font-weight:700">See my leagues &rarr;</a> &nbsp;&middot;&nbsp; <a href="#" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')" style="color:var(--accent-bright);font-weight:700">Open the Trade Analyzer &rarr;</a></p>
           <p style="margin-bottom:4px">Make the move you know is right. Life is good.</p>
           <p style="color:var(--muted);font-size:12.5px;margin-top:18px">Alan, founder of Mac Draft</p>
         </div>
@@ -1664,11 +1664,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
      lines, big air - and the first taste of the dark product world. -->
 <div class="mk-sec mk-dark" id="home-problem">
   <div class="mk-wrap mk-center">
-    <h2 class="mk-h2 mk-reveal">Stop practicing against<br>a league that doesn't exist.</h2>
+    <h2 class="mk-h2 mk-reveal">Stop opening six apps<br>to answer one question.</h2>
     <div class="mk-lines mk-reveal">
-      <p>Every mock site gives you the same twelve tidy bots. Your league is not tidy.</p>
-      <p>Your league takes two QBs in round 2. Your league has a guy who always reaches for rookies.</p>
-      <p class="mk-lines-strong">Draft day never looks like your practice. <span class="hl2">This mock drafts like your room.</span></p>
+      <p>You play in more than one league. Every app shows you exactly one of them.</p>
+      <p>So on Sunday you cannot answer the only question that matters: how am I actually doing, and who do I want to have a bad day?</p>
+      <p class="mk-lines-strong">Every league you play, side by side. <span class="hl2">Including the ones on Yahoo.</span></p>
     </div>
   </div>
 </div>
@@ -1679,28 +1679,28 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="mk-wrap">
     <div class="mk-center mk-reveal">
       <div class="mk-eyebrow-acc">How it works</div>
-      <h2 class="mk-h2">From your league's habits<br>to a live board. Four steps.</h2>
+      <h2 class="mk-h2">From one username<br>to every league you play. Four steps.</h2>
     </div>
     <div class="mk-steps">
       <div class="mk-step mk-reveal">
         <div class="mk-step-num">01</div>
-        <h3>Describe your league</h3>
-        <p>Plain words. RBs early, TE premium, whatever your room does.</p>
+        <h3>Connect your account</h3>
+        <p>Your Sleeper username or one Yahoo sign in. Every league you play comes with it.</p>
       </div>
       <div class="mk-step mk-reveal">
         <div class="mk-step-num">02</div>
-        <h3>Or connect Sleeper</h3>
-        <p>Scoring, size and format fill themselves. Manual works too.</p>
+        <h3>See your Sunday</h3>
+        <p>Record, this week's matchup and a live score in every league, side by side.</p>
       </div>
       <div class="mk-step mk-reveal">
         <div class="mk-step-num">03</div>
-        <h3>Draft in the war room</h3>
-        <p>Snake board, pick clock, queue, live scouting on every player.</p>
+        <h3>Read the board</h3>
+        <p>Every matchup priced with your own league's rules, and title odds from four thousand simulated seasons.</p>
       </div>
       <div class="mk-step mk-reveal">
         <div class="mk-step-num">04</div>
-        <h3>Mac on every pick</h3>
-        <p>Notes, stats, news, and a straight answer: take him or pass.</p>
+        <h3>Bring the league in</h3>
+        <p>One code opens your league to everyone in it: power rankings, past champions and the trade market.</p>
       </div>
     </div>
   </div>
@@ -1799,10 +1799,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <!-- FINAL CTA - the one action, at the persuasion peak. -->
   <div class="mk-sec mk-band">
     <div class="mk-wrap mk-center mk-reveal">
-      <h2 class="mk-h2">Draft day is coming.</h2>
-      <p class="mk-sub">Practice against your league, not somebody else's.</p>
+      <h2 class="mk-h2">Sunday is coming.</h2>
+      <p class="mk-sub">Bring every league you play into one screen, and see where you stand before kickoff.</p>
       <div class="mk-cta-row mk-center-row">
-        <a href="#" class="mk-btn" onclick="event.preventDefault();goMock()">Start a mock draft</a>
+        <a href="#" class="mk-btn" onclick="event.preventDefault();switchScreen('myleagues')">See my leagues</a>
       </div>
     </div>
   </div>
@@ -1908,11 +1908,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026090902"></script>
-<script src="/rankings.js?v=2026090902"></script>
-<script src="/live.js?v=2026090902"></script>
-<script src="/myleagues.js?v=2026090902"></script>
-<script src="/hub.js?v=2026090902"></script>
+<script src="/app.js?v=2026090903"></script>
+<script src="/rankings.js?v=2026090903"></script>
+<script src="/live.js?v=2026090903"></script>
+<script src="/myleagues.js?v=2026090903"></script>
+<script src="/hub.js?v=2026090903"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
