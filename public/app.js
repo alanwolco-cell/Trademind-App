@@ -1645,8 +1645,19 @@ function startYahooLogin(){
   window.open('/api/yahoo/login','trademind-yahoo','width='+w+',height='+h+',left='+x+',top='+y);
 }
 window.addEventListener('message',function(ev){
+  // El mensaje solo puede venir de NUESTRA propia ventana emergente. Sin esta
+  // linea, cualquier pagina que nos tenga abiertos podia inyectar un roster
+  // falso, y desde que el mensaje lleva ademas un token de Yahoo, mucho peor.
+  if(ev.origin!==window.location.origin)return;
   var d=ev.data;
   if(!d||d.type!=='trademind-yahoo'||!d.payload)return;
+  // Las DOS puertas de Yahoo (esta y la de All Leagues) guardan la misma
+  // credencial en el mismo sitio. Que cada una hiciera lo suyo es como se
+  // separan dos caminos que deberian dar lo mismo, y este repo ya pago esa
+  // leccion con la subasta.
+  if(d.payload.token&&d.payload.token.access_token&&window.mlYahooSet){
+    try{ mlYahooSet(d.payload.token); }catch(_){}
+  }
   var st=document.getElementById('yahoo-status');
   if(d.payload.error){if(st)st.textContent=d.payload.error;return;}
   _yahooTeams=d.payload.teams||[];

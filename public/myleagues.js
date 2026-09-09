@@ -1205,3 +1205,6 @@ window.mlOpenOdds = mlOpenOdds;
 window.mlYahooConnect = mlYahooConnect;
 window.mlYahooDisconnect = mlYahooDisconnect;
 window.mlShare = mlShare;
+// app.js guarda aqui el token cuando el usuario entra por la puerta vieja.
+window.mlYahooSet = mlYahooSet;
+window.mlYahooConectado = mlYahooConectado;
