@@ -258,12 +258,25 @@ try {
     `sin ganga con la puja alta NI con el lote recien abierto en $${m2.bid} (era el falso positivo de cada nominacion)`);
 
   // ── (n) EL CONSEJO CALLA CUANDO NO TIENE NADA ────────────────────────────
+  // El escenario tiene que ser DE VERDAD uno sin nada que decir, y con el
+  // roster VACIO no lo es: quien no tiene nada necesita todo, asi que "quedan
+  // dos de este tier de RB" es informacion correcta y el consejo hace bien en
+  // darla. Este check pedia silencio en un caso donde el producto habla con
+  // razon, y por eso fallaba una corrida si y otra no, segun como quedara el
+  // board de los checks anteriores.
+  //
+  // El caso honesto: el roster YA tiene cubierto lo que este jugador aporta, la
+  // sala esta neutra y el precio es el de mercado. Ahi no hay nada que decir.
   const silencio = await pg.evaluate(() => {
-    MD.mine = []; AU.inflation = 1;
+    AU.inflation = 1;
     const p = lvOne('jeanty'); lvBlock(p);
+    // Titulares cubiertos de sobra en su posicion: ya no lo necesita.
+    MD.mine = [];
+    for (let i = 0; i < 6; i++) MD.mine.push({ id: 'relleno' + i, pos: p.pos, name: 'Relleno ' + i });
     return lvAdvice(p, lvCeiling(p), lvRead());
   });
-  ok('n', silencio === '', 'el consejo calla en un lote sin nada que decir');
+  ok('n', silencio === '', 'el consejo calla en un lote sin nada que decir'
+    + (silencio ? ' -> dijo: "' + String(silencio).slice(0, 120) + '"' : ''));
 
   // ── (o) LA RESERVA BAJA EL TECHO Y SE LIBERA SOLA ────────────────────────
   const res = await pg.evaluate(() => {
