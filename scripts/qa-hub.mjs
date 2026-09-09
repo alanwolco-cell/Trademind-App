@@ -325,8 +325,12 @@ const p2 = await persona('qa_hub_dos_bbbbbbbbbbbbbbbbbbbbbb', 390, 844, true);
 
   const r2 = await fetch(BASE + '/hub?c=ZZZZZZ');
   const html2 = await r2.text();
+  // El titulo por defecto cambia con el posicionamiento del producto (paso el
+  // 2026-09-09 al esconder los mock drafts). Lo que este control mide no es una
+  // frase concreta: es que un codigo inexistente NO reciba una previa de liga.
+  const t2 = /<meta property="og:title" content="([^"]*)"/.exec(html2);
   ok('(x) CONTROL: un codigo que no existe cae en la previa de siempre',
-    /Mock Draft That Drafts/.test(html2));
+    !!t2 && !/ on Mac Draft$/.test(t2[1]) && /Mac Draft/.test(t2[1]), t2 && t2[1]);
 
   // CANARIO del escapado. Si alguien "simplifica" attrSeguro, esto se pone rojo
   // antes de que el XSS llegue a produccion.

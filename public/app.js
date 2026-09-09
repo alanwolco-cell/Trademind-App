@@ -132,6 +132,27 @@ let ACTIVE_SEASON='2026';
 // rutas siguen enteros (Draft Day y los precios de My Rankings salen de ese
 // mismo motor). En julio se pone en true y vuelve todo con una linea.
 var DRAFT_SEASON = false;
+// La app abre DONDE SE USA. Un visitante nuevo aterriza en la portada, que es
+// lo que le explica de que va esto. Uno que ya conecto su cuenta no viene a
+// leer la portada otra vez: viene a ver sus ligas. Ninguna app te deja en su
+// pagina de marketing cuando ya eres usuario.
+//
+// Solo en la raiz limpia (sin ruta, sin query, sin hash), para no pisar un
+// enlace compartido, la demo, ni una vuelta atras del navegador. El logo y la
+// pestana Home siguen llevando a la portada.
+try {
+  document.addEventListener('DOMContentLoaded', function () {
+    if (location.pathname !== '/' || location.search || location.hash) return;
+    var tiene = false;
+    try { tiene = !!(localStorage.getItem('tm_username') || localStorage.getItem('tm_yahoo_tok')); } catch (_) { }
+    if (!tiene) return;
+    try {
+      history.replaceState({ screen: 'myleagues' }, '', '/myleagues');
+      switchScreen('myleagues', true);
+    } catch (_) { }
+  });
+} catch (_) { }
+
 // El boton del hero depende de si ya hay cuenta: al que llega de cero le sirve
 // VER el producto (datos de ejemplo, sin registrarse); al que ya conecto, ir a
 // lo suyo. Un solo boton que sirva a los dos no existe.

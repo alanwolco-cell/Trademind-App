@@ -1114,12 +1114,12 @@ function mlPaintLeagues() {
   });
   var visibles = orden.filter(mlPasaFiltro);
 
+  // Arriba SOLO lo que se usa a diario: tres controles por encima del contenido
+  // son tres cosas que leer antes de llegar a lo que vienes a ver.
   var h = mlAvisoDemo()
-    + '<div class="ml-tools">' + (ML.demo ? '' : '<button class="btn-sm" onclick="mlRefresh()">Refresh</button>'
-    + mlYahooBtn())
-    + (ML.stale ? '<span class="ml-hint">Showing your last saved copy: could not reach Sleeper just now.</span>' : '')
-    + '</div>'
-    + (ML.yahooErr ? '<div class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</div>' : '')
+    + (ML.demo ? '' : '<div class="ml-tools"><button class="btn-sm" onclick="mlRefresh()">Refresh</button>'
+      + (ML.stale ? '<span class="ml-hint">Showing your last saved copy: could not reach Sleeper just now.</span>' : '')
+      + '</div>')
     + mlFiltrosUI(orden, visibles);
 
   if (!visibles.length) {
@@ -1188,7 +1188,17 @@ function mlPaintLeagues() {
       + '<button class="ml-link" onclick="mlOpenOdds(\'' + L.id + '\')">Odds →</button></div>'
       + '</article>';
   });
-  box.innerHTML = h + '</div>';
+  h += '</div>';
+  // El pie: las dos acciones de UNA VEZ (conectar Yahoo, abrir una liga con un
+  // codigo). Encontrables, pero fuera del camino de lo que se mira a diario.
+  if (!ML.demo) {
+    h += '<footer class="ml-foot">'
+      + (mlYahooConectado() ? '' : mlYahooBtn())
+      + '<button class="ml-link" onclick="switchScreen(\'hub\')">Have a league code?</button>'
+      + (ML.yahooErr ? '<span class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</span>' : '')
+      + '</footer>';
+  }
+  box.innerHTML = h;
 }
 
 /* --------------------------------------------- el panel de las alineaciones */
@@ -1202,7 +1212,7 @@ function mlPanelAlineaciones() {
   var h = '<section class="ml-fix"><header class="ml-fix-h">'
     + '<div><h3>' + rotas.length + ' lineup' + (rotas.length === 1 ? '' : 's') + ' to fix</h3>'
     + '<p>You are leaving <b>' + mlN(total) + ' projected points</b> on your bench this week.</p></div>'
-    + '<span class="ml-fix-n mono">+' + mlN(total, 0) + '</span></header>'
+    + '<span class="ml-fix-n mono">+' + mlN(total) + '</span></header>'
     + '<div class="ml-fix-list">';
   rotas.slice(0, 6).forEach(function (x) {
     var L = x.L;

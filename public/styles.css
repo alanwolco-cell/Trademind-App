@@ -3155,3 +3155,17 @@ html.no-draft .draft-only{display:none !important}
   .ml-fix-row{grid-template-columns:1fr;gap:5px}
   .ml-fix-n{font-size:19px}
 }
+/* En el telefono los filtros van en UNA fila que se desliza, no en dos que se
+   apilan: con seis capsulas envueltas, el contenido empieza a media pantalla. */
+@media(max-width:640px){
+  /* Sin margenes negativos: sacaban la fila fuera del viewport y a 390px eso es
+     un desborde de verdad, aunque el scroll horizontal lo disimule. */
+  .ml-filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:2px 0 4px}
+  .ml-filters::-webkit-scrollbar{display:none}
+  .ml-chip{flex-shrink:0}
+  .ml-filters-sep{flex-shrink:0}
+}
+/* El pie de la lista: acciones de una sola vez (conectar Yahoo, abrir una liga
+   con un codigo). Fuera del camino, pero encontrables. */
+.ml-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;padding-top:14px;
+  border-top:1px solid var(--border)}
