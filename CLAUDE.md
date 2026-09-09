@@ -1430,12 +1430,49 @@ as an API permission **on your developer account**. Check your existing app for
 Fantasy Sports under API Permissions" (o sea: hay que MARCARLA en la app, no se
 activa sola), y el 8-sep "the credentials **for your application** are enabled".
 
-**Hecho el 9-sep:** `YAHOO_CLIENT_ID` en Vercel cambiado a la app aprobada y
-redespliegue (una variable de Vercel solo entra con un deploy nuevo). Verificado:
-produccion ya manda ese client_id con `scope=fspt-r` y el callback de macdraft.app.
-**PENDIENTE: `YAHOO_CLIENT_SECRET` sigue siendo el de la app vieja.** Hasta que
-el dueno pegue en Vercel el secreto de la app aprobada, el login pasara el
-consentimiento y fallara al canjear el codigo.
+### RESUELTO el 2026-09-09 a las ~2am. Yahoo CONECTADO.
+
+Eran TRES candados distintos, no uno, y cada uno daba un error diferente. Se
+cayeron en este orden:
+
+**1. El redirect URI.** La app vieja (`...bmVZTUk3UDVhNHhE...`, la de agosto)
+esta registrada con trademindff.com: pedirle el callback de macdraft.app da
+`invalid_request`. Queda descartada para siempre. La buena es la que el dueno
+creo el 8-sep con Fantasy Sports ya marcado: **App ID `x2hAMz0L`, Client ID
+`dj0yJmk9Q2REckxiZFNnMjI2...`**, con `https://macdraft.app/api/yahoo/callback`
+registrado.
+
+**2. EL SCOPE, que es el hallazgo que no esta documentado en ningun sitio de
+Yahoo.** Con la MISMA app, el MISMO redirect y el MISMO usuario, cambiando solo
+el scope:
+
+    scope=fspt-r  ->  tras el login, error=invalid_scope
+    SIN parametro scope  ->  pantalla de consentimiento normal, vuelve al callback
+
+Yahoo aplica los permisos que la app tiene marcados en su consola (Fantasy
+Sports - Read) y **rechaza el mismo permiso si se lo pides por parametro**. El
+codigo ya NO manda scope, y queda `YAHOO_SCOPE` como valvula por si algun dia
+hiciera falta volver a mandarlo. **Que nadie lo vuelva a anadir pensando que
+falta.**
+
+**3. El secreto.** `YAHOO_CLIENT_SECRET` en Vercel era el de otra app y el canje
+del codigo devolvia `INVALID_CLIENT_SECRET`. El dueno pego el de la app buena en
+Vercel y se redesplegó (una variable de Vercel NO entra hasta un deploy nuevo).
+
+**Lo que hizo posible cerrar el 3 en una sola vuelta**: media hora antes se
+cambiaron los mensajes de error. Antes decia "Import failed" a secas; ahora el
+canje distingue codigo invalido de credenciales que no cuadran y arrastra el
+motivo de Yahoo. El error paso de "algo fallo" a `INVALID_CLIENT_SECRET` y el
+arreglo fue evidente. **Un error que no dice cual es cuesta una noche.**
+
+### DOS ERRORES DE METODO QUE COMETI EN ESTA SESION, para no repetirlos
+- **Lei mal una senal y la presente como hecho.** El 302 al login solo prueba
+  que el redirect_uri es valido; Yahoo valida el scope DESPUES del login. Se
+  escribio "el permiso esta concedido" sobre esa base, y era falso.
+- **Inferi cual era la app aprobada** leyendo el hilo de correo (la de agosto) y
+  cambie la variable de produccion sobre esa inferencia, sin preguntarle al
+  dueno. Era la equivocada; el la corrigio y hubo que revertir. El dato lo tenia
+  el a un mensaje de distancia.
 
 Lo que se escribio en `server/routes/yahoo.js`: `/leagues`, `/league/:key`
 (reglamento, equipos, standings y planteles), `/league/:key/scoreboard?week=N` y
