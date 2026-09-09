@@ -1724,6 +1724,50 @@ Verificado ademas contra produccion (`QA_BASE=https://macdraft.app`): qa-nav y
 qa-myleagues en verde, y los seis archivos sirviendo el mismo sha256 que el
 local.
 
+### El pivote que propuso el agente de mercado, y lo que dice el dato REAL
+Recomendo un "Waiver Room": precio de puja FAAB modelado sobre TU liga, reusando
+el motor de subasta. El argumento es bueno y el hueco existe: el estado del arte
+es un porcentaje generico (4for4: QB 1%, RB 8.1%, WR 9.1%, TE 5.7%) y
+FantasyPros publica pujas sobre un presupuesto de $100 aunque las plataformas
+llegan a $1.000, que es el MISMO error que este repo ya midio en subasta
+(HALLAZGO 1 de agosto: el precio del #1 se desliza ~4 puntos por cada dos
+equipos, o sea que un porcentaje fijo miente).
+
+**PERO el dato de calibracion no esta ahi todavia.** Medido el 2026-09-09 contra
+las trece ligas del dueno, antes de construir nada:
+
+    6 de 13 son FAAB (waiver_type=2); las otras 7 son de ORDEN (rolling),
+    donde una recomendacion de puja no significa nada.
+    Presupuestos: 100, 200 y 1000 segun la liga (el argumento del porcentaje
+    fijo queda confirmado por sus propios datos).
+    Historico de pujas en TODA su cuenta: 24, y 22 de ellas en una sola liga.
+    En la liga Dynasty: 248 transacciones en la semana 1 y CERO waiver_bid.
+
+Conclusiones para quien lo retome:
+- La feature tiene que DETECTAR el tipo de waiver y callarse en las de orden.
+  Es la misma clase de error que el aviso de alineacion dando consejos a ligas
+  de best ball, cazado esta misma noche.
+- Calibrar contra el historico de la liga no se puede en la semana 1: hay que
+  arrancar con el motor de subasta (auMyWorth/auInflation) escalado al
+  presupuesto de ESA liga, y dejar que la calibracion entre sola segun se
+  acumulan pujas.
+- El agente tambien recomienda NO invertir mas en power rankings, playoff odds y
+  hub de liga porque ya son gratis en ffwrapped y My Fantasy Analyzer. Matiz: lo
+  que esos no tienen es el hub COMPARTIDO por codigo con el mercado y los votos.
+  Aun asi, conviene no meter mas horas en la parte de rankings.
+- Su nota de metodo: Reddit bloqueo su crawler, asi que no hay citas de
+  r/fantasyfootball. Lo declaro en vez de inventarlas.
+
+### Direccion visual recomendada por el agente de referencias
+Board con capturas reales en `rediseno-2026-09/referencias-fantasy/`. Veredicto:
+direccion B, "Panel de rendimiento", patron WHOOP (un numero grande que resume,
+mas una lista corta que lo explica), y NO la de casa de apuestas ni la
+editorial: el pivote es un panel PERSONAL, no un mercado publico. Dos prestamos
+puntuales: la fila de pildoras de ESPN para saltar de liga, y los numeros
+tabulares de DraftKings para el tablero de odds. De Sleeper, la regla de color
+que mas falta nos hace: el color saturado SOLO para "es tuyo / es tu turno",
+todo lo demas gris oscuro.
+
 ### Pendiente
 - Las side bets dentro del hub (tienen sentido ahi y en ningun otro sitio).
 - La imagen de Open Graph por liga (necesita `@vercel/og`).
