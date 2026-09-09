@@ -255,7 +255,12 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
 
   // filtrar a una liga concreta
   const filtro = await seguro(pg, async () => {
-    const L = (ML.leagues || []).filter(x => mlDrafted(x) && x._hyd && x._hyd.opp != null)[0];
+    // Tiene que ser una liga CABEZA A CABEZA: desde que best ball se detecta
+    // bien (2026-09-09), la primera liga con duelo puede ser una de best ball,
+    // que no tiene torneo por siembra y por tanto no tiene titulo que repartir.
+    // El check (p) mide el reparto del titulo: sin liga con titulo, no mide.
+    const L = (ML.leagues || []).filter(x =>
+      mlDrafted(x) && x._hyd && x._hyd.opp != null && mlIsHeadToHead(x))[0];
     if (!L) return { salta: true };
     mlOpenOdds(L.id);
     await new Promise(r => setTimeout(r, 1200));
