@@ -182,14 +182,45 @@ function mlProjPlayer(p, sc) {
   if (pr.td_price != null) {
     var am = Number(pr.td_price);
     var prob = am < 0 ? (-am) / ((-am) + 100) : 100 / (am + 100);
+    // El precio de UN solo lado lleva la comision de la casa (~7% de
+    // overround): la probabilidad implicita sobreestima. Sin el lado "No" en el
+    // feed no se puede normalizar exacto, asi que se descuenta la comision
+    // tipica (auditoria 2026-09-09).
+    prob *= 0.93;
     // El "anytime" no dice si es corriendo o atrapando: se usa el valor de la
     // posicion, que en el 99% de las ligas es el mismo numero.
     pts += prob * (p.pos === 'RB' ? sc.rushTd : sc.recTd);
   }
+  // DECLARADO, no restado: las intercepciones del QB (~1 pt/sem en ligas con
+  // INT a -1) no estan en las props del feed. Sesga a los QB medio punto
+  // arriba, parejo entre equipos.
   return Math.round(pts * 10) / 10;
 }
 
 /* --------------------------------------------------------------- alineacion */
+// El valor de un jugador SIN linea de mercado: percentil 25 de su posicion
+// entre todos los que SI tienen linea, con el reglamento de esta liga. Se
+// calcula una vez por liga (firma: id + numero de lineas cargadas) y se cachea.
+var _mlImputCache = {};
+function mlImputacion(L, sc, players) {
+  var firma = (L && L.id) + ':' + (ML.props ? Object.keys(ML.props).length : 0);
+  if (_mlImputCache[firma]) return _mlImputCache[firma];
+  var porPos = {};
+  Object.keys(players || {}).forEach(function (id) {
+    var p = players[id];
+    if (!p || ['QB', 'RB', 'WR', 'TE'].indexOf(p.pos) < 0) return;
+    var v = mlProjPlayer(p, sc);
+    if (v != null) (porPos[p.pos] = porPos[p.pos] || []).push(v);
+  });
+  var out = {};
+  Object.keys(porPos).forEach(function (k) {
+    var a = porPos[k].sort(function (x, y) { return x - y; });
+    out[k] = a[Math.floor(a.length * 0.25)] || 0;
+  });
+  _mlImputCache[firma] = out;
+  return out;
+}
+
 var ML_FLEX = {
   FLEX: ['RB', 'WR', 'TE'],
   WRRB_FLEX: ['RB', 'WR'],
@@ -214,19 +245,16 @@ function mlBestLineup(playerIds, L, sc, players) {
     var proj = mlProjPlayer(p, sc);
     pool.push({ id: (p.id || p.name), p: p, proj: proj });
   });
-  // Los que no tienen linea reciben la mediana de su posicion entre los que si
-  // la tienen. Ni se inventan estrellas ni se les pone cero, que seria peor:
-  // un titular en cero hunde a su equipo entero por un hueco de la casa.
-  var byPos = {};
-  pool.forEach(function (x) { if (x.proj != null) (byPos[x.p.pos] = byPos[x.p.pos] || []).push(x.proj); });
-  var med = {};
-  Object.keys(byPos).forEach(function (k) {
-    var a = byPos[k].slice().sort(function (x, y) { return x - y; });
-    med[k] = a[Math.floor(a.length / 2)];
-  });
+  // Los que no tienen linea reciben el PERCENTIL 25 de su posicion entre todos
+  // los que si la tienen EN LA LIGA, no la mediana del propio roster. Dos
+  // correcciones de la auditoria (2026-09-09): las casas solo publican props de
+  // los ~200 relevantes, asi que quien no tiene linea es PEOR que la mediana de
+  // los que si (la mediana sesgaba arriba); y la mediana por roster salia de 2
+  // o 3 valores, puro ruido. El p25 se calcula una vez por liga y se cachea.
+  var imput = mlImputacion(L, sc, players);
   var covered = 0, needed = 0;
   pool.forEach(function (x) {
-    if (x.proj == null) { x.proj = med[x.p.pos] != null ? med[x.p.pos] : 0; x.guess = true; }
+    if (x.proj == null) { x.proj = imput[x.p.pos] != null ? imput[x.p.pos] : 0; x.guess = true; }
   });
 
   var used = {}, lineup = [], total = 0;
@@ -244,7 +272,9 @@ function mlBestLineup(playerIds, L, sc, players) {
     pool.forEach(function (x) {
       if (used[x.id]) return;
       if (ok.indexOf(x.p.pos) === -1) return;
-      if (!best || x.proj > best.proj) best = x;
+      // A igualdad, manda el que tiene linea REAL: un imputado no desplaza a un
+      // titular con numero propio (auditoria 2026-09-09).
+      if (!best || x.proj > best.proj + 0.01 || (Math.abs(x.proj - best.proj) <= 0.01 && best.guess && !x.guess)) best = x;
     });
     var libres = idxDe[slot] || [];
     var idx = null;
@@ -361,7 +391,13 @@ function mlAlineacionesRotas() {
 /* --------------------------------------------------------------------- odds */
 // Probabilidad de ganar el duelo. La varianza semanal de un equipo de fantasy
 // ronda el 24% de su media; la del duelo es la suma de las dos.
-function mlSd(proj) { return Math.max(16, 0.24 * proj); }
+// UNA sola constante para el ruido semanal de un equipo, usada por el duelo y
+// por la simulacion. Tener 0.24 en uno y 0.26 en la otra era dar dos
+// probabilidades distintas para la misma pregunta (auditoria 2026-09-09).
+// 25% de la media esta en el borde alto de lo empirico (18-22%), y ancho es el
+// error bueno: probabilidades humildes.
+var ML_SD_SEMANAL = 0.25;
+function mlSd(proj) { return Math.max(16, ML_SD_SEMANAL * proj); }
 function mlNormCdf(z) {
   // El cero va aparte: la aproximacion devuelve 0.4999999995 y eso, redondeado
   // a precio americano, convierte un duelo exactamente parejo en un +100, o
@@ -472,7 +508,7 @@ function mlSimLeague(L, sims) {
   var r = Math.min(0.85, 0.5 + 0.35 * (jugados / (jugados + 6)));
   var mu = base.map(function (b) { return media + r * (b - media); });
   var tau = Math.sqrt(Math.max(0, r * (1 - r))) * sdBase;
-  var sigma = Math.max(14, 0.26 * media);
+  var sigma = Math.max(14, ML_SD_SEMANAL * media);
   var playoffTeams = Math.min(n, Number((L.settings || {}).playoff_teams) || 6);
   var titles = new Array(n).fill(0), playoffs = new Array(n).fill(0);
   var winSum = new Array(n).fill(0);
@@ -501,9 +537,18 @@ function mlSimLeague(L, sims) {
     for (var k = 0; k < playoffTeams; k++) playoffs[seed[k]]++;
     for (var i2 = 0; i2 < n; i2++) winSum[i2] += w[i2];
     // Cuadro de eliminacion directa, con byes para los mejores sembrados.
+    //
+    // EL BUG QUE CAZO LA AUDITORIA DE FORMULAS (2026-09-09): "byes = impar ? 1
+    // : 0" daba CERO byes con 6 equipos, o sea 1v6, 2v5, 3v4. El formato real
+    // de 6 da bye a los sembrados 1 y 2 (juegan 3v6 y 4v5). Consecuencia
+    // medida: el sembrado 1 jugaba TRES partidos en vez de dos y su titulo
+    // salia deflactado ~40% relativo, con los sembrados 3-4 inflados. Ningun
+    // gate podia verlo porque el reparto sumaba 100% igual.
+    // La formula correcta: byes hasta completar la potencia de 2 siguiente
+    // (6 -> 2 byes, 5 -> 3, 7 -> 1, potencias de 2 -> 0).
     var alive = seed.slice(0, playoffTeams);
     while (alive.length > 1) {
-      var byes = alive.length % 2 === 0 ? 0 : 1;
+      var byes = Math.pow(2, Math.ceil(Math.log2(alive.length))) - alive.length;
       var next = alive.slice(0, byes);
       var rest = alive.slice(byes);
       for (var j = 0; j < rest.length / 2; j++) {

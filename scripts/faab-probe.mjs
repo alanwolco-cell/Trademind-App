@@ -86,7 +86,8 @@ function proyeccion(p, sc) {
   if (pr.player_receptions != null) pts += pr.player_receptions * sc.rec;
   if (pr.td_price != null) {
     const am = Number(pr.td_price);
-    const prob = am < 0 ? (-am) / ((-am) + 100) : 100 / (am + 100);
+    let prob = am < 0 ? (-am) / ((-am) + 100) : 100 / (am + 100);
+    prob *= 0.93;   // comision de la casa: el precio de un solo lado sobreestima
     pts += prob * (p.pos === 'RB' ? sc.rushTd : sc.recTd);
   }
   return Math.round(pts * 10) / 10;
@@ -219,32 +220,50 @@ function aporta(idNuevo, plantel, L, sc, master) {
 
     if (!candidatos.length) { console.log('   Nadie del mercado te mejora la alineacion. No pujes.\n'); continue; }
 
+    /* ── LA FORMULA DE LA PUJA, reescrita por la auditoria (2026-09-09) ─────
+     * La anterior tenia dos fallos estructurales: la cuota podia pujar el
+     * presupuesto entero por un candidato unico de +0.9 pts, y el factor de
+     * semanas restantes iba al reves de la economia del FAAB (los puntos que
+     * aporta el jugador caen con las semanas, pero el dolar no gastado en la
+     * semana 14 vale CERO: los dos efectos se cancelan).
+     *
+     * La nueva se autocalibra sin constantes magicas:
+     *   PRECIO POR PUNTO del mercado = dinero restante de TODA la liga
+     *     dividido por los puntos-semana que hay a la venta hoy (suma de lo
+     *     que ganan los candidatos, por las semanas que quedan). El dinero
+     *     que queda persigue los puntos que quedan.
+     *   TECHO PROPIO = (mi ganancia - la mejor alternativa) x semanas x ese
+     *     precio. Se paga el EDGE sobre lo que se consigue gratis la semana
+     *     que viene, no el valor bruto.
+     *   PUJA = min(techo propio, tope del rival + 1, mi dinero), minimo $1.
+     */
+    const dineroLiga = rosters.reduce((a, r) =>
+      a + Math.max(0, bote - (Number((r.settings || {}).waiver_budget_used) || 0)), 0);
+    const puntosEnVenta = candidatos.reduce((a, c) => a + c.gana, 0) * semanasRestantes;
+    const precioPunto = puntosEnVenta > 0 ? dineroLiga / puntosEnVenta : 0;
+
     for (const c of candidatos.slice(0, 4)) {
       // LO QUE MAS HAY: las siguientes opciones de su misma posicion.
       const alternativas = candidatos.filter(x => x.p.pos === c.p.pos && x.id !== c.id)
         .slice(0, 3).map(x => x.gana);
-      const sumaAlt = alternativas.reduce((a, b) => a + b, 0);
-      const cuota = c.gana / (c.gana + sumaAlt);         // 1 si es el unico
+      const mejorAlt = alternativas.length ? alternativas[0] : 0;
 
       // QUIEN TE LO DISPUTA: rivales a los que tambien mejora, y su dinero.
+      // SIN TOPE ARRIBA (correccion del dueno): el FAAB se tradea, y en su liga
+      // "Gente seria" el roster 7 tiene $1033 en un bote de $1000 porque le
+      // compro 33 al roster 1 en un trade. Solo se acota por abajo.
       const rivales = rosters.filter(r => r.roster_id !== mio.roster_id).map(r => {
         const g = aporta(c.id, r.players || [], L, sc, master);
-        // SIN TOPE ARRIBA, y esto fue una correccion del dueno. La primera
-        // version acoto al bote porque un equipo aparecia con $1033 en una liga
-        // de $1000 y parecia un error de datos. No lo era: EL FAAB SE TRADEA.
-        // Verificado en su propia liga "Gente seria": el roster 7 tiene $1033
-        // porque le compro 33 de presupuesto al roster 1 (el del dueno) en un
-        // trade de la semana 1, y Sleeper lo refleja con waiver_budget_used en
-        // NEGATIVO. Topar ahi borraba justo el dato que mas importa para una
-        // puja: ese rival puede pasarte por encima a todos. Solo se acota por
-        // abajo, que nadie tiene dinero negativo.
         const queda = Math.max(0, bote - (Number((r.settings || {}).waiver_budget_used) || 0));
         return { g, queda };
       }).filter(r => r.g > 0).sort((a, b) => b.g - a.g);
-      const rivalTope = rivales.length ? Math.round(rivales[0].queda * (rivales[0].g / (rivales[0].g + sumaAlt))) : 0;
+      const rivalTope = rivales.length
+        ? Math.round(Math.min(rivales[0].queda,
+            Math.max(0, rivales[0].g - mejorAlt) * semanasRestantes * precioPunto)) : 0;
 
-      const puja = Math.max(1, Math.round(miDinero * cuota * Math.min(1, semanasRestantes / SEM_FIN)));
-      const tope = Math.max(puja, Math.min(miDinero, rivalTope + Math.ceil(bote * 0.01)));
+      const techoV = Math.round(Math.max(0, c.gana - mejorAlt) * semanasRestantes * precioPunto);
+      const puja = Math.max(1, Math.min(techoV, rivalTope + 1, miDinero));
+      const tope = Math.max(puja, Math.min(miDinero, techoV));
 
       const u = master[c.id];
       console.log(`   ${(u.name + ' ' + u.pos + ' ' + (u.team || 'FA')).padEnd(30)} +${c.gana.toFixed(1)} pts/sem`);
