@@ -1408,11 +1408,34 @@ deterministica y no dependa de una API de pago.
 - Un "todos cumplen" sobre una lista VACIA es cierto: tres checks pasaban contra
   un codigo que no pintaba nada. Ahora exigen que haya filas.
 
-### Yahoo: aprobado y cableado, SIN verificar con datos reales
-Comprobado el 2026-09-08 contra la app real: `scope=fspt-r` con
-`redirect_uri=https://macdraft.app/api/yahoo/callback` devuelve **302 al login de
-Yahoo**. En agosto ese mismo par devolvia `invalid_scope`. El permiso esta
-concedido y el dominio ya esta registrado.
+### Yahoo: cableado, y la CAUSA del invalid_scope encontrada (2026-09-09)
+**CORRECCION de lo que se escribio el 8-sep.** Ese dia se concluyo que el
+permiso estaba concedido porque `/api/yahoo/login` devolvia 302 al login en vez
+de `invalid_scope`. **Eso era leer mal la senal**: el 302 solo prueba que el
+`redirect_uri` es valido. Yahoo valida el scope DESPUES del login, y ahi seguia
+fallando: el dueno lo comprobo entrando y recibio
+`error=invalid_scope&error_description=invalid+scope`.
+
+**La causa, encontrada leyendo el hilo con Yahoo (Gmail 19fce100154aa018 y
+1a065284fdad6d06): habia DOS apps de Yahoo y estabamos autenticando con la que
+no aprobaron.**
+
+| | Client ID |
+|---|---|
+| La que Yahoo tiene en su expediente (enviada 5-ago, repetida limpia 25-ago) | `dj0yJmk9bmVZTUk3UDVhNHhE...` |
+| La que estaba desplegada hasta el 9-sep | `dj0yJmk9Q2REckxiZFNnMjI2...` |
+
+Los correos que lo explican: el 4-sep Yahoo dice "Fantasy Sports is now available
+as an API permission **on your developer account**. Check your existing app for
+Fantasy Sports under API Permissions" (o sea: hay que MARCARLA en la app, no se
+activa sola), y el 8-sep "the credentials **for your application** are enabled".
+
+**Hecho el 9-sep:** `YAHOO_CLIENT_ID` en Vercel cambiado a la app aprobada y
+redespliegue (una variable de Vercel solo entra con un deploy nuevo). Verificado:
+produccion ya manda ese client_id con `scope=fspt-r` y el callback de macdraft.app.
+**PENDIENTE: `YAHOO_CLIENT_SECRET` sigue siendo el de la app vieja.** Hasta que
+el dueno pegue en Vercel el secreto de la app aprobada, el login pasara el
+consentimiento y fallara al canjear el codigo.
 
 Lo que se escribio en `server/routes/yahoo.js`: `/leagues`, `/league/:key`
 (reglamento, equipos, standings y planteles), `/league/:key/scoreboard?week=N` y
