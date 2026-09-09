@@ -3126,3 +3126,9 @@ html.no-draft .draft-only{display:none !important}
   .da-frame .ml-slate-n span{font-size:9.5px}
   .da-frame .ml-game:nth-child(n+4){display:none}
 }
+/* Aviso de la demo. Va arriba del todo y con el color de aviso, no con el de
+   marca: una demostracion nunca puede pasar por datos de verdad. */
+.ml-demo-bar{border:1px solid rgba(230,192,122,.3);background:var(--yellow-dim);border-radius:12px;
+  padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--muted2);line-height:1.5}
+.ml-demo-bar b{color:var(--text)}
+.ml-demo-bar .ml-link{padding:0 0 0 4px;min-height:0;font-size:13px}

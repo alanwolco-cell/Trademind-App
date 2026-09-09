@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026090904">
+<link rel="stylesheet" href="/styles.css?v=2026090905">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026090904" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026090905" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026090904">
+<link rel="stylesheet" href="/theme.css?v=2026090905">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026090904">
+<link rel="stylesheet" href="/home.css?v=2026090905">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090904">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090905">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -296,12 +296,16 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="mk-hero-inner">
     <!-- app.js swaps this line for "Welcome back, <user>" on a return visit -->
     <div class="mk-eyebrow" id="hero-badge-text">Mac Draft</div>
-    <h1>Every league you play, <br>one screen.</h1>
-    <p class="mk-sub">Sleeper and Yahoo together: your record, who you face this week, every player you own across all of them, and a betting board that prices each matchup with your league's own rules.</p>
+    <h1>All your fantasy leagues, <br>one screen.</h1>
+    <p class="mk-sub">Sleeper and Yahoo in one place. Your record, who you play this week, every player you own across all of them, and odds on each matchup priced with your own league's rules.</p>
     <div class="mk-hero-cta hero-cta" id="hero-cta">
       <div class="mk-cta-row">
-        <a href="#" id="hero-enter-btn" class="mk-btn" onclick="event.preventDefault();switchScreen('myleagues')">See my leagues</a>
-        <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('hub')">Open a league with a code</a>
+        <!-- Para un desconocido el boton principal ABRE el producto con datos de
+             ejemplo: un producto que solo se puede ver despues de conectar una
+             cuenta se juzga por su portada. app.js lo cambia a "See my leagues"
+             en cuanto hay una cuenta conectada. -->
+        <a href="/myleagues?demo=1" id="hero-enter-btn" class="mk-btn">See it working</a>
+        <a href="#" class="mk-btnlink" id="hero-second-btn" onclick="event.preventDefault();goConnectLeague()">Connect my leagues</a>
       </div>
     </div>
   </div>
@@ -1908,12 +1912,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026090904"></script>
-<script src="/rankings.js?v=2026090904"></script>
-<script src="/live.js?v=2026090904"></script>
-<script src="/myleagues.js?v=2026090904"></script>
-<script src="/hub.js?v=2026090904"></script>
-<script src="/demo-anim.js?v=2026090904" defer></script>
+<script src="/app.js?v=2026090905"></script>
+<script src="/rankings.js?v=2026090905"></script>
+<script src="/live.js?v=2026090905"></script>
+<script src="/myleagues.js?v=2026090905"></script>
+<script src="/hub.js?v=2026090905"></script>
+<script src="/demo-anim.js?v=2026090905" defer></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

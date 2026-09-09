@@ -538,6 +538,84 @@ async function mlIngestYahoo(players) {
   return out;
 }
 
+/* ------------------------------------------------------------------- demo */
+// Un desconocido no puede juzgar un producto que no puede ver. Sin esto, la
+// unica forma de saber que hace Mac Draft era conectar una cuenta de Sleeper,
+// que es justo lo que nadie hace antes de entender para que sirve.
+//
+// Se entra con /myleagues?demo=1 y NO toca nada real: no guarda, no sincroniza
+// y la pantalla lo declara. Las ligas son inventadas (las de verdad se llaman
+// como se les ocurrio a diez amigos y no son publicables), pero los JUGADORES
+// son reales, con sus fotos y sus equipos: es lo que le da vida sin exponer a
+// nadie.
+var ML_DEMO_LIGAS = [
+  ['Sunday Money', 2, 12, 1, '8-3', 128.4, 121.7, 'The Commissioner', 1],
+  ['The Group Chat', 0, 10, 0.5, '7-4', 116.9, 124.2, 'Waiver Wire Willy', 0],
+  ['Dinner Table', 0, 12, 1, '6-5', 109.5, 98.1, 'Backup Plan', 0],
+  ['The Office', 0, 10, 0, '9-2', 121.0, 118.8, 'Copy Room Kings', 0],
+  ['Dynasty Warehouse', 2, 12, 1, '5-6', 132.7, 126.3, 'Rebuild Rick', 0],
+  ['Last Call', 0, 14, 0.5, '4-7', 104.2, 112.6, 'Sunday Scaries', 0]
+];
+// Jugadores REALES: sus fotos existen y se reconocen. El reparto por liga esta
+// escrito a mano para que el cruce de "rooting against yourself" salga cierto.
+var ML_DEMO_JUG = [
+  ['9509', 'Bijan Robinson', 'RB', 'ATL', [0, 1, 2, 4], [3]],
+  ['9493', 'Puka Nacua', 'WR', 'LAR', [0, 2, 4], [1, 3]],
+  ['11604', 'Brock Bowers', 'TE', 'LV', [1, 3], [0]],
+  ['7564', "Ja'Marr Chase", 'WR', 'CIN', [0, 3, 5], []],
+  ['9221', 'Jahmyr Gibbs', 'RB', 'DET', [2, 5], [4]],
+  ['6786', 'CeeDee Lamb', 'WR', 'DAL', [1, 4], []],
+  ['4984', 'Josh Allen', 'QB', 'BUF', [0, 2], [5]],
+  ['11632', 'Malik Nabers', 'WR', 'NYG', [3, 5], []],
+  ['7547', 'Amon-Ra St. Brown', 'WR', 'DET', [4], []],
+  ['11566', 'Jayden Daniels', 'QB', 'WAS', [1], [2]]
+];
+
+function mlEsDemo() {
+  try { return new URL(location.href).searchParams.get('demo') === '1'; } catch (e) { return false; }
+}
+
+function mlCargarDemo() {
+  var players = {};
+  ML_DEMO_JUG.forEach(function (j) {
+    players[j[0]] = { id: j[0], name: j[1], pos: j[2], team: j[3] };
+  });
+  ML.players = players;
+  ML.demo = true; ML.week = 11; ML.season = '2026'; ML.username = 'demo';
+  ML.err = null; ML.stale = null; ML.filtro = {};
+
+  ML.leagues = ML_DEMO_LIGAS.map(function (d, i) {
+    var mios = [], contra = [];
+    ML_DEMO_JUG.forEach(function (j) {
+      if (j[4].indexOf(i) !== -1) mios.push(j[0]);
+      if (j[5].indexOf(i) !== -1) contra.push(j[0]);
+    });
+    var rosters = [
+      { roster_id: 1, owner_id: 'me', players: mios, settings: { wins: +d[4].split('-')[0], losses: +d[4].split('-')[1], fpts: 1180 } },
+      { roster_id: 2, owner_id: 'opp', players: contra, settings: { wins: 5, losses: 6, fpts: 1090 } }
+    ];
+    var L = {
+      id: d[0].toLowerCase().replace(/[^a-z]+/g, '-'),
+      plat: i === 3 ? 'yahoo' : 'sleeper',
+      name: d[0], teams: d[2], status: 'in_season', type: d[1],
+      settings: { playoff_teams: 6, playoff_week_start: 15 },
+      roster_positions: ['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX', 'K', 'DEF', 'BN'],
+      scoring_settings: { rec: d[3] }, avatar: null, logo: null,
+      champId: d[8] ? 1 : null
+    };
+    L._hyd = {
+      rosters: rosters,
+      users: { me: { display_name: 'You', metadata: {} }, opp: { display_name: d[7], metadata: {} } },
+      mine: rosters[0], sc: null,
+      proj: { 1: { total: d[5], coverage: 1 }, 2: { total: d[6], coverage: 1 } },
+      matchups: [], muBy: { 1: [{ roster_id: 1, matchup_id: 1 }, { roster_id: 2, matchup_id: 1 }] },
+      myMu: { roster_id: 1, matchup_id: 1 }, opp: 2, schedule: null
+    };
+    return L;
+  });
+  ML.ready = true; ML.loading = false;
+}
+
 /* ------------------------------------------------------------------ carga */
 async function mlBoot(force) {
   if (ML.loading) return;
@@ -848,6 +926,15 @@ function mlPaint() {
   }
 }
 
+// El aviso va en LAS TRES pestanas, no solo en la primera: quien entra directo a
+// My Players tiene el mismo derecho a saber que esta viendo un ejemplo.
+function mlAvisoDemo() {
+  if (!ML.demo) return '';
+  return '<div class="ml-demo-bar"><b>This is a live example.</b> Six made up leagues with real players, '
+    + 'so you can see how it works before connecting anything. '
+    + '<button class="ml-link" onclick="mlSalirDemo()">Connect my own leagues</button></div>';
+}
+
 function mlSkeleton(rows) {
   var h = '';
   for (var i = 0; i < (rows || 3); i++) h += '<div class="ml-sk"></div>';
@@ -913,8 +1000,9 @@ function mlPaintLeagues() {
   });
   var visibles = orden.filter(mlPasaFiltro);
 
-  var h = '<div class="ml-tools"><button class="btn-sm" onclick="mlRefresh()">Refresh</button>'
-    + mlYahooBtn()
+  var h = mlAvisoDemo()
+    + '<div class="ml-tools">' + (ML.demo ? '' : '<button class="btn-sm" onclick="mlRefresh()">Refresh</button>'
+    + mlYahooBtn())
     + (ML.stale ? '<span class="ml-hint">Showing your last saved copy: could not reach Sleeper just now.</span>' : '')
     + '</div>'
     + (ML.yahooErr ? '<div class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</div>' : '')
@@ -1090,6 +1178,7 @@ function mlPaintPlayers() {
   if (!ML.leagues.length) { box.innerHTML = '<div class="ml-empty"><p>Connect an account with leagues to see this.</p></div>'; return; }
 
   var ex = mlExposure();
+  var avisoDemo = mlAvisoDemo();
   var rows = Object.keys(ex.mine).map(function (k) {
     var p = ex.ficha[k];
     return { id: (p && p.sid) || '', p: p, own: ex.mine[k], vs: ex.against[k] || [] };
@@ -1102,7 +1191,7 @@ function mlPaintPlayers() {
   var conflicts = rows.filter(function (r) { return r.own.length && r.vs.length; });
   var total = ML.leagues.length;
 
-  var h = '';
+  var h = avisoDemo;
   if (conflicts.length) {
     h += '<section class="ml-conf"><h3>Rooting against yourself</h3>'
       + '<p class="ml-sub2">These are yours in one league and across the field in another. Sunday is not simple.</p><div class="ml-conf-list">';
@@ -1204,7 +1293,10 @@ function mlPaintOdds() {
   if (!ML.username) { box.innerHTML = mlNeedsConnect(); return; }
   if (!ML.ready) { box.innerHTML = mlSkeleton(5); return; }
   if (!ML.leagues.length) { box.innerHTML = '<div class="ml-empty"><p>Connect an account with leagues to see this.</p></div>'; return; }
-  if (!ML.props) {
+  // En la demo las proyecciones ya vienen puestas: no hacen falta las lineas de
+  // la semana, y enseñar "el tablero esta cerrado" a quien viene a entender que
+  // hace esto seria la peor primera impresion posible.
+  if (!ML.props && !ML.demo) {
     box.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">The board is closed</div>'
       + '<p>Lines need this week\'s player numbers and they are not loaded right now. Everything else on this screen still works.</p></div>';
     return;
@@ -1217,7 +1309,7 @@ function mlPaintOdds() {
   var sel = !todas && ML.leagues.filter(function (L) { return L.id === ML.oddsLeague; })[0];
   if (!todas && !sel) { todas = true; ML.oddsLeague = 'all'; }
 
-  var h = '<div class="ml-book">';
+  var h = mlAvisoDemo() + '<div class="ml-book">';
   h += '<div class="ml-book-top"><select id="ml-odds-sel" onchange="mlOpenOdds(this.value)" aria-label="League">'
     + '<option value="all"' + (todas ? ' selected' : '') + '>All leagues</option>'
     + ML.leagues.map(function (L) {
@@ -1280,7 +1372,9 @@ function mlPaintOdds() {
   var sim = ML.sims[sel.id];
   h += '<div class="ml-champ"><div class="ml-champ-h"><h3>Championship odds</h3>'
     + '<span class="ml-book-tag">' + (sim ? (sim.sims / 1000) + 'k seasons simulated' : 'simulating') + '</span></div>';
-  if (!mlIsHeadToHead(sel)) {
+  if (ML.demo) {
+    h += '<p class="ml-sub2">Title odds come from four thousand simulated seasons of your league\'s real remaining schedule, so this example does not have them. Connect a league and they show up here.</p>';
+  } else if (!mlIsHeadToHead(sel)) {
     h += '<p class="ml-sub2">This league has no head to head bracket, so there is no title to price.</p>';
   } else if (!mlDrafted(sel)) {
     h += '<p class="ml-sub2">Nobody has a roster yet. A title race off empty rosters would be a made up number, so there is none.</p>';
@@ -1324,6 +1418,7 @@ var _mlSimming = {};
 async function mlRunSim(id) {
   var L = ML.leagues.filter(function (x) { return x.id === id; })[0];
   if (!L || !mlIsHeadToHead(L) || !mlDrafted(L)) return;
+  if (ML.demo) return;   // la demo no sale a la red por nada
   if (_mlSimming[id]) return;
   _mlSimming[id] = 1;
   // Sin lineas todas las proyecciones son cero y la simulacion repartiria el
@@ -1368,6 +1463,11 @@ async function mlShare(id, btn) {
 
 /* -------------------------------------------------------------- entrada */
 function renderMyLeagues() {
+  if (mlEsDemo()) {
+    if (!ML.demo) { mlCargarDemo(); }
+    mlPaint();
+    return;
+  }
   mlPaint();
   if (!ML.ready && !ML.loading) mlBoot(false);
 }
@@ -1388,6 +1488,8 @@ window.mlYahooConnect = mlYahooConnect;
 window.mlYahooDisconnect = mlYahooDisconnect;
 window.mlShare = mlShare;
 window.mlSetFiltro = mlSetFiltro;
+window.mlSalirDemo = function () { location.href = '/myleagues'; };
+window.mlEsDemo = mlEsDemo;
 // app.js guarda aqui el token cuando el usuario entra por la puerta vieja.
 window.mlYahooSet = mlYahooSet;
 window.mlYahooConectado = mlYahooConectado;

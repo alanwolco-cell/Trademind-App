@@ -175,7 +175,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
 
   const est = await seguro(pg, () => ({
     ligas: (ML.leagues || []).length,
-    tarjetas: document.querySelectorAll('.ml-card').length,
+    tarjetas: document.querySelectorAll('#screen-myleagues .ml-card').length,
     err: ML.err,
     props: !!ML.props,
     conMio: (ML.leagues || []).every(L => L._hyd && L._hyd.mine)
@@ -225,7 +225,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   await pg.waitForTimeout(1500);
   // la simulacion arranca sola al pintar; se le da tiempo al calendario
   for (let i = 0; i < 40; i++) {
-    const listo = await seguro(pg, () => document.querySelectorAll('.ml-champ-row').length > 0
+    const listo = await seguro(pg, () => document.querySelectorAll('#screen-myleagues .ml-champ-row').length > 0
       || !!document.querySelector('.ml-champ .ml-sub2'));
     if (listo === true) break;
     await pg.waitForTimeout(500);
@@ -235,7 +235,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   // mide esa vista, y despues se filtra a UNA liga, que es donde existen los
   // dos lados y la tabla de campeonato.
   const slate = await seguro(pg, () => {
-    const filas = [...document.querySelectorAll('.ml-game')];
+    const filas = [...document.querySelectorAll('#screen-myleagues .ml-game')];
     const resumen = [...document.querySelectorAll('.ml-slate-n b')].map(x => x.textContent.trim());
     const pct = filas.map(f => {
       const c = f.querySelectorAll('.ml-cell');
@@ -264,14 +264,14 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   ok('(l6) elegir una liga filtra el mismo tablero', filtro.salta === true || !!filtro.liga,
     JSON.stringify(filtro));
   for (let i = 0; i < 40; i++) {
-    const listo = await seguro(pg, () => document.querySelectorAll('.ml-champ-row').length > 0
+    const listo = await seguro(pg, () => document.querySelectorAll('#screen-myleagues .ml-champ-row').length > 0
       || !!document.querySelector('.ml-champ .ml-sub2'));
     if (listo === true) break;
     await pg.waitForTimeout(500);
   }
 
   const board = await seguro(pg, () => {
-    const juegos = [...document.querySelectorAll('.ml-game')].map(g => {
+    const juegos = [...document.querySelectorAll('#screen-myleagues .ml-game')].map(g => {
       const filas = [...g.querySelectorAll('.ml-bd-row')].map(f => {
         const c = f.querySelectorAll('.ml-cell');
         return {
@@ -302,7 +302,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   ok('(o) el total es el mismo en los dos lados', board.n > 0 && totalIgual === true, 'juegos=' + board.n);
 
   const champ = await seguro(pg, () => {
-    const filas = [...document.querySelectorAll('.ml-champ-row')];
+    const filas = [...document.querySelectorAll('#screen-myleagues .ml-champ-row')];
     const pct = filas.map(f => parseFloat((f.querySelector('.ml-champ-pct') || {}).textContent || '0'));
     return { n: filas.length, suma: pct.reduce((a, x) => a + x, 0), pct };
   });
@@ -318,7 +318,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     await new Promise(r => setTimeout(r, 800));
     return {
       salta: false,
-      filas: document.querySelectorAll('.ml-champ-row').length,
+      filas: document.querySelectorAll('#screen-myleagues .ml-champ-row').length,
       sim: !!ML.sims[L.id],
       dice: !!document.querySelector('.ml-champ .ml-sub2')
     };
@@ -343,7 +343,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     mlPaintOdds();
     await new Promise(r => setTimeout(r, 400));
     const txt = (document.getElementById('ml-odds-body') || {}).textContent || '';
-    const juegos = document.querySelectorAll('.ml-game').length;
+    const juegos = document.querySelectorAll('#screen-myleagues .ml-game').length;
     ML.props = guardadas;
     return { dice: /board is closed/i.test(txt), juegos };
   });
@@ -360,7 +360,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     const ids = Object.keys(ex.mine);
     const excede = ids.filter(id => ex.mine[id].length > total).length;
     // el conteo pintado tiene que coincidir con el calculado
-    const filas = [...document.querySelectorAll('.ml-row')].map(r => ({
+    const filas = [...document.querySelectorAll('#screen-myleagues .ml-row')].map(r => ({
       n: parseInt((r.querySelector('.ml-row-n') || {}).textContent || '0', 10),
       nombre: (r.querySelector('b') || {}).textContent
     }));
@@ -375,17 +375,17 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     const t = document.querySelector('#screen-myleagues .inner-tab[data-tab="tab-ml-leagues"]');
     if (t) t.click();
     await new Promise(r => setTimeout(r, 900));
-    const cards = [...document.querySelectorAll('.ml-card')];
+    const cards = [...document.querySelectorAll('#screen-myleagues .ml-card')];
     const colores = cards.map(c => c.style.getPropertyValue('--liga')).filter(Boolean);
     const sinEscudo = cards.filter(c => !c.querySelector('.ml-shield, .ml-mono')).length;
     // Un color por liga que cambie entre repintados no sirve para reconocer.
     mlPaintLeagues();
-    const otra = [...document.querySelectorAll('.ml-card')].map(c => c.style.getPropertyValue('--liga'));
+    const otra = [...document.querySelectorAll('#screen-myleagues .ml-card')].map(c => c.style.getPropertyValue('--liga'));
     return {
       cards: cards.length, colores: colores.length,
       distintos: new Set(colores).size, sinEscudo,
       estable: JSON.stringify(colores) === JSON.stringify(otra),
-      chips: document.querySelectorAll('.ml-chip').length
+      chips: document.querySelectorAll('#screen-myleagues .ml-chip').length
     };
   });
   ok('(v1) cada liga lleva escudo o monograma, nunca un hueco',
@@ -397,19 +397,19 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   ok('(v4) hay filtros con su conteo', identidad.chips >= 2, JSON.stringify(identidad));
 
   const filtrado = await seguro(pg, async () => {
-    const chips = [...document.querySelectorAll('.ml-chip')];
+    const chips = [...document.querySelectorAll('#screen-myleagues .ml-chip')];
     const objetivo = chips.filter(c => !/^All/.test(c.textContent))[0];
     if (!objetivo) return { salta: true };
     const etiqueta = objetivo.textContent.replace(/\d+$/, '').trim();
     const n = parseInt((objetivo.querySelector('span') || {}).textContent || '0', 10);
     objetivo.click();
     await new Promise(r => setTimeout(r, 500));
-    const tras = document.querySelectorAll('.ml-card').length;
+    const tras = document.querySelectorAll('#screen-myleagues .ml-card').length;
     // Control: volver a "All" tiene que devolver TODAS.
-    const todo = [...document.querySelectorAll('.ml-chip')].filter(c => /^All/.test(c.textContent))[0];
+    const todo = [...document.querySelectorAll('#screen-myleagues .ml-chip')].filter(c => /^All/.test(c.textContent))[0];
     if (todo) todo.click();
     await new Promise(r => setTimeout(r, 500));
-    return { salta: false, etiqueta, prometido: n, pintadas: tras, vuelta: document.querySelectorAll('.ml-card').length };
+    return { salta: false, etiqueta, prometido: n, pintadas: tras, vuelta: document.querySelectorAll('#screen-myleagues .ml-card').length };
   });
   ok('(v5) el filtro pinta exactamente las que promete su conteo',
     filtrado.salta === true || filtrado.prometido === filtrado.pintadas, JSON.stringify(filtrado));
@@ -437,7 +437,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
       activa: !!(s && s.classList.contains('active')),
       scroll: document.documentElement.scrollWidth,
       desbordan: anchos,
-      tarjetas: document.querySelectorAll('.ml-card').length
+      tarjetas: document.querySelectorAll('#screen-myleagues .ml-card').length
     };
   });
   ok('(w) a 390px no hay desborde ni elementos fuera de pantalla',

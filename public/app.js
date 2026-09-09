@@ -132,6 +132,24 @@ let ACTIVE_SEASON='2026';
 // rutas siguen enteros (Draft Day y los precios de My Rankings salen de ese
 // mismo motor). En julio se pone en true y vuelve todo con una linea.
 var DRAFT_SEASON = false;
+// El boton del hero depende de si ya hay cuenta: al que llega de cero le sirve
+// VER el producto (datos de ejemplo, sin registrarse); al que ya conecto, ir a
+// lo suyo. Un solo boton que sirva a los dos no existe.
+try {
+  document.addEventListener('DOMContentLoaded', function () {
+    var b = document.getElementById('hero-enter-btn');
+    if (!b) return;
+    var tiene = false;
+    try {
+      tiene = !!(localStorage.getItem('tm_username') || localStorage.getItem('tm_yahoo_tok'));
+    } catch (_) { }
+    if (!tiene) return;
+    b.textContent = 'See my leagues';
+    b.setAttribute('href', '/myleagues');
+    var s2 = document.getElementById('hero-second-btn');
+    if (s2) { s2.textContent = 'Open a league with a code'; s2.setAttribute('onclick', "event.preventDefault();switchScreen('hub')"); }
+  });
+} catch (_) { }
 try {
   document.documentElement.classList.toggle('no-draft', !DRAFT_SEASON);
 } catch (_) { }
