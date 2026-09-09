@@ -1412,15 +1412,21 @@ function mlOpenOdds(id) {
 // donde estas en problemas. Es la vista que ninguna app da, porque todas asumen
 // que juegas una sola liga.
 function mlTableroTodas() {
-  var filas = [];
+  var filas = [], enJuego = 0;
   ML.leagues.forEach(function (L) {
     if (!mlDrafted(L)) return;
     var H = L._hyd;
     if (!H || !H.mine || H.opp == null) return;
     var mio = (H.proj[H.mine.roster_id] || {}).total || 0;
     var suyo = (H.proj[H.opp] || {}).total || 0;
+    // Con la jornada en marcha manda el MARCADOR, aqui igual que en las
+    // tarjetas. Que el tablero siguiera enseñando proyecciones el domingo por la
+    // tarde dejaba media pantalla viviendo en el futuro y la otra en el
+    // presente, con dos cifras distintas para el mismo duelo.
+    var vivo = mlEnVivo(L);
+    if (vivo) enJuego++;
     filas.push({
-      L: L, mio: mio, suyo: suyo, wp: mlWinProb(mio, suyo),
+      L: L, mio: mio, suyo: suyo, vivo: vivo, wp: mlWinProb(mio, suyo),
       rival: mlTeamName(L, H.opp), yo: mlTeamName(L, H.mine.roster_id)
     });
   });
@@ -1429,29 +1435,45 @@ function mlTableroTodas() {
       + 'None of your leagues has a matchup posted for week ' + ML.week + ' yet.</div></div>';
   }
   // De peor a mejor: donde vas perdiendo es donde todavia puedes hacer algo.
-  filas.sort(function (a, b) { return a.wp - b.wp; });
-  var favorito = filas.filter(function (f) { return f.wp >= 0.5; }).length;
-  var puntos = filas.reduce(function (a, f) { return a + f.mio; }, 0);
+  var vivoManda = enJuego > 0;
+  filas.sort(function (a, b) {
+    if (vivoManda) {
+      var da = a.vivo ? (a.vivo.mio - a.vivo.suyo) : 999;
+      var db = b.vivo ? (b.vivo.mio - b.vivo.suyo) : 999;
+      return da - db;
+    }
+    return a.wp - b.wp;
+  });
+  var ganando = filas.filter(function (f) { return f.vivo ? f.vivo.mio >= f.vivo.suyo : f.wp >= 0.5; }).length;
+  var puntos = filas.reduce(function (a, f) { return a + (f.vivo ? f.vivo.mio : f.mio); }, 0);
 
-  var h = '<div class="ml-slate"><div class="ml-slate-n"><b>' + favorito + '</b><span>of ' + filas.length
-    + ' games favored</span></div>'
-    + '<div class="ml-slate-n"><b class="mono">' + mlN(puntos, 0) + '</b><span>points on the field</span></div>'
+  var h = '<div class="ml-slate"><div class="ml-slate-n"><b>' + ganando + '</b><span>of ' + filas.length
+    + (vivoManda ? ' games winning' : ' games favored') + '</span></div>'
+    + '<div class="ml-slate-n"><b class="mono">' + mlN(puntos, 0) + '</b><span>'
+    + (vivoManda ? 'points scored' : 'points on the field') + '</span></div>'
     + '<div class="ml-slate-n"><b class="mono">'
     + mlPct(filas.reduce(function (a, f) { return a + f.wp; }, 0) / filas.length)
     + '%</b><span>average shot</span></div></div>';
 
-  h += '<div class="ml-board"><div class="ml-board-h"><span>Your matchup</span><span>Spread</span><span>Money</span><span>Win</span></div>';
+  h += '<div class="ml-board"><div class="ml-board-h"><span>Your matchup</span>'
+    + (vivoManda
+      ? '<span>You</span><span>Them</span><span>Margin</span>'
+      : '<span>You</span><span>Them</span><span>Win</span>') + '</div>';
   filas.forEach(function (f) {
     var fav = f.mio >= f.suyo;
-    var tot = Math.round((f.mio + f.suyo) * 2) / 2;
-    h += '<div class="ml-game' + (f.wp < 0.4 ? ' is-cold' : (f.wp > 0.6 ? ' is-hot' : '')) + '">'
-      + '<div class="ml-game-tag">' + mlEsc(f.L.name) + '</div>'
+    var voyGanando = f.vivo ? f.vivo.mio >= f.vivo.suyo : fav;
+    // El marcador manda cuando existe; la linea de antes del partido baja a
+    // letra chica, como hace una casa de apuestas de verdad.
+    var izq = f.vivo ? f.vivo.mio : f.mio;
+    var der = f.vivo ? f.vivo.suyo : f.suyo;
+    h += '<div class="ml-game' + (voyGanando ? ((f.vivo || f.wp > 0.6) ? ' is-hot' : '') : ' is-cold') + '">'
+      + '<div class="ml-game-tag">' + mlEsc(f.L.name) + (f.vivo ? ' <i class="ml-live-dot"></i>' : '') + '</div>'
       + '<div class="ml-bd-row">'
       + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + ' vs ' + mlEsc(f.rival) + '</b>'
-      + '<span class="mono">' + mlN(f.mio) + ' - ' + mlN(f.suyo) + '</span></div>'
-      + '<div class="ml-cell mono">' + (fav ? '-' : '+') + mlSpread(Math.abs(f.mio - f.suyo)) + '</div>'
-      + '<div class="ml-cell mono ' + (f.wp >= 0.5 ? 'is-fav' : '') + '">' + mlAmerican(f.wp) + '</div>'
-      + '<div class="ml-cell mono ml-tot">' + mlPct(f.wp) + '%</div>'
+      + '<span class="mono">' + (f.vivo ? 'proj ' + mlN(f.mio) + ' - ' + mlN(f.suyo) : mlN(f.mio) + ' - ' + mlN(f.suyo)) + '</span></div>'
+      + '<div class="ml-cell mono">' + mlN(izq) + '</div>'
+      + '<div class="ml-cell mono ' + (voyGanando ? 'is-fav' : '') + '">' + mlN(der) + '</div>'
+      + '<div class="ml-cell mono ml-tot">' + (f.vivo ? (izq >= der ? '+' : '') + mlN(izq - der) : mlPct(f.wp) + '%') + '</div>'
       + '</div>'
       + '<button class="ml-link ml-game-go" onclick="mlOpenOdds(\'' + mlEsc(f.L.id) + '\')">Full board and title odds →</button>'
       + '</div>';

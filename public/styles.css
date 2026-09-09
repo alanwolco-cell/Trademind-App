@@ -3184,3 +3184,5 @@ html.no-draft .draft-only{display:none !important}
      enteras, y eso ya cuenta la historia de "todas tus ligas". */
   .da-frame .ml-card{padding:9px 11px 8px;gap:6px}
 }
+.ml-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);
+  margin-left:5px;vertical-align:middle;animation:mlpulse 1.8s ease-in-out infinite}
