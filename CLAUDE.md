@@ -1642,6 +1642,94 @@ interceptada del entorno y no del producto. `qa-nav` ALL GREEN contra produccion
   las tarjetas de Sleeper.
 - `qa-live` sigue siendo intermitente contra HEAD tambien.
 
+## Sesion 2026-09-09 (noche): Yahoo conectado, pivote a la temporada, y los gates dejan de mentir
+
+### Yahoo quedo CONECTADO (ver el bloque de arriba para los tres candados)
+El hallazgo que no esta documentado en ningun sitio de Yahoo: **el scope de
+fantasy NO se pide por parametro**. Con `fspt-r` explicito devuelve
+`invalid_scope` DESPUES del login; sin parametro, aplica los permisos que la app
+tiene marcados y entra. Queda `YAHOO_SCOPE` como valvula.
+
+### El producto pivota a la temporada
+Los mock drafts se esconden con UN INTERRUPTOR (`DRAFT_SEASON=false` en app.js,
+que pone `html.no-draft`), no con una purga: el motor de subasta es lo que le
+pone precio a My Rankings y a Draft Day, y en julio se revierte con una linea.
+La barra inferior cambia Draft por Trades. La portada deja de vender mock drafts
+en el titulo, la descripcion de Google, la previa del enlace, los cuatro pasos y
+los CTA.
+
+**Mercado, con datos:** FantasyPros "My Playbook" es el competidor real en
+multi-liga y **cobra por numero de ligas** (2 con PRO, 10 con MVP, 50 con HOF;
+$108 a $156 al ano). Es una categoria que la gente PAGA y su eje de precio es
+justo el numero de ligas, que es donde esta el dueno con trece.
+https://support.fantasypros.com/hc/en-us/articles/115002755194
+https://support.fantasypros.com/hc/en-us/articles/25996886459931
+
+### Lo que se construyo
+- **Identidad por liga**: escudo (de la liga y del manager, prefiriendo la foto
+  subida) y color derivado del id, no aleatorio, para que la misma liga sea el
+  mismo color en todo el producto. Sin imagen, monograma con ese color: nunca un
+  hueco gris. El color es un filo de 3px, no un panel.
+- **Filtros por formato y plataforma**, con su conteo, y **solo a partir de
+  cinco ligas**: con tres, el control era una solucion a un problema que esa
+  persona no tiene, y era lo primero que veia al entrar.
+- **Marcador en vivo**: con la jornada en marcha manda el marcador real y la
+  proyeccion baja a letra chica.
+- **Revisar alineaciones en TODAS las ligas**, que es lo unico accionable de la
+  pantalla y lo que ninguna app hace entre catorce ligas.
+- **Demo publica** (`/myleagues?demo=1`) con ligas inventadas y JUGADORES REALES
+  con foto. El boton principal del hero la abre: un producto que solo se ve
+  despues de conectar una cuenta se juzga por su portada.
+- **La app abre donde se usa**: con cuenta conectada, la raiz lleva a las ligas.
+- **Animacion del hero en codigo**, copiando el patron de Resuelto
+  (components/DemoAnimada.tsx), pero pintando el MARKUP REAL del producto
+  (.ml-card, .ml-vs, .ml-board): si cambia el diseño de una tarjeta, la
+  animacion cambia con ella.
+
+### TRES ERRORES DE DOMINIO que solo aparecieron con SUS ligas de verdad
+Ninguno se habria visto con datos inventados, y los tres habrian hecho que no le
+creyeran al resto de la pantalla:
+1. **Best ball**: 6 de sus 13 ligas lo son, y el aviso de alineacion les salia
+   igual. En best ball la plataforma pone tu mejor once sola. Ademas Sleeper lo
+   marca de DOS formas (type 3 y la casilla `best_ball`), asi que mirar solo el
+   type dejaba fuera a la mitad.
+2. **Emparejar por valor y no por casilla**: salia "Stafford entra por Quentin
+   Johnston", un QB por un WR. El array de titulares de Sleeper es POSICIONAL.
+3. **Travis Hunter sin precio**: el feed de ADP lo lista como DB (Sleeper:
+   fantasy_positions ['DB','WR'], depth_chart SWR) y el pool solo admitia
+   QB/RB/WR/TE. Era la fila 148 con "$-" que tenia a qa-rankings en rojo desde
+   hacia dias.
+
+### LOS GATES DEJAN DE MENTIR (era la deuda mas cara del repo)
+- **qa-rankings ALL GREEN** por primera vez en dias. El fallo no se diagnosticaba
+  porque el mensaje no decia QUE fila estaba mal; con el indice y el nombre se
+  cerro en una vuelta.
+- **qa-live ALL GREEN dos veces seguidas, 50 checks.** Su intermitencia de dias
+  NO era del producto: el check (n) ponia `MD.mine = []` y esperaba silencio,
+  pero con el roster vacio uno necesita TODO y el consejo hace bien en hablar;
+  que saliera o no dependia de como quedara el board de los checks anteriores.
+- **qa-live mide ahora EL INTERRUPTOR de temporada**: con `html.no-draft` la
+  entrada de Draft Day tiene que estar ESCONDIDA y la sala se abre por
+  `lvEnter()`, para que la feature no se pudra fuera de la vista.
+- **qa-hub (x)** comprobaba una FRASE del titulo de portada que cambio con el
+  posicionamiento; ahora mide lo que importa, que un codigo inexistente no
+  reciba previa de liga.
+- **qa-myleagues** contaba las `.ml-card` del DOM entero, y la animacion de la
+  portada pinta tarjetas reales: 19 para 13 ligas. Selectores acotados a su
+  pantalla.
+
+**Estado de los ocho gates al cerrar:** qa-myleagues, qa-hub, qa-nav, qa-board,
+qa-rankings, qa-perfil, qa-flows, qa-trades y qa-live, todos ALL GREEN.
+Verificado ademas contra produccion (`QA_BASE=https://macdraft.app`): qa-nav y
+qa-myleagues en verde, y los seis archivos sirviendo el mismo sha256 que el
+local.
+
+### Pendiente
+- Las side bets dentro del hub (tienen sentido ahi y en ningun otro sitio).
+- La imagen de Open Graph por liga (necesita `@vercel/og`).
+- La seccion larga "Asi se ve por dentro" al estilo Resuelto, con guion de 30s.
+- El loro sigue decidido: se queda.
+
 ---
 
 # Rediseño de septiembre 2026 (act. 8-sep)
