@@ -178,7 +178,8 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
   console.log('\n=== barra inferior del telefono ===');
   // La barra cambio el 2026-09-08: Analyze salio de la barra (sigue en el
   // cajon y en su ruta) y entro Leagues, que es lo que se mira cada semana.
-  for (const [etiqueta, espera] of [['Leagues', 'screen-myleagues'], ['Draft', 'screen-mock']]) {
+  // 2026-09-09: fuera de temporada de drafts, la barra es Home/Trades/Mac/Leagues.
+  for (const [etiqueta, espera] of [['Leagues', 'screen-myleagues'], ['Trades', 'screen-analyze']]) {
     const pg = await nueva(390, 844);
     await abrirCajon(pg);
     const r = await pg.evaluate(async (et) => {

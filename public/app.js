@@ -126,6 +126,15 @@ function navSearchBlur(){
 const SLEEPER='https://api.sleeper.app/v1';
 let userId=null,allPlayers={},myRoster=[],oppRoster=[],leagueRosters=[],leagueUsers=[],leagueId=null,leagueName='',leagueSeason='';
 let ACTIVE_SEASON='2026';
+// ── Temporada de drafts ──────────────────────────────────────────────────────
+// En septiembre los drafts ya pasaron: todo lo de mock draft ocupa sitio sin
+// servir. Esto NO borra nada, esconde: el codigo, el motor de subasta y las
+// rutas siguen enteros (Draft Day y los precios de My Rankings salen de ese
+// mismo motor). En julio se pone en true y vuelve todo con una linea.
+var DRAFT_SEASON = false;
+try {
+  document.documentElement.classList.toggle('no-draft', !DRAFT_SEASON);
+} catch (_) { }
 // Live NFL calendar state - drives season-aware copy (no "playoff push" talk in July)
 var NFL_WEEK=0;
 var NFL_SEASON_TYPE='off'; // 'off' | 'pre' | 'regular' | 'post'
@@ -16106,7 +16115,7 @@ switchScreen=function(name,_noPush){
 // The four direct tabs cannot cover every screen, so anything they don't own
 // (League, Research, News, Community) lights up "More" instead of leaving the
 // bar with nothing selected, which reads as broken.
-var _TABBAR_DIRECT=['home','myleagues','sage','mock'];
+var _TABBAR_DIRECT=['home','myleagues','sage','analyze'];
 function tabbarSync(name){
   var bar=document.getElementById('tabbar');
   if(!bar)return;

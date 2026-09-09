@@ -2795,31 +2795,73 @@ html{scroll-padding-top:76px}
 .ml-grid{display:grid;gap:12px;grid-template-columns:1fr}
 @media(min-width:760px){.ml-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:1180px){.ml-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.ml-card{border:1px solid var(--border2);border-radius:16px;background:var(--surface);padding:16px;
-  display:flex;flex-direction:column;gap:10px;min-width:0}
-.ml-card-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.ml-card-h h3{font-family:var(--font-head);font-size:16px;font-weight:600;margin:0;line-height:1.25;
-  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.ml-rec{font-size:13px;color:var(--muted2);flex-shrink:0;padding-top:1px}
+.ml-card{position:relative;border:1px solid var(--border2);border-radius:18px;background:var(--surface);
+  padding:16px 16px 12px;display:flex;flex-direction:column;gap:11px;min-width:0;overflow:hidden;
+  transition:border-color .18s,transform .18s}
+/* El filo del color de la liga: dos pixeles, no un bloque. Catorce ligas con un
+   panel de color cada una serian una ensalada; asi se reconoce sin gritar. */
+.ml-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--liga);opacity:.9}
+.ml-card:hover{border-color:color-mix(in srgb,var(--liga) 45%,var(--border2));transform:translateY(-1px)}
+.ml-card-h{display:flex;align-items:center;gap:11px}
+.ml-card-id{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.ml-card-h h3{font-family:var(--font-head);font-size:16.5px;font-weight:600;margin:0;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-card-sub{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-rec{font-size:13.5px;color:var(--muted2);flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* Escudos. Nunca un circulo vacio: debajo de la imagen hay un monograma con el
+   color de la liga, asi que si la imagen no existe o falla, queda algo con
+   forma de escudo y no un hueco gris. */
+.ml-shield,.ml-mono{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;overflow:hidden;
+  background:color-mix(in srgb,var(--c) 22%,var(--surface2));
+  border:1px solid color-mix(in srgb,var(--c) 38%,transparent)}
+.ml-mono,.ml-mono-bg{font-size:12px;font-weight:700;letter-spacing:.02em;
+  color:color-mix(in srgb,var(--c) 78%,var(--text))}
+.ml-mono-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.ml-shield img{position:relative;width:100%;height:100%;object-fit:cover}
+.ml-shield.is-lg,.ml-mono.is-lg{width:40px;height:40px;border-radius:11px}
+.ml-shield.is-lg .ml-mono-bg,.ml-mono.is-lg{font-size:14px}
+.ml-shield.is-sm,.ml-mono.is-sm{width:24px;height:24px;border-radius:50%}
+.ml-shield.is-sm .ml-mono-bg,.ml-mono.is-sm{font-size:9.5px}
+
+.ml-champ-tag{display:inline-flex;align-self:flex-start;align-items:center;gap:5px;font-size:10px;
+  font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--yellow);
+  background:var(--yellow-dim);border:1px solid rgba(230,192,122,.28);border-radius:100px;padding:3px 9px}
 .ml-flags{display:flex;flex-wrap:wrap;gap:5px}
 .ml-flags span{font-size:10px;font-weight:600;letter-spacing:.03em;color:var(--muted);
   background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:2px 8px}
-.ml-vs{display:flex;align-items:center;gap:8px;padding:10px 0 2px;border-top:1px solid var(--border)}
-.ml-vs-side{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.ml-vs{display:flex;align-items:flex-start;gap:8px;padding:11px 0 3px;border-top:1px solid var(--border)}
+.ml-vs-side{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
 .ml-vs-opp{text-align:right;align-items:flex-end}
-.ml-vs-lbl{font-size:12px;color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
-.ml-vs-num{font-size:17px;font-weight:600}
-.ml-vs-mid{flex-shrink:0}
-.ml-vs-at{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.ml-vs-odds{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2)}
+.ml-vs-lbl{font-size:11.5px;color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ml-vs-num{font-size:19px;font-weight:600;letter-spacing:-.02em}
+.ml-vs-mid{flex-shrink:0;padding-top:26px}
+.ml-vs-at{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.ml-vs-odds{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2);flex-wrap:wrap}
 .ml-vs-odds.is-fav>.mono:first-child{color:var(--green)}
 .ml-vs-odds.is-dog>.mono:first-child{color:var(--yellow)}
-.ml-vs-none{font-size:12.5px;color:var(--muted);padding:10px 0 2px;border-top:1px solid var(--border)}
+.ml-live{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--text)}
+.ml-live i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:mlpulse 1.8s ease-in-out infinite}
+@keyframes mlpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.ml-vs-none{font-size:12.5px;color:var(--muted);padding:11px 0 3px;border-top:1px solid var(--border)}
+.ml-when{color:var(--muted2);font-weight:600}
 .ml-dot{color:var(--muted);opacity:.6}
-.ml-card-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:8px}
+.ml-card-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:6px}
 .ml-team{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ml-link{background:none;border:0;color:var(--accent-bright);font-size:12.5px;font-weight:600;
-  cursor:pointer;padding:8px 0 8px 10px;min-height:44px}
+  cursor:pointer;padding:8px 0;min-height:40px}
+
+/* filtros */
+.ml-filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px}
+.ml-filters-sep{width:1px;height:18px;background:var(--border2);margin:0 4px}
+.ml-chip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 11px;border-radius:100px;
+  border:1px solid var(--border);background:var(--surface);color:var(--muted2);font-size:12.5px;
+  font-weight:500;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.ml-chip:hover{border-color:var(--border2);color:var(--text)}
+.ml-chip span{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ml-chip.is-on{border-color:rgba(155,114,232,.5);background:var(--accent-dim);color:var(--text);font-weight:600}
+.ml-chip.is-on span{color:var(--accent-bright)}
 
 /* --- exposicion --- */
 .ml-conf{border:1px solid rgba(230,192,122,.28);background:var(--yellow-dim);border-radius:16px;padding:16px;margin-bottom:16px}
@@ -2896,9 +2938,11 @@ html{scroll-padding-top:76px}
 }
 /* Yahoo dentro de My Leagues */
 .ml-or{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:12px 0 10px}
-.ml-y{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;
-  border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:13.5px;
-  font-weight:600;cursor:pointer}
+/* Secundario a proposito: es una accion que se hace UNA vez, y con el peso de
+   un boton principal competia con las ligas, que son el contenido. */
+.ml-y{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px;border-radius:100px;
+  border:1px solid var(--border);background:var(--surface);color:var(--muted2);font-size:12.5px;
+  font-weight:500;cursor:pointer}
 .ml-y:hover{border-color:var(--accent-bright)}
 .ml-y.is-on{color:var(--muted2);font-weight:500}
 .ml-y-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
@@ -2990,4 +3034,19 @@ html{scroll-padding-top:76px}
   .hb-head{flex-direction:column;gap:10px}
   .hb-code{width:100%;justify-content:space-between}
   .hb-tab-row{grid-template-columns:20px minmax(0,1fr) 50px 54px;gap:6px;font-size:12px}
+}
+
+/* Fuera de temporada de drafts (html.no-draft, lo pone DRAFT_SEASON en app.js):
+   las entradas de draft salen del menu. No se borra nada: las rutas siguen
+   vivas para quien tenga un enlace guardado. */
+html.no-draft .draft-only{display:none !important}
+
+/* En el telefono los blancos tactiles son de 44px, no de 34: una capsula de
+   filtro se toca con el pulgar igual que un boton. Va al FINAL del archivo a
+   proposito: puesto antes, la definicion de .ml-y que viene despues lo pisaba
+   por orden, con la misma especificidad. */
+@media(max-width:640px){
+  .ml-chip{min-height:44px;padding:0 14px;font-size:13px}
+  .ml-y{min-height:44px;padding:0 16px}
+  .ml-link{min-height:44px}
 }

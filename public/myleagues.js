@@ -569,11 +569,16 @@ async function mlBoot(force) {
     }
 
     var leagues = (raw || []).map(function (l) {
+      var meta = l.metadata || {};
       return {
         id: l.league_id, plat: 'sleeper', name: l.name || 'League', teams: l.total_rosters || 0,
         status: l.status, type: (l.settings || {}).type,
         settings: l.settings || {}, roster_positions: l.roster_positions || [],
-        scoring_settings: l.scoring_settings || {}, avatar: l.avatar || null
+        scoring_settings: l.scoring_settings || {}, avatar: l.avatar || null,
+        draftId: l.draft_id || null,
+        // Sleeper guarda quien gano el ano pasado. Estaba ahi y no lo miraba nadie.
+        champId: meta.latest_league_winner_roster_id != null
+          ? Number(meta.latest_league_winner_roster_id) : null
       };
     });
 
@@ -610,6 +615,17 @@ async function mlBoot(force) {
         rosters: rosters, users: uById, mine: mine, sc: sc, proj: proj,
         matchups: mus, muBy: muBy, myMu: myMu, opp: oppRosterId, schedule: null
       };
+      return true;
+    });
+
+    // La fecha del draft de las ligas que aun no draftean. Es informacion de SU
+    // liga (cuando juega), no una funcion de mock draft.
+    var sinDraftear = leagues.filter(function (L) {
+      return L.draftId && L._hyd && L._hyd.mine && !mlDrafted(L);
+    });
+    await mlPool(sinDraftear, 3, async function (L) {
+      var d = await mlGet('/draft/' + L.draftId).catch(function () { return null; });
+      if (d && d.start_time) L.draftAt = Number(d.start_time);
       return true;
     });
 
@@ -690,6 +706,92 @@ function mlCacheRead() {
     if ((d.username || '') !== (localStorage.getItem('tm_username') || '').trim()) return null;
     return { season: d.season, week: d.week, userId: d.userId, username: d.username, leagues: d.leagues || [] };
   } catch (e) { return null; }
+}
+
+/* --------------------------------------------------- identidad de cada liga */
+// Catorce ligas con el mismo aspecto son catorce filas que hay que LEER. Con un
+// escudo y un color propios, se reconocen de un vistazo.
+//
+// El color NO es aleatorio: sale del id de la liga, asi que "Gente seria" es
+// siempre el mismo verde, aqui, en el tablero de odds y en el hub. Un color por
+// sesion decoraria sin servir para reconocer. Saturacion y brillo van fijos
+// para que catorce colores se lean como sistema y no como ensalada de frutas.
+function mlHash(str) {
+  var h = 0, x = String(str || '');
+  for (var i = 0; i < x.length; i++) { h = (h * 31 + x.charCodeAt(i)) >>> 0; }
+  return h;
+}
+function mlLigaColor(L) {
+  var tono = mlHash(L && L.id) % 360;
+  // El morado de la marca (250-290) se reserva para la interfaz: si una liga se
+  // pinta del color del producto, deja de distinguirse de los botones.
+  if (tono > 245 && tono < 295) tono = (tono + 70) % 360;
+  return 'hsl(' + tono + ' 62% 58%)';
+}
+function mlIniciales(nombre) {
+  var partes = String(nombre || '?').trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return '?';
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[1][0]).toUpperCase();
+}
+// Nunca un circulo vacio: si no hay imagen, va un monograma con el color de la
+// liga. Un hueco gris se lee como algo que no cargo.
+function mlEscudo(url, nombre, color, clase) {
+  var ini = mlEsc(mlIniciales(nombre));
+  var mono = '<span class="ml-mono ' + (clase || '') + '" style="--c:' + color + '">' + ini + '</span>';
+  if (!url) return mono;
+  // Si la imagen falla, el monograma que ya esta debajo queda a la vista.
+  return '<span class="ml-shield ' + (clase || '') + '" style="--c:' + color + '">'
+    + '<span class="ml-mono-bg">' + ini + '</span>'
+    + '<img src="' + mlEsc(url) + '" alt="" loading="lazy" onerror="this.remove()">'
+    + '</span>';
+}
+function mlLigaEscudo(L, clase) {
+  var url = L.plat === 'yahoo'
+    ? (L.logo || null)
+    : (L.avatar ? 'https://sleepercdn.com/avatars/thumbs/' + L.avatar : null);
+  return mlEscudo(url, L.name, mlLigaColor(L), clase);
+}
+// El del manager: primero la foto que EL subio, que es la que se ve bien, y
+// despues el avatar generico de Sleeper.
+function mlTeamEscudo(L, rosterId, clase) {
+  var H = L._hyd; if (!H) return '';
+  var r = (H.rosters || []).filter(function (x) { return x.roster_id === rosterId; })[0];
+  var u = r && H.users[r.owner_id];
+  var url = null;
+  if (L.plat === 'yahoo') url = (r && r.logo) || (u && u.logo) || null;
+  else if (u) url = (u.metadata && u.metadata.avatar) || (u.avatar ? 'https://sleepercdn.com/avatars/thumbs/' + u.avatar : null);
+  return mlEscudo(url, mlTeamName(L, rosterId), mlLigaColor(L), clase);
+}
+
+// Cuando juega una liga que todavia no drafteo. Es informacion de SU liga, no
+// una funcion de mock draft.
+function mlCuandoDraftea(L) {
+  if (!L.draftAt) return null;
+  var faltan = L.draftAt - Date.now();
+  var d = new Date(L.draftAt);
+  var dia = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  var hora = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (faltan < 0) return 'Drafting now';
+  var horas = faltan / 3600000;
+  if (horas < 1) return 'Drafts in ' + Math.max(1, Math.round(faltan / 60000)) + ' min';
+  if (horas < 24) return 'Drafts today at ' + hora;
+  if (horas < 48) return 'Drafts tomorrow at ' + hora;
+  return 'Drafts ' + dia + ' at ' + hora;
+}
+
+// El marcador de verdad, cuando la jornada ya empezo. Una proyeccion a las dos
+// de la tarde del domingo es un numero muerto: lo que quieres saber es como vas.
+function mlEnVivo(L) {
+  var H = L._hyd; if (!H || !H.mine || H.opp == null) return null;
+  var fila = function (rid) {
+    return (H.matchups || []).filter(function (m) { return m.roster_id === rid; })[0];
+  };
+  var mio = fila(H.mine.roster_id), suyo = fila(H.opp);
+  var a = mio ? Number(mio.points) || 0 : 0;
+  var b = suyo ? Number(suyo.points) || 0 : 0;
+  if (a <= 0 && b <= 0) return null;   // todavia no ha jugado nadie
+  return { mio: a, suyo: b };
 }
 
 /* ------------------------------------------------------------------ ayudas */
@@ -792,64 +894,144 @@ function mlRefresh() {
 function mlPaintLeagues() {
   var box = document.getElementById('ml-leagues-body');
   if (!box) return;
-  if (!ML.username) { box.innerHTML = mlNeedsConnect(); return; }
+  if (!ML.username && !mlYahooConectado()) { box.innerHTML = mlNeedsConnect(); return; }
   if (!ML.ready) { box.innerHTML = mlSkeleton(4); return; }
   if (ML.err) { box.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">Could not load your leagues</div><p>' + mlEsc(ML.err) + '</p><button class="btn-sm" onclick="mlRefresh()">Try again</button></div>'; return; }
   if (!ML.leagues.length) {
     box.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">No leagues on this account for ' + mlEsc(ML.season) + '</div><p>Check the username, or connect a different one.</p>'
-      + '<div class="ml-conn"><input id="ml-user" value="' + mlEsc(ML.username) + '" placeholder="Sleeper username"><button class="btn-sm" onclick="mlConnect()">Connect</button></div></div>';
+      + '<div class="ml-conn"><input id="ml-user" value="' + mlEsc(ML.username) + '" placeholder="Sleeper username"><button class="btn-sm" onclick="mlConnect()">Connect</button></div>'
+      + '<div class="ml-or">or</div>' + mlYahooBtn() + '</div>';
     return;
   }
+
+  // Las ligas en juego arriba; las que aun no draftean, al final. Y dentro de
+  // cada grupo, primero la que esta mas apretada: es donde miras primero.
+  var orden = ML.leagues.slice().sort(function (a, b) {
+    var da = mlDrafted(a) ? 0 : 1, db = mlDrafted(b) ? 0 : 1;
+    if (da !== db) return da - db;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+  var visibles = orden.filter(mlPasaFiltro);
 
   var h = '<div class="ml-tools"><button class="btn-sm" onclick="mlRefresh()">Refresh</button>'
     + mlYahooBtn()
     + (ML.stale ? '<span class="ml-hint">Showing your last saved copy: could not reach Sleeper just now.</span>' : '')
-    + '<span class="ml-hint">Cached so it opens instantly. Refresh pulls new scores.</span></div>'
+    + '</div>'
     + (ML.yahooErr ? '<div class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</div>' : '')
-    + '<div class="ml-grid">';
+    + mlFiltrosUI(orden, visibles);
 
-  // Las ligas en juego arriba: una liga sin draftear no tiene nada que mirar hoy.
-  var orden = ML.leagues.slice().sort(function (a, b) {
-    return (mlDrafted(b) ? 1 : 0) - (mlDrafted(a) ? 1 : 0);
-  });
-  orden.forEach(function (L) {
+  if (!visibles.length) {
+    return void (box.innerHTML = h + '<div class="ml-empty"><p>No leagues match that filter.</p></div>');
+  }
+
+  h += '<div class="ml-grid">';
+  visibles.forEach(function (L) {
     var H = L._hyd, mine = H.mine;
+    var color = mlLigaColor(L);
     var myProj = (H.proj[mine.roster_id] || {}).total || 0;
     var oppId = H.opp;
     var oppProj = oppId != null ? ((H.proj[oppId] || {}).total || 0) : null;
-    var line = '';
+    var vivo = mlEnVivo(L);
+    var cuerpo = '';
+
     if (!mlDrafted(L)) {
-      line = '<div class="ml-vs-none">Draft has not happened yet. Odds open when the rosters do.</div>';
+      var cuando = mlCuandoDraftea(L);
+      cuerpo = '<div class="ml-vs-none">' + (cuando
+        ? '<b class="ml-when">' + mlEsc(cuando) + '</b>'
+        : 'Rosters are not set yet.') + '</div>';
     } else if (oppId != null) {
       var wp = mlWinProb(myProj, oppProj);
-      var favored = myProj >= oppProj;
-      line = '<div class="ml-vs">'
-        + '<div class="ml-vs-side"><span class="ml-vs-lbl">You</span><span class="mono ml-vs-num">' + mlN(myProj) + '</span></div>'
-        + '<div class="ml-vs-mid"><span class="ml-vs-at">vs</span></div>'
-        + '<div class="ml-vs-side ml-vs-opp"><span class="ml-vs-lbl">' + mlEsc(mlTeamName(L, oppId)) + '</span><span class="mono ml-vs-num">' + mlN(oppProj) + '</span></div>'
+      var favorito = myProj >= oppProj;
+      // Con la jornada en marcha manda el MARCADOR; la proyeccion baja a letra
+      // chica. Al reves seria enseñar el pronostico del tiempo durante la
+      // tormenta.
+      var izq = vivo ? mlN(vivo.mio) : mlN(myProj);
+      var der = vivo ? mlN(vivo.suyo) : mlN(oppProj);
+      cuerpo = '<div class="ml-vs">'
+        + '<div class="ml-vs-side">' + mlTeamEscudo(L, mine.roster_id, 'is-sm')
+        + '<span class="ml-vs-lbl">You</span><span class="mono ml-vs-num">' + izq + '</span></div>'
+        + '<div class="ml-vs-mid"><span class="ml-vs-at">' + (vivo ? 'live' : 'vs') + '</span></div>'
+        + '<div class="ml-vs-side ml-vs-opp">' + mlTeamEscudo(L, oppId, 'is-sm')
+        + '<span class="ml-vs-lbl">' + mlEsc(mlTeamName(L, oppId)) + '</span>'
+        + '<span class="mono ml-vs-num">' + der + '</span></div>'
         + '</div>'
-        + '<div class="ml-vs-odds ' + (favored ? 'is-fav' : 'is-dog') + '">'
-        + '<span class="mono">' + (favored ? '-' : '+') + mlSpread(Math.abs(myProj - oppProj)) + '</span>'
-        + '<span class="ml-dot">·</span><span class="mono">' + mlAmerican(wp) + '</span>'
-        + '<span class="ml-dot">·</span><span>' + mlPct(wp) + '% to win</span></div>';
+        + '<div class="ml-vs-odds ' + (favorito ? 'is-fav' : 'is-dog') + '">'
+        + (vivo
+          ? '<span class="ml-live"><i></i>' + (vivo.mio >= vivo.suyo ? 'winning by ' + mlN(vivo.mio - vivo.suyo) : 'down ' + mlN(vivo.suyo - vivo.mio)) + '</span>'
+            + '<span class="ml-dot">·</span><span>proj ' + mlN(myProj) + ' - ' + mlN(oppProj) + '</span>'
+          : '<span class="mono">' + (favorito ? '-' : '+') + mlSpread(Math.abs(myProj - oppProj)) + '</span>'
+            + '<span class="ml-dot">·</span><span class="mono">' + mlAmerican(wp) + '</span>'
+            + '<span class="ml-dot">·</span><span>' + mlPct(wp) + '% to win</span>')
+        + '</div>';
     } else {
-      line = '<div class="ml-vs-none">No matchup this week</div>';
+      cuerpo = '<div class="ml-vs-none">No matchup this week</div>';
     }
-    var flags = [L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper', mlFormat(L),
-      mlScoringLabel(L) + (L._scoringGuess ? ' (assumed)' : ''), L.teams + ' teams'];
+
+    var flags = [mlFormat(L), mlScoringLabel(L) + (L._scoringGuess ? ' (assumed)' : ''), L.teams + ' teams'];
     if (mlSuperflex(L)) flags.push('Superflex');
-    h += '<article class="ml-card">'
-      + '<header class="ml-card-h"><h3>' + mlEsc(L.name) + '</h3>'
+    var esCampeon = L.champId != null && L.champId === mine.roster_id;
+
+    h += '<article class="ml-card" style="--liga:' + color + '">'
+      + '<header class="ml-card-h">' + mlLigaEscudo(L, 'is-lg')
+      + '<div class="ml-card-id"><h3>' + mlEsc(L.name) + '</h3>'
+      + '<span class="ml-card-sub">' + (L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper') + ' · ' + mlEsc(mlTeamName(L, mine.roster_id)) + '</span></div>'
       + '<span class="ml-rec mono">' + mlRecord(mine) + '</span></header>'
+      + (esCampeon ? '<div class="ml-champ-tag">Defending champion</div>' : '')
       + '<div class="ml-flags">' + flags.map(function (f) { return '<span>' + mlEsc(f) + '</span>'; }).join('') + '</div>'
-      + line
-      + '<div class="ml-card-f"><span class="ml-team">' + mlEsc(mlTeamName(L, mine.roster_id)) + '</span>'
-      + (L.plat === 'sleeper'
-        ? '<button class="ml-link" onclick="mlShare(\'' + L.id + '\',this)">Share →</button>' : '')
+      + cuerpo
+      + '<div class="ml-card-f">'
+      + (L.plat === 'sleeper' ? '<button class="ml-link" onclick="mlShare(\'' + L.id + '\',this)">Share</button>' : '<span></span>')
       + '<button class="ml-link" onclick="mlOpenOdds(\'' + L.id + '\')">Odds →</button></div>'
       + '</article>';
   });
   box.innerHTML = h + '</div>';
+}
+
+/* ------------------------------------------------------------------ filtros */
+// Con catorce ligas, mirar solo las de un formato o las de una plataforma deja
+// de ser un lujo. Cada opcion lleva su conteo: un filtro que lleva a cero es
+// una via muerta que se ve venir.
+function mlPasaFiltro(L) {
+  var f = ML.filtro || {};
+  if (f.formato && f.formato !== 'all' && mlFormat(L) !== f.formato) return false;
+  if (f.plat && f.plat !== 'all' && (L.plat || 'sleeper') !== f.plat) return false;
+  return true;
+}
+function mlSetFiltro(clave, valor) {
+  ML.filtro = ML.filtro || {};
+  ML.filtro[clave] = valor;
+  mlPaintLeagues();
+}
+function mlFiltrosUI(todas, visibles) {
+  var f = ML.filtro || {};
+  var formatos = {};
+  todas.forEach(function (L) { formatos[mlFormat(L)] = (formatos[mlFormat(L)] || 0) + 1; });
+  var plats = {};
+  todas.forEach(function (L) { var k = L.plat || 'sleeper'; plats[k] = (plats[k] || 0) + 1; });
+
+  var chip = function (clave, valor, texto, n, activo) {
+    return '<button class="ml-chip' + (activo ? ' is-on' : '') + '" onclick="mlSetFiltro(\'' + clave + '\',\'' + valor + '\')">'
+      + mlEsc(texto) + '<span>' + n + '</span></button>';
+  };
+  var h = '<div class="ml-filters">';
+  h += chip('formato', 'all', 'All', todas.length, !f.formato || f.formato === 'all');
+  Object.keys(formatos).sort().forEach(function (k) {
+    h += chip('formato', k, k, formatos[k], f.formato === k);
+  });
+  // La plataforma solo se ofrece cuando de verdad hay dos: un filtro con una
+  // sola opcion es ruido.
+  if (Object.keys(plats).length > 1) {
+    h += '<span class="ml-filters-sep"></span>';
+    h += chip('plat', 'all', 'Both', todas.length, !f.plat || f.plat === 'all');
+    Object.keys(plats).forEach(function (k) {
+      h += chip('plat', k, k === 'yahoo' ? 'Yahoo' : 'Sleeper', plats[k], f.plat === k);
+    });
+  }
+  h += '</div>';
+  if (visibles.length !== todas.length) {
+    h += '<p class="ml-hint" style="margin:-6px 0 12px">Showing ' + visibles.length + ' of ' + todas.length + '.</p>';
+  }
+  return h;
 }
 
 /* ------------------------------------------------------- pestana My Players */
@@ -1205,6 +1387,7 @@ window.mlOpenOdds = mlOpenOdds;
 window.mlYahooConnect = mlYahooConnect;
 window.mlYahooDisconnect = mlYahooDisconnect;
 window.mlShare = mlShare;
+window.mlSetFiltro = mlSetFiltro;
 // app.js guarda aqui el token cuando el usuario entra por la puerta vieja.
 window.mlYahooSet = mlYahooSet;
 window.mlYahooConectado = mlYahooConectado;

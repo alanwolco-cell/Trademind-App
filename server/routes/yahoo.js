@@ -289,6 +289,7 @@ router.get('/leagues', async (req, res) => {
         league_key: l.league_key,
         league_id: l.league_id,
         name: typeof l.name === 'object' ? l.name.full : l.name,
+        logo: l.logo_url || null,
         season: String(l.season || ''),
         num_teams: numY(l.num_teams, 0),
         scoring_type: l.scoring_type || '',
@@ -328,10 +329,19 @@ router.get('/league/:key', async (req, res) => {
     for (const t of eqs) {
       if (vistos[t.team_key]) continue;
       vistos[t.team_key] = 1;
+      // El escudo viene anidado (team_logos -> team_logo -> url) y a veces no
+      // viene. Si falta, la pantalla dibuja un monograma con el color de la
+      // liga: nunca un circulo vacio.
+      let escudo = null;
+      try {
+        const logos = deepCollect(t, 'team_logo', []).map(x => flattenEntity(x));
+        escudo = (logos.filter(x => x && x.url)[0] || {}).url || null;
+      } catch (_) { }
       teams.push({
         team_key: t.team_key,
         team_id: numY(t.team_id, 0),
         name: typeof t.name === 'object' ? t.name.full : t.name,
+        logo: escudo,
         is_owned_by_current_login: numY(t.is_owned_by_current_login, 0) === 1,
         wins: null, losses: null, ties: null, points_for: null,
         players: []
@@ -376,6 +386,7 @@ router.get('/league/:key', async (req, res) => {
     res.json({
       league: {
         league_key: key,
+        logo: liga.logo_url || null,
         name: typeof liga.name === 'object' ? liga.name.full : liga.name,
         num_teams: numY(liga.num_teams, teams.length),
         season: String(liga.season || ''),

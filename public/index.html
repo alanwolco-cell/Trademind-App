@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026090901">
+<link rel="stylesheet" href="/styles.css?v=2026090902">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026090901" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026090902" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026090901">
+<link rel="stylesheet" href="/theme.css?v=2026090902">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026090901">
+<link rel="stylesheet" href="/home.css?v=2026090902">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090901">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090902">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -153,7 +153,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
          and Ask Mac (the copilot). Everything else lives behind the menu
          button on the right - hidden, not removed. -->
     <div class="nav-item">
-      <button class="nav-item-btn screen-nav" data-screen="mock" onclick="goMock()">Mock Draft</button>
+      <button class="nav-item-btn screen-nav draft-only" data-screen="mock" onclick="goMock()">Mock Draft</button>
+      <button class="nav-item-btn screen-nav" data-screen="myleagues" onclick="switchScreen('myleagues')">My Leagues</button>
     </div>
     <div class="nav-item">
       <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')"><img src="/sage/sage-32.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:5px">Ask Mac</button>
@@ -234,14 +235,14 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <span style="font-family:var(--font-head);font-weight:700;font-size:15px">Menu</span>
         <button class="theme-toggle icon" onclick="mobMenuToggle()" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
-      <button class="mob-menu-item" onclick="mobGo('mock','solo')">Mock Draft</button>
+      <button class="mob-menu-item draft-only" onclick="mobGo('mock','solo')">Mock Draft</button>
       <button class="mob-menu-item" onclick="mobGo('sage')"><img src="/sage/sage-32.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:6px">Ask Mac</button>
       <div class="mob-group">
-        <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)">Draft modes<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="mob-menu-item mob-parent draft-only" aria-expanded="false" onclick="mobGroupToggle(this)">Draft modes<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="mob-subs">
-          <button class="mob-menu-item mob-sub" onclick="mobGo('mock','friends')">Draft with Friends</button>
-          <button class="mob-menu-item mob-sub" onclick="mobGo('mock','live')">Live Draft Assist</button>
-          <button class="mob-menu-item mob-sub" onclick="mobGo('mock','history')">Draft History</button>
+          <button class="mob-menu-item mob-sub draft-only" onclick="mobGo('mock','friends')">Draft with Friends</button>
+          <button class="mob-menu-item mob-sub draft-only" onclick="mobGo('mock','live')">Live Draft Assist</button>
+          <button class="mob-menu-item mob-sub draft-only" onclick="mobGo('mock','history')">Draft History</button>
         </div>
       </div>
       <!-- A08: por debajo de 360px la campana sale de la barra (no cabe junto al
@@ -256,7 +257,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
            pasa en Yahoo. La entrada va AQUI arriba y no escondida en un submenu
            porque el dia que se usa es el dia del draft y no hay tiempo de
            buscarla (leccion del 26-ago: una feature sin puerta no existe). -->
-      <button class="mob-menu-item" onclick="mobMenuCloseForNav();lvEnter()">Draft Day (live auction)</button>
+      <button class="mob-menu-item draft-only" onclick="mobMenuCloseForNav();lvEnter()">Draft Day (live auction)</button>
       <button class="mob-menu-item" onclick="mobGo('analyze')">Trade Analyzer</button>
       <button class="mob-menu-item" onclick="mobGo('myleagues')">All Leagues</button>
       <button class="mob-menu-item" onclick="mobGo('hub')">League Hub</button>
@@ -295,22 +296,22 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="mk-hero-inner">
     <!-- app.js swaps this line for "Welcome back, <user>" on a return visit -->
     <div class="mk-eyebrow" id="hero-badge-text">Mac Draft</div>
-    <h1>Draft like it's <br>draft night.</h1>
-    <p class="mk-sub">Mock drafts that behave like your league. Snake or auction, with Mac on the headset.</p>
+    <h1>Every league you play,<br>one screen.</h1>
+    <p class="mk-sub">Sleeper and Yahoo together: your record, who you face this week, every player you own across all of them, and a betting board that prices each matchup with your league's own rules.</p>
     <div class="mk-hero-cta hero-cta" id="hero-cta">
       <div class="mk-cta-row">
-        <a href="#" id="hero-enter-btn" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Start a mock draft</a>
-        <a href="#" class="mk-btnlink" onclick="event.preventDefault();goConnectLeague()">Connect your league</a>
+        <a href="#" id="hero-enter-btn" class="mk-btn" onclick="event.preventDefault();switchScreen('myleagues')">See my leagues</a>
+        <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('hub')">Open a league with a code</a>
       </div>
     </div>
   </div>
-  <!-- The product itself: a real auction room mid-draft - the lot card, the bid
-       climbing and changing hands, and the budget column reacting. Filmed from
-       the running product by scripts/gen-reel.mjs, never by hand. Decorative for
-       screen readers: the headline already carries the meaning. -->
+  <!-- El producto, capturado del producto corriendo (scripts/gen-hero-shot.mjs),
+       nunca dibujado a mano: el tablero de odds con los duelos reales de una
+       cuenta. El video del draft salio de aqui el 2026-09-09 al esconderse todo
+       lo de draft; cuando vuelva la temporada, o cuando se filme la pantalla de
+       ligas, este hueco recupera su pelicula. -->
   <div class="mk-hero-shot mk-reveal" aria-hidden="true">
-    <!-- The product film: autoplay, muted, loops - the Apple treatment. -->
-    <video class="mk-film" data-src="/promo-reel.mp4?v=4" poster="/promo-poster.jpg?v=4" muted loop playsinline preload="none" width="1282" height="806"></video>
+    <img class="mk-film" src="/hero-leagues.png?v=1" alt="" width="1072" height="657" loading="eager" decoding="async">
   </div>
 </div>
 
@@ -1815,11 +1816,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div class="mk-eyebrow-acc mk-reveal">Why Mac Draft exists</div>
     <p class="mk-founder-lead mk-reveal">Mac Draft started with a trade I almost blew. One tab on a value chart, another on injury news, a group chat where three friends told me three different things.</p>
     <p class="mk-reveal">The problem was never a lack of information. The problem is that none of it knew anything about me - my roster, my league, my window.</p>
-    <p class="mk-reveal">So I built the fix. First for trades: Mac reads your roster, your league and the manager across the table before he weighs a single value. Then for the nights leagues are actually won: the draft. Rooms that behave like your friends do, bots with your leaguemates' habits, real auction money, and Mac on the headset for every pick.</p>
+    <p class="mk-reveal">So I built the fix. First for trades: Mac reads your roster, your league and the manager across the table before he weighs a single value. Then for the season itself: every league you play in one screen, Sleeper and Yahoo side by side, priced with your own league's rules so a half PPR matchup is never quoted at full PPR.</p>
     <p class="mk-reveal">One promise sits above every feature: accuracy. I would rather show you nothing than show you something wrong.</p>
     <p class="mk-founder-close mk-reveal">Life is good when you know the move.</p>
     <div class="mk-cta-row mk-reveal" style="margin-top:22px">
-      <a href="#" class="mk-btn" onclick="event.preventDefault();heroStartMock()">Start a mock draft</a>
+      <a href="#" class="mk-btn" onclick="event.preventDefault();switchScreen('myleagues')">See my leagues</a>
       <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Try the Trade Analyzer</a>
     </div>
     <div class="mk-founder-sign mk-reveal">Alan Wolcovinsky, founder</div>
@@ -1871,9 +1872,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.4 12 3.2l9 7.2"/><path d="M5.4 9.2V20.4h13.2V9.2"/></svg>
     <span>Home</span>
   </button>
-  <button type="button" class="tabbar-item" data-tab="mock" onclick="tabGo('mock')">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.4h5v2.8h-5z"/><path d="M14.5 4.8h2.6A1.4 1.4 0 0 1 18.5 6.2v13A1.4 1.4 0 0 1 17.1 20.6H6.9A1.4 1.4 0 0 1 5.5 19.2v-13A1.4 1.4 0 0 1 6.9 4.8h2.6"/><path d="M9 11.4h6"/><path d="M9 15.2h4"/></svg>
-    <span>Draft</span>
+  <!-- Fuera de temporada de drafts esta plaza la ocupa el analizador de trades:
+       un draft se juega tres dias al ano y un trade se piensa cada semana. El
+       mock draft no se borro, vive en el cajon y vuelve en julio. -->
+  <button type="button" class="tabbar-item" data-tab="analyze" onclick="tabGo('analyze')">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 13l-4 4 4 4"/><path d="M4 17h16"/></svg>
+    <span>Trades</span>
   </button>
   <button type="button" class="tabbar-item" data-tab="sage" onclick="tabGo('sage')">
     <!-- Mac himself rides the tab: the mascot IS the button. The old chat
@@ -1904,11 +1908,11 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026090901"></script>
-<script src="/rankings.js?v=2026090901"></script>
-<script src="/live.js?v=2026090901"></script>
-<script src="/myleagues.js?v=2026090901"></script>
-<script src="/hub.js?v=2026090901"></script>
+<script src="/app.js?v=2026090902"></script>
+<script src="/rankings.js?v=2026090902"></script>
+<script src="/live.js?v=2026090902"></script>
+<script src="/myleagues.js?v=2026090902"></script>
+<script src="/hub.js?v=2026090902"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

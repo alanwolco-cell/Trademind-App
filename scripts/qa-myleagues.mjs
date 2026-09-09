@@ -370,6 +370,52 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   });
   ok('(t) la exposicion se pinta y nadie aparece en mas ligas de las que hay',
     expo.jugadores > 0 && expo.filas > 0 && expo.excede === 0, JSON.stringify(expo));
+  // --- LA IDENTIDAD DE CADA LIGA -----------------------------------------
+  const identidad = await seguro(pg, async () => {
+    const t = document.querySelector('#screen-myleagues .inner-tab[data-tab="tab-ml-leagues"]');
+    if (t) t.click();
+    await new Promise(r => setTimeout(r, 900));
+    const cards = [...document.querySelectorAll('.ml-card')];
+    const colores = cards.map(c => c.style.getPropertyValue('--liga')).filter(Boolean);
+    const sinEscudo = cards.filter(c => !c.querySelector('.ml-shield, .ml-mono')).length;
+    // Un color por liga que cambie entre repintados no sirve para reconocer.
+    mlPaintLeagues();
+    const otra = [...document.querySelectorAll('.ml-card')].map(c => c.style.getPropertyValue('--liga'));
+    return {
+      cards: cards.length, colores: colores.length,
+      distintos: new Set(colores).size, sinEscudo,
+      estable: JSON.stringify(colores) === JSON.stringify(otra),
+      chips: document.querySelectorAll('.ml-chip').length
+    };
+  });
+  ok('(v1) cada liga lleva escudo o monograma, nunca un hueco',
+    identidad.cards > 0 && identidad.sinEscudo === 0, JSON.stringify(identidad));
+  ok('(v2) el color de cada liga es estable entre repintados',
+    identidad.estable === true && identidad.colores === identidad.cards, JSON.stringify(identidad));
+  ok('(v3) los colores distinguen: no todas las ligas del mismo tono',
+    identidad.distintos >= Math.min(4, identidad.cards), JSON.stringify(identidad));
+  ok('(v4) hay filtros con su conteo', identidad.chips >= 2, JSON.stringify(identidad));
+
+  const filtrado = await seguro(pg, async () => {
+    const chips = [...document.querySelectorAll('.ml-chip')];
+    const objetivo = chips.filter(c => !/^All/.test(c.textContent))[0];
+    if (!objetivo) return { salta: true };
+    const etiqueta = objetivo.textContent.replace(/\d+$/, '').trim();
+    const n = parseInt((objetivo.querySelector('span') || {}).textContent || '0', 10);
+    objetivo.click();
+    await new Promise(r => setTimeout(r, 500));
+    const tras = document.querySelectorAll('.ml-card').length;
+    // Control: volver a "All" tiene que devolver TODAS.
+    const todo = [...document.querySelectorAll('.ml-chip')].filter(c => /^All/.test(c.textContent))[0];
+    if (todo) todo.click();
+    await new Promise(r => setTimeout(r, 500));
+    return { salta: false, etiqueta, prometido: n, pintadas: tras, vuelta: document.querySelectorAll('.ml-card').length };
+  });
+  ok('(v5) el filtro pinta exactamente las que promete su conteo',
+    filtrado.salta === true || filtrado.prometido === filtrado.pintadas, JSON.stringify(filtrado));
+  ok('(v6) CONTROL: quitar el filtro devuelve todas',
+    filtrado.salta === true || filtrado.vuelta === identidad.cards, JSON.stringify(filtrado));
+
   ok('(u) el numero pintado arriba es el maximo real',
     typeof expo.topPintado === 'number' && expo.topPintado > 0 && expo.topPintado === expo.maxCalc,
     JSON.stringify(expo));
