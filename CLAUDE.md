@@ -1758,6 +1758,21 @@ Conclusiones para quien lo retome:
 - Su nota de metodo: Reddit bloqueo su crawler, asi que no hay citas de
   r/fantasyfootball. Lo declaro en vez de inventarlas.
 
+### EL FAAB SE TRADEA (correccion del dueno, 2026-09-09)
+Un equipo puede tener MAS presupuesto del que empezo la liga, porque el FAAB se
+intercambia en trades. Sleeper lo refleja con `waiver_budget_used` en NEGATIVO,
+asi que `bote - used` puede pasar del bote.
+
+Verificado en su liga "Gente seria" (bote $1000): el roster 7 tiene $1033
+porque le compro 33 de presupuesto al roster 1, que es el del dueno, en un trade
+de la semana 1 (`transactions/1` -> `waiver_budget: [{amount:33, sender:1,
+receiver:7}]`).
+
+La primera version de la sonda lo acotaba al bote pensando que era un error de
+datos. **No acotar por arriba nunca.** Ese dato es justo el que mas importa para
+una puja: un rival que compro FAAB puede pasarte por encima a todos, y merece
+decirse con todas las letras en la recomendacion.
+
 ### Direccion visual recomendada por el agente de referencias
 Board con capturas reales en `rediseno-2026-09/referencias-fantasy/`. Veredicto:
 direccion B, "Panel de rendimiento", patron WHOOP (un numero grande que resume,

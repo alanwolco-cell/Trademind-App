@@ -196,7 +196,7 @@ function aporta(idNuevo, plantel, L, sc, master) {
     const sc = scoring(L);
     const bote = Number((L.settings || {}).waiver_budget) || 100;
     const miGastado = Number((mio.settings || {}).waiver_budget_used) || 0;
-    const miDinero = bote - miGastado;
+    const miDinero = Math.max(0, bote - miGastado);   // sin tope: el FAAB se tradea
 
     // agentes libres = todo el maestro menos lo que tiene alguien
     const tomados = {};
@@ -229,10 +229,16 @@ function aporta(idNuevo, plantel, L, sc, master) {
       // QUIEN TE LO DISPUTA: rivales a los que tambien mejora, y su dinero.
       const rivales = rosters.filter(r => r.roster_id !== mio.roster_id).map(r => {
         const g = aporta(c.id, r.players || [], L, sc, master);
-        // Acotado al bote: la primera corrida imprimio "el mas motivado tiene
-        // $1033" en una liga de $1000, porque waiver_budget_used puede venir
-        // negativo cuando la liga devuelve dinero.
-        const queda = Math.max(0, Math.min(bote, bote - (Number((r.settings || {}).waiver_budget_used) || 0)));
+        // SIN TOPE ARRIBA, y esto fue una correccion del dueno. La primera
+        // version acoto al bote porque un equipo aparecia con $1033 en una liga
+        // de $1000 y parecia un error de datos. No lo era: EL FAAB SE TRADEA.
+        // Verificado en su propia liga "Gente seria": el roster 7 tiene $1033
+        // porque le compro 33 de presupuesto al roster 1 (el del dueno) en un
+        // trade de la semana 1, y Sleeper lo refleja con waiver_budget_used en
+        // NEGATIVO. Topar ahi borraba justo el dato que mas importa para una
+        // puja: ese rival puede pasarte por encima a todos. Solo se acota por
+        // abajo, que nadie tiene dinero negativo.
+        const queda = Math.max(0, bote - (Number((r.settings || {}).waiver_budget_used) || 0));
         return { g, queda };
       }).filter(r => r.g > 0).sort((a, b) => b.g - a.g);
       const rivalTope = rivales.length ? Math.round(rivales[0].queda * (rivales[0].g / (rivales[0].g + sumaAlt))) : 0;
@@ -244,7 +250,10 @@ function aporta(idNuevo, plantel, L, sc, master) {
       console.log(`   ${(u.name + ' ' + u.pos + ' ' + (u.team || 'FA')).padEnd(30)} +${c.gana.toFixed(1)} pts/sem`);
       console.log(`      puja $${puja}   tope $${tope}`
         + `   ·   ${alternativas.length ? alternativas.length + ' alternativas parecidas (+' + alternativas.map(a => a.toFixed(1)).join(', +') + ')' : 'no hay otro igual en el mercado'}`
-        + `   ·   ${rivales.length} rivales lo quieren` + (rivales.length ? `, el mas motivado tiene $${rivales[0].queda}` : ''));
+        + `   ·   ${rivales.length} rivales lo quieren`
+        + (rivales.length ? `, el mas motivado tiene $${rivales[0].queda}` : '')
+        + (rivales.length && rivales[0].queda > bote
+          ? ` (compro FAAB: empezo con $${bote})` : ''));
     }
     console.log('');
   }
