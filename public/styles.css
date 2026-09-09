@@ -3116,8 +3116,11 @@ html.no-draft .draft-only{display:none !important}
 @keyframes da-blink{50%{opacity:0}}
 @keyframes da-bump{50%{transform:translateY(-4px)}}
 @media(max-width:760px){
-  .da-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .da-grid .ml-card:nth-child(n+5){display:none}
+  /* El marco del hero mide unos 288px de alto en un telefono: dos filas de
+     tarjetas no caben y salian cortadas por la mitad, que se lee como algo
+     roto. Una columna, dos tarjetas ENTERAS. */
+  .da-grid{grid-template-columns:1fr;gap:8px}
+  .da-grid .ml-card:nth-child(n+3){display:none}
   .da-frame{padding:12px}
   .da-head b{font-size:14px}
   .da-frame .ml-slate{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -3170,3 +3173,14 @@ html.no-draft .draft-only{display:none !important}
 /* Refresh vive con los filtros, separado por un respiro y sin conteo. */
 .ml-chip-ref{margin-left:auto;color:var(--muted)}
 @media(max-width:640px){.ml-chip-ref{margin-left:6px}}
+/* En el telefono el cuadro del hero es apaisado y mide unos 220px de alto: no
+   cabe entera ni una tarjeta, y las escenas salian cortadas. Se le da
+   proporcion vertical (la imagen fija, que solo es el respaldo, se recorta por
+   arriba y a la izquierda, que es donde estan las tarjetas). */
+@media(max-width:640px){
+  .mk-hero-shot img{aspect-ratio:4/5;object-fit:cover;object-position:top left}
+  .da-grid .ml-card:nth-child(n+4){display:none}
+  /* Tres tarjetas de ~140px no caben en 458 con la cabecera: se ven tres,
+     enteras, y eso ya cuenta la historia de "todas tus ligas". */
+  .da-frame .ml-card{padding:9px 11px 8px;gap:6px}
+}

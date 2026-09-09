@@ -96,12 +96,31 @@ try {
     if (!abierto) { await pg.close(); continue; }
     await pg.waitForTimeout(450);
 
+    // FUERA DE TEMPORADA DE DRAFTS (DRAFT_SEASON=false en app.js, que pone
+    // html.no-draft) la entrada de Draft Day NO se ve, y eso es lo correcto: en
+    // septiembre los drafts ya pasaron. El gate mide EL INTERRUPTOR, no una
+    // expectativa vieja:
+    //   - con el interruptor puesto, la entrada tiene que estar ESCONDIDA, y
+    //     Draft Day se abre igual llamando a lvEnter(), para que la feature no
+    //     se pudra mientras esta fuera de la vista;
+    //   - en temporada, la entrada tiene que verse y abrir con un clic.
+    const fueraDeTemporada = await pg.evaluate(() =>
+      document.documentElement.classList.contains('no-draft'));
     const item = await pg.$('button.mob-menu-item:has-text("Draft Day")');
     const vis = item ? await item.isVisible() : false;
-    ok(tag === 'phone' ? 'b2' : 'b1', vis, `${tag}: la entrada Draft Day existe y se ve en el menu`);
-    if (!vis) { await pg.close(); continue; }
+    ok(tag === 'phone' ? 'b2' : 'b1', fueraDeTemporada ? !vis : vis,
+      fueraDeTemporada
+        ? `${tag}: fuera de temporada, la entrada Draft Day esta escondida`
+        : `${tag}: la entrada Draft Day existe y se ve en el menu`);
 
-    await item.click();
+    if (fueraDeTemporada) {
+      // Se entra por la puerta que queda abierta. Todo lo de abajo sigue
+      // midiendo la sala de verdad.
+      await pg.evaluate(() => { try { mobMenuCloseForNav(); } catch (_) { } lvEnter(); });
+    } else {
+      if (!vis) { await pg.close(); continue; }
+      await item.click();
+    }
     await pg.waitForTimeout(9500);
 
     const st = await pg.evaluate(() => ({
