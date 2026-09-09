@@ -443,12 +443,21 @@ console.log('\n=== My Rankings: el dinero ===');
     // las dos y este check dejaria de medir nada.
     const cif = Array.from(document.querySelectorAll('#rk-body .rk-pr'))
       .map(e => ((e.querySelector('.rk-pr-n') || {}).textContent || '').trim());
-    const malos = cif.filter(t => !/^\$\d+$/.test(t) || Number(t.slice(1)) <= 0);
-    return { filas, n: cif.length, malos: malos.slice(0, 3), top: cif.slice(0, 3), room: (typeof TMR !== 'undefined' ? TMR.room : null) };
+    // Con el indice: sin saber QUE fila esta mal, el fallo no se puede
+    // diagnosticar y el gate lleva dias en rojo sin que nadie sepa por que.
+    const malos = [];
+    cif.forEach((t, i) => {
+      if (!/^\$\d+$/.test(t) || Number(t.slice(1)) <= 0) {
+        const fila = document.querySelectorAll('#rk-body .rk-row')[i];
+        const nom = fila ? ((fila.querySelector('b') || {}).textContent || '').trim() : '?';
+        malos.push('#' + (i + 1) + ' ' + nom + ' = "' + t + '"');
+      }
+    });
+    return { filas, n: cif.length, nMalos: malos.length, malos: malos.slice(0, 5), top: cif.slice(0, 3), room: (typeof TMR !== 'undefined' ? TMR.room : null) };
   });
   ok('(w) la columna Pay se pinta en todas las filas, con cifras > 0',
     !pay._err && pay.n > 0 && pay.n === pay.filas && pay.malos.length === 0,
-    pay._err || `${pay.n} cifras para ${pay.filas} filas, top ${(pay.top || []).join(' / ')} en ${JSON.stringify(pay.room)}`);
+    pay._err || `${pay.n} cifras para ${pay.filas} filas, ${pay.nMalos} malas: ${(pay.malos || []).join(' | ')} | top ${(pay.top || []).join(' / ')} en ${JSON.stringify(pay.room)}`);
 
   // (w2) CONTROL DE SANIDAD del precio: sale del motor de subasta, no de un
   //      numero inventado. El bote de la sala son teams x budget y los precios

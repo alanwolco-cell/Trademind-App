@@ -233,6 +233,11 @@ function mlBestLineup(playerIds, L, sc, players) {
   var order = slots.slice().sort(function (a, b) {
     return (ML_FLEX[a] ? 1 : 0) - (ML_FLEX[b] ? 1 : 0);   // fijas primero
   });
+  // El indice original de la casilla: se rellenan primero las fijas y despues
+  // los flex, pero para comparar con la alineacion REAL hace falta saber a que
+  // puesto de la lista de la liga corresponde cada uno.
+  var idxDe = {}, usadoIdx = {};
+  slots.forEach(function (sl, i) { (idxDe[sl] = idxDe[sl] || []).push(i); });
   order.forEach(function (slot) {
     var ok = ML_FLEX[slot] || [slot];
     var best = null;
@@ -241,14 +246,19 @@ function mlBestLineup(playerIds, L, sc, players) {
       if (ok.indexOf(x.p.pos) === -1) return;
       if (!best || x.proj > best.proj) best = x;
     });
+    var libres = idxDe[slot] || [];
+    var idx = null;
+    for (var q = 0; q < libres.length; q++) {
+      if (!usadoIdx[libres[q]]) { idx = libres[q]; usadoIdx[idx] = 1; break; }
+    }
     if (best) {
       used[best.id] = 1;
-      lineup.push({ slot: slot, x: best });
+      lineup.push({ slot: slot, idx: idx, x: best });
       total += best.proj;
       needed++; if (!best.guess) covered++;
     } else {
       needed++;   // casilla vacia: cuenta contra la cobertura
-      lineup.push({ slot: slot, x: null });
+      lineup.push({ slot: slot, idx: idx, x: null });
     }
   });
   return {
@@ -258,6 +268,94 @@ function mlBestLineup(playerIds, L, sc, players) {
     needed: needed,
     coverage: needed ? covered / needed : 0
   };
+}
+
+/* --------------------------------------------------- revisar la alineacion */
+// Lo que ninguna app hace: mirar TODAS tus ligas a la vez y decirte donde tienes
+// a alguien en la banca que deberia estar jugando. Sleeper te avisa dentro de
+// una liga; con catorce, el domingo por la mañana no te da la vida para abrirlas
+// una por una.
+//
+// La comparacion es honesta y por eso es util: se mide TU alineacion real
+// (starters, del enfrentamiento de la semana) contra la mejor alineacion
+// posible con TU plantel y las casillas de TU liga, con los puntos proyectados
+// segun el reglamento de esa liga. No es una opinion, es una resta.
+// Puntos. Por debajo de esto no se abre la boca: un aviso por dos puntos de
+// diferencia es ruido, y la mitad de las proyecciones llevan la mediana de su
+// posicion dentro. Tres puntos en fantasy si cambian un domingo.
+var ML_UMBRAL_CAMBIO = 3;
+
+function mlRevisarAlineacion(L) {
+  var H = L._hyd;
+  if (!H || !H.mine || !mlDrafted(L)) return null;
+  // En best ball la plataforma pone tu mejor alineacion sola: no hay nada que
+  // arreglar, y decirle a alguien que mueva su banca en una liga de best ball
+  // es la clase de error que hace que no te crean el resto.
+  if (mlEsBestBall(L)) return null;
+  var fila = (H.matchups || []).filter(function (m) { return m.roster_id === H.mine.roster_id; })[0];
+  var titulares = (fila && fila.starters) || H.mine.starters || [];
+  if (!titulares.length) return null;
+  var players = ML.players || {};
+  var sc = H.sc || mlScoring(L);
+  var mejor = H.proj[H.mine.roster_id];
+  if (!mejor || !mejor.lineup) return null;
+
+  // Lo que vale lo que tienes puesto, con las mismas reglas.
+  var puestos = titulares.filter(function (id) { return id && id !== '0'; });
+  var valorActual = 0, sinNumero = 0;
+  puestos.forEach(function (id) {
+    var p = players[id];
+    if (!p) { sinNumero++; return; }
+    var v = mlProjPlayer(p, sc);
+    if (v == null) { sinNumero++; return; }
+    valorActual += v;
+  });
+  // Con la mitad del once sin numero propio, la resta no significa nada y no se
+  // opina. Callarse es parte del trabajo.
+  if (!puestos.length || sinNumero > puestos.length / 2) return null;
+
+  // CASILLA POR CASILLA, no por valor. Emparejar por valor daba frases como
+  // "Stafford entra por Quentin Johnston", un QB por un WR, que es imposible y
+  // hace que no te crean el resto de la pantalla. El array de titulares de
+  // Sleeper es POSICIONAL: starters[i] juega en roster_positions[i].
+  var pares = [];
+  mejor.lineup.forEach(function (slot) {
+    if (!slot.x || !slot.x.p || slot.idx == null) return;
+    var actualId = titulares[slot.idx];
+    if (!actualId || actualId === '0') {
+      // Casilla vacia: entra alguien donde no habia nadie.
+      if (slot.x.proj >= ML_UMBRAL_CAMBIO) {
+        pares.push({ entra: { p: slot.x.p, pts: slot.x.proj }, sale: { p: null, pts: 0 }, gana: slot.x.proj });
+      }
+      return;
+    }
+    if (actualId === slot.x.id) return;   // ya esta puesto
+    var pa = players[actualId];
+    var va = pa ? mlProjPlayer(pa, sc) : null;
+    if (va == null) return;               // sin numero del que sale, no se opina
+    var gana = slot.x.proj - va;
+    if (gana >= ML_UMBRAL_CAMBIO) {
+      pares.push({ entra: { p: slot.x.p, pts: slot.x.proj }, sale: { p: pa, pts: va }, gana: gana, slot: slot.slot });
+    }
+  });
+  pares.sort(function (a, b) { return b.gana - a.gana; });
+  if (!pares.length) return { ok: true, gana: 0, cambios: [] };
+  var total = pares.reduce(function (a, x) { return a + x.gana; }, 0);
+  return { ok: pares.length === 0, gana: Math.round(total * 10) / 10, cambios: pares };
+}
+
+// Todas las ligas de un vistazo, ordenadas por lo que te estas dejando.
+function mlAlineacionesRotas() {
+  var out = [];
+  (ML.leagues || []).forEach(function (L) {
+    // En la demo no hay lineas de la semana, asi que no hay proyeccion por
+    // jugador y esta revision no puede correr de verdad. Va escrita a mano para
+    // que se VEA de que va, y la pantalla entera esta declarada como ejemplo en
+    // las tres pestañas.
+    var r = (ML.demo && L._demoFix) ? L._demoFix : mlRevisarAlineacion(L);
+    if (r && !r.ok && r.cambios.length) out.push({ L: L, r: r });
+  });
+  return out.sort(function (a, b) { return b.r.gana - a.r.gana; });
 }
 
 /* --------------------------------------------------------------------- odds */
@@ -613,6 +711,17 @@ function mlCargarDemo() {
     };
     return L;
   });
+  // Dos alineaciones con algo que arreglar, para que el ejemplo enseñe la unica
+  // pantalla del producto sobre la que se puede ACTUAR.
+  var pj = function (id) { return ML.players[id]; };
+  ML.leagues[1]._demoFix = { ok: false, gana: 11.4, cambios: [
+    { entra: { p: pj('9509'), pts: 18.2 }, sale: { p: pj('11566'), pts: 9.6 }, gana: 8.6, slot: 'FLEX' },
+    { entra: { p: pj('11604'), pts: 12.1 }, sale: { p: pj('7547'), pts: 9.3 }, gana: 2.8, slot: 'TE' }
+  ] };
+  ML.leagues[4]._demoFix = { ok: false, gana: 6.1, cambios: [
+    { entra: { p: pj('9221'), pts: 16.4 }, sale: { p: pj('6786'), pts: 10.3 }, gana: 6.1, slot: 'RB' }
+  ] };
+
   ML.ready = true; ML.loading = false;
 }
 
@@ -885,10 +994,15 @@ function mlRecord(r) {
   var t = Number(s.ties) || 0;
   return (Number(s.wins) || 0) + '-' + (Number(s.losses) || 0) + (t ? '-' + t : '');
 }
+function mlEsBestBall(L) {
+  // Sleeper lo marca de dos maneras: type 3, o una liga normal con la casilla
+  // best_ball puesta. Mirar solo el type deja fuera a la mitad.
+  return L.type === 3 || Number((L.settings || {}).best_ball) === 1;
+}
 function mlFormat(L) {
+  if (mlEsBestBall(L)) return 'Best ball';
   if (L.type === 2) return 'Dynasty';
   if (L.type === 1) return 'Keeper';
-  if (L.type === 3) return 'Best ball';
   return 'Redraft';
 }
 // Una liga sin draftear no tiene plantel, asi que no tiene proyeccion, asi que
@@ -901,7 +1015,7 @@ function mlDrafted(L) {
 function mlIsHeadToHead(L) {
   // Los formatos "chopped" y best ball de Sleeper no tienen duelos ni playoffs
   // por siembra: simular un titulo ahi seria inventar un torneo que no existe.
-  return L.type !== 3 && Number((L.settings || {}).playoff_teams) > 0;
+  return !mlEsBestBall(L) && Number((L.settings || {}).playoff_teams) > 0;
 }
 function mlScoringLabel(L) {
   var r = mlScoring(L).rec;
@@ -1012,6 +1126,8 @@ function mlPaintLeagues() {
     return void (box.innerHTML = h + '<div class="ml-empty"><p>No leagues match that filter.</p></div>');
   }
 
+  h += mlPanelAlineaciones();
+
   h += '<div class="ml-grid">';
   visibles.forEach(function (L) {
     var H = L._hyd, mine = H.mine;
@@ -1073,6 +1189,37 @@ function mlPaintLeagues() {
       + '</article>';
   });
   box.innerHTML = h + '</div>';
+}
+
+/* --------------------------------------------- el panel de las alineaciones */
+// Va ARRIBA de las ligas y solo cuando hay algo que arreglar. Es la unica cosa
+// de esta pantalla sobre la que se puede ACTUAR ahora mismo, y en domingo por la
+// mañana es lo unico que importa: el resto es informacion.
+function mlPanelAlineaciones() {
+  var rotas = mlAlineacionesRotas();
+  if (!rotas.length) return '';
+  var total = Math.round(rotas.reduce(function (a, x) { return a + x.r.gana; }, 0) * 10) / 10;
+  var h = '<section class="ml-fix"><header class="ml-fix-h">'
+    + '<div><h3>' + rotas.length + ' lineup' + (rotas.length === 1 ? '' : 's') + ' to fix</h3>'
+    + '<p>You are leaving <b>' + mlN(total) + ' projected points</b> on your bench this week.</p></div>'
+    + '<span class="ml-fix-n mono">+' + mlN(total, 0) + '</span></header>'
+    + '<div class="ml-fix-list">';
+  rotas.slice(0, 6).forEach(function (x) {
+    var L = x.L;
+    h += '<div class="ml-fix-row" style="--liga:' + mlLigaColor(L) + '">'
+      + '<div class="ml-fix-liga">' + mlLigaEscudo(L, 'is-sm')
+      + '<span>' + mlEsc(L.name) + '</span></div>'
+      + '<div class="ml-fix-moves">'
+      + x.r.cambios.slice(0, 2).map(function (c) {
+        return '<span class="ml-fix-move"><b>' + mlEsc(c.entra.p.name) + '</b> in for '
+          + mlEsc(c.sale.p ? c.sale.p.name : 'an empty slot')
+          + ' <i class="mono">+' + mlN(c.gana) + '</i></span>';
+      }).join('')
+      + '</div></div>';
+  });
+  h += '</div><p class="ml-fine">Your starters against the best lineup your roster allows, '
+    + 'scored with each league\'s own rules. Change it in Sleeper or Yahoo: this only tells you.</p></section>';
+  return h;
 }
 
 /* ------------------------------------------------------------------ filtros */

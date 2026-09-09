@@ -330,8 +330,21 @@ function _tmrPricePool(n) {
    * y estos caen por debajo), solo les da su numero. */
   for (var i = 0; i < TMR.rows.length; i++) {
     var r = TMR.rows[i];
-    if (vistos[r.id] || ['QB', 'RB', 'WR', 'TE'].indexOf(r.pos) < 0 || !r.adp) continue;
-    out.push({ id: r.id, name: r.name, pos: r.pos, team: r.team || '', adp: r.adp });
+    if (vistos[r.id]) continue;
+    /* El filtro de posicion se queda FUERA de este lado a proposito. El feed de
+     * ADP da una sola posicion y hay jugadores de dos caras: Travis Hunter sale
+     * como DB (Sleeper: fantasy_positions ['DB','WR'], depth_chart SWR) y con
+     * el filtro salia sin precio, con un "$-" en la fila 148 de su lista.
+     * Quien esta en la lista del dueño es un activo de fantasy por definicion:
+     * si el board no lo cotiza por su etiqueta, el problema es la etiqueta. */
+    if (['K', 'DEF'].indexOf(r.pos) >= 0) continue;   // esos no van a subasta aqui
+    /* Sin ADP tampoco se queda fuera. El arreglo del 28-ago cubrio a los que
+     * faltaban del board de ESE formato, pero no a los que no tienen ADP en
+     * ninguno: uno de ellos seguia saliendo con "$-" en la columna del dinero
+     * (medido el 2026-09-09, fila 148 de su lista). Un jugador al que nadie
+     * cotiza vale el suelo de la sala, y eso es un dato, no un guion.
+     * Entra al final de la cola, detras del ancla, asi que no mueve un precio. */
+    out.push({ id: r.id, name: r.name, pos: r.pos, team: r.team || '', adp: r.adp || 9999 });
     vistos[r.id] = 1;
   }
   out.sort(function (a, b) { return a.adp - b.adp; });
