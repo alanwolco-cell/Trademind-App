@@ -1044,9 +1044,8 @@ function mlPaint() {
 // My Players tiene el mismo derecho a saber que esta viendo un ejemplo.
 function mlAvisoDemo() {
   if (!ML.demo) return '';
-  return '<div class="ml-demo-bar"><b>This is a live example.</b> Six made up leagues with real players, '
-    + 'so you can see how it works before connecting anything. '
-    + '<button class="ml-link" onclick="mlSalirDemo()">Connect my own leagues</button></div>';
+  return '<div class="ml-demo-bar"><b>A live example.</b> Six made up leagues, real players. '
+    + '<button class="ml-link" onclick="mlSalirDemo()">Connect mine</button></div>';
 }
 
 function mlSkeleton(rows) {
@@ -1191,6 +1190,8 @@ function mlPaintLeagues() {
   // codigo). Encontrables, pero fuera del camino de lo que se mira a diario.
   if (!ML.demo) {
     h += '<footer class="ml-foot">'
+      + (orden.length < ML_MIN_FILTROS
+        ? '<button class="ml-link" onclick="mlRefresh()">Refresh</button>' : '')
       + (mlYahooConectado() ? '' : mlYahooBtn())
       + '<button class="ml-link" onclick="switchScreen(\'hub\')">Have a league code?</button>'
       + (ML.yahooErr ? '<span class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</span>' : '')
@@ -1245,8 +1246,17 @@ function mlSetFiltro(clave, valor) {
   ML.filtro[clave] = valor;
   mlPaintLeagues();
 }
+// Umbral a partir del cual filtrar deja de ser ruido. Con tres ligas no hay
+// nada que filtrar: enseñar el control es enseñar una solucion a un problema
+// que esa persona no tiene, y es lo primero que ve al entrar.
+var ML_MIN_FILTROS = 5;
+
 function mlFiltrosUI(todas, visibles) {
   var f = ML.filtro || {};
+  if (todas.length < ML_MIN_FILTROS) {
+    // Sin filtros, Refresh baja al pie con las demas acciones sueltas.
+    return '';
+  }
   var formatos = {};
   todas.forEach(function (L) { formatos[mlFormat(L)] = (formatos[mlFormat(L)] || 0) + 1; });
   var plats = {};
