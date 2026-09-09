@@ -260,11 +260,16 @@ const YSTAT = {
   9: 'rush_yd', 10: 'rush_td',
   11: 'rec', 12: 'rec_yd', 13: 'rec_td'
 };
-function scoringDeYahoo(modifiers) {
+function scoringDeYahoo(ajustes) {
+  // Yahoo esconde los modificadores en settings -> stat_modifiers -> stats ->
+  // [{stat: {stat_id, value}}], y ADEMAS lista los mismos stat_id sin value en
+  // stat_categories. La forma robusta: recoger TODAS las entidades 'stat' del
+  // documento y quedarse solo con las que traen value, que son los
+  // modificadores. El dueno confirmo que sus ligas de Yahoo son half PPR y
+  // salian preciadas como standard: el parseo anterior devolvia vacio.
   const out = {};
-  (modifiers || []).forEach(m => {
-    const st = m && (m.stat || m);
-    if (!st) return;
+  deepCollect(ajustes, 'stat', []).map(x => flattenEntity(x)).forEach(st => {
+    if (!st || st.value == null) return;
     const k = YSTAT[numY(st.stat_id, -1)];
     if (k) out[k] = numY(st.value, 0);
   });
@@ -329,19 +334,35 @@ router.get('/league/:key', async (req, res) => {
     for (const t of eqs) {
       if (vistos[t.team_key]) continue;
       vistos[t.team_key] = 1;
-      // El escudo viene anidado (team_logos -> team_logo -> url) y a veces no
-      // viene. Si falta, la pantalla dibuja un monograma con el color de la
-      // liga: nunca un circulo vacio.
-      let escudo = null;
+      // DOS imagenes distintas, y hasta hoy solo pedia una:
+      //   team_logos -> team_logo -> url   es el escudo del EQUIPO (muchas
+      //     veces el generico que pone Yahoo);
+      //   managers -> manager -> image_url es la FOTO DE PERFIL de la persona,
+      //     que es la que de verdad identifica a un rival en una liga de
+      //     amigos.
+      // Se prefiere la foto de la persona y el escudo queda de respaldo. Si no
+      // hay ninguna, la pantalla dibuja un monograma con el color de la liga:
+      // nunca un circulo vacio.
+      let escudo = null, cara = null;
       try {
         const logos = deepCollect(t, 'team_logo', []).map(x => flattenEntity(x));
         escudo = (logos.filter(x => x && x.url)[0] || {}).url || null;
+      } catch (_) { }
+      try {
+        const gente = deepCollect(t, 'manager', []).map(x => flattenEntity(x));
+        const conFoto = gente.filter(x => x && x.image_url)[0];
+        cara = conFoto ? conFoto.image_url : null;
+        // Yahoo sirve una silueta gris para el que no subio foto. Esa no es una
+        // foto, es un hueco con forma de foto: mejor el monograma de color.
+        if (cara && /profile_b1|default_user|silhouette/i.test(cara)) cara = null;
       } catch (_) { }
       teams.push({
         team_key: t.team_key,
         team_id: numY(t.team_id, 0),
         name: typeof t.name === 'object' ? t.name.full : t.name,
-        logo: escudo,
+        logo: cara || escudo,
+        teamLogo: escudo,
+        managerPhoto: cara,
         is_owned_by_current_login: numY(t.is_owned_by_current_login, 0) === 1,
         wins: null, losses: null, ties: null, points_for: null,
         players: []
@@ -395,8 +416,7 @@ router.get('/league/:key', async (req, res) => {
         num_playoff_teams: numY(set.num_playoff_teams, 6),
         draft_status: liga.draft_status || set.draft_status || '',
         roster_positions,
-        scoring_settings: scoringDeYahoo(deepCollect(ajustes, 'stat_modifiers', [])
-          .flatMap(sm => deepCollect(sm, 'stat', []).map(x => ({ stat: flattenEntity(x) }))))
+        scoring_settings: scoringDeYahoo(ajustes)
       },
       teams
     });

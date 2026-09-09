@@ -419,23 +419,73 @@ function mlSimLeague(L, sims) {
   var idx = {}; ids.forEach(function (id, i) { idx[id] = i; });
   var n = ids.length;
   var proj = ids.map(function (id) { return (H.proj[id] && H.proj[id].total) || 0; });
-  var sd = proj.map(mlSd);
-  var w0 = [], l0 = [], pf0 = [];
+  var w0 = [], l0 = [], pf0 = [], jug = [];
   H.rosters.forEach(function (r, i) {
     var s = r.settings || {};
     w0[i] = Number(s.wins) || 0;
     l0[i] = Number(s.losses) || 0;
     pf0[i] = Number(s.fpts || 0) + Number(s.fpts_decimal || 0) / 100;
+    jug[i] = w0[i] + l0[i] + (Number(s.ties) || 0);
   });
+
+  /* ── POR QUE ESTO NO ES UNA SIMULACION INGENUA ─────────────────────────────
+   * La primera version daba 30,4% de titulo al mejor equipo de una liga de
+   * DIEZ, antes de jugarse un solo partido. El dueno lo cazo: en una liga de
+   * diez, si todos fueran iguales seria 10%, y el mejor equipo de verdad ronda
+   * el 15-20% en pretemporada. Un 30% es un modelo sobreconfiado.
+   *
+   * La causa era tratar la proyeccion COMO SI FUERA LA VERDAD. No lo es: es una
+   * estimacion con error propio. Si uno simula con la proyeccion como media
+   * exacta, el equipo que proyecta 87 gana el 66% de sus duelos TODAS las
+   * semanas de TODAS las simulaciones, y eso compone hasta un titulo casi
+   * seguro. En la realidad, media de la distancia que vemos entre equipos es
+   * ruido de nuestros propios numeros.
+   *
+   * El arreglo es el estandar para "mi estimacion de la media tambien es
+   * incierta": encoger hacia la media de la liga, y ademas sortear el talento
+   * real de cada equipo en CADA temporada simulada.
+   *
+   *   FIABILIDAD (r): que parte de la distancia entre equipos es talento real.
+   *     Sin partidos jugados vale 0.5 (la mitad de lo que medimos es error
+   *     nuestro) y sube hacia 0.85 segun se juega, porque los puntos anotados
+   *     de verdad si son informacion. r = 0.5 + 0.35 * g/(g+6).
+   *   ENCOGIDO: mu_i = media + r * (base_i - media).
+   *   INCERTIDUMBRE DEL TALENTO (tau): sqrt(r*(1-r)) * desviacion de las bases.
+   *     Es la varianza que queda despues de encoger, y es lo que convierte
+   *     "este equipo es mejor" en "este equipo es probablemente mejor".
+   *   RUIDO SEMANAL: 26% de la media de la liga. Una semana de fantasy tiene
+   *     una desviacion de ese orden, y se usa la MISMA para todos: darle mas
+   *     varianza al que mas proyecta lo premia dos veces.
+   *   LO QUE YA PASO manda cuanto mas se juega: base = mezcla de la proyeccion
+   *     y los puntos por partido reales, con peso g/(g+4).
+   * ─────────────────────────────────────────────────────────────────────────*/
+  var jugados = jug.reduce(function (a, b) { return a + b; }, 0) / n;
+  var pesoReal = jugados / (jugados + 4);
+  var base = proj.map(function (p, i) {
+    if (!jug[i]) return p;
+    var ppg = pf0[i] / jug[i];
+    return p * (1 - pesoReal) + ppg * pesoReal;
+  });
+  var media = base.reduce(function (a, b) { return a + b; }, 0) / n;
+  var varBase = base.reduce(function (a, b) { return a + (b - media) * (b - media); }, 0) / n;
+  var sdBase = Math.sqrt(varBase);
+  var r = Math.min(0.85, 0.5 + 0.35 * (jugados / (jugados + 6)));
+  var mu = base.map(function (b) { return media + r * (b - media); });
+  var tau = Math.sqrt(Math.max(0, r * (1 - r))) * sdBase;
+  var sigma = Math.max(14, 0.26 * media);
   var playoffTeams = Math.min(n, Number((L.settings || {}).playoff_teams) || 6);
   var titles = new Array(n).fill(0), playoffs = new Array(n).fill(0);
   var winSum = new Array(n).fill(0);
 
   for (var s = 0; s < sims; s++) {
     var w = w0.slice(), pf = pf0.slice();
+    // El talento real de cada equipo se sortea UNA VEZ por temporada: dentro de
+    // una misma temporada el equipo es el que es, pero no sabemos cual es.
+    var talento = [];
+    for (var t = 0; t < n; t++) talento[t] = mu[t] + tau * mlGauss();
     H.schedule.forEach(function (wk) {
       var scores = [];
-      for (var i = 0; i < n; i++) scores[i] = proj[i] + sd[i] * mlGauss();
+      for (var i = 0; i < n; i++) scores[i] = talento[i] + sigma * mlGauss();
       wk.forEach(function (pair) {
         var a = idx[pair[0]], b = idx[pair[1]];
         if (a == null || b == null) return;
@@ -458,7 +508,7 @@ function mlSimLeague(L, sims) {
       var rest = alive.slice(byes);
       for (var j = 0; j < rest.length / 2; j++) {
         var A = rest[j], B = rest[rest.length - 1 - j];
-        var sa = proj[A] + sd[A] * mlGauss(), sb = proj[B] + sd[B] * mlGauss();
+        var sa = talento[A] + sigma * mlGauss(), sb = talento[B] + sigma * mlGauss();
         next.push(sa >= sb ? A : B);
       }
       next.sort(function (x, y) { return seed.indexOf(x) - seed.indexOf(y); });
@@ -475,7 +525,8 @@ function mlSimLeague(L, sims) {
       proj: proj[i]
     };
   }).sort(function (a, b) { return b.title - a.title || b.proj - a.proj; });
-  return { rows: rows, sims: sims, weeks: H.schedule.length };
+  return { rows: rows, sims: sims, weeks: H.schedule.length,
+    fiabilidad: Math.round(r * 100), jugados: Math.round(jugados * 10) / 10 };
 }
 
 /* ------------------------------------------------------------------ yahoo */
@@ -603,6 +654,7 @@ async function mlIngestYahoo(players) {
       return {
         roster_id: i + 1,
         owner_id: t.team_key,
+        logo: t.logo || null,
         players: (t.players || []).map(function (p) {
           return { name: p.name, pos: String(p.pos || '').split(',')[0].replace('DEF', 'DEF'), team: p.team, yahoo: true };
         }),
@@ -1024,6 +1076,15 @@ function mlScoringLabel(L) {
 function mlSuperflex(L) {
   return (L.roster_positions || []).indexOf('SUPER_FLEX') !== -1;
 }
+// Ligas con jugadores defensivos individuales (IDP). Sus casillas (LB, DB, DL,
+// IDP_FLEX) no tienen linea de mercado, asi que la proyeccion solo cubre el
+// lado ofensivo. Se DECLARA: el duelo sigue siendo comparable (a los dos
+// equipos les falta lo mismo), pero fingir que el numero es completo seria
+// mentir.
+var ML_IDP = { LB: 1, DB: 1, DL: 1, DE: 1, DT: 1, CB: 1, S: 1, IDP: 1, IDP_FLEX: 1 };
+function mlEsIdp(L) {
+  return (L.roster_positions || []).some(function (sl) { return ML_IDP[sl]; });
+}
 
 /* ------------------------------------------------------------------ pintado */
 function mlPaint() {
@@ -1170,6 +1231,7 @@ function mlPaintLeagues() {
 
     var flags = [mlFormat(L), mlScoringLabel(L) + (L._scoringGuess ? ' (assumed)' : ''), L.teams + ' teams'];
     if (mlSuperflex(L)) flags.push('Superflex');
+    if (mlEsIdp(L)) flags.push('IDP');
     var esCampeon = L.champId != null && L.champId === mine.roster_id;
 
     h += '<article class="ml-card" style="--liga:' + color + '">'
@@ -1331,6 +1393,7 @@ function mlExposure() {
   };
   ML.leagues.forEach(function (L) {
     var H = L._hyd; if (!H || !H.mine) return;
+    if (!mlDrafted(L)) return;   // sin draftear no tienes a nadie en ella
     (H.mine.players || []).forEach(function (it) { anotar(mine, it, L); });
     if (H.opp != null) {
       var opp = (H.rosters || []).filter(function (r) { return r.roster_id === H.opp; })[0];
@@ -1361,7 +1424,9 @@ function mlPaintPlayers() {
   });
 
   var conflicts = rows.filter(function (r) { return r.own.length && r.vs.length; });
-  var total = ML.leagues.length;
+  // Solo las ligas DRAFTEADAS: una liga sin plantel no puede contener a nadie,
+  // asi que contarla solo sirve para que "4 de 13" suene peor de lo que es.
+  var total = ML.leagues.filter(mlDrafted).length || ML.leagues.length;
 
   var h = avisoDemo;
   if (conflicts.length) {
@@ -1370,8 +1435,11 @@ function mlPaintPlayers() {
     conflicts.slice(0, 8).forEach(function (r) {
       h += '<div class="ml-conf-row">' + mlFace(r.id)
         + '<div class="ml-conf-txt"><b>' + mlEsc(r.p.name) + '</b>'
-        + '<span>' + r.own.length + ' for you · ' + r.vs.length + ' against you</span></div>'
-        + '<span class="ml-conf-tag mono">' + r.own.length + 'v' + r.vs.length + '</span></div>';
+        + '<span>' + mlEsc(r.p.pos) + ' · ' + mlEsc(r.p.team || 'FA') + '</span></div>'
+        + '<div class="ml-conf-split">'
+        + '<span class="ml-conf-for mono">' + r.own.length + '</span>'
+        + '<i>for</i><span class="ml-conf-sep"></span><i>against</i>'
+        + '<span class="ml-conf-vs mono">' + r.vs.length + '</span></div></div>';
     });
     h += '</div></section>';
   }
@@ -1379,13 +1447,20 @@ function mlPaintPlayers() {
   h += '<section class="ml-expo"><h3>Your players, all leagues</h3>'
     + '<p class="ml-sub2">' + rows.length + ' players across ' + total + ' league' + (total === 1 ? '' : 's') + '. Sorted by how exposed you are.</p>'
     + '<div class="ml-rows">';
+  // Puntos en vez de barra: con una fila por jugador, una barra de progreso por
+  // linea es un grafico que nadie mira. Los puntos se cuentan de un vistazo y
+  // pesan menos en pantalla.
   rows.slice(0, 120).forEach(function (r) {
-    var pctOwn = Math.round(r.own.length / total * 100);
+    var puntos = '';
+    for (var d = 0; d < total; d++) {
+      puntos += '<i class="' + (d < r.own.length ? 'is-on' : '') + '"></i>';
+    }
     h += '<div class="ml-row">'
       + mlFace(r.id)
       + '<div class="ml-row-main"><b>' + mlEsc(r.p.name) + '</b>'
-      + '<span class="ml-row-meta">' + mlEsc(r.p.pos) + ' · ' + mlEsc(r.p.team || 'FA') + '</span></div>'
-      + '<div class="ml-row-bar" title="' + pctOwn + '% of your leagues"><i style="width:' + pctOwn + '%"></i></div>'
+      + '<span class="ml-row-meta">' + mlEsc(r.p.pos) + ' · ' + mlEsc(r.p.team || 'FA')
+      + (r.vs.length ? ' · <em>' + r.vs.length + ' against you</em>' : '') + '</span></div>'
+      + '<div class="ml-row-dots" title="' + r.own.length + ' of ' + total + ' leagues">' + puntos + '</div>'
       + '<div class="ml-row-n mono">' + r.own.length + '<span>/' + total + '</span></div>'
       + '</div>';
   });
@@ -1578,29 +1653,36 @@ function mlPaintOdds() {
     h += mlSkeleton(4);
   } else {
     h += '<div class="ml-champ-rows">';
+    h += '<div class="ml-champ-head"><span>Team</span><span>Playoffs</span><span>Title</span></div>';
     sim.rows.forEach(function (r) {
       var isMine = r.rosterId === H.mine.roster_id;
       h += '<div class="ml-champ-row' + (isMine ? ' is-mine' : '') + '">'
         + '<div class="ml-champ-team"><b>' + mlEsc(mlTeamName(sel, r.rosterId)) + '</b>'
         + '<span class="mono">' + mlN(r.wins, 1) + ' proj wins · ' + mlN(r.proj) + ' pts/wk</span></div>'
-        + '<div class="ml-champ-bar"><i style="width:' + Math.max(1, Math.round(r.title * 100)) + '%"></i></div>'
-        + '<div class="ml-cell mono">' + mlAmerican(r.title) + '</div>'
-        + '<div class="ml-cell mono ml-champ-pct">' + mlPct(r.title) + '%</div>'
+        + '<div class="ml-champ-po"><i style="--w:' + Math.max(2, Math.round(r.playoff * 100)) + '%"></i>'
+        + '<b class="mono">' + mlPct(r.playoff) + '%</b></div>'
+        + '<div class="ml-cell mono ml-champ-pct">' + mlPct(r.title) + '%'
+        + '<i class="ml-champ-am mono">' + mlAmerican(r.title) + '</i></div>'
         + '</div>';
     });
     // Ordenados por SU propia cifra. Heredar el orden del titulo dejaba
     // 71.4% delante de 71.6% y se lee como un error de suma.
-    var pl = sim.rows.slice().sort(function (a, b) { return b.playoff - a.playoff; }).slice(0, 3);
-    h += '</div><p class="ml-fine">Best playoff odds: '
-      + pl.map(function (r) { return mlEsc(mlTeamName(sel, r.rosterId)) + ' ' + mlPct(r.playoff) + '%'; }).join(' · ')
-      + '</p>';
+    // El modelo se declara: un porcentaje sin decir de donde sale es un adorno,
+    // y ademas este cambia de confianza segun se juega.
+    h += '</div><p class="ml-fine">' + (sim.sims / 1000) + ',000 simulated seasons. '
+      + 'The projection is treated as an <b>estimate, not a fact</b>: every simulated season draws each '
+      + 'team\'s true level around it, and the gap between teams is shrunk toward the league average. '
+      + 'Right now <b>' + sim.fiabilidad + '%</b> of that gap is taken as real talent, and that rises as '
+      + 'games are played, so these odds sharpen with the season.</p>';
   }
   h += '</div>';
 
   // La honestidad del tablero, escrita donde se ve: de donde sale el numero,
   // cuanto de tu alineacion cubre, y que no hay comision.
   var cov = (H.proj[H.mine.roster_id] || {}).coverage;
-  h += '<p class="ml-fine">Lines come from this week\'s player numbers, priced with <b>' + mlEsc(mlScoringLabel(sel))
+  var notaIdp = mlEsIdp(sel)
+    ? 'This is an IDP league: defensive players have no market line, so these numbers cover the offensive side only (both teams miss the same). ' : '';
+  h += '<p class="ml-fine">' + notaIdp + 'Lines come from this week\'s player numbers, priced with <b>' + mlEsc(mlScoringLabel(sel))
     + '</b> and your league\'s rules. '
     + (sel._scoringGuess ? 'Heads up: this league did not hand over its scoring rules, so these use standard scoring. ' : '') + (cov != null ? Math.round(cov * 100) + '% of your starters have a number of their own; the rest get their position\'s median. ' : '')
     + 'No juice: these are straight probabilities, not a book\'s price.</p>';
