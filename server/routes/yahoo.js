@@ -75,8 +75,12 @@ async function yahooGet(pathPart, token) {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    console.error('[yahoo] %d: %s', res.status, body.slice(0, 220));
-    throw new Error('Yahoo Fantasy API returned ' + res.status);
+    console.error('[yahoo] %d %s: %s', res.status, pathPart, body.slice(0, 220));
+    // El mensaje viaja hasta la ventana del usuario. Un "returned 401" a secas
+    // obliga a una ronda de preguntas para saber que paso; el motivo que manda
+    // Yahoo suele decirlo en una linea. Se recorta y se limpia de saltos.
+    const motivo = String(body).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+    throw new Error('Yahoo Fantasy API returned ' + res.status + (motivo ? ': ' + motivo : ''));
   }
   return res.json();
 }
@@ -105,13 +109,24 @@ router.get('/status', (req, res) => {
 // GET /api/yahoo/login — kick off the OAuth dance in a popup
 router.get('/login', (req, res) => {
   if (!configured()) return res.status(503).send('Yahoo login is not configured yet.');
+  // SIN scope explicito, y esto NO es un descuido.
+  //
+  // Medido con el dueno el 2026-09-09, misma app, mismo redirect, cambiando solo
+  // el scope:
+  //   scope=fspt-r  -> tras el login, error=invalid_scope
+  //   sin scope     -> pantalla de permiso normal, y vuelve al callback
+  //
+  // Yahoo aplica los permisos que la app tiene marcados en su consola (Fantasy
+  // Sports - Read), asi que pedirlo por parametro no anade nada y ahi rompia.
+  // Queda una valvula por si algun dia hace falta: YAHOO_SCOPE lo vuelve a
+  // mandar sin tocar codigo.
   const params = new URLSearchParams({
     client_id: process.env.YAHOO_CLIENT_ID,
     redirect_uri: redirectUri(req),
     response_type: 'code',
-    scope: 'fspt-r', // Fantasy Sports read - requested at auth time (the app console no longer lists it)
     language: 'en-us'
   });
+  if (process.env.YAHOO_SCOPE) params.set('scope', process.env.YAHOO_SCOPE);
   res.redirect(`${YAHOO_AUTH}?${params}`);
 });
 
@@ -142,7 +157,13 @@ router.get('/callback', async (req, res) => {
       })
     });
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) throw new Error(tokenData.error_description || 'Token exchange failed.');
+    if (!tokenData.access_token) {
+      // Distinguir "el codigo no sirve" de "las credenciales no cuadran" ahorra
+      // una noche entera de suposiciones.
+      throw new Error('Token exchange failed (' + tokenRes.status + ')'
+        + (tokenData.error ? ': ' + tokenData.error : '')
+        + (tokenData.error_description ? ' - ' + String(tokenData.error_description).slice(0, 140) : ''));
+    }
     const token = tokenData.access_token;
 
     // All of the user's NFL fantasy teams (any season Yahoo still exposes; nfl = current)
