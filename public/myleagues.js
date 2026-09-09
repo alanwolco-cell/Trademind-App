@@ -1117,10 +1117,8 @@ function mlPaintLeagues() {
   // Arriba SOLO lo que se usa a diario: tres controles por encima del contenido
   // son tres cosas que leer antes de llegar a lo que vienes a ver.
   var h = mlAvisoDemo()
-    + (ML.demo ? '' : '<div class="ml-tools"><button class="btn-sm" onclick="mlRefresh()">Refresh</button>'
-      + (ML.stale ? '<span class="ml-hint">Showing your last saved copy: could not reach Sleeper just now.</span>' : '')
-      + '</div>')
-    + mlFiltrosUI(orden, visibles);
+    + mlFiltrosUI(orden, visibles)
+    + (ML.stale ? '<p class="ml-hint" style="margin:-6px 0 12px">Showing your last saved copy: could not reach Sleeper just now.</p>' : '');
 
   if (!visibles.length) {
     return void (box.innerHTML = h + '<div class="ml-empty"><p>No leagues match that filter.</p></div>');
@@ -1271,6 +1269,13 @@ function mlFiltrosUI(todas, visibles) {
     Object.keys(plats).forEach(function (k) {
       h += chip('plat', k, k === 'yahoo' ? 'Yahoo' : 'Sleeper', plats[k], f.plat === k);
     });
+  }
+  // Refresh va con los filtros y no en una fila propia: un boton solo ocupaba
+  // una linea entera de un telefono para una accion que se usa poco.
+  if (!ML.demo) {
+    h += '<button class="ml-chip ml-chip-ref" onclick="mlRefresh()" title="Pull new scores">'
+      + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg>Refresh</button>';
   }
   h += '</div>';
   if (visibles.length !== todas.length) {

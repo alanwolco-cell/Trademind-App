@@ -3158,14 +3158,15 @@ html.no-draft .draft-only{display:none !important}
 /* En el telefono los filtros van en UNA fila que se desliza, no en dos que se
    apilan: con seis capsulas envueltas, el contenido empieza a media pantalla. */
 @media(max-width:640px){
-  /* Sin margenes negativos: sacaban la fila fuera del viewport y a 390px eso es
-     un desborde de verdad, aunque el scroll horizontal lo disimule. */
-  .ml-filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:2px 0 4px}
-  .ml-filters::-webkit-scrollbar{display:none}
-  .ml-chip{flex-shrink:0}
-  .ml-filters-sep{flex-shrink:0}
+  /* Envuelven, NO se deslizan. Un carrusel horizontal esconde la mitad de los
+     filtros detras de un gesto que la gente no descubre, y encima deja
+     elementos fuera del viewport. Ocupa una linea mas y se ve todo. */
+  .ml-chip{font-size:13px}
 }
 /* El pie de la lista: acciones de una sola vez (conectar Yahoo, abrir una liga
    con un codigo). Fuera del camino, pero encontrables. */
 .ml-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;padding-top:14px;
   border-top:1px solid var(--border)}
+/* Refresh vive con los filtros, separado por un respiro y sin conteo. */
+.ml-chip-ref{margin-left:auto;color:var(--muted)}
+@media(max-width:640px){.ml-chip-ref{margin-left:6px}}
