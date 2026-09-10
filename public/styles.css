@@ -3260,3 +3260,6 @@ html.no-draft .draft-only{display:none !important}
   .ml-row{grid-template-columns:30px minmax(0,1fr) 46px}
   .ml-row-dots{display:none}
 }
+/* El toggle de la fuente de proyecciones. Dos opciones, se recuerda. */
+.ml-proy-tog{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.ml-proy-tog>span{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-right:4px}

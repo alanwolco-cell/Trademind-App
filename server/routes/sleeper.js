@@ -185,6 +185,43 @@ router.get('/league/:leagueId/matchups/:week', async (req, res) => {
   }
 });
 
+// GET /api/sleeper/projections/:week
+// Las proyecciones OFICIALES que ve un usuario de Sleeper (las provee Rotowire
+// dentro de su API), por ESTADISTICA CRUDA y no por puntos: eso permite
+// preciarlas con el reglamento de cada liga, igual que las de Vegas, y ademas
+// restar intercepciones y fumbles, que las props no traen. Se adelgaza aqui la
+// respuesta (2 MB -> ~100 KB) quedandonos solo las estadisticas que puntuan.
+const PROY_KEYS = ['pass_yd', 'pass_td', 'pass_int', 'pass_2pt', 'rush_yd', 'rush_td',
+  'rush_2pt', 'rec', 'rec_yd', 'rec_td', 'rec_2pt', 'fum_lost', 'pts_ppr', 'pts_half_ppr', 'pts_std'];
+router.get('/projections/:week', async (req, res) => {
+  const week = parseInt(req.params.week, 10);
+  if (!Number.isInteger(week) || week < 1 || week > 22) {
+    return res.status(400).json({ error: 'week must be 1-22' });
+  }
+  const key = `proy_${week}`;
+  try {
+    const hit = shortCache.get(key);
+    if (hit) return res.json(hit);
+    const st = shortCache.get('state_nfl') || await sleeperFetch('/state/nfl');
+    const season = st.season || new Date().getFullYear();
+    const r = await fetch(`https://api.sleeper.com/projections/nfl/${season}/${week}`
+      + `?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE`);
+    if (!r.ok) throw new Error('projections ' + r.status);
+    const crudo = await r.json();
+    const out = {};
+    (crudo || []).forEach(x => {
+      const stt = x && x.stats;
+      if (!stt || (stt.pass_yd == null && stt.rush_yd == null && stt.rec_yd == null)) return;
+      const slim = {};
+      PROY_KEYS.forEach(k => { if (stt[k] != null) slim[k] = stt[k]; });
+      out[String(x.player_id)] = slim;
+    });
+    const doc = { week, season, updated: Date.now(), source: 'sleeper/rotowire', players: out };
+    shortCache.set(key, doc, 600);   // 10 min: cambian poco y pesan
+    res.json(doc);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // GET /api/sleeper/trending-week
 // Most added / dropped players across ALL of Sleeper over the last 7 days, with counts
 router.get('/trending-week', async (req, res) => {

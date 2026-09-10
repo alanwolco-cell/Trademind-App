@@ -35,6 +35,13 @@ var ML = {
   players: null,       // id -> {id,name,pos,team}
   props: null,         // nombre en minusculas -> {player_pass_yds, ...}
   propsAt: 0,
+  proySite: null,      // id de Sleeper -> stats proyectadas (Rotowire via Sleeper)
+  proySiteAt: 0,
+  // La fuente de las proyecciones. 'site' = la oficial de Sleeper (la que el
+  // usuario ve en su app, menos sorpresas); 'vegas' = la nuestra, reconstruida
+  // de las lineas de las casas. Las DOS se precian con el reglamento de cada
+  // liga. Se elige con el toggle del tablero y se recuerda.
+  fuenteProy: (function () { try { return localStorage.getItem('tm_ml_proy') || 'site'; } catch (e) { return 'site'; } })(),
   sims: {},            // leagueId -> resultado de la simulacion
   tab: 'ml-leagues'
 };
@@ -115,6 +122,21 @@ async function mlPlayersMap() {
 
 /* ------------------------------------------------------------ las proyecciones */
 // Las lineas crudas. Sin ellas el tablero de Odds no se inventa nada: lo dice.
+async function mlLoadProySite() {
+  if (ML.proySite && Date.now() - ML.proySiteAt < 10 * 60 * 1000) return ML.proySite;
+  try {
+    var r = await fetch('/api/sleeper/projections/' + (ML.week || 1));
+    if (!r.ok) { return ML.proySite; }
+    var d = await r.json();
+    if (d && d.players && Object.keys(d.players).length) {
+      ML.proySite = d.players;
+      ML.proySiteAt = Date.now();
+      _mlImputCache = {};
+    }
+  } catch (e) { }
+  return ML.proySite;
+}
+
 async function mlLoadProps() {
   if (ML.props && Date.now() - ML.propsAt < 6 * 3600 * 1000) return ML.props;
   // El gate inyecta esto para no depender de una API de pago ni de la red.
@@ -157,7 +179,9 @@ function mlScoring(L) {
     recYd: num(s.rec_yd, 0.1),
     rec: num(s.rec, 0),
     rushTd: num(s.rush_td, 6),
-    recTd: num(s.rec_td, 6)
+    recTd: num(s.rec_td, 6),
+    passInt: num(s.pass_int, -1),
+    fumLost: num(s.fum_lost, -2)
   };
 }
 
@@ -169,6 +193,29 @@ function mlScoring(L) {
 var ML_PASS_TD_PER_YD = 1 / 150;
 
 function mlProjPlayer(p, sc) {
+  // FUENTE 'site': la proyeccion oficial (Rotowire via Sleeper), por
+  // estadistica cruda y preciada con el reglamento de ESTA liga, incluyendo
+  // intercepciones y fumbles que Vegas no trae. Los jugadores de Yahoo se
+  // resuelven a su id de Sleeper por nombre. Si el jugador no esta en la
+  // fuente elegida, se cae a la otra: un titular sin numero es peor que un
+  // numero de la otra fuente.
+  if (ML.fuenteProy === 'site' && ML.proySite) {
+    var sid = p && (p.id || mlIdPorNombre(p.name));
+    var st = sid && ML.proySite[sid];
+    if (st) {
+      var v = 0;
+      if (st.pass_yd) v += st.pass_yd * sc.passYd;
+      if (st.pass_td) v += st.pass_td * sc.passTd;
+      if (st.pass_int) v += st.pass_int * sc.passInt;
+      if (st.rush_yd) v += st.rush_yd * sc.rushYd;
+      if (st.rush_td) v += st.rush_td * sc.rushTd;
+      if (st.rec) v += st.rec * sc.rec;
+      if (st.rec_yd) v += st.rec_yd * sc.recYd;
+      if (st.rec_td) v += st.rec_td * sc.recTd;
+      if (st.fum_lost) v += st.fum_lost * sc.fumLost;
+      return Math.round(v * 10) / 10;
+    }
+  }
   var pr = mlPropsFor(p && p.name);
   if (!pr) return null;
   var pts = 0;
@@ -862,7 +909,7 @@ async function mlBoot(force) {
     if (st) { ML.week = st.week || 1; ML.season = st.season || ML.season; ML.phase = st.season_type || 'regular'; }
 
     var players = await mlPlayersMap();
-    await mlLoadProps();
+    await Promise.all([mlLoadProps(), mlLoadProySite()]);
 
     var raw = [];
     if (uname) {
@@ -1652,6 +1699,11 @@ function mlPaintOdds() {
   if (!todas && !sel) { todas = true; ML.oddsLeague = 'all'; }
 
   var h = mlAvisoDemo() + '<div class="ml-book">';
+  h += '<div class="ml-proy-tog" role="group" aria-label="Projection source">'
+    + '<span>Projections</span>'
+    + '<button class="ml-chip' + (ML.fuenteProy === 'site' ? ' is-on' : '') + '" onclick="mlSetProy(\'site\')">Sleeper</button>'
+    + '<button class="ml-chip' + (ML.fuenteProy === 'vegas' ? ' is-on' : '') + '" onclick="mlSetProy(\'vegas\')">Vegas</button>'
+    + '</div>';
   h += '<div class="ml-book-top"><select id="ml-odds-sel" onchange="mlOpenOdds(this.value)" aria-label="League">'
     + '<option value="all"' + (todas ? ' selected' : '') + '>All leagues</option>'
     + ML.leagues.map(function (L) {
@@ -1757,7 +1809,7 @@ function mlPaintOdds() {
     ? 'This is an IDP league: defensive players have no market line, so these numbers cover the offensive side only (both teams miss the same). ' : '';
   h += '<p class="ml-fine">' + notaIdp + 'Lines come from this week\'s player numbers, priced with <b>' + mlEsc(mlScoringLabel(sel))
     + '</b> and your league\'s rules. '
-    + (sel._scoringGuess ? 'Heads up: this league did not hand over its scoring rules, so these use standard scoring. ' : '') + (cov != null ? Math.round(cov * 100) + '% of your starters have a number of their own; the rest get their position\'s median. ' : '')
+    + (sel._scoringGuess ? 'Heads up: this league did not hand over its scoring rules, so these use standard scoring. ' : '') + (cov != null ? Math.round(cov * 100) + '% of your starters have a number of their own; the rest get their position\'s 25th percentile. ' : '')
     + 'No juice: these are straight probabilities, not a book\'s price.</p>';
 
   box.innerHTML = h + '</div>';
@@ -1810,6 +1862,27 @@ async function mlShare(id, btn) {
   }
 }
 
+// Cambiar la fuente recalcula TODO lo derivado (proyecciones por equipo, sims,
+// imputaciones): dos fuentes con la mitad de la pantalla cada una serian dos
+// verdades a la vez.
+function mlSetProy(f) {
+  if (f !== 'site' && f !== 'vegas') return;
+  if (ML.fuenteProy === f) return;
+  ML.fuenteProy = f;
+  try { localStorage.setItem('tm_ml_proy', f); } catch (e) { }
+  _mlImputCache = {};
+  ML.sims = {}; ML.simNone = {};
+  var players = ML.players || {};
+  (ML.leagues || []).forEach(function (L) {
+    var H = L._hyd; if (!H) return;
+    var sc = H.sc || mlScoring(L);
+    (H.rosters || []).forEach(function (r) {
+      H.proj[r.roster_id] = mlBestLineup(r.players || [], L, sc, players);
+    });
+  });
+  mlPaint();
+}
+
 /* -------------------------------------------------------------- entrada */
 function renderMyLeagues() {
   if (mlEsDemo()) {
@@ -1838,6 +1911,7 @@ window.mlYahooDisconnect = mlYahooDisconnect;
 window.mlShare = mlShare;
 window.mlSetFiltro = mlSetFiltro;
 window.mlSalirDemo = function () { location.href = '/myleagues'; };
+window.mlSetProy = mlSetProy;
 window.mlEsDemo = mlEsDemo;
 // app.js guarda aqui el token cuando el usuario entra por la puerta vieja.
 window.mlYahooSet = mlYahooSet;
