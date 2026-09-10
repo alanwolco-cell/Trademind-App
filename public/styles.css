@@ -2946,8 +2946,13 @@ html{scroll-padding-top:76px}
 .ml-fine b{color:var(--muted2);font-weight:600}
 
 @media(max-width:520px){
-  .ml-champ-row{grid-template-columns:minmax(0,1fr) 52px 46px;gap:6px}
-  .ml-champ-row .ml-champ-bar{display:none}
+  /* La rejilla del campeonato cambio a Team/Playoffs/Title y esta media query
+     seguia apretando las columnas del layout viejo: el % de playoffs y el de
+     titulo se montaban uno sobre otro. Visto en el recorrido de UX del 10-sep,
+     no por un gate: los gates miden numeros y esto era pintura. */
+  .ml-champ-row,.ml-champ-head{grid-template-columns:minmax(0,1fr) 58px 62px;gap:8px}
+  .ml-champ-po i{display:none}
+  .ml-champ-po{justify-content:flex-end}
   .ml-row{grid-template-columns:30px minmax(0,1fr) 44px 46px;gap:8px;padding:7px 10px}
   .ml-bd-row{grid-template-columns:minmax(0,1fr) 48px 54px 52px;gap:4px;padding:9px 10px}
   .ml-cell{font-size:12.5px}
