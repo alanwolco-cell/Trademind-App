@@ -248,9 +248,15 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   ok('(l4) el resumen del domingo trae sus tres cifras',
     Array.isArray(slate.resumen) && slate.resumen.length === 3 && slate.resumen.every(x => x && x.length),
     JSON.stringify(slate.resumen));
+  // Con la jornada en marcha la columna es el MARGEN (numeros ascendentes) y
+  // los partidos no empezados van con guion AL FINAL. Sin jornada, es el % de
+  // ganar. El check acepta las dos semanticas: numeros ascendentes, y los
+  // nulos (guiones) solo al final.
+  const nums = (slate.pct || []).filter(v => v != null && !isNaN(v));
+  const nulos = (slate.pct || []).map(v => (v == null || isNaN(v)) ? 1 : 0);
+  const nulosAlFinal = nulos.join('').match(/^0*1*$/) != null;
   ok('(l5) los duelos van del peor al mejor, que es donde puedes hacer algo',
-    Array.isArray(slate.pct) && slate.pct.length > 0
-    && slate.pct.every((v, i) => i === 0 || slate.pct[i - 1] <= v + 0.05),
+    nums.length > 0 && nums.every((v, i) => i === 0 || nums[i - 1] <= v + 0.05) && nulosAlFinal,
     JSON.stringify(slate.pct));
 
   // filtrar a una liga concreta

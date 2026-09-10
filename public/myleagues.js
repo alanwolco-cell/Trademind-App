@@ -221,6 +221,18 @@ function mlImputacion(L, sc, players) {
   return out;
 }
 
+// Estados de lesion que significan "no va a jugar". Un jugador asi no entra en
+// la mejor alineacion posible, y por tanto NUNCA se recomienda meterlo. El caso
+// que lo destapo (2026-09-10): el panel recomendaba "Brock Bowers in for AJ
+// Barner" con Bowers en Doubtful. Recomendar a un lesionado es el consejo que
+// hace que no te crean el resto de la pantalla.
+// Questionable NO esta en la lista: jugar con un questionable es lo normal en
+// fantasy, y sacarlos a todos seria pasarse de listo en la otra direccion.
+// Cubre los dos vocabularios: Sleeper (Out, IR, PUP, Sus, NA, COV, DNR,
+// Doubtful) y Yahoo (O, IR, PUP, SUSP, D, NA).
+var ML_NO_JUEGA = { Out: 1, IR: 1, PUP: 1, Sus: 1, SUSP: 1, NA: 1, COV: 1, DNR: 1, Doubtful: 1, O: 1, D: 1 };
+function mlNoJuega(p) { return !!(p && p.inj && ML_NO_JUEGA[p.inj]); }
+
 var ML_FLEX = {
   FLEX: ['RB', 'WR', 'TE'],
   WRRB_FLEX: ['RB', 'WR'],
@@ -242,6 +254,7 @@ function mlBestLineup(playerIds, L, sc, players) {
   (playerIds || []).forEach(function (item) {
     var p = (item && typeof item === 'object') ? item : players[item];
     if (!p) return;
+    if (mlNoJuega(p)) return;   // un Out/Doubtful no puede estar en el mejor once
     var proj = mlProjPlayer(p, sc);
     pool.push({ id: (p.id || p.name), p: p, proj: proj });
   });
@@ -701,7 +714,8 @@ async function mlIngestYahoo(players) {
         owner_id: t.team_key,
         logo: t.logo || null,
         players: (t.players || []).map(function (p) {
-          return { name: p.name, pos: String(p.pos || '').split(',')[0].replace('DEF', 'DEF'), team: p.team, yahoo: true };
+          return { name: p.name, pos: String(p.pos || '').split(',')[0].replace('DEF', 'DEF'),
+            team: p.team, inj: p.status || null, yahoo: true };
         }),
         settings: { wins: t.wins || 0, losses: t.losses || 0, ties: t.ties || 0, fpts: t.points_for || 0 },
         _mio: !!t.is_owned_by_current_login
@@ -715,18 +729,24 @@ async function mlIngestYahoo(players) {
     var proj = {};
     rosters.forEach(function (r) { proj[r.roster_id] = mlBestLineup(r.players, L, sc, players); });
 
-    var muBy = {}, myMu = null, opp = null;
+    // Los PUNTOS del scoreboard entran a los matchups: sin ellos, las ligas de
+    // Yahoo mostraban proyeccion aunque hubiera partido en curso ("los scores
+    // estan mal en algunas ligas", 2026-09-10).
+    var muBy = {}, myMu = null, opp = null, matchups = [];
     ((sb && sb.matchups) || []).forEach(function (m, k) {
       var a = idPorClave[m.teams[0]], b = idPorClave[m.teams[1]];
       if (!a || !b) return;
-      muBy[k + 1] = [{ roster_id: a, matchup_id: k + 1 }, { roster_id: b, matchup_id: k + 1 }];
+      var fa = { roster_id: a, matchup_id: k + 1, points: Number((m.points || [])[0]) || 0 };
+      var fb = { roster_id: b, matchup_id: k + 1, points: Number((m.points || [])[1]) || 0 };
+      muBy[k + 1] = [fa, fb];
+      matchups.push(fa, fb);
       if (mine && (a === mine.roster_id || b === mine.roster_id)) {
         myMu = { roster_id: mine.roster_id, matchup_id: k + 1 };
         opp = a === mine.roster_id ? b : a;
       }
     });
     L._hyd = { rosters: rosters, users: users, mine: mine, sc: sc, proj: proj,
-      matchups: [], muBy: muBy, myMu: myMu, opp: opp, schedule: null };
+      matchups: matchups, muBy: muBy, myMu: myMu, opp: opp, schedule: null };
     if (mine) out.push(L);
     return true;
   });
@@ -1590,10 +1610,18 @@ function mlTableroTodas() {
       + '<div class="ml-game-tag">' + mlEsc(f.L.name) + (f.vivo ? ' <i class="ml-live-dot"></i>' : '') + '</div>'
       + '<div class="ml-bd-row">'
       + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + ' vs ' + mlEsc(f.rival) + '</b>'
-      + '<span class="mono">' + (f.vivo ? 'proj ' + mlN(f.mio) + ' - ' + mlN(f.suyo) : mlN(f.mio) + ' - ' + mlN(f.suyo)) + '</span></div>'
+      + '<span class="mono">' + (f.vivo
+        ? 'proj ' + mlN(f.mio) + ' - ' + mlN(f.suyo)
+        : mlN(f.mio) + ' - ' + mlN(f.suyo) + (vivoManda ? ' · ' + mlPct(f.wp) + '% to win' : '')) + '</span></div>'
       + '<div class="ml-cell mono">' + mlN(izq) + '</div>'
       + '<div class="ml-cell mono ' + (voyGanando ? 'is-fav' : '') + '">' + mlN(der) + '</div>'
-      + '<div class="ml-cell mono ml-tot">' + (f.vivo ? (izq >= der ? '+' : '') + mlN(izq - der) : mlPct(f.wp) + '%') + '</div>'
+      // Con la jornada en marcha la tercera columna es EL MARGEN. Un partido no
+      // empezado no tiene margen: guion, y su % baja a la letra chica. Antes
+      // salian porcentajes bajo la cabecera "Margin": dos unidades distintas en
+      // la misma columna (visto en el recorrido de UX del 10-sep).
+      + '<div class="ml-cell mono ml-tot">' + (f.vivo
+        ? (izq >= der ? '+' : '') + mlN(izq - der)
+        : (vivoManda ? '–' : mlPct(f.wp) + '%')) + '</div>'
       + '</div>'
       + '<button class="ml-link ml-game-go" onclick="mlOpenOdds(\'' + mlEsc(f.L.id) + '\')">Full board and title odds →</button>'
       + '</div>';

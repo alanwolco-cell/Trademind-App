@@ -360,7 +360,11 @@ router.get('/league/:key', async (req, res) => {
         team_key: t.team_key,
         team_id: numY(t.team_id, 0),
         name: typeof t.name === 'object' ? t.name.full : t.name,
-        logo: cara || escudo,
+        // EL ESCUDO DEL EQUIPO MANDA (correccion del dueno, 2026-09-10: la foto
+        // de "Family Feud" salia mal). El escudo es lo que la liga reconoce
+        // dentro de Yahoo; la foto de perfil del manager puede ser vieja o de
+        // otra cosa, y solo sirve de respaldo cuando no hay escudo.
+        logo: escudo || cara,
         teamLogo: escudo,
         managerPhoto: cara,
         is_owned_by_current_login: numY(t.is_owned_by_current_login, 0) === 1,
@@ -433,10 +437,22 @@ router.get('/league/:key/scoreboard', async (req, res) => {
   try {
     const j = await yahooGet(`/league/${key}/scoreboard;week=${week}`, token);
     const duelos = deepCollect(j, 'matchup', []).map(m => {
-      const eq = deepCollect(m, 'team', []).map(t => flattenEntity(t)).filter(t => t.team_key);
-      const claves = [];
-      eq.forEach(t => { if (claves.indexOf(t.team_key) === -1) claves.push(t.team_key); });
-      return { week, teams: claves.slice(0, 2) };
+      // OJO: flattenEntity DESCARTA los objetos anidados (salvo name), asi que
+      // team_points hay que sacarlo del nodo CRUDO de cada equipo, antes de
+      // aplanar. El primer intento lo leia del aplanado y siempre daba cero.
+      const crudos = deepCollect(m, 'team', []);
+      const claves = [], puntos = [];
+      crudos.forEach(nodo => {
+        const t = flattenEntity(nodo);
+        if (!t.team_key || claves.indexOf(t.team_key) !== -1) return;
+        claves.push(t.team_key);
+        // team_points -> total: el marcador EN VIVO del duelo. Sin esto las
+        // ligas de Yahoo enseñaban proyeccion con el partido en curso.
+        const tp = deepCollect(nodo, 'team_points', []).map(x => flattenEntity(x))
+          .filter(x => x && x.total != null)[0] || {};
+        puntos.push(Number(tp.total) || 0);
+      });
+      return { week, teams: claves.slice(0, 2), points: puntos.slice(0, 2) };
     }).filter(d => d.teams.length === 2);
     // El mismo duelo puede venir repetido por el anidamiento de Yahoo.
     const vistos = {}, out = [];

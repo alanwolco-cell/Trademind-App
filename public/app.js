@@ -5699,6 +5699,15 @@ function switchScreen(name,_noPush){
   // terminar (mismo remedio que My Rankings).
   if(name==='myleagues'){try{window.renderMyLeagues&&renderMyLeagues();}catch(_){}}
   if(name==='hub'){try{window.renderHub&&renderHub();}catch(_){}}
+  // FRICCION DE PRIMER DIA (recorrido de UX, 10-sep): entrar al analizador con
+  // la cuenta puesta y sin liga cargada enseñaba "Connect your Sleeper account"
+  // con el usuario YA escrito y un boton que habia que tocar. Si sabemos quien
+  // es, las ligas se cargan solas; el boton queda para el que quiere cambiar de
+  // usuario. Solo una vez por sesion: loadUser pinta estado y no es gratis.
+  if(name==='analyze'&&!leagueId&&!window._mlAutoConnect){
+    var _u=null; try{_u=localStorage.getItem('tm_username');}catch(_){}
+    if(_u){ window._mlAutoConnect=1; try{loadUser();}catch(_){} }
+  }
   document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
   document.querySelectorAll(".screen-nav").forEach(function(n){n.classList.remove("active");});
   var screen=document.getElementById("screen-"+name);
