@@ -1220,9 +1220,16 @@ function mlPaint() {
   mlPaintOdds();
   var sub = document.getElementById('ml-sub');
   if (sub) {
-    sub.textContent = ML.username
+    // "Not connected" solo puede decirse cuando el arranque TERMINO y de
+    // verdad no hay cuenta. El primer pintado corre antes de que mlBoot lea el
+    // localStorage, y en ese hueco le decia "Not connected" a un usuario
+    // conectado (reportado por el dueno, 2026-09-10).
+    var guardado = '';
+    try { guardado = localStorage.getItem('tm_username') || ''; } catch (e) { }
+    var hayCuenta = ML.username || guardado || mlYahooConectado();
+    sub.textContent = ML.ready && ML.username
       ? (ML.leagues.length + ' league' + (ML.leagues.length === 1 ? '' : 's') + ' · Week ' + ML.week + ' · @' + ML.username)
-      : 'Not connected';
+      : (hayCuenta ? 'Loading...' : 'Not connected');
   }
 }
 
