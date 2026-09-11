@@ -1267,7 +1267,7 @@ function mlPaint() {
     try { guardado = localStorage.getItem('tm_username') || ''; } catch (e) { }
     var hayCuenta = ML.username || guardado || mlYahooConectado();
     sub.textContent = ML.ready && ML.username
-      ? (ML.leagues.length + ' league' + (ML.leagues.length === 1 ? '' : 's') + ' · Week ' + ML.week + ' · @' + ML.username)
+      ? ('Week ' + ML.week)
       : (hayCuenta ? 'Loading...' : 'Not connected');
   }
 }
@@ -1337,10 +1337,21 @@ function mlPaintLeagues() {
   }
 
   // Las ligas en juego arriba; las que aun no draftean, al final. Y dentro de
-  // cada grupo, primero la que esta mas apretada: es donde miras primero.
+  // cada grupo, primero la mas APRETADA (el vivo mas cerrado, o el pronostico
+  // mas cerca de la moneda al aire): es donde todavia puedes hacer algo.
+  var apriete = function (L) {
+    if (!mlDrafted(L) || !L._hyd || !L._hyd.mine || L._hyd.opp == null) return 999;
+    var v = mlEnVivo(L);
+    if (v) return Math.abs(v.mio - v.suyo);
+    var m = (L._hyd.proj[L._hyd.mine.roster_id] || {}).total || 0;
+    var o = (L._hyd.proj[L._hyd.opp] || {}).total || 0;
+    return Math.abs(mlWinProb(m, o) - 0.5) * 100;
+  };
   var orden = ML.leagues.slice().sort(function (a, b) {
     var da = mlDrafted(a) ? 0 : 1, db = mlDrafted(b) ? 0 : 1;
     if (da !== db) return da - db;
+    var ua = apriete(a), ub = apriete(b);
+    if (ua !== ub) return ua - ub;
     return (a.name || '').localeCompare(b.name || '');
   });
   var visibles = orden.filter(mlPasaFiltro);
@@ -1389,17 +1400,14 @@ function mlPaintLeagues() {
         + '<span class="ml-vs-lbl">' + mlEsc(mlTeamName(L, oppId)) + '</span>'
         + '<span class="mono ml-vs-num">' + der + '</span></div>'
         + '</div>'
+        // UNA cifra de veredicto por tarjeta (veredicto Jobs 11-sep): en vivo
+        // el delta del marcador; antes, el porcentaje en texto plano. El
+        // spread firmado se leia al reves (el menos del favorito) y el aro
+        // chico era el mismo trazo del aro grande a otra escala.
         + '<div class="ml-vs-odds ' + (favorito ? 'is-fav' : 'is-dog') + '">'
         + (vivo
           ? '<span class="ml-live"><i></i>' + (vivo.mio >= vivo.suyo ? 'winning by ' + mlN(vivo.mio - vivo.suyo) : 'down ' + mlN(vivo.suyo - vivo.mio)) + '</span>'
-          : '<span class="mono">' + (favorito ? '-' : '+') + mlSpread(Math.abs(myProj - oppProj)) + '</span>')
-        // El aro chico: el % de ganar como veredicto visual, a la derecha.
-        // SOLO antes del partido. En vivo el marcador ES el veredicto, y poner
-        // al lado un aro verde de "61%" calculado antes del kickoff mientras
-        // vas perdiendo por 10 es tener dos veredictos en el mismo plano, que
-        // es exactamente lo que el patron prohibe. Recalcularlo en vivo seria
-        // fingir un modelo de partido que no existe.
-        + (vivo ? '' : '<span class="ml-vs-aro">' + mlAro(wp * 100, 44) + '</span>')
+          : '<span>' + mlPct(wp) + '% to win</span>')
         + '</div>';
     } else {
       cuerpo = '<div class="ml-vs-none">No matchup this week</div>';
@@ -1414,7 +1422,7 @@ function mlPaintLeagues() {
     // adentro paran la propagacion por ser <button>, el manejador los filtra.
     var abre = mlDrafted(L) && H.opp != null
       ? ' role="button" tabindex="0" onclick="mlCardClick(event,\'' + L.id + '\')" onkeydown="if(event.key===\'Enter\')mlOpenMatchup(\'' + L.id + '\')"' : '';
-    h += '<article class="ml-card" style="--liga:' + color + '"' + abre + '>'
+    h += '<article class="ml-card' + (L === visibles[0] && mlDrafted(L) && H.opp != null ? ' is-lead' : '') + '" style="--liga:' + color + '"' + abre + '>'
       + '<header class="ml-card-h">' + mlLigaEscudo(L, 'is-lg')
       + '<div class="ml-card-id"><h3>' + mlEsc(L.name) + '</h3>'
       + '<span class="ml-card-sub">' + (L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper') + '</span></div>'
@@ -1422,8 +1430,6 @@ function mlPaintLeagues() {
       + (esCampeon ? '<div class="ml-champ-tag">Defending champion</div>' : '')
       + '<div class="ml-flags">' + flags.map(function (f) { return '<span>' + mlEsc(f) + '</span>'; }).join('') + '</div>'
       + cuerpo
-      + (L.plat === 'sleeper'
-        ? '<div class="ml-card-f"><button class="ml-link" onclick="mlShare(\'' + L.id + '\',this)">Share</button></div>' : '')
       + '</article>';
   });
   h += '</div>';
@@ -1489,13 +1495,12 @@ function mlCabeceraSemana(ligas) {
   var fix = mlAlineacionesRotas();
   var fixPts = fix.reduce(function (a, x) { return a + x.r.gana; }, 0);
   return '<section class="ml-week">'
-    + mlAro(media, 118, 'this week')
+    + mlAro(media, 118, 'avg win chance')
     + '<div class="ml-week-list">'
     + '<div class="ml-week-row"><span>' + (enVivo ? 'Winning' : 'Favored') + '</span>'
     + '<b class="mono">' + ganando + ' of ' + conDuelo.length + '</b></div>'
     + '<div class="ml-week-row"><span>Toughest matchup</span><b>' + (peor ? mlEsc(peor.L.name) : '-') + '</b></div>'
-    + '<div class="ml-week-row"><span>Bench points to claim</span><b class="mono' + (fixPts > 0 ? ' is-warn' : '') + '">'
-    + (fixPts > 0 ? '+' + mlN(fixPts) : 'none') + '</b></div>'
+    + (fix.length ? '' : '<div class="ml-week-row"><span>Bench points to claim</span><b class="mono">none</b></div>')
     + '</div></section>';
 }
 
@@ -1566,10 +1571,16 @@ function mlFiltrosUI(todas, visibles) {
       + mlEsc(texto) + '<span>' + n + '</span></button>';
   };
   var h = '<div class="ml-filters">';
-  h += chip('formato', 'all', 'All', todas.length, !f.formato || f.formato === 'all');
-  Object.keys(formatos).sort().forEach(function (k) {
-    h += chip('formato', k, k, formatos[k], f.formato === k);
-  });
+  // La misma regla que la plataforma tenia escrita abajo: un filtro con una
+  // sola opcion es ruido. Un formato con conteo 1 no gana pastilla (la liga
+  // ya esta a la vista), y con una sola categoria tampoco se pinta "All".
+  var fmtKeys = Object.keys(formatos).sort().filter(function (k) { return formatos[k] > 1; });
+  if (fmtKeys.length > 1) {
+    h += chip('formato', 'all', 'All', todas.length, !f.formato || f.formato === 'all');
+    fmtKeys.forEach(function (k) {
+      h += chip('formato', k, k, formatos[k], f.formato === k);
+    });
+  }
   // La plataforma solo se ofrece cuando de verdad hay dos: un filtro con una
   // sola opcion es ruido.
   if (Object.keys(plats).length > 1) {
@@ -1693,21 +1704,13 @@ function mlPaintPlayers() {
     + '<p class="ml-sub2">' + rows.length + ' players in your ' + total + ' drafted league' + (total === 1 ? '' : 's')
     + (enContra ? ', <em>' + enContra + ' also playing against you</em>' : '') + '. Sorted by how exposed you are.</p>'
     + '<div class="ml-rows">';
-  // Puntos en vez de barra: con una fila por jugador, una barra de progreso por
-  // linea es un grafico que nadie mira. Los puntos se cuentan de un vistazo y
-  // pesan menos en pantalla.
   var tope = ML.playersAll ? 400 : 20;
   rows.slice(0, tope).forEach(function (r) {
-    var puntos = '';
-    for (var d = 0; d < total; d++) {
-      puntos += '<i class="' + (d < r.own.length ? 'is-on' : '') + '"></i>';
-    }
     h += '<div class="ml-row">'
       + mlFace(r.id)
       + '<div class="ml-row-main"><b>' + mlEsc(r.p.name) + '</b>'
       + '<span class="ml-row-meta">' + mlEsc(r.p.pos) + ' · ' + mlEsc(r.p.team || 'FA')
       + (r.vs.length ? ' · <em>' + r.vs.length + ' against you</em>' : '') + '</span></div>'
-      + '<div class="ml-row-dots" title="' + r.own.length + ' of ' + total + ' leagues">' + puntos + '</div>'
       + '<div class="ml-row-n mono" title="in ' + r.own.length + ' of your ' + total + ' leagues">' + r.own.length + '<span>/' + total + '</span></div>'
       + '</div>';
   });
@@ -2094,7 +2097,8 @@ function mlOpenMatchup(id) {
   var h = '<div class="ml-mu-panel" style="--liga:' + mlLigaColor(L) + '">'
     + '<header class="ml-mu-h">'
     + '<button class="ml-mu-x" onclick="mlCloseMatchup()" aria-label="Close">&times;</button>'
-    + '<span class="ml-mu-liga">' + mlEsc(L.name) + (vivo ? ' <i class="ml-live-dot"></i>' : '') + '</span>'
+    + '<span class="ml-mu-liga">' + mlEsc(L.name) + (vivo ? ' <i class="ml-live-dot"></i>' : '')
+    + (L.plat === 'sleeper' ? ' <button class="ml-link ml-mu-share" onclick="mlShare(\'' + L.id + '\',this)">Share</button>' : '') + '</span>'
     + '<div class="ml-mu-score">'
     + '<div class="ml-mu-side"><span>' + mlEsc(mlTeamName(L, H.mine.roster_id)) + '</span><b class="mono">' + mlN(mioT) + '</b></div>'
     + '<span class="ml-mu-vs">' + (vivo ? 'live' : 'vs') + '</span>'

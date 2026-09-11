@@ -511,7 +511,18 @@ function hbCopy(link) {
 }
 
 /* --------------------------------------------------------------- entrada */
+function hbInvitado() {
+  try { return !localStorage.getItem('tm_username') && !localStorage.getItem('tm_yahoo_tok'); }
+  catch (e) { return true; }
+}
 function renderHub() {
+  try {
+    document.body.classList.toggle('hub-guest', hbInvitado());
+    var f = document.getElementById('hub-guest-foot');
+    if (f) f.innerHTML = hbInvitado()
+      ? '<span>Every league you play, one screen.</span><a href="/">Try Mac Draft</a>'
+      : '';
+  } catch (e) { }
   var c = hbCodeFromUrl();
   if (c && c !== HUB.code) { hbLoad(c); return; }
   if (!c && !HUB.code) { hbPaint(); return; }

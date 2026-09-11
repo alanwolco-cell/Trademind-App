@@ -2798,9 +2798,9 @@ html{scroll-padding-top:76px}
 .ml-card{position:relative;border:1px solid var(--border2);border-radius:18px;background:var(--surface);
   padding:16px 16px 12px;display:flex;flex-direction:column;gap:11px;min-width:0;overflow:hidden;
   transition:border-color .18s,transform .18s}
-/* El filo del color de la liga: dos pixeles, no un bloque. Catorce ligas con un
-   panel de color cada una serian una ensalada; asi se reconoce sin gritar. */
-.ml-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--liga);opacity:.9}
+/* El color de la liga vive SOLO en el monograma del escudo (veredicto Jobs
+   11-sep): doce filos saturados elegidos por hash eran decoracion sin dato,
+   la regla de Sleeper es color unicamente cuando significa algo. */
 .ml-card:hover{border-color:color-mix(in srgb,var(--liga) 45%,var(--border2));transform:translateY(-1px)}
 .ml-card-h{display:flex;align-items:center;gap:11px}
 .ml-card-id{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
@@ -2842,7 +2842,7 @@ html{scroll-padding-top:76px}
 .ml-vs-odds.is-fav>.mono:first-child{color:var(--green)}
 .ml-vs-odds.is-dog>.mono:first-child{color:var(--yellow)}
 .ml-live{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--text)}
-.ml-live i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:mlpulse 1.8s ease-in-out infinite}
+.ml-live i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:mlpulse 1.8s ease-in-out infinite}
 @keyframes mlpulse{0%,100%{opacity:1}50%{opacity:.35}}
 .ml-vs-none{font-size:12.5px;color:var(--muted);padding:11px 0 3px;border-top:1px solid var(--border)}
 .ml-when{color:var(--muted2);font-weight:600}
@@ -3210,7 +3210,7 @@ html.no-draft .draft-only{display:none !important}
      enteras, y eso ya cuenta la historia de "todas tus ligas". */
   .da-frame .ml-card{padding:9px 11px 8px;gap:6px}
 }
-.ml-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);
+.ml-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);
   margin-left:5px;vertical-align:middle;animation:mlpulse 1.8s ease-in-out infinite}
 
 /* ============================================================================
@@ -3298,9 +3298,9 @@ html.no-draft .draft-only{display:none !important}
 .ml-aro-n b{font-weight:700;letter-spacing:-.03em;line-height:1}
 .ml-aro-n b i{font-style:normal;font-size:.55em;color:var(--muted);margin-left:1px}
 .ml-aro-n span{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.ml-week{display:flex;align-items:center;gap:20px;max-width:560px;min-width:0;border:1px solid var(--border2);border-radius:18px;
+.ml-week{display:flex;align-items:center;gap:24px;min-width:0;border:1px solid var(--border2);border-radius:18px;
   background:var(--surface);padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.28)}
-.ml-week-list{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.ml-week-list{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0 28px;align-content:center}
 .ml-week-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
   border-bottom:1px solid rgba(255,255,255,.045);padding-bottom:7px}
 .ml-week-row:last-child{border-bottom:0;padding-bottom:0}
@@ -3356,3 +3356,20 @@ html.no-draft .draft-only{display:none !important}
 @media (prefers-reduced-motion: reduce){.ml-live i,.ml-live-dot{animation:none}}
 
 .ml-you{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-bright);background:var(--accent-dim);border-radius:999px;padding:1px 6px;vertical-align:1px}
+
+/* La tarjeta de arriba, y solo esa, sube de peso: el ojo necesita donde
+   parar (veredicto Jobs 11-sep). */
+.ml-card.is-lead{border-color:color-mix(in srgb,var(--accent-bright) 40%,var(--border2))}
+.ml-card.is-lead .ml-vs-num{font-size:24px}
+@media (max-width:640px){#tab-asksage{padding-bottom:calc(70px + env(safe-area-inset-bottom))}}
+.ml-board.is-live .ml-bd-team .mono{font-size:12.5px;color:var(--muted2)}
+
+.ml-expo{max-width:760px}
+
+/* El invitado del hub no ve la barra del app privado (Jobs 11-sep):
+   una sola linea al pie, con un solo destino. */
+body.hub-guest:has(#screen-hub.active) #tabbar{display:none}
+#hub-guest-foot:empty{display:none}
+#hub-guest-foot{position:fixed;left:0;right:0;bottom:0;z-index:300;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--border2);font-size:12.5px;color:var(--muted)}
+#hub-guest-foot a{color:var(--accent-bright);font-weight:700}
+body.hub-guest #screen-hub{padding-bottom:64px}

@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026090923">
+<link rel="stylesheet" href="/styles.css?v=2026091101">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026090923" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091101" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026090923">
+<link rel="stylesheet" href="/theme.css?v=2026091101">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026090923">
+<link rel="stylesheet" href="/home.css?v=2026091101">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026090923">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091101">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -851,6 +851,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
     <!-- LEAGUE HUB SCREEN (se llega por /hub?c=CODIGO) -->
     <div class="screen" id="screen-hub">
+    <div id="hub-guest-foot"></div>
       <div id="hub-head"></div>
       <div class="inner-tab-bar" id="hub-tab-bar">
         <div class="inner-tab active" data-tab="tab-hub-booth" onclick="switchInnerTab(this,'tab-hub-booth','screen-hub');window.renderHub&&renderHub()">Rankings</div>
@@ -1659,19 +1660,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
 <!-- Problem statement: the second-guessing spiral. Dark full-bleed, short
      lines, big air - and the first taste of the dark product world. -->
-<div class="mk-sec mk-dark" id="home-problem">
-  <div class="mk-wrap mk-center">
-    <h2 class="mk-h2 mk-reveal">Stop opening six apps<br>to answer one question.</h2>
-    <div class="mk-lines mk-reveal">
-      <p>You play in more than one league. Every app shows you exactly one of them.</p>
-      <p>So on Sunday you cannot answer the only question that matters: how am I actually doing, and who do I want to have a bad day?</p>
-      <p class="mk-lines-strong">Every league you play, side by side. <span class="hl2">Including the ones on Yahoo.</span></p>
-    </div>
-  </div>
-</div>
-
-<!-- How it works: four numbered columns over hairline rules, back on white.
-     The reader just admitted they are stuck; this is the path out. -->
 <div class="mk-sec" id="home-how">
   <div class="mk-wrap">
     <div class="mk-center mk-reveal">
@@ -1777,12 +1765,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div class="mk-eyebrow-acc mk-reveal">Why Mac Draft exists</div>
     <p class="mk-founder-lead mk-reveal">Mac Draft started with a trade I almost blew. One tab on a value chart, another on injury news, a group chat where three friends told me three different things.</p>
     <p class="mk-reveal">The problem was never a lack of information. The problem is that none of it knew anything about me - my roster, my league, my window.</p>
-    <p class="mk-reveal">So I built the fix. First for trades: Mac reads your roster, your league and the manager across the table before he weighs a single value. Then for the season itself: every league you play in one screen, Sleeper and Yahoo side by side, priced with your own league's rules so a half PPR matchup is never quoted at full PPR.</p>
     <p class="mk-reveal">One promise sits above every feature: accuracy. I would rather show you nothing than show you something wrong.</p>
     <p class="mk-founder-close mk-reveal">Life is good when you know the move.</p>
     <div class="mk-cta-row mk-reveal" style="margin-top:22px">
       <a href="#" class="mk-btn" onclick="event.preventDefault();switchScreen('myleagues')">See my leagues</a>
-      <a href="#" class="mk-btnlink" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Try the Trade Analyzer</a>
     </div>
     <div class="mk-founder-sign mk-reveal">Alan Wolcovinsky, founder</div>
   </div>
@@ -1815,7 +1801,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div onclick="goHome()" style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;cursor:pointer" title="Back to home">
     <span class="tm-wordmark" style="font-size:15px">Mac Draft</span>
   </div>
-  <div class="footer-sub">Every fantasy football league you play, one screen. Sleeper and Yahoo together.</div>
+  <div class="footer-sub">Made for managers who play more than one league.</div>
   <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
     <a href="/analyze" class="nav-link" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Trade Analyzer</a>
     <span class="nav-link" onclick="switchScreen('community');loadCommunityFeed();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">Community</span>
@@ -1869,12 +1855,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026090923"></script>
-<script src="/rankings.js?v=2026090923"></script>
-<script src="/live.js?v=2026090923"></script>
-<script src="/myleagues.js?v=2026090923"></script>
-<script src="/hub.js?v=2026090923"></script>
-<script src="/demo-anim.js?v=2026090923" defer></script>
+<script src="/app.js?v=2026091101"></script>
+<script src="/rankings.js?v=2026091101"></script>
+<script src="/live.js?v=2026091101"></script>
+<script src="/myleagues.js?v=2026091101"></script>
+<script src="/hub.js?v=2026091101"></script>
+<script src="/demo-anim.js?v=2026091101" defer></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
