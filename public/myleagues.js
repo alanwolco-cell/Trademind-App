@@ -342,8 +342,11 @@ function mlBestLineup(playerIds, L, sc, players) {
     var proj = mlProjPlayer(p, sc);
     pool.push({ id: (p.id || p.name), p: p, proj: proj });
   });
-  // Los que no tienen linea reciben el PERCENTIL 25 de su posicion entre todos
-  // los que si la tienen EN LA LIGA, no la mediana del propio roster. Dos
+  // Los que no tienen linea reciben el PERCENTIL 25 de su posicion entre
+  // todos los que si la tienen EN EL MAESTRO ENTERO (108 RB, 165 WR), no la
+  // mediana del propio roster. Ojo: no es "en la liga"; cambiarlo moveria
+  // todos los totales de la pantalla y esta medido que el p25 global es mas
+  // honesto que una mediana de 2 o 3 valores. Dos
   // correcciones de la auditoria (2026-09-09): las casas solo publican props de
   // los ~200 relevantes, asi que quien no tiene linea es PEOR que la mediana de
   // los que si (la mediana sesgaba arriba); y la mediana por roster salia de 2
@@ -1905,6 +1908,8 @@ function mlPaintOdds() {
     h += '<p class="ml-sub2">This league has no head to head bracket, so there is no title to price.</p>';
   } else if (!mlDrafted(sel)) {
     h += '<p class="ml-sub2">Nobody has a roster yet. A title race off empty rosters would be a made up number, so there is none.</p>';
+  } else if (sel.plat === 'yahoo' && !sim) {
+    h += '<p class="ml-sub2">Yahoo does not hand over the rest of the schedule yet, so there is no season to simulate. The matchup board above still works.</p>';
   } else if (!sim && ML.simNone && ML.simNone[sel.id]) {
     h += '<p class="ml-sub2">No schedule posted past this week, so there is no season to simulate yet.</p>';
   } else if (!sim) {
