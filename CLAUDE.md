@@ -2036,3 +2036,30 @@ Tres pedidos del dueno en caliente, los tres DESPLEGADOS (sha256 verificado, cac
 **PENDIENTE DEL DUENO para encender el push**: pegar en Vercel las variables de
 `~/.macdraft-vapid.txt` (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY) mas CRON_SECRET
 (cadena larga cualquiera) y redesplegar. Sin eso el boton no aparece (a proposito).
+
+## Backlog al migrar de sesion (2026-09-11 ~3am, dictado por el dueno en rafaga)
+
+Reportes SIN atender, en orden de llegada:
+1. **Chopped leagues de Sleeper salen como "Best ball"** en los filtros/tarjetas.
+   mlEsBestBall (myleagues.js) mira type 3 y settings.best_ball; chopped debe ser
+   otra señal. Ver que manda Sleeper en esas ligas y clasificarlas aparte.
+2. **Las ligas de Yahoo no aparecen en el celular.** Esperado por diseño (el token
+   vive POR NAVEGADOR), pero es un hueco de UX: en el telefono hay que iniciar
+   sesion Yahoo otra vez, o pensar traslado (mismo problema que el Pro por
+   dispositivo). Minimo: que la pantalla lo DIGA en el celular.
+3. **La cinta de added/dropped va muy lenta.** Revisar la animacion (duracion
+   proporcional al contenido) y/o la carga del feed.
+4. **Quitar el tab Roster Grade** (dueno: "remove roster grade tab").
+5. **Quitar el tab Community; dejar News y Learn** (dueno).
+6. **Buy/Sell no dice de que liga habla**: falta el contexto de liga en pantalla.
+7. **Buy/Sell clasifica a Skattebo, Lemon y Herbert como "declining veterans"**:
+   la logica de arquetipos esta mal (jovenes etiquetados de veteranos).
+8. **Rediseno del tab Ask Mac** ("puede estar mucho mejor hecho"): pendiente de
+   una pasada de diseño seria (squad), no se empezo.
+9. **VAPID keys**: el dueno aun no pega las llaves de ~/.macdraft-vapid.txt +
+   CRON_SECRET en Vercel; sin eso el boton de push no aparece (a proposito).
+10. El video CRUDO del vuelo esta en /tmp/vuelo-raw.mp4 (se pierde al reiniciar);
+    si hay que re-encodear, esta ahi. El pipeline entero esta documentado arriba.
+
+Estado del arbol: HEAD empujado y desplegado (cache-bust 2026091106, sha256
+verificado). Los gates qa-nav, qa-push, qa-myleagues en verde en la ultima corrida.
