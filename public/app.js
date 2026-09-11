@@ -173,6 +173,7 @@ try {
 } catch (_) { }
 try {
   document.documentElement.classList.toggle('no-draft', !DRAFT_SEASON);
+  document.documentElement.classList.toggle('is-app', _hayCuenta());
 } catch (_) { }
 // Live NFL calendar state - drives season-aware copy (no "playoff push" talk in July)
 var NFL_WEEK=0;
@@ -342,9 +343,14 @@ function _overlayClosed(){
   _overlays.pop();
   if(history.state&&history.state.overlay){try{history.back();}catch(_){}}
 }
+function _hayCuenta(){
+  try{return !!(localStorage.getItem('tm_username')||localStorage.getItem('tm_yahoo_tok'));}catch(e){return false;}
+}
 function goHome(){
-  // The wordmark is the front door: it opens the HOME page (landing only),
-  // a separate page from the Analyze tool.
+  // Con cuenta, "home" es TU pantalla (Leagues), no la portada de venta: un
+  // usuario conectado no vuelve al folleto. El wordmark sigue siendo la
+  // puerta de la portada solo para quien no ha conectado.
+  if(_hayCuenta()){switchScreen('myleagues');return;}
   _heroDismissed=false;
   window._noAnchorOnce=true;
   switchScreen('home');

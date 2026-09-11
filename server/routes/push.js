@@ -190,6 +190,7 @@ async function buyLows(ctx) {
   // la semana que viene, no por rank de mercado: el mercado es justamente lo
   // que estamos acusando de equivocarse.
   const out = [];
+  const M = await maestro().catch(() => ({}));
   for (const L of ctx.ligas) {
     let fc;
     try { fc = await fcValores(L.superflex ? 2 : 1, L.ppr, L.dynasty); } catch (_) { continue; }
@@ -214,6 +215,7 @@ async function buyLows(ctx) {
     (L.rivales || []).forEach(rv => {
       (rv.players || []).forEach(pid => {
         const v = fc[pid]; if (!v || v.value < 500) return;
+        if (M[pid] && M[pid].inj) return;   // lesionado: el rol NO esta intacto
         const p = proy[pid]; if (!p) return;
         const projPts = p[campo] != null ? p[campo] : p.half;
         if (projPts == null || projPts < (ROL_MIN[v.pos] || 9)) return;   // rol no afirmable
@@ -313,7 +315,7 @@ async function maestro() {
   const map = {};
   Object.keys(all).forEach(id => {
     const p = all[id];
-    map[id] = { name: ((p.first_name || '') + ' ' + (p.last_name || '')).trim(), pos: p.position };
+    map[id] = { name: ((p.first_name || '') + ' ' + (p.last_name || '')).trim(), pos: p.position, inj: p.injury_status || null };
   });
   _maestroCache = { ts: Date.now(), map };
   return map;
