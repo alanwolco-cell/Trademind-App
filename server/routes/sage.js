@@ -563,12 +563,25 @@ router.post('/chat', async (req, res) => {
       }
     } catch (_) { }
 
-    // El scout del RIVAL se construyo y se QUITO el 2026-09-10 por decision del
-    // dueno: no confiaba en que las tendencias del otro manager fueran base
-    // suficiente para recomendar jugadas contra amigos. El self-scouting (las
-    // tendencias del PROPIO usuario) se queda: habla de uno mismo, con el
-    // motor estadistico del perfil detras. Si algun dia vuelve, el historial
-    // de git tiene la implementacion completa en el commit de esta fecha.
+    // SCOUT DEL RIVAL, en su version con correa (decision del dueno,
+    // 2026-09-10, en dos pasos: primero lo quito entero, luego acepto "que
+    // solo sirva si preguntas"). Mac SOLO puede usarlo cuando el usuario
+    // pregunta EXPLICITAMENTE por los habitos de ese manager o pide
+    // scoutearlo. Nunca por iniciativa propia, nunca mezclado en consejo
+    // generico de matchup, y sin revelar que lo tiene si no se lo piden.
+    try {
+      const rival = String((req.body || {}).rival || '').trim().toLowerCase();
+      if (rival && rival !== user && /^[A-Za-z0-9_.-]{1,40}$/.test(rival)) {
+        const rl = await require('./perfil').tendenciasParaMac(rival);
+        if (rl && rl.length) {
+          tendenciasTxt = (tendenciasTxt ? tendenciasTxt + '\n\n' : '')
+            + 'OPPONENT SCOUT (rival manager "' + rival + '", same mining, same thresholds). '
+            + 'STRICT RULE: use this ONLY if the user EXPLICITLY asks about this manager\'s habits, how he trades or drafts, or asks you to scout him. '
+            + 'NEVER volunteer it, never fold it into generic matchup or lineup advice, and never mention you have it unless asked. When you do use it, present each line as an observed pattern with its sample size, not as a certainty:\n'
+            + rl.join('\n');
+        }
+      }
+    } catch (_) { }
 
     const system = [
       {
