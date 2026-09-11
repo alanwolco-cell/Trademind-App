@@ -404,31 +404,44 @@ function mlRevisarAlineacion(L) {
   // opina. Callarse es parte del trabajo.
   if (!puestos.length || sinNumero > puestos.length / 2) return null;
 
-  // CASILLA POR CASILLA, no por valor. Emparejar por valor daba frases como
-  // "Stafford entra por Quentin Johnston", un QB por un WR, que es imposible y
-  // hace que no te crean el resto de la pantalla. El array de titulares de
-  // Sleeper es POSICIONAL: starters[i] juega en roster_positions[i].
-  var pares = [];
-  mejor.lineup.forEach(function (slot) {
-    if (!slot.x || !slot.x.p || slot.idx == null) return;
-    var actualId = titulares[slot.idx];
-    if (!actualId || actualId === '0') {
-      // Casilla vacia: entra alguien donde no habia nadie.
-      if (slot.x.proj >= ML_UMBRAL_CAMBIO) {
-        pares.push({ entra: { p: slot.x.p, pts: slot.x.proj }, sale: { p: null, pts: 0 }, gana: slot.x.proj });
-      }
-      return;
-    }
-    if (actualId === slot.x.id) return;   // ya esta puesto
-    var pa = players[actualId];
+  // POR CONJUNTOS, no por casilla. La version por casilla comparaba
+  // mejor.lineup[i] contra starters[i], y en una liga con DOS casillas de QB o
+  // dos FLEX el mismo once reordenado salia como dos cambios: al dueno le
+  // recomendo "Jeanty in for Parker Washington" y "Baker in for Willis" con los
+  // CUATRO ya de titulares, solo que en otro orden (2026-09-10, su liga
+  // Dynasty, QB/QB/.../FLEX/FLEX). Un cambio REAL es alguien que entra desde la
+  // banca; todo lo demas es reacomodo, y el reacomodo entre alineaciones
+  // validas no suma puntos.
+  var enActual = {};
+  titulares.forEach(function (id) { if (id && id !== '0') enActual[id] = 1; });
+  var enMejor = {};
+  mejor.lineup.forEach(function (sl) { if (sl.x) enMejor[sl.x.id] = 1; });
+
+  var entran = [];
+  mejor.lineup.forEach(function (sl) {
+    if (!sl.x || !sl.x.p) return;
+    if (enActual[sl.x.id]) return;        // ya es titular: reacomodo, no cambio
+    if (sl.x.guess) return;               // no se recomienda a nadie sin numero propio
+    entran.push({ p: sl.x.p, pts: sl.x.proj, slot: sl.slot });
+  });
+  var salen = [];
+  puestos.forEach(function (id) {
+    if (enMejor[id]) return;              // sigue en el mejor once
+    var pa = players[id];
     var va = pa ? mlProjPlayer(pa, sc) : null;
     if (va == null) return;               // sin numero del que sale, no se opina
-    var gana = slot.x.proj - va;
-    if (gana >= ML_UMBRAL_CAMBIO) {
-      pares.push({ entra: { p: slot.x.p, pts: slot.x.proj }, sale: { p: pa, pts: va }, gana: gana, slot: slot.slot });
-    }
+    salen.push({ p: pa, pts: va, id: id });
   });
-  pares.sort(function (a, b) { return b.gana - a.gana; });
+  // El que mas suma entra por el que menos aporta. Cruzar posiciones aqui es
+  // legitimo: en una liga con FLEX, sentar a un WR para arrancar a un RB es un
+  // movimiento real.
+  entran.sort(function (a, b) { return b.pts - a.pts; });
+  salen.sort(function (a, b) { return a.pts - b.pts; });
+  var pares = [];
+  for (var q = 0; q < entran.length && q < salen.length; q++) {
+    var gana = entran[q].pts - salen[q].pts;
+    if (gana >= ML_UMBRAL_CAMBIO) pares.push({ entra: entran[q], sale: salen[q], gana: gana });
+  }
   if (!pares.length) return { ok: true, gana: 0, cambios: [] };
   var total = pares.reduce(function (a, x) { return a + x.gana; }, 0);
   return { ok: pares.length === 0, gana: Math.round(total * 10) / 10, cambios: pares };
