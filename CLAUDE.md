@@ -1923,3 +1923,79 @@ Y una observación menor que quedó anotada: en las últimas rondas, cuando solo
 las cápsulas de las otras posiciones siguen encendidas y llevan a un tablero con las filas
 bloqueadas. El callejón queda rotulado por el contador ("14 on the board, none for you") en
 vez de cerrado.
+
+## Sesion 2026-09-11 (madrugada): la noche de simplicidad, con squad y veredicto Jobs
+
+Mandato del dueno, textual: "trabaja en mac draft por las proximas tres horas con los
+agentes que quieras... el agente steve jobs revise todo y te corrija todo... que todo sea
+lo mas simple posible... arranca, demorate 3 horas minimo, y despliega". Cinco agentes:
+ing-datos (Opus), qa-noche (Opus), dis-simple (Opus), copy-noche (Sonnet), steve-jobs
+(Opus, revisor final). Seis commits, todo DESPLEGADO y verificado por sha256 + QA_BASE
+contra produccion. Cache-bust 2026091102.
+
+**Antes del squad, dos deploys sueltos:**
+- K y DEF con proyeccion REAL del feed (32+32; una DEF se indexa por su abreviatura de
+  equipo). Dos filtros nuestros los tiraban: el proxy exigia yardas, el cliente devolvia
+  la media antes de mirar el feed. Queda 7.5/7.0 SOLO de respaldo.
+- El proxy de Sleeper aguanta la rafaga: max 6 en vuelo, dedupe de identicas, ultimo
+  bueno 30 min servido con 200. La consola del gate quedo limpia de 500s pasajeros.
+
+**ing-datos (d8e4335):** la hipotesis de roster_positions REFUTADA midiendo, pero cazo:
+IR+/IL contaban como titular (once de 11 casillas), stat 18 fum_lost sin mapear (toda
+liga Yahoo al -2 por defecto), homonimos resolviendo al retirado (Kenneth Walker entraba
+a 1.0 en vez de 14.1: a igualdad de nombre manda el que tiene equipo), y NaN del feed
+comiendose el total entero (tres candados). El 413 del sync salia como HTML de fabrica
+con rastro de pila y el cliente decia "Offline" para siempre: ahora JSON limpio y "Too
+big to sync". Gate nuevo scripts/qa-yahoo-parse.mjs (12 checks, funciones puras + espejo
+del cliente extraido).
+
+**Simplicidad (30ca825), de los reportes de dis-simple y copy-noche:** portada sin "The
+war room" (vendia mocks apagados, con un em dash HORNEADO en shot-advice.jpg que ningun
+grep iba a cazar), sin numerales 01-04, H1 y title dicen "fantasy football"; la pantalla
+se llama "Leagues" en TODAS las puertas (era My Leagues / All Leagues / Leagues); Booth
+pasa a "Rankings"; tarjetas sin proj-duplicada / precio americano / nombre propio / 0-0 /
+boton Odds; pestana Odds sin el resumen que CONTRADECIA a Leagues (221 vs 86 bajo el
+mismo rotulo "points scored", verificado en produccion) y sin columna MARGIN, con
+rotulos de columna tambien en movil; My Players sin la seccion "Rooting against
+yourself" (era la misma lista dos veces), tope 20 + Show all; hub con rankings primero,
+reclamo plegado en barra, codigo solo para quien ya reclamo, sin relleno "Middle of the
+pack"; Mac sin pastillas de venta, banda de conectar solo sin cuenta, cuota tras la
+primera respuesta.
+
+**QA nocturno (13 defectos, 4 bloqueantes) cerrados en 917c... :** el verde de is-fav
+caia en la celda del RIVAL; los 0.0 pre-kickoff salian en tinta "real" (vuelven a
+proyeccion gris, como Sleeper/Yahoo); la barra inferior (z350) tapaba el pie del overlay
+(z340->360) y se navegaba por debajo del modal; flash de ~2.5s del formulario de alta a
+usuario conocido (ML.username se lee al iniciar el modulo); el hub proyectaba SIEMPRE
+con Vegas sin decirlo y sin feed publicaba ranking de CEROS (ahora carga ambas fuentes,
+declara cual, y sin ninguna se niega); el 404 mandaba al mock escondido; el selector del
+analizador llamaba "Redraft" al best ball; chip "you" en los dos tableros y TU fila
+arriba en tu duelo; prefers-reduced-motion cubre mlpulse.
+
+**Veredicto Jobs, 15 ordenes + 4 arbitrajes, TODAS aplicadas:** punto "live" gris (verde
+pegado a un marcador = "vas ganando"; aqui significaba "hay partido"); UNA cifra de
+veredicto por tarjeta ("62% to win" texto; fuera spread firmado y aro chico); el aro
+grande se rotula "avg win chance" (via que conserva el WHOOP aprobado); bench-points
+sin duplicar; Share fuera de las 12 tarjetas y dentro del overlay; FUERA el filo
+arcoiris (color de liga solo en el monograma; regla Sleeper: color solo cuando
+significa); orden por urgencia con la primera tarjeta subida de peso (.is-lead);
+resumen a lo ancho en rejilla; caption "Week 1" a secas; My Players a 760px sin el
+medidor de puntos; el INVITADO del hub sin tabbar (body.hub-guest + :has) con una linea
+al pie; portada sin home-problem ni el parrafo 3 de la carta (6977px -> 5101px a 390);
+analizador fuera de la portada; footer sin repetir el hero. Arbitrajes: filas vivas SIN
+probabilidad inventada (no hay modelo de partido en vivo, no se finge); etiqueta de
+formato SIEMPRE; filtro con conteo 1 NO se pinta (ni "All" con una sola categoria).
+
+**Pendientes que dejo esta noche:**
+1. **Aviso de alineacion para ligas de Yahoo**: el dato ya se baja
+   (selected_position del lineup semanal); es la unica pieza accionable de la
+   pantalla y NO se hizo de madrugada a proposito. Merece sesion propia con gate.
+2. El "flash de proyecciones" que vio Jobs (pendiente 16) NO reproduce en produccion
+   (medido: valor estable desde la primera muestra); era el fallback local con odds 503.
+3. mlLoadProps se llama dos veces al cargar el hub (minor, cacheado).
+4. Viejos: sonda FAAB el martes, rutas Yahoo sin verificar con sesion real, domingo
+   de 13 ligas como prueba de fuego.
+
+Gates al cierre, TODOS ALL GREEN: qa-myleagues, qa-hub, qa-nav, qa-rankings, qa-live 50,
+qa-yahoo-parse 12, qa-perfil 156. Contra produccion: qa-nav y qa-myleagues en verde,
+sha256 iguales en los 7 archivos tocados.
