@@ -1282,18 +1282,6 @@ function getKtcValue(name, sleeperId){
   return 0;
 }
 
-// El username del manager de ENFRENTE esta semana, para el scout del rival de
-// Mac. En Sleeper el display_name del dueno del roster rival es su username.
-function _sageRival(){
-  try{
-    if(typeof oppRosterId==='undefined'||!oppRosterId||!leagueRosters||!leagueUsers)return '';
-    var r=leagueRosters.filter(function(x){return x.roster_id===oppRosterId;})[0];
-    if(!r)return '';
-    var u=leagueUsers.filter(function(x){return x.user_id===r.owner_id;})[0];
-    return (u&&u.display_name)||'';
-  }catch(_){return '';}
-}
-
 async function loadUser(autoLeagueId){
   var username=document.getElementById("sleeper-username").value.trim();
   if(!username){ setStatus("Enter your Sleeper username first.","var(--red)"); return; }
@@ -2506,7 +2494,7 @@ async function sageChatSend(){
         });
       }
     }catch(_){}
-    var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:_sageChat,playerNotes:_noteMatches,notesAsOf:PLAYER_NOTES_ASOF,leagueContext:_sageLeagueCtx(),user:localStorage.getItem('tm_username')||'',rival:_sageRival(),device:_deviceId()})});
+    var res=await fetch('/api/sage/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:_sageChat,playerNotes:_noteMatches,notesAsOf:PLAYER_NOTES_ASOF,leagueContext:_sageLeagueCtx(),user:localStorage.getItem('tm_username')||'',device:_deviceId()})});
     var ctype=res.headers.get('content-type')||'';
     if(ctype.indexOf('text/event-stream')<0){
       // Non-streaming fallback (errors come back as JSON)

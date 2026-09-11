@@ -563,22 +563,12 @@ router.post('/chat', async (req, res) => {
       }
     } catch (_) { }
 
-    // SCOUT DEL RIVAL: si el cliente dice contra quien juega esta semana (un
-    // username de Sleeper), Mac recibe tambien las tendencias de ESE manager.
-    // Misma tuberia, apuntada al otro lado de la mesa: "el de enfrente abre
-    // las mesas de trade el mismo" es informacion que nadie mas da.
-    try {
-      const rival = String((req.body || {}).rival || '').trim().toLowerCase();
-      if (rival && rival !== user && /^[A-Za-z0-9_.-]{1,40}$/.test(rival)) {
-        const rl = await require('./perfil').tendenciasParaMac(rival);
-        if (rl && rl.length) {
-          tendenciasTxt = (tendenciasTxt ? tendenciasTxt + '\n\n' : '')
-            + 'OPPONENT SCOUT (this week\'s rival, "' + rival + '", same mining, same thresholds):\n'
-            + rl.join('\n')
-            + '\nUse these when he asks about his matchup or how to deal with this manager. Same format rule applies.';
-        }
-      }
-    } catch (_) { }
+    // El scout del RIVAL se construyo y se QUITO el 2026-09-10 por decision del
+    // dueno: no confiaba en que las tendencias del otro manager fueran base
+    // suficiente para recomendar jugadas contra amigos. El self-scouting (las
+    // tendencias del PROPIO usuario) se queda: habla de uno mismo, con el
+    // motor estadistico del perfil detras. Si algun dia vuelve, el historial
+    // de git tiene la implementacion completa en el commit de esta fecha.
 
     const system = [
       {
