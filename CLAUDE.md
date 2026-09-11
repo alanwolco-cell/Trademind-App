@@ -1789,6 +1789,72 @@ todo lo demas gris oscuro.
 - La seccion larga "Asi se ve por dentro" al estilo Resuelto, con guion de 30s.
 - El loro sigue decidido: se queda.
 
+## Sesion 2026-09-10: la noche de usar el producto de verdad
+
+El dueno uso la app con los partidos de la semana 1 en vivo y cada cosa que
+reporto era real. Todo desplegado y verificado (sha256 contra produccion).
+
+### Bugs cazados POR EL, usando el producto
+1. **"Me recomienda meter a Bowers y esta lesionado"**: el mejor once excluye
+   ahora a quien no va a jugar (Out/IR/PUP/Sus/NA/COV/DNR/Doubtful de Sleeper,
+   O/IR/PUP/SUSP/D/NA de Yahoo). Questionable NO se excluye a proposito.
+2. **"Me recomienda cambios que ya hice"**: su liga Dynasty tiene QB/QB y dos
+   FLEX, y la comparacion por CASILLA leia el mismo once reordenado como dos
+   cambios. Ahora compara CONJUNTOS: solo habla si alguien entra desde la
+   banca. El reacomodo entre alineaciones validas no suma puntos.
+3. **"La foto de Family Feud esta mal"**: en Yahoo mandaba la foto del manager
+   sobre el escudo del equipo; es al reves (el escudo es lo que la liga
+   reconoce). 
+4. **"Los scores estan mal en algunas ligas"**: las de Yahoo no tenian marcador
+   en vivo (solo emparejamientos). team_points entra ahora, sacado del nodo
+   CRUDO porque flattenEntity descarta objetos anidados.
+5. **"No veo los nombres de los jugadores"** (matchup de Yahoo): asumi que su
+   API no daba alineaciones semanales y SI las da (roster;week=N con
+   selected_position y player_points). Ruta /api/yahoo/team/:key/lineup y el
+   panel se rellena EN SITIO al llegar.
+6. **"No puedo scrollear el panel, se scrollea el fondo"**: bloquear solo el
+   body no basta, la pagina scrollea en html. Se bloquean los dos +
+   overscroll-behavior:contain.
+7. **"30% de campeonato antes de empezar"** (dia anterior, cerrado hoy con la
+   auditoria): shrinkage + bracket con byes corregido.
+
+### Lo construido esta noche
+- **Dos fuentes de proyeccion** con toggle recordado: 'Sleeper' (Rotowire via
+  /api/sleeper/projections/:week, por estadistica cruda, rescoreada por liga
+  con INT y fumbles) y 'Vegas' (la nuestra). Cambiar fuente recalcula TODO.
+  Gibbs medido: 21.9 site vs 15.8 vegas.
+- **Patron WHOOP**: aro grande "this week" + letra chica; aro chico por tarjeta
+  SOLO pre-partido (en vivo el marcador es el veredicto: dos veredictos en el
+  mismo plano jamas).
+- **Detalle de matchup** al tocar el duelo: dos alineaciones de frente estilo
+  Sleeper, puntos reales en blanco solo cuando el duelo tiene puntos,
+  proyeccion gris antes. Yahoo con nombres de verdad.
+- **Mac conoce las tendencias del manager** (tendenciasParaMac en
+  routes/perfil.js): el motor del perfil comprimido al contexto de sage, SOLO
+  afirmaciones confirmadas, cacheado-o-nada (el armado en frio se dispara en
+  segundo plano; la primera pregunta sale sin tendencias). Cada linea con su
+  [dynasty]/[redraft] (RECORDATORIO DEL DUENO: la mayoria no es dynasty) y los
+  duplicados en español filtrados.
+- **Scout del rival**: sage acepta `rival` (username) y el cliente manda el del
+  roster de enfrente cargado; Mac recibe las tendencias del otro manager.
+- **Side bets en el hub** (Market): registro entre amigos, sin mover dinero;
+  reglas como permisos (qa-hub 37 checks).
+- **Tarjeta OG por liga**: /api/liga/:code/og.png, SVG a mano + @resvg/resvg-js
+  (dep nueva aprobada) + Familjen Grotesk TTF en server/assets. Verificada en
+  produccion.
+- **El resto del API de Yahoo cableado**: transactions (CON faab_bid: el dato
+  para calibrar el Waiver Room en Yahoo), draftresults (con cost de subasta) y
+  free-agents. Parseo defensivo, guardas 401 probadas, y DECLARADO
+  no-verificado con sesion real.
+
+### Deuda declarada
+- Las rutas nuevas de Yahoo (transactions/draftresults/free-agents/lineup)
+  necesitan una pasada con la sesion real del dueno: el parseo es defensivo
+  pero esta escrito a ciegas. El del lineup ya lo probo el dueno en produccion.
+- La sonda FAAB corre el MARTES con el mercado movido; con las transactions de
+  Yahoo ya se puede calibrar tambien en sus ligas de Yahoo.
+- Domingo = la prueba de fuego del camino en vivo con 13 ligas a la vez.
+
 ---
 
 # Rediseño de septiembre 2026 (act. 8-sep)
