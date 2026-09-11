@@ -1999,3 +1999,40 @@ formato SIEMPRE; filtro con conteo 1 NO se pinta (ni "All" con una sola categori
 Gates al cierre, TODOS ALL GREEN: qa-myleagues, qa-hub, qa-nav, qa-rankings, qa-live 50,
 qa-yahoo-parse 12, qa-perfil 156. Contra produccion: qa-nav y qa-myleagues en verde,
 sha256 iguales en los 7 archivos tocados.
+
+## Sesion 2026-09-11 (madrugada, segunda tanda): vuelo de Mac, reel de temporada, y push
+
+Tres pedidos del dueno en caliente, los tres DESPLEGADOS (sha256 verificado, cache-bust
+2026091103):
+
+1. **El arranque de la PWA**: Mac arranca quieto (identico a la imagen fija de iOS,
+   medio segundo), sale VOLANDO por la derecha con arco y aleteo (dos animaciones
+   compuestas: arco en el envoltorio, aleteo en la imagen) y un mini fade revela la
+   app. Todo CSS, se quita sola sin JS. reduced-motion: fade simple. El dueno tiene
+   que DESINSTALAR y re-anadir la PWA para verlo.
+2. **El video de la intro** ("no se entiende, se ve generico"): la animacion DOM del
+   hero murio; el hueco recupera su pelicula como el comentario anticipaba.
+   `scripts/gen-reel-season.mjs` filma /myleagues?demo=1 (11.4s, 1240x780, 236 KB):
+   parrilla -> matchup de Sunday Money -> tablero de Odds. Para eso la demo gano un
+   duelo ESTELAR completo (18 titulares reales con ids verificados contra el maestro,
+   K y DEF con escudo, puntos de media tarde). Verificaciones propias: maestro con
+   control negativo, sin truncados, consola limpia (solo firmas del entorno
+   filtradas), primer fotograma por luminancia, duracion. OJO: en esta maquina no hay
+   ffprobe; las medidas salen del stderr de ffmpeg (spawnSync, porque execFileSync no
+   devuelve stderr en exito).
+3. **Push del producto** (avisos elegidos por el: actividad del hub + resumen del
+   lunes): sw.js SOLO push (candado del gate contra un manejador de fetch),
+   server/routes/push.js (subscribe/unsubscribe/vapid/recap, sendPushTo con PUSH_DRY
+   y limpieza de suscripciones muertas), disparos en liga.js (claim, trade, side bet,
+   nunca al actor, nunca tumban la peticion), boton "Get notified" en el pie de
+   Leagues (oculto sin llave VAPID; en iPhone sin instalar explica el Add to Home
+   Screen; subscribe con tope de 20s), cron lunes 14:00 UTC. Resumen SOLO Sleeper
+   (el token de Yahoo vive en el navegador, decision ya tomada). Dep nueva: web-push.
+   Gate scripts/qa-push.mjs (11 checks): el fixture del hub siembra los acct
+   HASHEADOS (sha256 recortado a 32) como los guarda identity.js; sembrar la llave
+   cruda fue el primer fallo del gate. El paso navegador->FCM NO es verificable con
+   el Chromium de Playwright (sin credenciales de Google): se prueba con el iPhone.
+
+**PENDIENTE DEL DUENO para encender el push**: pegar en Vercel las variables de
+`~/.macdraft-vapid.txt` (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY) mas CRON_SECRET
+(cadena larga cualquiera) y redesplegar. Sin eso el boton no aparece (a proposito).
