@@ -460,4 +460,72 @@ router.hubPorCodigo = async function (code) {
   try { return publico(await leer(c)); } catch (_) { return null; }
 };
 
+/* ── LA TARJETA DEL ENLACE (Open Graph) ─────────────────────────────────────
+ * El link del hub pegado en el grupo de WhatsApp se pinta con una imagen
+ * PROPIA de esa liga, no con la generica de la portada. Se dibuja como SVG a
+ * mano (sin satori: una plantilla fija no necesita un motor de layout) y se
+ * rasteriza con resvg, con la Familjen Grotesk empaquetada en server/assets
+ * porque en un serverless no hay fuentes del sistema.
+ * Todo texto que entra aqui lo escribio un desconocido en Sleeper: attrSvg lo
+ * escapa, igual que attrSeguro en las metas. */
+const { Resvg } = require('@resvg/resvg-js');
+const FUENTES = [
+  path.join(__dirname, '../assets/FamiljenGrotesk-Regular.ttf'),
+  path.join(__dirname, '../assets/FamiljenGrotesk-Bold.ttf')
+];
+const ogCache = {};   // code -> {v, png}
+function attrSvg(v, max) {
+  return String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, max || 60)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function ogSvg(hub) {
+  const nombre = attrSvg(hub.name, 34);
+  const equipos = (hub.rosters || []).length || (hub.source && hub.source.teams) || 0;
+  const temporadas = (hub.historia || []).length;
+  const lider = (hub.rosters || []).slice().sort((a, b) => (b.wins - a.wins) || (b.fpts - a.fpts))[0];
+  const jugados = (hub.rosters || []).reduce((a, r) => a + (r.wins || 0) + (r.losses || 0), 0);
+  const linea2 = attrSvg(
+    equipos + ' teams' + (temporadas ? ' · ' + temporadas + ' season' + (temporadas === 1 ? '' : 's') + ' of history' : '')
+    + (jugados && lider ? ' · ' + lider.owner + ' leads at ' + lider.wins + '-' + lider.losses : ''), 90);
+  const code = attrSvg(hub.code, 8);
+  // 1200x630, el tamano canonico de OG. Fondo de marca, nunca negro puro.
+  return `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141018"/><stop offset="1" stop-color="#050507"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <rect x="0" y="0" width="1200" height="6" fill="#7c5cbf"/>
+  <text x="80" y="150" font-family="Familjen Grotesk" font-weight="700" font-size="44" fill="#9b72e8">Mac Draft</text>
+  <text x="80" y="290" font-family="Familjen Grotesk" font-weight="700" font-size="92" fill="#ffffff">${nombre}</text>
+  <text x="80" y="360" font-family="Familjen Grotesk" font-size="34" fill="#c6c6ce">${linea2}</text>
+  <rect x="80" y="440" width="${180 + code.length * 34}" height="92" rx="18" fill="#1c1c20" stroke="#7c5cbf" stroke-width="2"/>
+  <text x="106" y="478" font-family="Familjen Grotesk" font-size="22" fill="#9a9aa5">INVITE CODE</text>
+  <text x="106" y="518" font-family="Familjen Grotesk" font-weight="700" font-size="46" fill="#ffffff" letter-spacing="8">${code}</text>
+  <text x="80" y="592" font-family="Familjen Grotesk" font-size="26" fill="#9a9aa5">Power rankings, past champions and the trade market, for this league.</text>
+</svg>`;
+}
+router.get('/:code/og.png', async (req, res) => {
+  const code = String(req.params.code || '').toUpperCase();
+  if (!FORMA_CODIGO.test(code)) return res.status(404).end();
+  try {
+    const doc = await leer(code);
+    if (!doc) return res.status(404).end();
+    const c = ogCache[code];
+    if (!c || c.v !== doc.v) {
+      const svg = ogSvg(publico(doc));
+      const r = new Resvg(svg, { font: { fontFiles: FUENTES, loadSystemFonts: false, defaultFontFamily: 'Familjen Grotesk' } });
+      ogCache[code] = { v: doc.v, png: Buffer.from(r.render().asPng()) };
+    }
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=600');
+    res.send(ogCache[code].png);
+  } catch (e) {
+    console.error('[og] %s', e.message);
+    res.status(500).end();
+  }
+});
+
 module.exports = router;

@@ -247,7 +247,10 @@ function htmlConPrevia(hub, code) {
   const titulo = attrSeguro(hub.name + ' on Mac Draft', 90);
   const desc = attrSeguro('Power rankings, past champions and the trade market. ' + partes.join(' · '), 200);
   const url = attrSeguro('https://macdraft.app/hub?c=' + code, 120);
+  const img = attrSeguro('https://macdraft.app/api/liga/' + code + '/og.png?v=' + (hub.v || 1), 140);
   return htmlBase()
+    .replace(/<meta property="og:image"[^>]*>/, '<meta property="og:image" content="' + img + '">')
+    .replace(/<meta name="twitter:image"[^>]*>/, '<meta name="twitter:image" content="' + img + '">')
     .replace(/<meta property="og:title"[^>]*>/, '<meta property="og:title" content="' + titulo + '">')
     .replace(/<meta property="og:description"[^>]*>/, '<meta property="og:description" content="' + desc + '">')
     .replace(/<meta property="og:url"[^>]*>/, '<meta property="og:url" content="' + url + '">')
