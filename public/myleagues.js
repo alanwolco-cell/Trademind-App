@@ -1392,9 +1392,7 @@ function mlPaintLeagues() {
         + '<div class="ml-vs-odds ' + (favorito ? 'is-fav' : 'is-dog') + '">'
         + (vivo
           ? '<span class="ml-live"><i></i>' + (vivo.mio >= vivo.suyo ? 'winning by ' + mlN(vivo.mio - vivo.suyo) : 'down ' + mlN(vivo.suyo - vivo.mio)) + '</span>'
-            + '<span class="ml-dot">·</span><span>proj ' + mlN(myProj) + ' - ' + mlN(oppProj) + '</span>'
-          : '<span class="mono">' + (favorito ? '-' : '+') + mlSpread(Math.abs(myProj - oppProj)) + '</span>'
-            + '<span class="ml-dot">·</span><span class="mono">' + mlAmerican(wp) + '</span>')
+          : '<span class="mono">' + (favorito ? '-' : '+') + mlSpread(Math.abs(myProj - oppProj)) + '</span>')
         // El aro chico: el % de ganar como veredicto visual, a la derecha.
         // SOLO antes del partido. En vivo el marcador ES el veredicto, y poner
         // al lado un aro verde de "61%" calculado antes del kickoff mientras
@@ -1419,14 +1417,13 @@ function mlPaintLeagues() {
     h += '<article class="ml-card" style="--liga:' + color + '"' + abre + '>'
       + '<header class="ml-card-h">' + mlLigaEscudo(L, 'is-lg')
       + '<div class="ml-card-id"><h3>' + mlEsc(L.name) + '</h3>'
-      + '<span class="ml-card-sub">' + (L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper') + ' · ' + mlEsc(mlTeamName(L, mine.roster_id)) + '</span></div>'
-      + '<span class="ml-rec mono">' + mlRecord(mine) + '</span></header>'
+      + '<span class="ml-card-sub">' + (L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper') + '</span></div>'
+      + (mlRecord(mine) === '0-0' ? '' : '<span class="ml-rec mono">' + mlRecord(mine) + '</span>') + '</header>'
       + (esCampeon ? '<div class="ml-champ-tag">Defending champion</div>' : '')
       + '<div class="ml-flags">' + flags.map(function (f) { return '<span>' + mlEsc(f) + '</span>'; }).join('') + '</div>'
       + cuerpo
-      + '<div class="ml-card-f">'
-      + (L.plat === 'sleeper' ? '<button class="ml-link" onclick="mlShare(\'' + L.id + '\',this)">Share</button>' : '<span></span>')
-      + '<button class="ml-link" onclick="mlOpenOdds(\'' + L.id + '\')">Odds →</button></div>'
+      + (L.plat === 'sleeper'
+        ? '<div class="ml-card-f"><button class="ml-link" onclick="mlShare(\'' + L.id + '\',this)">Share</button></div>' : '')
       + '</article>';
   });
   h += '</div>';
@@ -1496,8 +1493,7 @@ function mlCabeceraSemana(ligas) {
     + '<div class="ml-week-list">'
     + '<div class="ml-week-row"><span>' + (enVivo ? 'Winning' : 'Favored') + '</span>'
     + '<b class="mono">' + ganando + ' of ' + conDuelo.length + '</b></div>'
-    + (enVivo ? '<div class="ml-week-row"><span>Points scored</span><b class="mono">' + mlN(puntos, 0) + '</b></div>' : '')
-    + '<div class="ml-week-row"><span>Toughest matchup</span><b>' + (peor ? mlEsc(peor.L.name) + ' <i class="mono">' + mlPct(peor.wp) + '%</i>' : '-') + '</b></div>'
+    + '<div class="ml-week-row"><span>Toughest matchup</span><b>' + (peor ? mlEsc(peor.L.name) : '-') + '</b></div>'
     + '<div class="ml-week-row"><span>Bench points to claim</span><b class="mono' + (fixPts > 0 ? ' is-warn' : '') + '">'
     + (fixPts > 0 ? '+' + mlN(fixPts) : 'none') + '</b></div>'
     + '</div></section>';
@@ -1513,7 +1509,7 @@ function mlPanelAlineaciones() {
   var total = Math.round(rotas.reduce(function (a, x) { return a + x.r.gana; }, 0) * 10) / 10;
   var h = '<section class="ml-fix"><header class="ml-fix-h">'
     + '<div><h3>' + rotas.length + ' lineup' + (rotas.length === 1 ? '' : 's') + ' to fix</h3>'
-    + '<p>You are leaving <b>' + mlN(total) + ' projected points</b> on your bench this week.</p></div>'
+    + '<p>There are <b>' + mlN(total) + ' projected points</b> sitting on your bench right now.</p></div>'
     + '<span class="ml-fix-n mono">+' + mlN(total) + '</span></header>'
     + '<div class="ml-fix-list">';
   rotas.slice(0, 6).forEach(function (x) {
@@ -1685,34 +1681,23 @@ function mlPaintPlayers() {
     return (b.own.length - a.own.length) || (b.vs.length - a.vs.length) || a.p.name.localeCompare(b.p.name);
   });
 
-  var conflicts = rows.filter(function (r) { return r.own.length && r.vs.length; });
   // Solo las ligas DRAFTEADAS: una liga sin plantel no puede contener a nadie,
   // asi que contarla solo sirve para que "4 de 13" suene peor de lo que es.
+  // La cifra de la sub-linea DECLARA que cuenta solo esas, para que no rina
+  // con el "12 leagues" de la cabecera.
   var total = ML.leagues.filter(mlDrafted).length || ML.leagues.length;
+  var enContra = rows.filter(function (r) { return r.own.length && r.vs.length; }).length;
 
   var h = avisoDemo;
-  if (conflicts.length) {
-    h += '<section class="ml-conf"><h3>Rooting against yourself</h3>'
-      + '<p class="ml-sub2">These are yours in one league and across the field in another. Sunday is not simple.</p><div class="ml-conf-list">';
-    conflicts.slice(0, 8).forEach(function (r) {
-      h += '<div class="ml-conf-row">' + mlFace(r.id)
-        + '<div class="ml-conf-txt"><b>' + mlEsc(r.p.name) + '</b>'
-        + '<span>' + mlEsc(r.p.pos) + ' · ' + mlEsc(r.p.team || 'FA') + '</span></div>'
-        + '<div class="ml-conf-split">'
-        + '<span class="ml-conf-for mono">' + r.own.length + '</span>'
-        + '<i>for</i><span class="ml-conf-sep"></span><i>against</i>'
-        + '<span class="ml-conf-vs mono">' + r.vs.length + '</span></div></div>';
-    });
-    h += '</div></section>';
-  }
-
   h += '<section class="ml-expo"><h3>Your players, all leagues</h3>'
-    + '<p class="ml-sub2">' + rows.length + ' players across ' + total + ' league' + (total === 1 ? '' : 's') + '. Sorted by how exposed you are.</p>'
+    + '<p class="ml-sub2">' + rows.length + ' players in your ' + total + ' drafted league' + (total === 1 ? '' : 's')
+    + (enContra ? ', <em>' + enContra + ' also playing against you</em>' : '') + '. Sorted by how exposed you are.</p>'
     + '<div class="ml-rows">';
   // Puntos en vez de barra: con una fila por jugador, una barra de progreso por
   // linea es un grafico que nadie mira. Los puntos se cuentan de un vistazo y
   // pesan menos en pantalla.
-  rows.slice(0, 120).forEach(function (r) {
+  var tope = ML.playersAll ? 400 : 20;
+  rows.slice(0, tope).forEach(function (r) {
     var puntos = '';
     for (var d = 0; d < total; d++) {
       puntos += '<i class="' + (d < r.own.length ? 'is-on' : '') + '"></i>';
@@ -1723,9 +1708,12 @@ function mlPaintPlayers() {
       + '<span class="ml-row-meta">' + mlEsc(r.p.pos) + ' · ' + mlEsc(r.p.team || 'FA')
       + (r.vs.length ? ' · <em>' + r.vs.length + ' against you</em>' : '') + '</span></div>'
       + '<div class="ml-row-dots" title="' + r.own.length + ' of ' + total + ' leagues">' + puntos + '</div>'
-      + '<div class="ml-row-n mono">' + r.own.length + '<span>/' + total + '</span></div>'
+      + '<div class="ml-row-n mono" title="in ' + r.own.length + ' of your ' + total + ' leagues">' + r.own.length + '<span>/' + total + '</span></div>'
       + '</div>';
   });
+  if (rows.length > tope) {
+    h += '<button class="ml-link ml-showall" onclick="ML.playersAll=true;mlPaintPlayers()">Show all ' + rows.length + ' players</button>';
+  }
   h += '</div></section>';
   box.innerHTML = h;
 }
@@ -1781,21 +1769,12 @@ function mlTableroTodas() {
     }
     return a.wp - b.wp;
   });
-  var ganando = filas.filter(function (f) { return f.vivo ? f.vivo.mio >= f.vivo.suyo : f.wp >= 0.5; }).length;
-  var puntos = filas.reduce(function (a, f) { return a + (f.vivo ? f.vivo.mio : f.mio); }, 0);
-
-  var h = '<div class="ml-slate"><div class="ml-slate-n"><b>' + ganando + '</b><span>of ' + filas.length
-    + (vivoManda ? ' games winning' : ' games favored') + '</span></div>'
-    + '<div class="ml-slate-n"><b class="mono">' + mlN(puntos, 0) + '</b><span>'
-    + (vivoManda ? 'points scored' : 'points on the field') + '</span></div>'
-    + '<div class="ml-slate-n"><b class="mono">'
-    + mlPct(filas.reduce(function (a, f) { return a + f.wp; }, 0) / filas.length)
-    + '%</b><span>average shot</span></div></div>';
-
-  h += '<div class="ml-board"><div class="ml-board-h"><span>Your matchup</span>'
-    + (vivoManda
-      ? '<span>You</span><span>Them</span><span>Margin</span>'
-      : '<span>You</span><span>Them</span><span>Win</span>') + '</div>';
+  // La columna del margen era la resta de las dos de al lado, y el resumen de
+  // tres cifras de aqui arriba repetia el panel de Leagues con OTRO numero bajo
+  // el mismo rotulo (221 vs 86 "points scored"). Los dos fuera: cada dato vive
+  // en un solo sitio.
+  var h = '<div class="ml-board' + (vivoManda ? ' is-live' : '') + '"><div class="ml-board-h"><span>Your matchup</span>'
+    + '<span>You</span><span>Them</span>' + (vivoManda ? '' : '<span>Win</span>') + '</div>';
   filas.forEach(function (f) {
     var fav = f.mio >= f.suyo;
     var voyGanando = f.vivo ? f.vivo.mio >= f.vivo.suyo : fav;
@@ -1803,7 +1782,9 @@ function mlTableroTodas() {
     // letra chica, como hace una casa de apuestas de verdad.
     var izq = f.vivo ? f.vivo.mio : f.mio;
     var der = f.vivo ? f.vivo.suyo : f.suyo;
-    h += '<div class="ml-game' + (voyGanando ? ((f.vivo || f.wp > 0.6) ? ' is-hot' : '') : ' is-cold') + '">'
+    h += '<div class="ml-game' + (voyGanando ? ((f.vivo || f.wp > 0.6) ? ' is-hot' : '') : ' is-cold')
+      + '" role="button" tabindex="0" onclick="mlOpenOdds(\'' + mlEsc(f.L.id) + '\')"'
+      + ' onkeydown="if(event.key===\'Enter\')mlOpenOdds(\'' + mlEsc(f.L.id) + '\')">'
       + '<div class="ml-game-tag">' + mlEsc(f.L.name) + (f.vivo ? ' <i class="ml-live-dot"></i>' : '') + '</div>'
       + '<div class="ml-bd-row">'
       + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + ' vs ' + mlEsc(f.rival) + '</b>'
@@ -1816,11 +1797,8 @@ function mlTableroTodas() {
       // empezado no tiene margen: guion, y su % baja a la letra chica. Antes
       // salian porcentajes bajo la cabecera "Margin": dos unidades distintas en
       // la misma columna (visto en el recorrido de UX del 10-sep).
-      + '<div class="ml-cell mono ml-tot">' + (f.vivo
-        ? (izq >= der ? '+' : '') + mlN(izq - der)
-        : (vivoManda ? '–' : mlPct(f.wp) + '%')) + '</div>'
+      + (vivoManda ? '' : '<div class="ml-cell mono ml-tot">' + mlPct(f.wp) + '%</div>')
       + '</div>'
-      + '<button class="ml-link ml-game-go" onclick="mlOpenOdds(\'' + mlEsc(f.L.id) + '\')">Full board and title odds →</button>'
       + '</div>';
   });
   return h + '</div>';
@@ -1836,7 +1814,7 @@ function mlPaintOdds() {
   // la semana, y enseñar "el tablero esta cerrado" a quien viene a entender que
   // hace esto seria la peor primera impresion posible.
   if (!ML.props && !ML.demo) {
-    box.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">The board is closed</div>'
+    box.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">Odds are not ready yet</div>'
       + '<p>Lines need this week\'s player numbers and they are not loaded right now. Everything else on this screen still works.</p></div>';
     return;
   }
@@ -1859,7 +1837,7 @@ function mlPaintOdds() {
     + ML.leagues.map(function (L) {
       return '<option value="' + mlEsc(L.id) + '"' + (!todas && L.id === sel.id ? ' selected' : '') + '>' + mlEsc(L.name) + '</option>';
     }).join('') + '</select>'
-    + '<span class="ml-book-tag">Week ' + ML.week + '</span></div>';
+    + '</div>';
 
   if (todas) { box.innerHTML = h + mlTableroTodas() + '</div>'; return; }
 
@@ -2079,7 +2057,7 @@ function mlOpenMatchup(id) {
         : (sid ? '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(sid) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="ml-mu-sinfoto"></span>');
       return '<div class="ml-mu-p ' + lado + '">' + foto
         + '<span class="ml-mu-txt"><b>' + mlEsc(y.name) + '</b><i>' + mlEsc(y.pos) + ' · ' + mlEsc(y.team || 'FA') + '</i></span>'
-        + '<span class="ml-mu-pts mono' + (y.points != null && y.points !== 0 ? ' is-real' : '') + '">' + ypts + '</span>'
+        + '<span class="ml-mu-pts mono' + (y.points != null && y.points !== 0 ? ' is-real' : (y.points === 0 ? ' is-cero' : '')) + '">' + ypts + '</span>'
         + '</div>';
     }
     var id = ((m.starters || [])[i]) || null;
@@ -2101,7 +2079,7 @@ function mlOpenMatchup(id) {
       : '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(p.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';
     return '<div class="ml-mu-p ' + lado + '">' + fotoS
       + '<span class="ml-mu-txt"><b>' + mlEsc(p.name) + '</b><i>' + mlEsc(p.pos) + ' · ' + mlEsc(p.team || 'FA') + '</i></span>'
-      + '<span class="ml-mu-pts mono' + (real != null ? ' is-real' : '') + '">' + pts + '</span>'
+      + '<span class="ml-mu-pts mono' + (real != null && real !== 0 ? ' is-real' : (real === 0 ? ' is-cero' : '')) + '">' + pts + '</span>'
       + '</div>';
   };
 
@@ -2116,7 +2094,20 @@ function mlOpenMatchup(id) {
     + '<div class="ml-mu-side"><span>' + mlEsc(mlTeamName(L, H.mine.roster_id)) + '</span><b class="mono">' + mlN(mioT) + '</b></div>'
     + '<span class="ml-mu-vs">' + (vivo ? 'live' : 'vs') + '</span>'
     + '<div class="ml-mu-side is-opp"><span>' + mlEsc(mlTeamName(L, H.opp)) + '</span><b class="mono">' + mlN(suyoT) + '</b></div>'
-    + '</div></header><div class="ml-mu-rows">';
+    + '</div>'
+    + (function () {
+      var pm = (H.proj[H.mine.roster_id] || {}).total || 0;
+      var po = (H.proj[H.opp] || {}).total || 0;
+      var wp = mlWinProb(pm, po);
+      if (vivo) {
+        var d = vivo.mio - vivo.suyo;
+        return '<div class="ml-mu-line">' + (d >= 0 ? 'winning by ' + mlN(d) : 'down ' + mlN(-d))
+          + ' · proj ' + mlN(pm) + ' - ' + mlN(po) + '</div>';
+      }
+      return '<div class="ml-mu-line"><span class="mono">' + (pm >= po ? '-' : '+') + mlSpread(Math.abs(pm - po))
+        + '</span> · ' + mlPct(wp) + '% to win</div>';
+    })()
+    + '</header><div class="ml-mu-rows">';
   if (L.plat === 'yahoo' && yhMio) {
     // Los rotulos de casilla, de la alineacion real de Yahoo (W/R, etc).
     slots = yhMio.map(function (y) { return y.slot || '?'; });

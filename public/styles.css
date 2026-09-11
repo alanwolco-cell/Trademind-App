@@ -1330,7 +1330,7 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 .sage-composer textarea{flex:1;background:none;border:none;outline:none;resize:none;color:var(--text);font-family:var(--font-body);font-size:14.5px;line-height:1.55;min-height:44px;max-height:220px;padding:2px 0}
 .sage-composer textarea::placeholder{color:var(--muted)}
 .sage-composer textarea:disabled{color:var(--muted)}
-.sage-composer button{width:38px;height:38px;border-radius:12px;border:none;background:var(--accent-btn);color:#fff;font-size:18px;font-weight:800;cursor:pointer;flex-shrink:0;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center}
+.sage-composer button{width:auto;min-width:38px;padding:0 16px;white-space:nowrap;height:38px;border-radius:12px;border:none;background:var(--accent-btn);color:#fff;font-size:14px;font-weight:800;cursor:pointer;flex-shrink:0;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center}
 .sage-composer button:hover:not(:disabled){transform:translateY(-1px);background:#b18ff5}
 .sage-composer button:disabled{background:var(--surface3);color:var(--muted);cursor:not-allowed}
 .sage-chat-log:empty{display:none}
@@ -2891,8 +2891,12 @@ html{scroll-padding-top:76px}
   border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:14px}
 .ml-book-tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
   border:1px solid var(--border);border-radius:100px;padding:4px 10px;white-space:nowrap}
-.ml-board{border:0;background:transparent;display:flex;flex-direction:column;gap:8px}
-.ml-board-h{display:none}
+.ml-board{border:0;background:transparent;display:flex;flex-direction:column;gap:8px;max-width:900px}
+.ml-board-h{display:grid;grid-template-columns:minmax(0,1fr) 58px 62px 62px;gap:6px;padding:2px 14px 6px}
+.ml-board-h span{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right}
+.ml-board-h span:first-child{text-align:left}
+.ml-board.is-live .ml-board-h,.ml-board.is-live .ml-bd-row{grid-template-columns:minmax(0,1fr) 62px 62px}
+.ml-game[role=button]{cursor:pointer}
 .ml-board-empty{padding:18px;font-size:13px;color:var(--muted);border:1px solid var(--border);
   border-radius:14px;background:var(--surface)}
 /* Cada duelo es una PIEZA, no dos filas separadas por la misma linea que las
@@ -2913,9 +2917,6 @@ html{scroll-padding-top:76px}
 .ml-cell.is-fav{color:var(--green);font-weight:600}
 .ml-tot{color:var(--muted)}
 @media(min-width:720px){
-  .ml-board-h{display:grid;grid-template-columns:minmax(0,1fr) 58px 62px 62px;gap:6px;padding:2px 14px 6px}
-  .ml-board-h span{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:right}
-  .ml-board-h span:first-child{text-align:left}
 }
 .ml-champ{margin-top:18px;border:1px solid var(--border2);border-radius:16px;background:var(--surface);padding:16px}
 .ml-champ-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -2955,6 +2956,8 @@ html{scroll-padding-top:76px}
   .ml-champ-po{justify-content:flex-end}
   .ml-row{grid-template-columns:30px minmax(0,1fr) 44px 46px;gap:8px;padding:7px 10px}
   .ml-bd-row{grid-template-columns:minmax(0,1fr) 48px 54px 52px;gap:4px;padding:9px 10px}
+  .ml-board-h{grid-template-columns:minmax(0,1fr) 48px 54px 52px;gap:4px;padding:2px 10px 4px}
+  .ml-board.is-live .ml-board-h,.ml-board.is-live .ml-bd-row{grid-template-columns:minmax(0,1fr) 54px 54px}
   .ml-cell{font-size:12.5px}
 }
 /* Yahoo dentro de My Leagues */
@@ -2993,6 +2996,8 @@ html{scroll-padding-top:76px}
 .hb-code-lbl{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .hb-code b{font-size:19px;letter-spacing:.18em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .hb-claim{border:1px solid rgba(155,114,232,.32);background:var(--accent-dim);border-radius:16px;padding:16px;margin-bottom:18px}
+.hb-claim.is-slim{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px}
+.hb-claim.is-slim span{font-size:13.5px;font-weight:600}
 .hb-claim-h{font-family:var(--font-head);font-size:17px;font-weight:600}
 .hb-claim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .hb-team{min-height:44px;padding:10px 12px;border-radius:10px;border:1px solid var(--border2);
@@ -3293,7 +3298,7 @@ html.no-draft .draft-only{display:none !important}
 .ml-aro-n b{font-weight:700;letter-spacing:-.03em;line-height:1}
 .ml-aro-n b i{font-style:normal;font-size:.55em;color:var(--muted);margin-left:1px}
 .ml-aro-n span{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.ml-week{display:flex;align-items:center;gap:20px;border:1px solid var(--border2);border-radius:18px;
+.ml-week{display:flex;align-items:center;gap:20px;max-width:560px;border:1px solid var(--border2);border-radius:18px;
   background:var(--surface);padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.28)}
 .ml-week-list{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
 .ml-week-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
@@ -3338,10 +3343,12 @@ html.no-draft .draft-only{display:none !important}
 .ml-mu-p img{width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--surface2)}
 .ml-mu-txt{display:flex;flex-direction:column;min-width:0}
 .ml-mu-p.is-opp .ml-mu-txt{align-items:flex-end}
-.ml-mu-txt b{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ml-mu-txt b{font-size:12.5px;font-weight:600;line-height:1.15;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .ml-mu-txt i{font-style:normal;font-size:10px;color:var(--muted)}
 .ml-mu-pts{font-size:13px;color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
 .ml-mu-pts.is-real{color:var(--text);font-weight:700}
+.ml-mu-pts.is-cero{opacity:.45}
+.ml-mu-line{text-align:center;font-size:11.5px;color:var(--muted);padding:2px 0 8px}
 .ml-mu-p.is-empty .ml-mu-nom{font-size:11.5px;color:var(--muted);font-style:italic}
 .ml-mu-sinfoto{width:30px;height:30px;border-radius:50%;background:var(--surface2);flex-shrink:0;display:block}
 .ml-card[role="button"]{cursor:pointer}

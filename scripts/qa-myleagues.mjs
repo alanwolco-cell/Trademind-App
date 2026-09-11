@@ -153,7 +153,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
 {
   const { ctx, pg } = await nuevaPagina(1400, 900, false);
   const nav = await entrarClicando(pg);
-  ok('(a) el cajon abre y lista All Leagues', nav.abierto === true && nav.item === true,
+  ok('(a) el cajon abre y lista Leagues', nav.abierto === true && nav.item === true,
     JSON.stringify(nav));
 
   const tras = await seguro(pg, () => {
@@ -235,29 +235,36 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   // mide esa vista, y despues se filtra a UNA liga, que es donde existen los
   // dos lados y la tabla de campeonato.
   const slate = await seguro(pg, () => {
+    const board = document.querySelector('#screen-myleagues .ml-board');
+    const enVivo = !!(board && board.classList.contains('is-live'));
     const filas = [...document.querySelectorAll('#screen-myleagues .ml-game')];
-    const resumen = [...document.querySelectorAll('.ml-slate-n b')].map(x => x.textContent.trim());
-    const pct = filas.map(f => {
-      const c = f.querySelectorAll('.ml-cell');
-      return parseFloat((c[2] || {}).textContent || 'NaN');
+    // Rediseño 11-sep: el resumen de tres cifras de Odds SE FUE (repetia el
+    // panel de Leagues con otro numero bajo el mismo rotulo). El margen, que
+    // era la resta de las dos celdas de al lado, tambien. Lo que queda por
+    // fila: You, Them, y Win% solo antes del partido.
+    const slates = document.querySelectorAll('.ml-slate').length;
+    const cab = [...document.querySelectorAll('#screen-myleagues .ml-board-h span')].map(x => x.textContent.trim());
+    // En un tablero en vivo los duelos NO empezados van al final (asi ordena
+    // el producto); su resta de proyecciones no es un margen y no entra en la
+    // serie. Se marca cada fila por su punto de "live".
+    const orden = filas.map(f => {
+      const c = [...f.querySelectorAll('.ml-cell')].map(x => parseFloat(x.textContent));
+      if (!enVivo) return c[2];
+      return f.querySelector('.ml-live-dot') ? (c[0] - c[1]) : null;
     });
-    return { filas: filas.length, resumen, pct, ligas: (ML.leagues || []).filter(mlDrafted).length };
+    return { filas: filas.length, slates, cab, enVivo, orden, ligas: (ML.leagues || []).filter(mlDrafted).length };
   });
   ok('(l3) el tablero abre con TUS duelos de todas las ligas',
     slate.filas > 0 && slate.filas <= slate.ligas, JSON.stringify(slate).slice(0, 200));
-  ok('(l4) el resumen del domingo trae sus tres cifras',
-    Array.isArray(slate.resumen) && slate.resumen.length === 3 && slate.resumen.every(x => x && x.length),
-    JSON.stringify(slate.resumen));
-  // Con la jornada en marcha la columna es el MARGEN (numeros ascendentes) y
-  // los partidos no empezados van con guion AL FINAL. Sin jornada, es el % de
-  // ganar. El check acepta las dos semanticas: numeros ascendentes, y los
-  // nulos (guiones) solo al final.
-  const nums = (slate.pct || []).filter(v => v != null && !isNaN(v));
-  const nulos = (slate.pct || []).map(v => (v == null || isNaN(v)) ? 1 : 0);
+  ok('(l4) el resumen duplicado ya no existe y las columnas llevan rotulo',
+    slate.slates === 0 && Array.isArray(slate.cab) && slate.cab.length >= 3 && slate.cab[1] === 'You',
+    JSON.stringify({ slates: slate.slates, cab: slate.cab }));
+  const nums = (slate.orden || []).filter(v => v != null && !isNaN(v));
+  const nulos = (slate.orden || []).map(v => (v == null || isNaN(v)) ? 1 : 0);
   const nulosAlFinal = nulos.join('').match(/^0*1*$/) != null;
   ok('(l5) los duelos van del peor al mejor, que es donde puedes hacer algo',
     nums.length > 0 && nums.every((v, i) => i === 0 || nums[i - 1] <= v + 0.05) && nulosAlFinal,
-    JSON.stringify(slate.pct));
+    JSON.stringify(slate.orden));
 
   // filtrar a una liga concreta
   const filtro = await seguro(pg, async () => {
@@ -356,7 +363,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     const txt = (document.getElementById('ml-odds-body') || {}).textContent || '';
     const juegos = document.querySelectorAll('#screen-myleagues .ml-game').length;
     ML.props = guardadas;
-    return { dice: /board is closed/i.test(txt), juegos };
+    return { dice: /Odds are not ready yet/i.test(txt), juegos };
   });
   ok('(s) CONTROL: sin lineas el tablero se declara cerrado y no pinta ceros',
     cerrado.dice === true && cerrado.juegos === 0, JSON.stringify(cerrado));

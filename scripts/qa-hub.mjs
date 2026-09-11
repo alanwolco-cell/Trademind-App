@@ -149,17 +149,30 @@ const p1 = await persona('qa_hub_uno_aaaaaaaaaaaaaaaaaaaaaa');
 
   const cab = await seguro(pg, () => ({
     liga: (document.querySelector('.hb-title h2') || {}).textContent,
-    codigo: (document.querySelector('.hb-code b') || {}).textContent,
+    // El codigo NO se enseña a quien entro con el (rediseño 11-sep): solo a
+    // quien ya reclamo equipo, que es el que lo va a reenviar.
+    codigoAntes: !!document.querySelector('.hb-code b'),
     filas: document.querySelectorAll('.hb-row').length,
     lineas: document.querySelectorAll('.hb-line').length,
-    equipos: document.querySelectorAll('.hb-team').length
+    relleno: /Middle of the pack/.test((document.getElementById('hub-booth-body') || {}).textContent || ''),
+    barra: !!document.querySelector('.hb-claim.is-slim'),
+    equiposAntes: document.querySelectorAll('.hb-team').length
   }));
-  ok('(b) pinta la liga, su codigo y un puesto por equipo',
-    cab.liga === 'Dynasty' && cab.codigo === CODE && cab.filas === 10, JSON.stringify(cab));
-  ok('(c) cada equipo del ranking lleva su linea de Mac', cab.lineas === cab.filas,
-    JSON.stringify(cab));
-  ok('(d) sin equipo reclamado, ofrece los diez para reclamar', cab.equipos === 10,
-    JSON.stringify(cab));
+  ok('(b) pinta la liga y un puesto por equipo, sin el codigo antes de reclamar',
+    cab.liga === 'Dynasty' && cab.codigoAntes === false && cab.filas === 10, JSON.stringify(cab));
+  ok('(c) las lineas de Mac que existen dicen algo: cero relleno de "Middle of the pack"',
+    cab.lineas <= cab.filas && cab.relleno === false, JSON.stringify(cab));
+  ok('(d) el reclamo arranca plegado en una barra y se abre a los diez equipos',
+    cab.barra === true && cab.equiposAntes === 0, JSON.stringify(cab));
+  const abierto = await seguro(pg, async () => {
+    const b = document.querySelector('.hb-claim.is-slim button');
+    if (!b) return { _err: 'sin boton' };
+    b.click();
+    await new Promise(r => setTimeout(r, 400));
+    return { equipos: document.querySelectorAll('.hb-team').length };
+  });
+  ok('(d2) tocar la barra ofrece los diez para reclamar', abierto.equipos === 10,
+    JSON.stringify(abierto));
 
   // El ranking tiene que estar ORDENADO por su propio numero. Un ranking que no
   // ordena es una lista.
@@ -176,6 +189,9 @@ const p1 = await persona('qa_hub_uno_aaaaaaaaaaaaaaaaaaaaaa');
   });
   ok('(f) reclamar un equipo lo deja como tuyo y cierra el selector',
     reclamo.mio === 3 && reclamo.quedan === 0, JSON.stringify(reclamo));
+  const codDespues = await seguro(pg, () => (document.querySelector('.hb-code b') || {}).textContent);
+  ok('(f2) el codigo aparece cuando ya reclamaste: eres quien lo reenvia',
+    codDespues === CODE, JSON.stringify(codDespues));
 }
 
 /* ------------------------------------------------------ persona 2: miembro */
@@ -185,11 +201,15 @@ const p2 = await persona('qa_hub_dos_bbbbbbbbbbbbbbbbbbbbbb', 390, 844, true);
   const cargo = await abrirHub(pg, CODE);
   ok('(g) el segundo navegador abre el mismo hub', cargo === true);
 
-  const ve = await seguro(pg, () => ({
-    tomados: document.querySelectorAll('.hb-team.is-taken').length,
-    libres: document.querySelectorAll('.hb-team:not(.is-taken)').length,
-    mio: HUB.myTeamId
-  }));
+  const ve = await seguro(pg, async () => {
+    const b = document.querySelector('.hb-claim.is-slim button');
+    if (b) { b.click(); await new Promise(r => setTimeout(r, 400)); }
+    return {
+      tomados: document.querySelectorAll('.hb-team.is-taken').length,
+      libres: document.querySelectorAll('.hb-team:not(.is-taken)').length,
+      mio: HUB.myTeamId
+    };
+  });
   ok('(h) CONTROL: ve el equipo del otro como reclamado y no como suyo',
     ve.tomados === 1 && ve.libres === 9 && ve.mio === null, JSON.stringify(ve));
 

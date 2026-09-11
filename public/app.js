@@ -1747,18 +1747,23 @@ var _sageChat=[];
 var MAC_SUGGESTIONS_PRE=[
   'Should I trade Rashee Rice for Jordan Addison and a 2027 2nd?',
   'Who should I take at 1.01 in my rookie draft?',
-  'Paste a league convo - Mac writes your reply',
+  'Paste a league convo: Mac writes your reply',
   'Top 3 buy-low WRs before week 1?'
 ];
 var MAC_SUGGESTIONS_REG=[
   'Should I trade Rashee Rice for Jordan Addison and a 2027 2nd?',
-  'Build a rebuild plan for my dynasty team',
-  'Paste a league convo - Mac writes your reply',
+  'Who do I start this week?',
+  'Paste a league convo: Mac writes your reply',
   'Top 3 buy-low WRs right now?'
 ];
 function MAC_SUGGESTIONS_NOW(){
   var st=window._nflState||{};
-  return (st.season_type&&st.season_type!=='pre')?MAC_SUGGESTIONS_REG:MAC_SUGGESTIONS_PRE;
+  if(st.season_type)return st.season_type!=='pre'?MAC_SUGGESTIONS_REG:MAC_SUGGESTIONS_PRE;
+  // Sin estado aun (la primera pintada gana la carrera a loadNflState), decide
+  // el calendario: de septiembre a enero es temporada. Antes se asumia
+  // pretemporada y en semana 1 salian preguntas de draft.
+  var m=new Date().getMonth();
+  return (m>=8||m===0)?MAC_SUGGESTIONS_REG:MAC_SUGGESTIONS_PRE;
 }
 var MAC_SUGGESTIONS=MAC_SUGGESTIONS_PRE; // compat para cualquier lector viejo
 function _sageRenderSuggestions(){
@@ -1965,7 +1970,7 @@ function _proBenefitsHtml(){
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:13px;margin-bottom:22px">'
       +_proBenefit('Unlimited Mac','Ask as much as you want, all season long. No daily or weekly caps.')
-      +_proBenefit('The sharpest read','Every trade weighed with our most capable AI, not a lite model.')
+      +_proBenefit('The sharpest read','Every trade gets our best read, not a shortcut version.')
       +_proBenefit('The deep stuff','Opponent tendencies, negotiation coaching, and player scouting on demand.')
       +_proBenefit('Always in your corner','One clear answer before every move. Cancel anytime.')
     +'</div>'
@@ -2072,7 +2077,7 @@ async function openReferral(){
   if(!m){m=document.createElement('div');m.id='referral-modal';m.onclick=function(e){if(e.target===m)closeReferral();};document.body.appendChild(m);}
   m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:20px';
   m.innerHTML="<div style='max-width:440px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 22px'>"
-    +"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px'><div style='font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em'>Refer friends, earn Mac</div><span onclick='closeReferral()' style='cursor:pointer;color:var(--muted);font-size:20px;line-height:1'>&times;</span></div>"
+    +"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px'><div style='font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-.02em'>Refer friends, earn free questions</div><span onclick='closeReferral()' style='cursor:pointer;color:var(--muted);font-size:20px;line-height:1'>&times;</span></div>"
     +"<div style='font-size:13px;color:var(--muted2);line-height:1.55;margin:6px 0 16px'>Send this link to a friend. When they connect a real Sleeper league, you both get two extra Ask Mac questions that day. Up to "+(st.cap||10)+" from referrals.</div>"
     +"<div style='display:flex;gap:8px;margin-bottom:14px'><input id='referral-link-input' readonly value='"+link.replace(/'/g,"&#39;")+"' style='flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 12px;font-size:12.5px;color:var(--text);outline:none'><button onclick='copyReferral(this)' class='ideas-refresh' style='white-space:nowrap'>Copy</button></div>"
     +"<div style='display:flex;gap:10px'>"
@@ -2161,6 +2166,9 @@ async function _manageResume(){
 }
 async function sageUpdateQuota(){
   var el=document.getElementById('sage-quota');if(!el)return;
+  // El contador de preguntas no se ensena antes de la primera respuesta:
+  // mostrar el muro antes de que nadie haya probado nada es venderse al reves.
+  if(!_sageChat.length){el.style.display='none';return;}
   var user=localStorage.getItem('tm_username')||'';
   if(!user){el.style.display='none';return;}
   try{
@@ -5733,7 +5741,7 @@ function switchScreen(name,_noPush){
   // loaded yet. For a signed-out visitor it would be a second, competing entry
   // point next to the inline sign-in - which is exactly the double prompt we are
   // killing - so we keep it hidden and let the inline sign-in own onboarding.
-  if(name==='sage'){var sch=document.getElementById('sage-connect-hint');if(sch)sch.style.display=(localStorage.getItem('tm_username')&&!leagueId)?'inline-flex':'none';try{sageSyncUser();}catch(_){}try{sageUpdateQuota();}catch(_){}}
+  if(name==='sage'){var sch=document.getElementById('sage-connect-hint');if(sch)sch.style.display=(!localStorage.getItem('tm_username')&&!leagueId)?'inline-flex':'none';try{sageSyncUser();}catch(_){}try{sageUpdateQuota();}catch(_){}}
   // HOME is the landing page (hero + story + news rail); every other screen is
   // a tool page. The hero and marketing live ONLY on home now - the Analyze
   // page shows just the tool.
@@ -5849,7 +5857,7 @@ window.addEventListener('popstate',function(e){
 });
 
 async function syncRoster(){
-  var _sb=document.getElementById("sync-btn");if(_sb){_sb.textContent="Syncing...";_sb.disabled=true;setTimeout(function(){_sb.textContent="↺ Sync Roster";_sb.disabled=false;},2500);}
+  var _sb=document.getElementById("sync-btn");if(_sb){_sb.textContent="Syncing...";_sb.disabled=true;setTimeout(function(){_sb.textContent="↺ Refresh Roster";_sb.disabled=false;},2500);}
   if(!leagueId){setStatus('No league loaded - select a league first.','var(--red)');return;}
   var btn=document.getElementById('sync-btn');
   if(btn){btn.textContent='Syncing...';btn.disabled=true;}
@@ -5857,7 +5865,7 @@ async function syncRoster(){
   // Force allPlayers to re-fetch by clearing it
   allPlayers={};
   await loadLeague(leagueId, leagueName, null, leagueSeason||ACTIVE_SEASON);
-  if(btn){btn.textContent='↺ Sync Roster';btn.disabled=false;}
+  if(btn){btn.textContent='↺ Refresh Roster';btn.disabled=false;}
   var active=document.querySelector('#screen-league .tab-content.active');
   if(active){
     if(active.id==='tab-roster-grade')renderRosterGrade();

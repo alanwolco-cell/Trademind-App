@@ -49,7 +49,7 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <link rel="apple-touch-startup-image" href="/splash/1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="/splash/1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="/splash/1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<title>Mac Draft - Every League You Play, One Screen</title>
+<title>Mac Draft: Fantasy Football, Every League</title>
 <meta name="description" content="Track every fantasy football league you play, Sleeper and Yahoo together: your record, who you face this week, every player you own across all of them, and a betting board priced with your own league's rules.">
 <meta property="og:title" content="Mac Draft - Every League You Play, One Screen">
 <meta property="og:description" content="Sleeper and Yahoo in one screen. Your record, this week's matchup, your exposure across every league, and odds priced with your league's own rules.">
@@ -154,7 +154,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
          button on the right - hidden, not removed. -->
     <div class="nav-item">
       <button class="nav-item-btn screen-nav draft-only" data-screen="mock" onclick="goMock()">Mock Draft</button>
-      <button class="nav-item-btn screen-nav" data-screen="myleagues" onclick="switchScreen('myleagues')">My Leagues</button>
+      <button class="nav-item-btn screen-nav" data-screen="myleagues" onclick="switchScreen('myleagues')">Leagues</button>
     </div>
     <div class="nav-item">
       <button class="nav-item-btn screen-nav sage-hot" data-screen="sage" onclick="switchScreen('sage')"><img src="/sage/sage-32.png" alt="" style="width:18px;height:18px;object-fit:contain;vertical-align:-4px;margin-right:5px">Ask Mac</button>
@@ -214,7 +214,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="nav-dd-sep" style="margin:4px 0"></div>
       <div class="user-dd-item" onclick="openReferral();closeAllDropdowns()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6M19 8v6"/></svg>
-        Refer friends, earn Mac
+        Refer friends, earn free questions
       </div>
       <div class="user-dd-item" id="user-dd-pro" onclick="sagePillPro();closeAllDropdowns()" style="color:var(--accent-bright)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.3L12 17.8 5.7 21.5l1.7-7.3L2 9.5l7.1-.6z"/></svg>
@@ -259,13 +259,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
            buscarla (leccion del 26-ago: una feature sin puerta no existe). -->
       <button class="mob-menu-item draft-only" onclick="mobMenuCloseForNav();lvEnter()">Draft Day (live auction)</button>
       <button class="mob-menu-item" onclick="mobGo('analyze')">Trade Analyzer</button>
-      <button class="mob-menu-item" onclick="mobGo('myleagues')">All Leagues</button>
+      <button class="mob-menu-item" onclick="mobGo('myleagues')">Leagues</button>
       <button class="mob-menu-item" onclick="mobGo('league')">Roster Grade</button>
       <div class="mob-group">
         <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)">Research<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="mob-subs">
           <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-buysell')">Buy / Sell</button>
-          <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-compare')">Compare Players</button>
+          <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-compare')">Compare</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-startsit')">Start / Sit</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-players-db')">Players</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('research','tab-market')">Market</button>
@@ -295,7 +295,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="mk-hero-inner">
     <!-- app.js swaps this line for "Welcome back, <user>" on a return visit -->
     <div class="mk-eyebrow" id="hero-badge-text">Mac Draft</div>
-    <h1>All your fantasy leagues, <br>one screen.</h1>
+    <h1>All your fantasy football leagues, <br>one screen.</h1>
     <p class="mk-sub">Sleeper and Yahoo in one place. Your record, who you play this week, every player you own across all of them, and odds on each matchup priced with your own league's rules.</p>
     <div class="mk-hero-cta hero-cta" id="hero-cta">
       <div class="mk-cta-row">
@@ -777,7 +777,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="inner-tab active" onclick="switchInnerTab(this,'tab-roster-grade','screen-league');renderRosterGrade()">Roster Grade</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-league-trades','screen-league');renderLeagueTrades()">League Trades</div>
         <div class="inner-tab" data-tab="tab-history" onclick="switchInnerTab(this,'tab-history','screen-league');renderHistory()">Saved Trades</div>
-        <div style="margin-left:auto;flex-shrink:0"><button class="btn-sm" id="sync-btn" onclick="syncRoster()">↺ Sync Roster</button></div>
+        <div style="margin-left:auto;flex-shrink:0"><button class="btn-sm" id="sync-btn" onclick="syncRoster()">↺ Refresh Roster</button></div>
       </div>
 
     <!-- HISTORY TAB -->
@@ -853,7 +853,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <div class="screen" id="screen-hub">
       <div id="hub-head"></div>
       <div class="inner-tab-bar" id="hub-tab-bar">
-        <div class="inner-tab active" data-tab="tab-hub-booth" onclick="switchInnerTab(this,'tab-hub-booth','screen-hub');window.renderHub&&renderHub()">Booth</div>
+        <div class="inner-tab active" data-tab="tab-hub-booth" onclick="switchInnerTab(this,'tab-hub-booth','screen-hub');window.renderHub&&renderHub()">Rankings</div>
         <div class="inner-tab" data-tab="tab-hub-history" onclick="switchInnerTab(this,'tab-hub-history','screen-hub');window.renderHub&&renderHub()">History</div>
         <div class="inner-tab" data-tab="tab-hub-market" onclick="switchInnerTab(this,'tab-hub-market','screen-hub');window.renderHub&&renderHub()">Market</div>
       </div>
@@ -1144,12 +1144,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <img src="/sage/sage-128.png" alt="Mac" id="sage-greet-owl" class="sage-greet-owl" style="width:76px;height:76px;object-fit:contain;margin-bottom:12px">
           <div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--text)">Ask me anything.</div>
           <div style="font-size:13px;color:var(--muted);margin-top:7px">The friend everyone texts before hitting Accept.</div>
-          <div class="sage-caps">
-            <span class="sage-cap"><b>Reads</b> your roster</span>
-            <span class="sage-cap"><b>Knows</b> your league</span>
-            <span class="sage-cap"><b>Live</b> market values</span>
-            <span class="sage-cap"><b>Never</b> emotional</span>
-          </div>
           <button class="btn-sm" id="sage-connect-hint" style="display:none;margin-top:12px" onclick="goConnectLeague()">Connect your Sleeper league so Mac sees your roster →</button>
         </div>
         <div id="sage-chat-log" class="sage-chat-log"></div>
@@ -1686,22 +1680,18 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
     <div class="mk-steps">
       <div class="mk-step mk-reveal">
-        <div class="mk-step-num">01</div>
         <h3>Connect your account</h3>
         <p>Your Sleeper username or one Yahoo sign in. Every league you play comes with it.</p>
       </div>
       <div class="mk-step mk-reveal">
-        <div class="mk-step-num">02</div>
         <h3>See your Sunday</h3>
         <p>Record, this week's matchup and a live score in every league, side by side.</p>
       </div>
       <div class="mk-step mk-reveal">
-        <div class="mk-step-num">03</div>
         <h3>Read the board</h3>
         <p>Every matchup priced with your own league's rules, and title odds from four thousand simulated seasons.</p>
       </div>
       <div class="mk-step mk-reveal">
-        <div class="mk-step-num">04</div>
         <h3>Bring the league in</h3>
         <p>One code opens your league to everyone in it: power rankings, past champions and the trade market.</p>
       </div>
@@ -1723,8 +1713,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <p class="mk-sub mk-reveal">Always in your corner. Notes, stats, news, and a straight answer: take him or pass.</p>
 
       <div class="mk-chat mk-reveal" aria-hidden="true">
-        <div class="mk-chat-q">I'm on the clock at 5.05 and already strong at WR. Who's the pick?</div>
-        <div class="mk-chat-a"><span class="mk-chat-tag">Mac</span>No hesitation: Jameson Williams. 6.8 yards after catch per grab means he manufactures points on his own. You are already strong at WR, so this is a stack-the-deck pick that doubles as trade bait.</div>
+        <div class="mk-chat-q">They offered me their WR1 for my two bench RBs. Take it?</div>
+        <div class="mk-chat-a"><span class="mk-chat-tag">Mac</span>Take it. You are three deep at running back and starting a bye-week filler at WR. Turning bench depth into a weekly starter is how a season flips.</div>
       </div>
 
       <div class="mk-trio">
@@ -1749,47 +1739,15 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
   </div>
 
-  <!-- THE WAR ROOM - back to light. Three feature cards, each with a small
-       CSS excerpt of the real dark UI (position edges, the clock, the tier
-       cliff) so the product peeks through without repeating the hero shot. -->
-  <div class="mk-sec mk-band">
-    <div class="mk-wrap">
-      <div class="mk-center mk-reveal">
-        <div class="mk-eyebrow-acc">The war room</div>
-        <h2 class="mk-h2">A draft room,<br>not a spreadsheet.</h2>
-        <p class="mk-sub">Board or list view, timer on or off, undo, auto-draft, and live scouting on every player.</p>
-      </div>
-      <div class="mk-cards">
-        <div class="mk-card mk-reveal">
-          <h3>A real snake board.</h3>
-          <p>Every pick lands on the grid as it happens, position-coloured, your column marked.</p>
-          <img class="mk-shot" src="/shot-board.jpg" alt="" loading="lazy">
-        </div>
-        <div class="mk-card mk-reveal">
-          <h3>The clock is yours.</h3>
-          <p>Timer on or off. Undo a pick. Flip on auto-draft when life happens.</p>
-          <img class="mk-shot" src="/shot-advice.jpg" alt="" loading="lazy">
-        </div>
-        <div class="mk-card mk-reveal">
-          <h3>Auction mode.</h3>
-          <p>Real dollar values, live room inflation, and Mac telling you what he is worth to you.</p>
-          <img class="mk-shot" src="/shot-auction.jpg" alt="" loading="lazy">
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- LEAGUE CONNECT - white. The platforms, plainly. -->
   <div class="mk-sec">
     <div class="mk-wrap mk-center">
       <div class="mk-reveal">
         <h2 class="mk-h2">Bring your league with you.</h2>
-        <p class="mk-sub">Connect Sleeper and your scoring, size and format fill themselves. ESPN imports too, Yahoo is coming soon - or describe a home league in plain words.</p>
-      <p class="mk-sub" style="margin-top:14px">Then name the room. Every seat takes one of your leaguemates and the way they actually draft - the one who never waits on a quarterback, the one who hoards running backs, the one who reaches for rookies. You are not practising against ten strangers called Team 5. You are practising against your league.</p>
+        <p class="mk-sub">Connect Sleeper with a username or sign in with Yahoo. Your scoring, size and format fill themselves.</p>
       </div>
       <div class="mk-plats mk-reveal">
         <span class="mk-plat"><img src="/sleeper-logo.png" alt="" width="20" height="20">Sleeper</span>
-        <span class="mk-plat"><span class="mk-plat-mark" style="background:#d50a0a">ESPN</span>ESPN</span>
         <span class="mk-plat"><span class="mk-plat-mark" style="background:#6001d2">Y!</span>Yahoo</span>
         <span class="mk-plat"><span class="mk-plat-mark" style="background:#1d1d1f">H</span>Home leagues</span>
       </div>

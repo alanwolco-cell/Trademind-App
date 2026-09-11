@@ -145,7 +145,7 @@ function hbLinea(x) {
   }
   if (x.pos === n) return 'Last in the room. The rebuild starts with a phone call, not a waiver claim.';
   if (x.pos === 1) return 'Top of the league. Everyone else should be calling you, so name your price.';
-  return 'Middle of the pack: ' + hbN(x.p.titulares) + ' projected, ' + puestoFondo + (puestoFondo === 1 ? 'st' : puestoFondo === 2 ? 'nd' : puestoFondo === 3 ? 'rd' : 'th') + ' in depth.';
+  return '';
 }
 
 /* --------------------------------------------------------------- pintado */
@@ -165,7 +165,7 @@ function hbPaintHead() {
   if (!el) return;
   if (!HUB.code) {
     el.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">Open a league</div>'
-      + '<p>Paste the six character code a leaguemate sent you, or share one of your own leagues from All Leagues.</p>'
+      + '<p>Paste the six character code a leaguemate sent you, or share one of your own leagues from the Leagues tab.</p>'
       + '<div class="ml-conn"><input id="hub-code" placeholder="Code" maxlength="6" autocapitalize="characters" '
       + 'autocorrect="off" spellcheck="false" inputmode="text" style="text-transform:uppercase">'
       + '<button class="btn-sm" onclick="hbOpenTyped()">Open</button></div>'
@@ -185,11 +185,11 @@ function hbPaintHead() {
   var link = location.origin + '/hub?c=' + d.code;
   el.innerHTML = '<div class="hb-head">'
     + '<div class="hb-title"><h2>' + hbEsc(d.name) + '</h2>'
-    + '<span class="hb-meta">' + hbEsc(d.season) + ' · ' + (d.source.teams || d.rosters.length) + ' teams · '
-    + Object.keys(d.members || {}).length + ' joined</span></div>'
-    + '<div class="hb-code"><span class="hb-code-lbl">Invite code</span>'
-    + '<b class="mono">' + hbEsc(d.code) + '</b>'
-    + '<button class="btn-sm" onclick="hbCopy(\'' + hbEsc(link) + '\')">Copy link</button></div>'
+    + '<span class="hb-meta">' + hbEsc(d.season) + ' · ' + (d.source.teams || d.rosters.length) + ' teams'
+    + (Object.keys(d.members || {}).length ? ' · ' + Object.keys(d.members || {}).length + ' joined' : '') + '</span></div>'
+    + (mio ? '<div class="hb-code"><span class="hb-code-lbl">Invite code</span>'
+      + '<b class="mono">' + hbEsc(d.code) + '</b>'
+      + '<button class="btn-sm" onclick="hbCopy(\'' + hbEsc(link) + '\')">Copy link</button></div>' : '')
     + '</div>'
     + (mio ? '' : hbClaimUI());
 }
@@ -197,6 +197,10 @@ function hbPaintHead() {
 function hbClaimUI() {
   var d = HUB.doc;
   var tomados = d.members || {};
+  if (!HUB.claimOpen) {
+    return '<div class="hb-claim is-slim"><span>Which team is yours?</span>'
+      + '<button class="btn-sm" onclick="HUB.claimOpen=true;hbPaintHead()">Pick your team</button></div>';
+  }
   return '<div class="hb-claim"><div class="hb-claim-h">Which team is yours?</div>'
     + '<p class="ml-sub2">Pick it once and this browser remembers. Nobody can take a team that is already claimed.</p>'
     + '<div class="hb-claim-grid">'
@@ -222,9 +226,9 @@ function hbPaintBooth() {
     h += '<article class="hb-row' + (mio ? ' is-mine' : '') + '">'
       + '<div class="hb-pos mono">' + x.pos + '</div>'
       + '<div class="hb-main"><b>' + hbEsc(x.owner) + (mio ? ' <span class="hb-you">you</span>' : '') + '</b>'
-      + '<span class="hb-line">' + hbEsc(hbLinea(x)) + '</span></div>'
+      + (hbLinea(x) ? '<span class="hb-line">' + hbEsc(hbLinea(x)) + '</span>' : '') + '</div>'
       + '<div class="hb-nums"><span class="mono">' + hbN(x.p.titulares) + '</span>'
-      + '<small>' + x.r.wins + '-' + x.r.losses + (x.r.ties ? '-' + x.r.ties : '') + '</small></div>'
+      + (x.r.wins + x.r.losses + x.r.ties ? '<small>' + x.r.wins + '-' + x.r.losses + (x.r.ties ? '-' + x.r.ties : '') + '</small>' : '') + '</div>'
       + '</article>';
   });
   h += '</div>';
