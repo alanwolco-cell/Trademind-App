@@ -755,8 +755,17 @@ function mlYahooConnect() {
     }
   }
   window.addEventListener('message', alLlegar);
-  // Si la ventana se cierra sin contestar, no dejamos el oyente colgado.
+  // Si la ventana se cierra sin contestar, no dejamos el oyente colgado. Y si
+  // el login volvio por el camino sin opener (el callback guarda el token
+  // directo en localStorage: telefono / PWA instalada), lo detectamos aqui y
+  // arrancamos igual que si hubiera llegado el postMessage.
   var reloj = setInterval(function () {
+    if (!listo && mlYahooConectado()) {
+      listo = true;
+      clearInterval(reloj); window.removeEventListener('message', alLlegar);
+      ML.ready = false; mlPaint(); mlBoot(true);
+      return;
+    }
     if (w.closed) { clearInterval(reloj); if (!listo) window.removeEventListener('message', alLlegar); }
   }, 800);
 }
@@ -1240,11 +1249,19 @@ function mlRecord(r) {
   return (Number(s.wins) || 0) + '-' + (Number(s.losses) || 0) + (t ? '-' + t : '');
 }
 function mlEsBestBall(L) {
-  // Sleeper lo marca de dos maneras: type 3, o una liga normal con la casilla
-  // best_ball puesta. Mirar solo el type deja fuera a la mitad.
-  return L.type === 3 || Number((L.settings || {}).best_ball) === 1;
+  // La UNICA señal de best ball es la casilla best_ball. El type 3 NO lo es:
+  // medido contra las ligas reales del dueno (2026-09-11), las best ball de
+  // Sleeper llegan con type 0 + best_ball 1, y las Chopped con type 3 +
+  // best_ball 0. Mirar el type aqui clasificaba las Chopped de best ball.
+  return Number((L.settings || {}).best_ball) === 1;
+}
+function mlEsChopped(L) {
+  // Chopped (eliminacion semanal): Sleeper la manda con settings.type 3. Es
+  // el unico formato que ademas trae disable_elimination en settings.
+  return Number(L.type) === 3;
 }
 function mlFormat(L) {
+  if (mlEsChopped(L)) return 'Chopped';
   if (mlEsBestBall(L)) return 'Best ball';
   if (L.type === 2) return 'Dynasty';
   if (L.type === 1) return 'Keeper';
@@ -1260,7 +1277,7 @@ function mlDrafted(L) {
 function mlIsHeadToHead(L) {
   // Los formatos "chopped" y best ball de Sleeper no tienen duelos ni playoffs
   // por siembra: simular un titulo ahi seria inventar un torneo que no existe.
-  return !mlEsBestBall(L) && Number((L.settings || {}).playoff_teams) > 0;
+  return !mlEsBestBall(L) && !mlEsChopped(L) && Number((L.settings || {}).playoff_teams) > 0;
 }
 function mlScoringLabel(L) {
   var r = mlScoring(L).rec;
@@ -1473,6 +1490,11 @@ function mlPaintLeagues() {
       + '<button class="ml-link" onclick="switchScreen(\'hub\')">Have a league code?</button>'
       + '<button class="ml-link" id="ml-push-btn">Get notified</button>'
       + (ML.yahooErr ? '<span class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</span>' : '')
+      // El hueco reportado el 2026-09-11: en el telefono "faltaban" las ligas
+      // de Yahoo y nada explicaba por que. El token de Yahoo vive POR
+      // NAVEGADOR (decision de seguridad, ver server/routes/yahoo.js), asi
+      // que cada dispositivo tiene que iniciar sesion una vez. Se declara.
+      + (mlYahooConectado() ? '' : '<span class="ml-hint" style="flex-basis:100%">Yahoo leagues connect per device. If yours are missing here, tap Sign in with Yahoo on this device once.</span>')
       + '</footer>';
   }
   box.innerHTML = h;

@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091106">
+<link rel="stylesheet" href="/styles.css?v=2026091107">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091106" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091107" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091106">
+<link rel="stylesheet" href="/theme.css?v=2026091107">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091106">
+<link rel="stylesheet" href="/home.css?v=2026091107">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091106">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091107">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -242,7 +242,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
         Trade Ideas
       </div>
-      <div class="user-dd-item" onclick="switchScreen('community');loadCommunityFeed();closeAllDropdowns()">
+      <div class="user-dd-item community-only" onclick="switchScreen('community');loadCommunityFeed();closeAllDropdowns()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Community Feed
       </div>
@@ -295,7 +295,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <button class="mob-menu-item draft-only" onclick="mobMenuCloseForNav();lvEnter()">Draft Day (live auction)</button>
       <button class="mob-menu-item" onclick="mobGo('analyze')">Trade Analyzer</button>
       <button class="mob-menu-item" onclick="mobGo('myleagues')">Leagues</button>
-      <button class="mob-menu-item" onclick="mobGo('league')">Roster Grade</button>
+      <button class="mob-menu-item rostergrade-only" onclick="mobGo('league')">Roster Grade</button>
+      <button class="mob-menu-item rostergrade-alt" onclick="mobGo('league')">League Trades</button>
       <div class="mob-group">
         <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)">Research<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="mob-subs">
@@ -308,9 +309,9 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         </div>
       </div>
       <div class="mob-group">
-        <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)">Community<svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="mob-menu-item mob-parent" aria-expanded="false" onclick="mobGroupToggle(this)"><span class="community-only">Community</span><span class="community-alt">News &amp; Learn</span><svg class="mob-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="mob-subs">
-          <button class="mob-menu-item mob-sub" onclick="mobGo('community')">Trade Feed</button>
+          <button class="mob-menu-item mob-sub community-only" onclick="mobGo('community')">Trade Feed</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('community','news')">News</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn()">Learn</button>
           <button class="mob-menu-item mob-sub" onclick="mobGo('community');goLearn();switchLearnTab(document.querySelectorAll('#community-tab-learn .inner-tab')[3],'tab-about')">About Mac Draft</button>
@@ -810,7 +811,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <!-- MY LEAGUE SCREEN -->
     <div class="screen" id="screen-league">
       <div class="inner-tab-bar">
-        <div class="inner-tab active" onclick="switchInnerTab(this,'tab-roster-grade','screen-league');renderRosterGrade()">Roster Grade</div>
+        <div class="inner-tab active rostergrade-only" onclick="switchInnerTab(this,'tab-roster-grade','screen-league');renderRosterGrade()">Roster Grade</div>
         <div class="inner-tab" onclick="switchInnerTab(this,'tab-league-trades','screen-league');renderLeagueTrades()">League Trades</div>
         <div class="inner-tab" data-tab="tab-history" onclick="switchInnerTab(this,'tab-history','screen-league');renderHistory()">Saved Trades</div>
         <div style="margin-left:auto;flex-shrink:0"><button class="btn-sm" id="sync-btn" onclick="syncRoster()">↺ Refresh Roster</button></div>
@@ -922,7 +923,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
           <div>
             <div style="font-size:16px;font-weight:700;margin-bottom:2px">Buy / Sell Alerts</div>
-            <div style="font-size:12px;color:var(--muted)">Based on 30-day value movement in FantasyCalc dynasty rankings</div>
+            <div style="font-size:12px;color:var(--muted)" id="bs-sub">Based on 30-day value movement in FantasyCalc rankings</div>
           </div>
           <button class="btn-sm" onclick="window._bsOffset=(window._bsOffset||0)+5;renderBuySell()">New suggestions ↺</button>
         </div>
@@ -934,7 +935,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
           <div>
             <div style="font-size:16px;font-weight:700;margin-bottom:2px">Stash Targets</div>
-            <div style="font-size:12px;color:var(--muted)">High-value players not on any roster in your league</div>
+            <div style="font-size:12px;color:var(--muted)" id="bs-stash-sub">High-value players not on any roster in your league</div>
           </div>
           <button class="btn-sm" onclick="renderWaiverTargets()">Refresh ↺</button>
         </div>
@@ -1624,10 +1625,10 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="comm-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px">
           <div>
             <div style="font-size:16px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:8px">
-              Community
-              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(167,139,250,.15);color:var(--accent-bright);text-transform:uppercase;letter-spacing:.06em">LIVE</span>
+              <span class="community-only">Community</span><span class="community-alt">News &amp; Learn</span>
+              <span class="community-only" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(167,139,250,.15);color:var(--accent-bright);text-transform:uppercase;letter-spacing:.06em">LIVE</span>
             </div>
-            <div style="font-size:12px;color:var(--muted)">Real trades, real takes. Post yours and let the league vote.</div>
+            <div style="font-size:12px;color:var(--muted)"><span class="community-only">Real trades, real takes. Post yours and let the league vote.</span><span class="community-alt">The NFL news wire and the guides that explain how Mac thinks.</span></div>
           </div>
           <button class="btn-sm" id="comm-refresh-btn" onclick="refreshActiveCommunityTab()">Refresh</button>
         </div>
@@ -1840,7 +1841,8 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="footer-sub">Made for managers who play more than one league.</div>
   <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
     <a href="/analyze" class="nav-link" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Trade Analyzer</a>
-    <span class="nav-link" onclick="switchScreen('community');loadCommunityFeed();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">Community</span>
+    <span class="nav-link community-only" onclick="switchScreen('community');loadCommunityFeed();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">Community</span>
+    <span class="nav-link community-alt" onclick="goNews();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">News &amp; Learn</span>
     <a href="/privacy" class="nav-link" style="pointer-events:auto">Privacy Policy</a>
     <a href="/terms" class="nav-link" style="pointer-events:auto">Terms of Use</a>
   </div>
@@ -1891,12 +1893,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091106"></script>
-<script src="/rankings.js?v=2026091106"></script>
-<script src="/live.js?v=2026091106"></script>
-<script src="/myleagues.js?v=2026091106"></script>
-<script src="/push.js?v=2026091106" defer></script>
-<script src="/hub.js?v=2026091106"></script>
+<script src="/app.js?v=2026091107"></script>
+<script src="/rankings.js?v=2026091107"></script>
+<script src="/live.js?v=2026091107"></script>
+<script src="/myleagues.js?v=2026091107"></script>
+<script src="/push.js?v=2026091107" defer></script>
+<script src="/hub.js?v=2026091107"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

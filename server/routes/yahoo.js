@@ -96,6 +96,15 @@ function popupReply(res, payload) {
     'if(window.opener){window.opener.postMessage({type:"trademind-yahoo",payload:p},window.location.origin);' +
     'document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster imported. You can close this window.";' +
     'setTimeout(function(){window.close();},1200);}' +
+    // Sin opener no hay a quien avisar por postMessage: pasa en el telefono
+    // (la PWA instalada abre el login a pantalla completa) y en navegadores
+    // que cortan la cadena de ventanas. Esta pagina corre en NUESTRO origen,
+    // asi que puede guardar el token donde el cliente ya lo busca
+    // (localStorage tm_yahoo_tok, ver myleagues.js) y volver a Leagues.
+    // Antes este camino era un callejon: "abre Mac Draft y prueba otra vez".
+    'else if(p.token&&p.token.access_token){try{localStorage.setItem("tm_yahoo_tok",JSON.stringify(p.token));}catch(_){}' +
+    'document.getElementById("msg").textContent="Yahoo connected. Taking you to your leagues...";' +
+    'setTimeout(function(){window.location.replace("/myleagues");},600);}' +
     'else{document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster loaded. Open Mac Draft and try the Yahoo login again.";}' +
     '</script></body></html>'
   );

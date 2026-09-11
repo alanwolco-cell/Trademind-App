@@ -123,7 +123,9 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
 
   // (b..d) desde la PORTADA, con el cajon abierto, cada destino tiene que
   // llevarme ahi y sacarme del hero. Este es el caso que estaba roto.
-  for (const [etiqueta, espera] of [['Buy / Sell', 'screen-research'], ['Trade Analyzer', 'screen-analyze'], ['Roster Grade', 'screen-league'], ['Leagues', 'screen-myleagues']]) {
+  // "Roster Grade" era la puerta de screen-league hasta la poda del
+  // 2026-09-11 (dueno): ahora la puerta se llama League Trades.
+  for (const [etiqueta, espera] of [['Buy / Sell', 'screen-research'], ['Trade Analyzer', 'screen-analyze'], ['League Trades', 'screen-league'], ['Leagues', 'screen-myleagues']]) {
     const pg = await nueva(w, h);
     await abrirCajon(pg);
     const c = await clicEnCajon(pg, etiqueta);

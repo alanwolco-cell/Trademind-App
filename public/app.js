@@ -175,6 +175,23 @@ try {
   document.documentElement.classList.toggle('no-draft', !DRAFT_SEASON);
   document.documentElement.classList.toggle('is-app', _hayCuenta());
 } catch (_) { }
+// Podas dictadas por el dueno (2026-09-11): el tab Roster Grade y la parte
+// social de Community (Trade Feed / My Trades / Hot Takes / Feedback) se
+// ESCONDEN, no se borran - mismo patron que no-draft: interruptor + CSS.
+// News y Learn siguen vivos dentro de la misma pantalla. Revertir = false.
+var HIDE_ROSTER_GRADE=true;
+var HIDE_COMMUNITY=true;
+try {
+  document.documentElement.classList.toggle('no-rostergrade', HIDE_ROSTER_GRADE);
+  document.documentElement.classList.toggle('no-community', HIDE_COMMUNITY);
+  if (HIDE_ROSTER_GRADE) document.addEventListener('DOMContentLoaded', function () {
+    // El HTML trae Roster Grade como tab activo de la pantalla League; con la
+    // poda encendida el activo pasa a League Trades para no dejar la pantalla
+    // apuntando a un panel escondido.
+    var btn = document.querySelector("#screen-league .inner-tab[onclick*='tab-league-trades']");
+    if (btn && !btn.classList.contains('active')) switchInnerTab(btn, 'tab-league-trades', 'screen-league');
+  });
+} catch (_) { }
 // Live NFL calendar state - drives season-aware copy (no "playoff push" talk in July)
 var NFL_WEEK=0;
 var NFL_SEASON_TYPE='off'; // 'off' | 'pre' | 'regular' | 'post'
@@ -458,11 +475,14 @@ function _renderCmList(leagues,q){
   }else{html+='<div style="height:10px"></div>';}
   html+='<div class="cm-leagues">'+(hits.length?hits.map(function(l){
     var isDyn=tmEjeLiga(l)==='dynasty';
-    var isBB=Number(l.type)===3||Number((l.settings||{}).best_ball)===1;
+    // type 3 es Chopped, no best ball: la unica señal de best ball es la
+    // casilla best_ball (medido contra las ligas reales del dueno, 2026-09-11).
+    var isBB=Number((l.settings||{}).best_ball)===1;
+    var isChop=Number((l.settings||{}).type)===3||Number(l.type)===3;
     var nm=(l.name||'Unnamed').replace(/&/g,'&amp;').replace(/</g,'&lt;');
     return '<div class="cm-league" onclick="_cmPick(\''+l.league_id+'\')">'
       +'<div><div class="cm-lname">'+nm+'</div>'
-      +'<div class="cm-lmeta">'+(l.total_rosters||'?')+' teams · '+(l.season||'')+' · '+(isBB?'Best ball':(isDyn?'Dynasty':'Redraft'))+'</div></div>'
+      +'<div class="cm-lmeta">'+(l.total_rosters||'?')+' teams · '+(l.season||'')+' · '+(isChop?'Chopped':isBB?'Best ball':(isDyn?'Dynasty':'Redraft'))+'</div></div>'
       +'<span style="color:var(--muted)">&rsaquo;</span></div>';
   }).join(''):'<div style="padding:10px 2px;font-size:11.5px;color:var(--muted)">No league matches that.</div>')+'</div>';
   box.innerHTML=html;
@@ -2405,7 +2425,8 @@ var MAC_NAV={
   draft:{label:'Open the Draft room',go:function(){switchScreen('mock');try{mdRenderStrats();}catch(_){}}},
   mock:{label:'Open the Draft room',go:function(){switchScreen('mock');}},
   news:{label:'Open News',go:function(){switchScreen('news');try{loadNewsGrid();loadAnalystCorner();}catch(_){}}},
-  community:{label:'Open Community',go:function(){switchScreen('community');try{loadCommunityFeed();}catch(_){}}},
+  // Con la poda de Community, el chip lleva a lo que queda vivo ahi: News.
+  community:{label:'Open Community',go:function(){if(window.HIDE_COMMUNITY){goNews();return;}switchScreen('community');try{loadCommunityFeed();}catch(_){}}},
   learn:{label:'Fantasy 101',go:function(){goLearn();}}
 };
 // Higiene determinista de la salida de Mac. El prompt ya se lo pide, pero los
@@ -3978,8 +3999,13 @@ async function loadLiveFeed(lid, season){
     var items=[];
 
     // League activity items
+    // Recorte medido (2026-09-11): con 20 movimientos + 10 trending + 12
+    // titulares la cinta media 33.846px y el ciclo completo tardaba 147s: los
+    // added/dropped de la liga tardaban minutos en volver a pasar, y una capa
+    // animada de ese ancho es jank seguro en iPhone. Menos cola = ciclo de
+    // ~1 minuto y capa que Safari si compone.
     var acts=activity||[];
-    acts.slice(0,20).forEach(function(t){
+    acts.slice(0,12).forEach(function(t){
       var rname=getRosterName(t.roster_ids&&t.roster_ids[0]);
       if(t.type==="trade"){
         var parts=[],firstPid=null;
@@ -3998,14 +4024,14 @@ async function loadLiveFeed(lid, season){
 
     // Trending adds (buy-low signal)
     var tAdd=news.trending_add||[];
-    tAdd.slice(0,5).forEach(function(p){
+    tAdd.slice(0,3).forEach(function(p){
       var player=allPlayers[p.player_id];
       if(player) items.push({text:"Trending add across Sleeper",sub:player.name+" · "+player.pos,color:"var(--green)",pid:player.id});
     });
 
     // Trending drops (sell-high / avoid signal)
     var tDrop=news.trending_drop||[];
-    tDrop.slice(0,5).forEach(function(p){
+    tDrop.slice(0,3).forEach(function(p){
       var player=allPlayers[p.player_id];
       if(player) items.push({text:"People are dropping",sub:player.name+" · "+player.pos,color:"var(--red)"});
     });
@@ -4014,10 +4040,15 @@ async function loadLiveFeed(lid, season){
     // here - they were removed because attributing made-up trades and injuries to
     // real outlets is not something the site should show.)
     var headlines=news.headlines||[];
-    headlines.slice(0,12).forEach(function(h){
+    headlines.slice(0,6).forEach(function(h){
       items.push({text:"NFL NEWS",sub:h,color:"var(--muted)"});
     });
 
+    // Tope global: cada add/drop mete DOS items, asi que los recortes de
+    // arriba solos no bastan. 28 items a 150px/s es un ciclo de ~1 minuto.
+    // El orden ya es el de relevancia (tu liga, trending, titulares), asi que
+    // recortar por el final descarta lo mas prescindible.
+    items=items.slice(0,28);
     if(!items.length) return;
 
     // If the user switched leagues while this feed loaded, don't paint the old one's ticker
@@ -4039,7 +4070,7 @@ async function loadLiveFeed(lid, season){
     // hundred pixels wide, so forcing 20s dragged it down to roughly 20px per
     // second and it read as frozen. The floor now only guards against a
     // near-empty feed spinning absurdly fast.
-    var speed=115; // px per second
+    var speed=150; // px per second ("va muy lenta" del dueno, 2026-09-11)
     var applyDur=function(){
       var w=ticker.scrollWidth/2;
       if(!w)return;
@@ -5212,7 +5243,7 @@ function mobGo(screen,tab){
     switchScreen(screen);
     if(screen==='mock'){try{mdRenderStrats();mdPrefillFromLeague();if(tab)mdShowSection(tab);}catch(_){}}
     if(screen==='news'){try{loadNewsGrid();loadAnalystCorner();}catch(_){}}
-    if(screen==='community'){try{loadCommunityFeed();}catch(_){}if(tab){try{switchCommunityTab(tab);}catch(_){}}}
+    if(screen==='community'){if(!window.HIDE_COMMUNITY){try{loadCommunityFeed();}catch(_){}}if(tab){try{switchCommunityTab(tab);}catch(_){}}}
     if(tab&&screen==='research')openResearchTab(tab);
   }catch(_){}
 }
@@ -5801,13 +5832,16 @@ function switchScreen(name,_noPush){
     else if(_id==='tab-league-trades')renderLeagueTrades();
     else if(_id==='tab-history')renderHistory();
     else if(_id==='tab-buysell'){renderBuySell();if(typeof renderWaiverTargets==='function')renderWaiverTargets();}
+    // Con la poda de Community encendida, entrar a la pantalla no puede caer
+    // en un tab social escondido: se aterriza en News.
+    if(name==='community'&&window.HIDE_COMMUNITY&&['trades','mine','forum','feedback'].indexOf(activeCommunityTab)>=0)switchCommunityTab('news');
   }catch(_){}
 }
 // Tab-level history sync: tab changes inside a screen push a descriptive hash
 // (for example /research#tab-market) so the browser back button walks tabs
 // instead of leaving the site. Restores triggered by popstate run with
 // _tabRestoring set, so they never push again and cannot loop.
-var _TAB_DEFAULTS={analyze:'analyzer',league:'tab-roster-grade',research:'tab-buysell',community:'trades',mock:'solo'};
+var _TAB_DEFAULTS={analyze:'analyzer',league:(window.HIDE_ROSTER_GRADE?'tab-league-trades':'tab-roster-grade'),research:'tab-buysell',community:(window.HIDE_COMMUNITY?'news':'trades'),mock:'solo'};
 // Route parsing: strip leading AND trailing slashes, take the first segment,
 // lowercase it. pathname.replace('/','') only removed the FIRST slash, so
 // '/sage/' became 'sage/' and '/mock/' became 'mock/' - neither matched a
@@ -8593,6 +8627,10 @@ function bsView(which,btn){
 function renderBuySell(){
   var el=document.getElementById("buysell-content");
   if(!el)return;
+  // De que liga hablan estas señales (reportado 2026-09-11: el tab no lo
+  // decia y con 13 ligas conectadas cada lista parecia de ninguna).
+  var _sub=document.getElementById('bs-sub');
+  if(_sub)_sub.textContent=(leagueName?leagueName+' · ':'')+'30-day value moves in FantasyCalc '+(leagueMode==='redraft'?'redraft':'dynasty')+' rankings';
   if(!myRoster.length||!Object.keys(ktcFull).length){
     el.innerHTML="<div class='empty-state'>Connect a league first so player values can load.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
@@ -8655,17 +8693,37 @@ function renderBuySell(){
     return hasDepth(p.pos)?'<strong style="color:var(--text)">Your roster:</strong> you have surplus '+p.pos+' depth - you can absorb this loss without breaking your lineup.':'<strong style="color:var(--text)">Your roster:</strong> you\'re thin at '+p.pos+' - only sell if the return fixes another position.';
   }
 
-  // Sell High: own + trending UP + age 27+ (sell at peak before decline)
-  var sellHigh=players.filter(function(p){return p.iOwn&&p.trend>=100&&(isR||p.age>=27);})
+  // Umbral de "veterano" por posicion: la curva de caida no es la misma para
+  // un RB (27) que para un QB (33). Un QB de 28 en su prime etiquetado de
+  // "declining veteran" fue el bug reportado (Herbert, 2026-09-11).
+  var VET_EDAD={QB:33,RB:27,WR:29,TE:30};
+  function esVetDeclive(p){return p.age>=(VET_EDAD[p.pos]||28);}
+
+  // Sell High: own + trending UP; en dynasty solo veteranos (vender el pico
+  // antes de la caida). Los textos de curva de edad solo se dicen de quien
+  // de verdad esta en esa curva.
+  var sellHigh=players.filter(function(p){return p.iOwn&&p.trend>=100&&(isR||esVetDeclive(p));})
     .map(function(p){
-      return Object.assign({},p,{reason:footballReason(p)+'<strong style="color:var(--text)">The market:</strong> '+vary(p,['age '+p.age+' and climbing. Peaks like this are when smart managers cash out','the price is up while the age curve says down. That gap is your profit','you will never sell him for more than right now. That is the whole case','veterans get paid on reputation right up until they do not. Sell into the reputation'])+'. '+fitReason(p,false)});
+      var esVet=esVetDeclive(p);
+      return Object.assign({},p,{reason:footballReason(p)+'<strong style="color:var(--text)">The market:</strong> '+vary(p,esVet?['age '+p.age+' and climbing. Peaks like this are when smart managers cash out','the price is up while the age curve says down. That gap is your profit','you will never sell him for more than right now. That is the whole case','veterans get paid on reputation right up until they do not. Sell into the reputation']:['his price is at a season high. Peaks like this are when smart managers cash out','you will never sell him for more than right now. That is the whole case','a hot month is the best sales pitch you will ever get. Use it','sell into the hype while someone else is writing the story'])+'. '+fitReason(p,false)});
     }).sort(function(a,b){return b.trend-a.trend;}).slice(0,15);
 
-  // Sell Now: own + trending DOWN + age 27+ (declining veteran)
-  var sellNow=players.filter(function(p){return p.iOwn&&p.trend<=-150&&(isR||p.age>=27);})
-    .filter(function(p){return !sellHigh.find(function(s){return s.id===p.id;});})
+  // Sell Now, en dos listas que dicen la verdad. "Declining veteran" solo puede
+  // decirse de un jugador que DE VERDAD esta del lado malo de la curva de su
+  // posicion. El bug reportado (2026-09-11): jovenes y QBs en su prime salian
+  // etiquetados "Declining Veteran" porque en redraft el filtro ignoraba la
+  // edad por completo.
+  var sellDown=players.filter(function(p){return p.iOwn&&p.trend<=-150;})
+    .filter(function(p){return !sellHigh.find(function(s){return s.id===p.id;});});
+  var sellNow=sellDown.filter(esVetDeclive)
     .map(function(p){
       return Object.assign({},p,{reason:footballReason(p)+'<strong style="color:var(--text)">The market:</strong> '+vary(p,['sliding at age '+p.age+'. This price does not bounce back, it bleeds','every week you hold is money burning. Someone in your league still believes - find them','the market has decided and it is not changing its mind. Get whatever you can','age '+p.age+' with a falling price is the market telling you the story ended'])+'. '+fitReason(p,false)});
+    }).sort(function(a,b){return a.trend-b.trend;}).slice(0,15);
+  // Jovenes cayendo, solo en redraft: ahi se vende el rol, no la edad. En
+  // dynasty un joven barato es compra, no venta (misma regla que el buy-low).
+  var sellSlipping=(isR?sellDown.filter(function(p){return !esVetDeclive(p);}):[])
+    .map(function(p){
+      return Object.assign({},p,{reason:footballReason(p)+'<strong style="color:var(--text)">The market:</strong> '+vary(p,['his price has fallen hard in 30 days. In redraft that tracks role, not age - if the usage is not coming back, this is your exit','young, but the league is paying less for him every week. In redraft you sell the trend, not the birthday','someone in your league still values him at last month\'s price. That gap closes fast','a young faller can rebound - but you only hold if the role is intact. If it is not, get value while someone still believes'])+'. '+fitReason(p,false)});
     }).sort(function(a,b){return a.trend-b.trend;}).slice(0,15);
 
   // Buy Low: don't own + trending DOWN. Elite players STAY eligible - you can buy low
@@ -8704,7 +8762,7 @@ function renderBuySell(){
     if(out.length<5)out=out.concat(arr.slice(0,5-out.length));
     return out;
   }
-  sellHigh=_rot(sellHigh);sellNow=_rot(sellNow);buyLow=_rot(buyLow);buyNow=_rot(buyNow);watchList=_rot(watchList).slice(0,4);
+  sellHigh=_rot(sellHigh);sellNow=_rot(sellNow);sellSlipping=_rot(sellSlipping);buyLow=_rot(buyLow);buyNow=_rot(buyNow);watchList=_rot(watchList).slice(0,4);
 
   // How to pay for buys: your cheapest surplus piece at your deepest position
   var deepPos=Object.keys(myPosCount).sort(function(a,b){return (myPosCount[b]/(leaguePosAvg[b]||3))-(myPosCount[a]/(leaguePosAvg[a]||3));})[0];
@@ -8720,6 +8778,7 @@ function renderBuySell(){
   buyLow.forEach(function(p){p.reason+=payLine();});
   sellHigh.forEach(function(p){p.reason+=targetLine();});
   sellNow.forEach(function(p){p.reason+=targetLine();});
+  sellSlipping.forEach(function(p){p.reason+=targetLine();});
 
   var posColors={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
   window._bsPlayers=window._bsPlayers||[];
@@ -8764,11 +8823,12 @@ function renderBuySell(){
   }
   html+='</div>';
   html+='<div><div style="font-size:13px;font-weight:700;color:var(--red);border-bottom:2px solid var(--red);padding-bottom:6px;margin-bottom:14px">Sell Side (your roster)</div>';
-  if(!sellHigh.length&&!sellNow.length){
+  if(!sellHigh.length&&!sellNow.length&&!sellSlipping.length){
     html+='<div style="font-size:12px;color:var(--muted)">No strong sell signals on your roster right now.</div>';
   } else {
     if(sellHigh.length)html+=section('Sell High - At Peak Value','pill-sell',sellHigh,'');
     if(sellNow.length)html+=section('Sell Now - Declining Veteran','pill-sell',sellNow,'');
+    if(sellSlipping.length)html+=section('Sell Now - Price Falling','pill-sell',sellSlipping,'');
   }
   html+='</div></div>';
   el.innerHTML=html;
@@ -15809,6 +15869,8 @@ async function askSageStartSit(){
 function renderWaiverTargets(){
   var el=document.getElementById('waiver-content');
   if(!el)return;
+  var _sub=document.getElementById('bs-stash-sub');
+  if(_sub)_sub.textContent='High-value players not on any roster in '+(leagueName||'your league');
   if(!leagueRosters.length||!Object.keys(ktcFull).length){
     el.innerHTML="<div class='empty-state'>Connect a league to see stash targets.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
