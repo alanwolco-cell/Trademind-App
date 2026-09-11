@@ -548,6 +548,21 @@ router.post('/chat', async (req, res) => {
       if (lc.lastMock) leagueTxt += '\nTheir most recent Mac Draft mock draft (when they ask how they did, how their draft went, or about "my mock", grade THIS - the pick vs market rank gap tells you steals and reaches): ' + String(lc.lastMock).slice(0, 900);
     }
 
+    // SELF-SCOUTING: las tendencias REALES de este manager, deducidas de su
+    // historial publico de Sleeper por el motor del perfil (solo afirmaciones
+    // que pasaron su umbral estadistico, cada una con su n). Cacheado-o-nada:
+    // el armado en frio tarda y un chat no espera; la primera pregunta sale
+    // sin esto y la segunda ya lo lleva.
+    let tendenciasTxt = null;
+    try {
+      const lineas = await require('./perfil').tendenciasParaMac(user);
+      if (lineas && lineas.length) {
+        tendenciasTxt = 'SELF-SCOUTING (this manager\'s real tendencies, mined from his own Sleeper history; each line passed a statistical threshold and carries its sample size):\n'
+          + lineas.join('\n')
+          + '\nUse these when the question touches his habits, his trades or his drafting. Speak to them as observed facts about HIM ("you tend to..."), cite the count when it helps, and NEVER invent a tendency that is not on this list.';
+      }
+    } catch (_) { }
+
     const system = [
       {
         type: 'text',
@@ -555,10 +570,12 @@ router.post('/chat', async (req, res) => {
         cache_control: { type: 'ephemeral' }
       },
       // league + rosters change only when the league does: their own cache
-      // breakpoint means repeat messages read this block at ~10% of the price
+      // breakpoint means repeat messages read this block at ~10% of the price.
+      // Las tendencias del manager viajan aqui: cambian una vez al dia como
+      // mucho, asi que comparten el breakpoint de cache de la liga.
       {
         type: 'text',
-        text: leagueTxt || 'No league connected.',
+        text: (leagueTxt || 'No league connected.') + (tendenciasTxt ? '\n\n' + tendenciasTxt : ''),
         cache_control: { type: 'ephemeral' }
       },
       // volatile per-message context stays last, after the cached prefix

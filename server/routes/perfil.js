@@ -207,6 +207,83 @@ async function minarTrades(userId, temporadas) {
   return { trades, miRosterPorLiga, ligas, formatoPorLiga, fuentePorLiga, movimientos };
 }
 
+// El ensamblado completo del perfil de UN usuario de Sleeper, reutilizable:
+// lo llama la ruta del perfil (pantalla del dueno) y el resumen para Mac.
+// Cachea por usuario, sin la cuenta en la llave: el dato solo depende de el.
+async function construirSalida(user) {
+  const kk = 'salida:' + user;
+  const hit = cache.get(kk);
+  if (hit) return { salida: hit };
+  const me = await traer(`/user/${user}`);
+  if (!me || !me.user_id) return { error: 'Sleeper user not found.', status: 404 };
+  const anio = new Date().getUTCFullYear();
+  const temporadas = await temporadasConLigas(me.user_id, anio);
+  if (!temporadas.length) return { error: 'No NFL leagues found on that Sleeper account.', status: 404 };
+  const { trades, miRosterPorLiga, ligas, formatoPorLiga, fuentePorLiga, movimientos } =
+    await minarTrades(me.user_id, temporadas);
+  const picksDraft = await minarDrafts(me.user_id, temporadas);
+  const players = await traer('/players/nfl');
+  if (!players) return { error: 'upstream unavailable', status: 502 };
+  const ctx = { miRosterPorLiga, miUserId: me.user_id, temporadaActual: anio, formatoPorLiga, fuentePorLiga, movimientos, picksDraft };
+  const salida = {
+    generado: Date.now(), usuario: user, ligas,
+    temporadas,
+    ejes: construirPerfiles(trades, players, ctx),
+    tendenciasDraft: tendenciasDraft.analizarPorEjes(picksDraft, miRosterPorLiga, { formatoPorLiga }),
+    ...construirPerfil(trades, players, ctx)
+  };
+  cache.set(kk, salida);
+  return { salida };
+}
+
+/* ── LAS TENDENCIAS DEL USUARIO, PARA MAC ───────────────────────────────────
+ * El motor del perfil ya deduce como tradea, draftea y mueve waivers una
+ * persona, con su n y su umbral estadistico, sobre su historial PUBLICO de
+ * Sleeper. Esto lo comprime en unas lineas para el contexto de Mac, y asi Mac
+ * puede contestarle "tu tiendes a X" con un numero detras en vez de adivinar.
+ *
+ * REGLA DE ORO heredada del motor: solo se cosechan las afirmaciones
+ * CONFIRMADAS (aplicarFDR ya borro el texto de las que no pasaron el umbral),
+ * asi que aqui es imposible publicar una tendencia que el motor rechazo.
+ *
+ * CUIDADO CON EL RELOJ: el ensamblado en frio tarda (camina hasta 10
+ * temporadas). Un chat no puede esperar eso, asi que esta funcion devuelve lo
+ * cacheado o NADA, y en el segundo caso dispara el armado en segundo plano:
+ * la primera pregunta sale sin tendencias, la segunda ya las lleva. */
+const _macEnVuelo = new Set();
+async function tendenciasParaMac(user) {
+  const u = String(user || '').trim().toLowerCase();
+  if (!/^[A-Za-z0-9_.-]{1,40}$/.test(u)) return null;
+  const kk = 'mac:' + u;
+  const hit = cache.get(kk);
+  if (hit) return hit.length ? hit : null;
+  if (cache.get('salida:' + u)) {
+    // la salida esta armada: comprimir es barato y se hace en linea
+  } else if (!_macEnVuelo.has(u)) {
+    _macEnVuelo.add(u);
+    construirSalida(u).catch(() => { }).finally(() => _macEnVuelo.delete(u));
+    return null;
+  } else {
+    return null;
+  }
+  const armado = await construirSalida(u);
+  if (armado.error) { cache.set(kk, [], 3600); return null; }
+  const lineas = [];
+  const vistos = new Set();
+  (function cosechar(x) {
+    if (!x || typeof x !== 'object' || lineas.length >= 14) return;
+    if (Array.isArray(x)) return x.forEach(cosechar);
+    if (x.estado === 'confirmado' && x.texto && !vistos.has(x.texto)) {
+      vistos.add(x.texto);
+      lineas.push('- ' + x.texto + (x.n ? ' (n=' + x.n + ')' : ''));
+    }
+    Object.keys(x).forEach(k => cosechar(x[k]));
+  })(armado.salida);
+  cache.set(kk, lineas, 24 * 3600);
+  return lineas.length ? lineas : null;
+}
+router.tendenciasParaMac = tendenciasParaMac;
+
 // GET /api/perfil?user=<sleeper username>
 router.get('/', async (req, res) => {
   try {
@@ -226,32 +303,9 @@ router.get('/', async (req, res) => {
     const hit = cache.get(key);
     if (hit) return res.json({ ...hit, cacheado: true });
 
-    const me = await traer(`/user/${user}`);
-    if (!me || !me.user_id) return res.status(404).json({ error: 'Sleeper user not found.' });
-
-    const anio = new Date().getUTCFullYear();
-    const temporadas = await temporadasConLigas(me.user_id, anio);
-    if (!temporadas.length) return res.status(404).json({ error: 'No NFL leagues found on that Sleeper account.' });
-    const { trades, miRosterPorLiga, ligas, formatoPorLiga, fuentePorLiga, movimientos } =
-      await minarTrades(me.user_id, temporadas);
-    const picksDraft = await minarDrafts(me.user_id, temporadas);
-    const players = await traer('/players/nfl');
-    if (!players) return res.status(502).json({ error: 'upstream unavailable' });
-
-    const ctx = { miRosterPorLiga, miUserId: me.user_id, temporadaActual: anio, formatoPorLiga, fuentePorLiga, movimientos, picksDraft };
-    // Se devuelven los dos: `ejes` es lo que pintan los dos tabs, y `global` es
-    // el agregado de siempre, que sigue sirviendo para el recuento crudo y para
-    // no romper a nadie que ya lo leyera.
-    const salida = {
-      generado: Date.now(), usuario: user, ligas,
-      temporadas,
-      ejes: construirPerfiles(trades, players, ctx),
-      // Auto-scouting de draft: cinco ejes probados contra los rivales de cada
-      // sala, con correccion por comparaciones multiples. Clave nueva y aparte
-      // a proposito: lo de arriba ya lo consume la pantalla y no se toca.
-      tendenciasDraft: tendenciasDraft.analizarPorEjes(picksDraft, miRosterPorLiga, { formatoPorLiga }),
-      ...construirPerfil(trades, players, ctx)
-    };
+    const armado = await construirSalida(user);
+    if (armado.error) return res.status(armado.status).json({ error: armado.error });
+    const salida = armado.salida;
     cache.set(key, salida);
     res.json(salida);
   } catch (e) {
