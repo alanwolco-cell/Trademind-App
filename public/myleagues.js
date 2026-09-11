@@ -200,8 +200,21 @@ var ML_PASS_TD_PER_YD = 1 / 150;
 // honesto cuando no hay dato que distinga.
 var ML_PROJ_K = 7.5, ML_PROJ_DEF = 7.0;
 function mlProjPlayer(p, sc) {
-  if (p && p.pos === 'K') return ML_PROJ_K;
-  if (p && p.pos === 'DEF') return ML_PROJ_DEF;
+  // K y DEF: su proyeccion REAL sale del feed de expertos (el dueno la pidio y
+  // existe: 32 kickers y 32 defensas, las defensas por su abreviatura de
+  // equipo). Su puntaje casi no varia entre formatos, asi que vale para las
+  // dos fuentes; la media de liga queda solo de respaldo cuando el feed no
+  // trae a ese jugador.
+  if (p && (p.pos === 'K' || p.pos === 'DEF')) {
+    if (ML.proySite) {
+      var kid = p.pos === 'DEF'
+        ? String(p.team || p.id || '').toUpperCase()
+        : (p.id || mlIdPorNombre(p.name));
+      var kst = kid && ML.proySite[kid];
+      if (kst && kst.pts_std != null) return Math.round(kst.pts_std * 10) / 10;
+    }
+    return p.pos === 'K' ? ML_PROJ_K : ML_PROJ_DEF;
+  }
   // FUENTE 'site': la proyeccion oficial (Rotowire via Sleeper), por
   // estadistica cruda y preciada con el reglamento de ESTA liga, incluyendo
   // intercepciones y fumbles que Vegas no trae. Los jugadores de Yahoo se

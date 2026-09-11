@@ -205,13 +205,15 @@ router.get('/projections/:week', async (req, res) => {
     const st = shortCache.get('state_nfl') || await sleeperFetch('/state/nfl');
     const season = st.season || new Date().getFullYear();
     const r = await fetch(`https://api.sleeper.com/projections/nfl/${season}/${week}`
-      + `?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE`);
+      + `?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF`);
     if (!r.ok) throw new Error('projections ' + r.status);
     const crudo = await r.json();
     const out = {};
     (crudo || []).forEach(x => {
       const stt = x && x.stats;
-      if (!stt || (stt.pass_yd == null && stt.rush_yd == null && stt.rec_yd == null)) return;
+      // K y DEF no tienen yardas: entran por sus puntos (pedido del dueno,
+      // 2026-09-10: proyecciones reales para kickers y defensas, no una media).
+      if (!stt || (stt.pass_yd == null && stt.rush_yd == null && stt.rec_yd == null && stt.pts_std == null)) return;
       const slim = {};
       PROY_KEYS.forEach(k => { if (stt[k] != null) slim[k] = stt[k]; });
       out[String(x.player_id)] = slim;
