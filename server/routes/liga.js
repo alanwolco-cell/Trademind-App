@@ -124,6 +124,9 @@ function publico(doc) {
     scoring_settings: doc.scoring_settings,
     rosters: doc.rosters, historia: doc.historia || [],
     block: doc.block || {}, proposals: doc.proposals || [],
+    bets: (doc.bets || []).map(function (b) {
+      var o = Object.assign({}, b); delete o.by; return o;
+    }),
     members: miembros, createdAt: doc.createdAt, updatedAt: doc.updatedAt,
     refreshedAt: doc.refreshedAt || null
   };
@@ -526,6 +529,89 @@ router.get('/:code/og.png', async (req, res) => {
     console.error('[og] %s', e.message);
     res.status(500).end();
   }
+});
+
+/* ── SIDE BETS: el registro de apuestas entre amigos ────────────────────────
+ * NO mueve dinero, y eso es a proposito: es el cuaderno de "te aposte una cena
+ * a que te gano el duelo", con testigos. Quien apuesta, contra quien, que se
+ * juega, y quien gano. La liga entera lo ve; cobrar es cosa de ellos.
+ * Las reglas son permisos: sin equipo no se apuesta, nadie acepta su propia
+ * apuesta, y la liquida cualquiera de los DOS implicados (se confia en la
+ * pareja, no en uno solo: si mienten, mienten delante de toda la liga). */
+router.post('/:code/bet', async (req, res) => {
+  const acct = requireAcctId(req, res);
+  if (!acct) return;
+  const code = String(req.params.code || '').toUpperCase();
+  if (!FORMA_CODIGO.test(code)) return res.status(400).json({ error: 'bad code' });
+  const b = req.body || {};
+  try {
+    const doc = await leer(code);
+    if (!doc) return res.json({ found: false });
+    const yo = doc.members && doc.members[acct];
+    if (!yo) return res.json({ ok: false, needsTeam: true });
+    const desc = String(b.desc || '').trim().slice(0, 140);
+    const stake = String(b.stake || '').trim().slice(0, 40);
+    if (!desc || !stake) return res.status(400).json({ error: 'desc and stake required' });
+    let to = b.toTeamId != null ? Number(b.toTeamId) : null;
+    if (to != null && (!doc.rosters.some(r => r.teamId === to) || to === yo.teamId)) {
+      return res.status(400).json({ error: 'bad target team' });
+    }
+    doc.bets = doc.bets || [];
+    if (doc.bets.length >= 80) doc.bets = doc.bets.slice(-60);
+    doc.bets.push({
+      id: crypto.randomBytes(6).toString('hex'),
+      from: yo.teamId, to, taker: null,
+      desc, stake, status: 'open', winner: null,
+      by: acct, at: Date.now()
+    });
+    await escribir(doc);
+    res.json({ ok: true, hub: publico(doc) });
+  } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 180) }); }
+});
+
+router.post('/:code/bet/accept', async (req, res) => {
+  const acct = requireAcctId(req, res);
+  if (!acct) return;
+  const code = String(req.params.code || '').toUpperCase();
+  if (!FORMA_CODIGO.test(code)) return res.status(400).json({ error: 'bad code' });
+  try {
+    const doc = await leer(code);
+    if (!doc) return res.json({ found: false });
+    const yo = doc.members && doc.members[acct];
+    if (!yo) return res.json({ ok: false, needsTeam: true });
+    const bet = (doc.bets || []).filter(x => x.id === String((req.body || {}).id))[0];
+    if (!bet || bet.status !== 'open') return res.status(400).json({ error: 'no such open bet' });
+    if (bet.from === yo.teamId) return res.json({ ok: false, own: true });
+    if (bet.to != null && bet.to !== yo.teamId) return res.json({ ok: false, notYours: true });
+    bet.taker = yo.teamId;
+    bet.status = 'accepted';
+    await escribir(doc);
+    res.json({ ok: true, hub: publico(doc) });
+  } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 180) }); }
+});
+
+router.post('/:code/bet/settle', async (req, res) => {
+  const acct = requireAcctId(req, res);
+  if (!acct) return;
+  const code = String(req.params.code || '').toUpperCase();
+  if (!FORMA_CODIGO.test(code)) return res.status(400).json({ error: 'bad code' });
+  const b = req.body || {};
+  try {
+    const doc = await leer(code);
+    if (!doc) return res.json({ found: false });
+    const yo = doc.members && doc.members[acct];
+    if (!yo) return res.json({ ok: false, needsTeam: true });
+    const bet = (doc.bets || []).filter(x => x.id === String(b.id))[0];
+    if (!bet || bet.status !== 'accepted') return res.status(400).json({ error: 'no such accepted bet' });
+    if (yo.teamId !== bet.from && yo.teamId !== bet.taker) return res.json({ ok: false, involved: false });
+    const winner = Number(b.winner);
+    if (winner !== bet.from && winner !== bet.taker) return res.status(400).json({ error: 'winner must be one of the two' });
+    bet.status = 'settled';
+    bet.winner = winner;
+    bet.settledAt = Date.now();
+    await escribir(doc);
+    res.json({ ok: true, hub: publico(doc) });
+  } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 180) }); }
 });
 
 module.exports = router;

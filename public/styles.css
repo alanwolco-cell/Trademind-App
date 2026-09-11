@@ -3263,3 +3263,22 @@ html.no-draft .draft-only{display:none !important}
 /* El toggle de la fuente de proyecciones. Dos opciones, se recuerda. */
 .ml-proy-tog{display:flex;align-items:center;gap:6px;margin-bottom:10px}
 .ml-proy-tog>span{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+
+/* Side bets: el cuaderno de apuestas del hub. */
+.hb-bets{margin-bottom:18px}
+.hb-bets h3{font-family:var(--font-head);font-size:17px;font-weight:600;margin:0 0 8px}
+.hb-bet-form{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.hb-bet-form input,.hb-bet-form select{min-height:44px;padding:0 12px;border-radius:10px;
+  border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:14px}
+.hb-bet-row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px}
+.hb-bet{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;
+  background:var(--surface);padding:10px 12px;margin-bottom:8px}
+.hb-bet.is-done{opacity:.65}
+.hb-bet-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.hb-bet-main b{font-size:13px}
+.hb-bet-vs{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.hb-bet-main p{font-size:13px;color:var(--muted2);margin:2px 0}
+.hb-bet-stake{font-size:12px;font-weight:700;color:var(--yellow)}
+.hb-bet-side{display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0}
+.hb-bet-won{font-size:12px;font-weight:700;color:var(--green)}
+@media(max-width:560px){.hb-bet-row2{grid-template-columns:1fr;gap:6px}}

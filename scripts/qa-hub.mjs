@@ -283,6 +283,61 @@ const p2 = await persona('qa_hub_dos_bbbbbbbbbbbbbbbbbbbbbb', 390, 844, true);
   await p3.ctx.close();
 }
 
+/* -------------------------------------------------------------- side bets */
+{
+  const { pg } = p1;   // p1 tiene el equipo 3
+  await abrirHub(pg, CODE);
+  const abrio = await clic(pg, '#screen-hub .inner-tab[data-tab="tab-hub-market"]');
+  ok('(sb0) la pestana Market abre para apostar', abrio === true);
+  await pg.waitForTimeout(700);
+  const creada = await seguro(pg, async () => {
+    const r = await fetch('/api/liga/QAHUB2/bet', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ desc: 'I outscore you this week', stake: 'a dinner' })
+    });
+    const d = await r.json();
+    HUB.doc = d.hub; hbPaintMarket();
+    const b = d.hub.bets[d.hub.bets.length - 1];
+    return { ok: d.ok, id: b && b.id, pintadas: document.querySelectorAll('.hb-bet').length,
+      sinAcct: JSON.stringify(d.hub.bets).indexOf('qa_hub_') === -1 };
+  });
+  ok('(sb1) con equipo se publica una apuesta y se pinta', creada.ok === true && creada.pintadas === 1,
+    JSON.stringify(creada));
+  ok('(sb2) el documento publico no filtra la cuenta del apostador', creada.sinAcct === true);
+
+  const propia = await seguro(pg, async (id) => {
+    const r = await fetch('/api/liga/QAHUB2/bet/accept', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    return await r.json();
+  }, creada.id);
+  ok('(sb3) CONTROL: nadie acepta su propia apuesta', propia && propia.ok === false && propia.own === true,
+    JSON.stringify(propia));
+
+  const tomada = await seguro(p2.pg, async (id) => {
+    const r = await fetch('/api/liga/QAHUB2/bet/accept', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    return await r.json();
+  }, creada.id);
+  ok('(sb4) el rival la toma', tomada && tomada.ok === true, JSON.stringify(tomada && { ok: tomada.ok }));
+
+  const liquidada = await seguro(pg, async (id) => {
+    const r = await fetch('/api/liga/QAHUB2/bet/settle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, winner: 5 })
+    });
+    const d = await r.json();
+    const b = (d.hub && d.hub.bets || []).filter(x => x.id === id)[0];
+    return { ok: d.ok, status: b && b.status, winner: b && b.winner };
+  }, creada.id);
+  ok('(sb5) un implicado la liquida y queda el ganador',
+    liquidada.ok === true && liquidada.status === 'settled' && liquidada.winner === 5,
+    JSON.stringify(liquidada));
+}
+
 /* --------------------------------------------------------------- historia */
 {
   const { pg } = p1;

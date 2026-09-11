@@ -329,6 +329,8 @@ function hbPaintMarket() {
   }
   h += '</section>';
 
+  h += hbApuestas(d, equipo);
+
   h += '<section class="hb-props"><h3>Proposals</h3>';
   var props = (d.proposals || []).slice().reverse();
   if (!props.length) {
@@ -373,6 +375,84 @@ function hbSellUI() {
       + '<input type="checkbox" value="' + hbEsc(pid) + '"' + (on ? ' checked' : '') + '>'
       + hbEsc(p.name) + ' <small>' + hbEsc(p.pos) + '</small></label>';
   }).join('');
+}
+
+/* ------------------------------------------------------------- side bets */
+// El cuaderno de apuestas entre amigos, con testigos. No mueve dinero: apunta
+// quien aposto que contra quien, que se jugaba, y quien gano. Cobrar es cosa de
+// ellos; aqui queda escrito delante de toda la liga.
+function hbApuestas(d, equipo) {
+  var soy = HUB.myTeamId;
+  var bets = (d.bets || []).slice().reverse();
+  var h = '<section class="hb-bets"><h3>Side bets</h3>';
+  if (soy == null) {
+    h += '<p class="ml-sub2">Claim your team to make one. Everyone sees them; settling is on you two.</p>';
+  } else {
+    h += '<p class="ml-sub2">A bet is a line anyone in the league can read. No money moves here: it just keeps the receipts.</p>'
+      + '<div class="hb-bet-form">'
+      + '<input id="hb-bet-desc" maxlength="140" placeholder="The bet: I outscore you this week">'
+      + '<div class="hb-bet-row2">'
+      + '<input id="hb-bet-stake" maxlength="40" placeholder="Stake: $20, a dinner...">'
+      + '<select id="hb-bet-to"><option value="">Anyone can take it</option>'
+      + d.rosters.filter(function (r) { return r.teamId !== soy; }).map(function (r) {
+        return '<option value="' + r.teamId + '">' + hbEsc(r.owner) + '</option>';
+      }).join('')
+      + '</select>'
+      + '<button class="btn-sm" onclick="hbBet()">Post it</button></div>'
+      + '<span id="hb-bet-msg" class="ml-hint"></span></div>';
+  }
+  if (!bets.length) {
+    h += '<p class="ml-sub2">No bets yet. The first one usually starts an argument, which is the point.</p>';
+  } else {
+    bets.slice(0, 20).forEach(function (b) {
+      var abierta = b.status === 'open';
+      var mia = soy != null && (b.from === soy || b.taker === soy);
+      var puedoTomar = soy != null && abierta && b.from !== soy && (b.to == null || b.to === soy);
+      h += '<div class="hb-bet' + (b.status === 'settled' ? ' is-done' : '') + '">'
+        + '<div class="hb-bet-main"><b>' + hbEsc(equipo(b.from)) + '</b>'
+        + (b.status === 'open'
+          ? '<span class="hb-bet-vs">to ' + (b.to != null ? hbEsc(equipo(b.to)) : 'anyone') + '</span>'
+          : '<span class="hb-bet-vs">vs ' + hbEsc(equipo(b.taker)) + '</span>')
+        + '<p>' + hbEsc(b.desc) + '</p>'
+        + '<span class="hb-bet-stake">' + hbEsc(b.stake) + '</span></div>'
+        + '<div class="hb-bet-side">'
+        + (b.status === 'settled'
+          ? '<span class="hb-bet-won">' + hbEsc(equipo(b.winner)) + ' won</span>'
+          : (puedoTomar
+            ? '<button class="btn-sm" onclick="hbBetAccept(\'' + hbEsc(b.id) + '\')">Take it</button>'
+            : (b.status === 'accepted' && mia
+              ? '<button class="ml-link" onclick="hbBetSettle(\'' + hbEsc(b.id) + '\',' + b.from + ')">' + hbEsc(equipo(b.from)) + ' won</button>'
+                + '<button class="ml-link" onclick="hbBetSettle(\'' + hbEsc(b.id) + '\',' + b.taker + ')">' + hbEsc(equipo(b.taker)) + ' won</button>'
+              : '<span class="ml-hint">' + (b.status === 'open' ? 'open' : 'on') + '</span>')))
+        + '</div></div>';
+    });
+  }
+  return h + '</section>';
+}
+async function hbBet() {
+  var msg = document.getElementById('hb-bet-msg');
+  var desc = (document.getElementById('hb-bet-desc') || {}).value || '';
+  var stake = (document.getElementById('hb-bet-stake') || {}).value || '';
+  var to = (document.getElementById('hb-bet-to') || {}).value || '';
+  if (!desc.trim() || !stake.trim()) { if (msg) msg.textContent = 'Say the bet and the stake.'; return; }
+  if (msg) msg.textContent = 'Posting...';
+  try {
+    var d = await hbApi('/' + HUB.code + '/bet', { desc: desc, stake: stake, toTeamId: to || null });
+    if (d.ok) { HUB.doc = d.hub; hbPaintMarket(); }
+    else if (msg) msg.textContent = 'Claim your team first.';
+  } catch (e) { if (msg) msg.textContent = 'Could not post it. Try again.'; }
+}
+async function hbBetAccept(id) {
+  try {
+    var d = await hbApi('/' + HUB.code + '/bet/accept', { id: id });
+    if (d.ok) { HUB.doc = d.hub; hbPaintMarket(); }
+  } catch (e) { }
+}
+async function hbBetSettle(id, winner) {
+  try {
+    var d = await hbApi('/' + HUB.code + '/bet/settle', { id: id, winner: winner });
+    if (d.ok) { HUB.doc = d.hub; hbPaintMarket(); }
+  } catch (e) { }
 }
 
 /* ------------------------------------------------------------- acciones */
@@ -439,3 +519,6 @@ window.hbClaim = hbClaim;
 window.hbSaveBlock = hbSaveBlock;
 window.hbVote = hbVote;
 window.hbCopy = hbCopy;
+window.hbBet = hbBet;
+window.hbBetAccept = hbBetAccept;
+window.hbBetSettle = hbBetSettle;
