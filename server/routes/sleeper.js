@@ -27,28 +27,75 @@ function writePlayerCache(data) {
   } catch (_) {}
 }
 
-// Sleeper devuelve 5xx a ratos sin motivo. Pasarselo al navegador tal cual
-// pinta un error rojo en la consola de un visitante que no hizo nada mal, y en
-// este repo un error de consola cuenta como bug. Se reintenta una vez con una
-// espera corta.
-// NO se reintenta un 429: si nos estan limitando, insistir es empeorarlo. Y
-// tampoco los 4xx, que son peticiones mal formadas nuestras.
-async function sleeperFetch(urlPath) {
+// Sleeper devuelve 5xx a ratos sin motivo, y 429 cuando la hidratacion de
+// muchas ligas le dispara decenas de peticiones a la vez. Pasarle cualquiera
+// de los dos al navegador pinta un error rojo en la consola de un visitante
+// que no hizo nada mal, y en este repo un error de consola cuenta como bug.
+// Tres capas, de la raiz hacia afuera:
+//  1. CONCURRENCIA ACOTADA: nunca mas de 6 peticiones vivas hacia Sleeper.
+//     Es lo que evita el 429 en vez de curarlo.
+//  2. Reintento: los 5xx enseguida, el 429 UNA vez tras una espera larga
+//     (insistir rapido si est.a limitando es empeorarlo). Los demas 4xx son
+//     peticiones mal formadas nuestras y no se reintentan.
+//  3. ULTIMO BUENO: cada respuesta valida se guarda 30 min por ruta; si el
+//     upstream se cae del todo, se sirve esa copia con 200 en vez de un 500.
+//     Datos de hace minutos y una consola limpia ganan a un error en vivo.
+const ultimoBueno = new NodeCache({ stdTTL: 1800, useClones: false });
+let _slVivas = 0; const _slCola = [];
+function _slTurno() {
+  if (_slVivas >= 6) return new Promise(r => _slCola.push(r));
+  _slVivas++; return Promise.resolve();
+}
+function _slSuelta() {
+  const sig = _slCola.shift();
+  if (sig) sig(); else _slVivas--;
+}
+// Peticiones IDENTICAS en vuelo comparten un solo viaje al upstream: al
+// arrancar, app.js pide state/nfl desde varios sitios a la vez y sin esto
+// cada copia gastaba su propio turno (y su propia racion de 429).
+const _slEnVuelo = new Map();
+function sleeperFetch(urlPath) {
+  const vivo = _slEnVuelo.get(urlPath);
+  if (vivo) return vivo;
+  const pr = _sleeperFetch(urlPath);
+  _slEnVuelo.set(urlPath, pr);
+  pr.finally(() => _slEnVuelo.delete(urlPath)).catch(() => {});
+  return pr;
+}
+async function _sleeperFetch(urlPath) {
+  await _slTurno();
   let ultimo = null;
-  for (let intento = 0; intento < 2; intento++) {
-    try {
-      const res = await fetch(SLEEPER + urlPath);
-      if (res.ok) return res.json();
-      if (res.status < 500 || res.status === 429) {
-        throw new Error(`Sleeper returned ${res.status} for ${urlPath}`);
+  try {
+    for (let intento = 0; intento < 3; intento++) {
+      try {
+        const res = await fetch(SLEEPER + urlPath);
+        if (res.ok) {
+          const data = await res.json();
+          ultimoBueno.set(urlPath, data);
+          return data;
+        }
+        if (res.status === 429) {
+          if (intento > 0) throw new Error(`Sleeper returned 429 for ${urlPath}`);
+          ultimo = new Error(`Sleeper returned 429 for ${urlPath}`);
+          await new Promise(r => setTimeout(r, 900));
+          continue;
+        }
+        if (res.status < 500) {
+          throw new Error(`Sleeper returned ${res.status} for ${urlPath}`);
+        }
+        ultimo = new Error(`Sleeper returned ${res.status} for ${urlPath}`);
+      } catch (e) {
+        if (/returned 4\d\d/.test(e.message) && !/returned 429/.test(e.message)) throw e;
+        if (/returned 429/.test(e.message) && intento > 0) break;
+        ultimo = e;
       }
-      ultimo = new Error(`Sleeper returned ${res.status} for ${urlPath}`);
-    } catch (e) {
-      if (/returned 4/.test(e.message)) throw e;
-      ultimo = e;
+      if (intento < 2) await new Promise(r => setTimeout(r, 350));
     }
-    if (intento === 0) await new Promise(r => setTimeout(r, 350));
+  } finally {
+    _slSuelta();
   }
+  const viejo = ultimoBueno.get(urlPath);
+  if (viejo !== undefined) return viejo;
   throw ultimo;
 }
 
