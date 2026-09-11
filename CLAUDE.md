@@ -2063,6 +2063,8 @@ Reportes SIN atender, en orden de llegada:
 
 Estado del arbol: HEAD empujado y desplegado (cache-bust 2026091106, sha256
 verificado). Los gates qa-nav, qa-push, qa-myleagues en verde en la ultima corrida.
+[Puntos 1-7, 9 parcial: ATENDIDOS el 2026-09-11 por la mañana, ver la sesion de
+abajo. Quedan 8 y 11 (piden plan aprobado por el dueno) y las llaves VAPID.]
 11. **My Rankings se remodela (o se elimina, decidir con el)**: el dueno quiere
     hacer SUS rankings cada semana (por matchups) y que se hagan PUBLICOS, y que
     Start/Sit use esas recomendaciones para todos los usuarios del site. Es un
@@ -2071,3 +2073,67 @@ verificado). Los gates qa-nav, qa-push, qa-myleagues en verde en la ultima corri
     como se publica (el sync por servidor ya existe: /api/perfil/rankings), y
     como Start/Sit mezcla su ranking con las proyecciones sin mentir sobre la
     fuente ("Wolco has him WR12 this week").
+
+## Sesion 2026-09-11 (mañana): seis del backlog, desplegados y verificados
+
+Commit ca57e54, DESPLEGADO (cache-bust 2026091107, sha256 verificado en los 4
+archivos publicos). Gate nuevo `scripts/qa-backlog.mjs` (16 checks): corrido en
+ROJO contra produccion ANTES del deploy (cazo a Skattebo, Lemon y Herbert por
+nombre en 4b) y ALL GREEN contra produccion despues. qa-nav y qa-myleagues
+tambien en verde contra produccion.
+
+1. **Chopped es Chopped** (backlog 1): medido contra las ligas reales del dueno,
+   Sleeper manda las Chopped con `settings.type=3` y `best_ball=0`, y las best
+   ball con `type=0` y `best_ball=1`. `mlEsBestBall` miraba el type y las
+   clasificaba al reves. Ahora: best ball = SOLO la casilla best_ball; type 3 =
+   formato propio "Chopped" (mlEsChopped) en tarjetas, filtros y el selector del
+   analizador (app.js tenia el mismo bug). Chopped ademas queda fuera de la
+   simulacion de titulo (no hay bracket) y DENTRO del aviso de alineacion (en
+   chopped si se alinea).
+2. **La cinta** (backlog 3): no era la carga (endpoints ~0.35s) ni la proporcion
+   (ya era proporcional): era una capa animada de 33.846px con 52 items y ciclo
+   de 147s a 115px/s. Ahora: cola acotada a 28 items (actividad primero, luego
+   trending, titulares al final), 150px/s, will-change:transform. Medido: ciclo
+   ~59s, 150px/s exactos.
+3. **Buy/Sell** (backlog 6 y 7): el subtitulo declara liga y eje ("Gente seria ·
+   30-day value moves in FantasyCalc redraft rankings"); "Declining Veteran"
+   solo etiqueta al lado malo de la curva de SU posicion (QB 33 / RB 27 / WR 29
+   / TE 30); los jovenes cayendo en redraft van aparte como "Sell Now - Price
+   Falling" con textos sin curva de edad inventada; Sell High tampoco le dice
+   "age curve says down" a un joven. Stash targets tambien nombra la liga.
+4. **Podas** (backlog 4 y 5): interruptores `HIDE_ROSTER_GRADE` y
+   `HIDE_COMMUNITY` en app.js (patron no-draft: CSS esconde, nada se borra).
+   El par CSS `.x-only`/`.x-alt` permite que la misma puerta cambie de rotulo:
+   el cajon dice "League Trades" (screen-league arranca en ese tab) y "News &
+   Learn" (Community sin Trade Feed / My Trades / Hot Takes / Feedback, cae en
+   News, cabecera retitulada). El chip de Mac [[go:community]] lleva a News.
+   Revertir = flag en false.
+5. **Yahoo en el celular** (backlog 2, lo minimo + un paso mas): el pie de
+   Leagues declara "Yahoo leagues connect per device..." cuando no hay token en
+   ese navegador. Y el callback del OAuth SIN opener (PWA instalada / popup
+   roto) ya no es un callejon: la pagina del callback (mismo origen) guarda el
+   token en localStorage `tm_yahoo_tok` y redirige a /myleagues;
+   mlYahooConnect ademas detecta por sondeo el token que llega por esa via.
+   **SIN VERIFICAR en iPhone real** (mismo limite que el push): probar con el
+   dueno que el login de Yahoo cierra bien desde el telefono.
+
+**Trampas nuevas para la proxima sesion:**
+- El gate qa-backlog depende de datos reales del dueno (las dos ligas Chopped,
+  "Gente seria" 1401312905621712896 como redraft). Si abandona esas ligas,
+  actualizar los ids del gate.
+- El texto de los botones del cajon con par only/alt: `textContent` devuelve
+  LOS DOS rotulos concatenados ("CommunityNews & Learn"); un check que compare
+  texto exacto del boton se rompe. Comparar visibilidad o usar includes.
+
+**Pendiente de Wolco (sin cambios):** VAPID keys + CRON_SECRET en Vercel y
+redesplegar (el boton de push sigue oculto a proposito); apagar los emails de
+deployment; desinstalar/re-anadir la PWA para el vuelo de Mac; probar "Get
+notified" y ahora tambien el login de Yahoo desde el iPhone.
+
+**Backlog vivo: 8 y 11, piden plan aprobado antes de tocar.**
+- 8 (rediseno de Ask Mac, con el squad): sin empezar.
+- 11 (My Rankings -> rankings semanales publicos del dueno que alimentan
+  Start/Sit): preguntas abiertas: ¿edita en la UI actual de My Rankings o en
+  algo nuevo? ¿lo publico lleva su nombre? El sync por servidor ya existe
+  (/api/perfil/rankings). Start/Sit debe declarar la fuente ("Wolco has him
+  WR12 this week"), sin mezclar sin decirlo.
