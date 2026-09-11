@@ -2187,3 +2187,36 @@ sensible; CRON_SECRET ya existia de hace 51 dias, no se toco), redeploy
 4cdf073, y verificado en produccion: /api/push/vapid sirve la llave y el
 boton del pie de Leagues aparece. El push esta ENCENDIDO; falta solo la
 prueba fisica desde el iPhone del dueno.
+
+## Sesion 2026-09-11 (tarde): el candado de partido, y el squad de Ask Mac
+
+**Bug del dueno ("me recomienda meter a CJ Stroud por AJ Brown, y Brown ya
+jugo"), commit e12dd7a, DESPLEGADO y verificado (cache-bust 2026091109).**
+Dos causas, las dos en mlRevisarAlineacion:
+1. El aviso no sabia de partidos empezados. Ahora: proxy nuevo GET
+   /api/sleeper/schedule (calendario oficial con status por partido, cache 5
+   min) -> mlLoadCandados construye ML.lock por equipo+semana -> ningun
+   bloqueado entra ni sale. Falla ABIERTO si el calendario no responde.
+2. El pareo entra/sale iba por puntos a secas y cruzaba posiciones (el QB que
+   entra emparejado con el WR barato). Ahora pareo por posicion primero;
+   cruzar queda solo para lo que no tiene pareja (cadena legitima del FLEX).
+Gate scripts/qa-lineup.mjs (espejo extraido, patron qa-yahoo-parse):
+reproduce el caso EXACTO y quedo ROJO contra el codigo viejo ("CJ Stroud in
+for AJ Brown", +14) y ALL GREEN con el fix. OJO en esta temporada AJ Brown
+es de NE (trade de marzo 2026), por eso su partido era el NE@SEA del jueves.
+
+**Ask Mac (backlog 8): auditoria y referencias LISTAS, en espera de la
+decision del dueno.** Reportes completos en el scratchpad de la sesion
+(dis-askmac/ y ref-askmac/). Lo esencial:
+- 4 bloqueantes medidos: composer de 152px en celular (vs 794 en desktop),
+  todo centrado sin jerarquia (tell anti-vibecoded), lienzo muerto en
+  desktop (312px de vacio), historial enterrado y tapado por la tabbar.
+- Direccion A (poda y reorden, medio dia): arregla los 4 bloqueantes.
+  Defectos medidos, no gusto: se ejecuta sin preguntar.
+- Direccion B (el composer manda, 1 dia): fuera el saludo-poster, el input
+  arriba del primer viewport, ejemplos en fila horizontal.
+- Direccion C (la respuesta con forma, varios dias + gates): veredicto en
+  una linea + numeros en tabla chica + chip; toca el prompt y /api/sage.
+- Referencias: tarjeta de contexto fija (Notion/Linear), cita del dato
+  detras de cada recomendacion (Perplexity), veredicto-primero (ChatGPT).
+  En el rubro fantasy no hay referente de diseño: el hueco esta abierto.
