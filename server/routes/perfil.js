@@ -472,6 +472,82 @@ router.put('/rankings', async (req, res) => {
   }
 });
 
+// ── La hoja semanal ("Mac's weekly sheet") ─────────────────────────────────
+// Rankings SEMANALES por posicion (QB/RB/WR/TE), editados por el dueno y
+// PUBLICOS para todos los usuarios (decidido el 2026-09-11: firma del
+// producto, sin nombre propio). UN documento con todas las semanas de la
+// temporada: 4 posiciones x ~40 ids x 18 semanas cabe de sobra en el tope y
+// evita andar listando el Blob para saber cual es la ultima publicada.
+//
+// La lectura es PUBLICA pero solo entrega semanas con publishedAt: el borrador
+// del dueno no se filtra a nadie. Con cuenta de dueno, el GET devuelve el
+// documento entero (sus borradores incluidos) para editar desde cualquiera de
+// sus dispositivos. La escritura usa el MISMO guard que sus rankings de draft.
+const WK_PATH = 'perfil/weekly-sheet.json';
+const WK_FILE = process.env.PERFIL_WK_FILE
+  || path.join(os.tmpdir(), 'macdraft-weekly-sheet.json');
+const WK_POS = ['QB', 'RB', 'WR', 'TE'];
+const wkRead = () => docRead(WK_PATH, WK_FILE);
+const wkWrite = (doc) => docWrite(WK_PATH, WK_FILE, doc);
+
+function wkPublica(doc) {
+  if (!doc || typeof doc !== 'object') return null;
+  const weeks = {};
+  for (const [w, sem] of Object.entries(doc.weeks || {})) {
+    if (sem && Number(sem.publishedAt) > 0) weeks[w] = sem;
+  }
+  return { v: doc.v || 1, season: doc.season || null, weeks, updatedAt: doc.updatedAt || 0 };
+}
+
+// GET /api/perfil/weekly -> { doc, owner, updatedAt, store }
+router.get('/weekly', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const acct = readAcctId(req);
+  if (acct) await extraSync();
+  const owner = !!acct && permitido(acct);
+  try {
+    const r = await wkRead();
+    const doc = owner ? r.doc : wkPublica(r.doc);
+    res.json({ doc, owner, updatedAt: r.doc ? (Number(r.doc.updatedAt) || 0) : 0, store: r.store });
+  } catch (e) {
+    res.status(502).json({ error: 'Could not read the weekly sheet.', detail: String(e.message || e).slice(0, 120) });
+  }
+});
+
+// PUT /api/perfil/weekly  body: el documento entero. Misma filosofia que los
+// rankings de draft: se valida la FORMA, el contenido es del dueno.
+router.put('/weekly', async (req, res) => {
+  if (!(await rkGuard(req, res))) return;
+  const doc = req.body;
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return res.status(400).json({ error: 'Send a JSON object.' });
+  if (doc.weeks == null || typeof doc.weeks !== 'object' || Array.isArray(doc.weeks)) {
+    return res.status(400).json({ error: '`weeks` must be an object keyed by week number.' });
+  }
+  for (const [w, sem] of Object.entries(doc.weeks)) {
+    const wn = Number(w);
+    if (!Number.isInteger(wn) || wn < 1 || wn > 22) return res.status(400).json({ error: 'Week keys must be 1-22.' });
+    if (!sem || typeof sem !== 'object' || Array.isArray(sem)) return res.status(400).json({ error: 'Each week must be an object.' });
+    if (sem.pos == null || typeof sem.pos !== 'object' || Array.isArray(sem.pos)) return res.status(400).json({ error: 'Each week needs a `pos` object.' });
+    for (const [p, ids] of Object.entries(sem.pos)) {
+      if (!WK_POS.includes(p)) return res.status(400).json({ error: 'Positions are QB, RB, WR, TE.' });
+      if (!Array.isArray(ids) || ids.length > 120 || ids.some(id => typeof id !== 'string' || !id)) {
+        return res.status(400).json({ error: '`pos.' + p + '` must be an array of up to 120 player ids.' });
+      }
+    }
+    if (sem.publishedAt != null && !(Number(sem.publishedAt) > 0)) return res.status(400).json({ error: '`publishedAt` must be a timestamp.' });
+  }
+  const updatedAt = Number(doc.updatedAt) || Date.now();
+  const out = Object.assign({}, doc, { updatedAt });
+  const size = Buffer.byteLength(JSON.stringify(out));
+  if (size > RK_MAX) return res.status(413).json({ error: 'Document is over 200 KB.', size });
+  try {
+    const store = await wkWrite(out);
+    res.json({ ok: true, updatedAt, store, size });
+  } catch (e) {
+    res.status(502).json({ error: 'Could not save the weekly sheet.', detail: String(e.message || e).slice(0, 120) });
+  }
+});
+
 // ── Vincular otro dispositivo con un codigo ────────────────────────────────
 // El problema que resuelve: la cuenta es por navegador, asi que reinstalar la
 // PWA, estrenar telefono o abrir en otro navegador deja al dueno fuera de sus

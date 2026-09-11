@@ -15863,7 +15863,12 @@ async function askSageStartSit(){
   }).join('');
   if(missing.length)html+='<div style="font-size:11px;color:var(--muted);margin-top:6px">Couldn\'t find: '+missing.map(function(m){return m.name;}).join(', ')+'</div>';
   html+='<div style="font-size:10px;color:var(--muted);margin-top:10px">Always check the final injury report before kickoff.</div>';
-  out.innerHTML=html;
+  // La hoja semanal del sitio, citada como fuente APARTE y con nombre: el
+  // puntaje de arriba no la mezcla (decidido 2026-09-11). Si esta semana no
+  // hay hoja publicada o ninguno esta en ella, no se dice nada.
+  var cita='';
+  try{if(window.wkCite)cita=await wkCite(ranked.map(function(p){return p.name;}));}catch(_){cita='';}
+  out.innerHTML=(cita||'')+html;
 }
 
 function renderWaiverTargets(){

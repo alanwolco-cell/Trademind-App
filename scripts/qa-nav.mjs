@@ -136,26 +136,34 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
     await pg.close();
   }
 
-  // (e) My Rankings tiene que estar EN EL CAJON. Vivia solo en la barra de
-  // pestanas, que en el telefono se sale de la ventana: la feature existia y
-  // no habia forma de llegar a ella.
+  // (e) Weekly Rankings tiene que estar EN EL CAJON (la leccion de My
+  // Rankings: una feature que solo vive en la barra de pestanas no existe en
+  // el telefono). Desde el 2026-09-11 la puerta es la hoja semanal; la de
+  // draft ("Draft Rankings") queda tras draft-only.
   {
     const pg = await nueva(w, h);
     await abrirCajon(pg);
-    const c = await clicEnCajon(pg, 'My Rankings');
+    const c = await clicEnCajon(pg, 'Weekly Rankings');
     const d = await donde(pg);
-    ok('(e) ' + quien + ': cajon > My Rankings llega a la lista',
-      c === 'clicado' && d.pantalla === 'screen-research' && d.tab === 'tab-rankings' && !d.heroEnPantalla,
+    ok('(e) ' + quien + ': cajon > Weekly Rankings llega a la hoja',
+      c === 'clicado' && d.pantalla === 'screen-research' && d.tab === 'tab-weekly' && !d.heroEnPantalla,
       c + ' | ' + JSON.stringify(d));
-    // La lista sale de una fetch al board de Sleeper: leerla en el mismo
-    // instante del clic mide la red, no el producto. Medido el 2026-08-28:
-    // tarda ~3 s con la cache fria y este check fallaba al azar TAMBIEN contra
-    // el codigo de HEAD, o sea que llevaba tiempo mintiendo en las dos
-    // direcciones. Se espera a que pinte; si no pinta nunca, sigue fallando.
-    await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-row').length > 100,
-      { timeout: 30000 }).catch(() => { });
-    const filas = await pg.$$eval('#rk-body .rk-row', r => r.length).catch(() => 0);
-    ok('(f) ' + quien + ': la lista pinta jugadores al llegar por el cajon', filas > 100, filas + ' filas');
+    // La hoja sale de tres fetch (documento, jugadores, semana): leerla en el
+    // instante del clic mide la red, no el producto. Se espera a que pinte
+    // ALGO deliberado: filas si hay semana publicada, o el vacio honesto.
+    await pg.waitForFunction(() => {
+      const b = document.getElementById('wk-body');
+      return b && (b.querySelector('.wk-row') || b.querySelector('.rk-empty'));
+    }, { timeout: 30000 }).catch(() => { });
+    const pinta = await pg.evaluate(() => {
+      const b = document.getElementById('wk-body');
+      if (!b) return 'sin wk-body';
+      if (b.querySelector('.wk-row')) return 'filas';
+      if (b.querySelector('.rk-empty')) return 'vacio declarado';
+      return 'en blanco';
+    });
+    ok('(f) ' + quien + ': la hoja pinta contenido deliberado al llegar por el cajon',
+      pinta === 'filas' || pinta === 'vacio declarado', pinta);
     await pg.close();
   }
 

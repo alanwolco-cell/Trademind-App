@@ -82,7 +82,11 @@ const abrirTab = async pg => {
   await pg.evaluate(() => switchScreen('research'));
   await pg.waitForTimeout(350);
   await pg.evaluate(() => {
-    const t = Array.from(document.querySelectorAll('#screen-research .inner-tab')).find(x => /My Rankings/i.test(x.textContent));
+    // Por el DESTINO y no por el rotulo: desde el 2026-09-11 el booth se llama
+    // "Draft Rankings" y vive tras draft-only. El click programatico funciona
+    // aunque el tab este escondido: este gate prueba el booth, no su puerta.
+    const t = Array.from(document.querySelectorAll('#screen-research .inner-tab'))
+      .find(x => (x.getAttribute('onclick') || '').indexOf("'tab-rankings'") >= 0);
     if (t) t.click();
   });
   await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-row').length > 0, { timeout: 30000 });
@@ -199,7 +203,11 @@ console.log('\n=== My Rankings: la lista ===');
   await pg.evaluate(() => switchScreen('research'));
   await pg.waitForTimeout(300);
   await pg.evaluate(() => {
-    const t = Array.from(document.querySelectorAll('#screen-research .inner-tab')).find(x => /My Rankings/i.test(x.textContent));
+    // Por el DESTINO y no por el rotulo: desde el 2026-09-11 el booth se llama
+    // "Draft Rankings" y vive tras draft-only. El click programatico funciona
+    // aunque el tab este escondido: este gate prueba el booth, no su puerta.
+    const t = Array.from(document.querySelectorAll('#screen-research .inner-tab'))
+      .find(x => (x.getAttribute('onclick') || '').indexOf("'tab-rankings'") >= 0);
     if (t) t.click();
   });
   await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-row').length > 0, { timeout: 30000 });
@@ -802,8 +810,30 @@ const clicEnCajon = (pg, et) => pg.evaluate(async (et) => {
 for (const [tag, w, h] of [['escritorio', 1440, 950], ['movil', 390, 844]]) {
   const { pg, errs } = await nueva(w, h);
   const c1 = await abrirCajon(pg);
-  const c2 = await clicEnCajon(pg, 'My Rankings');
-  ok('(A-' + tag + ') el cajon lleva a My Rankings', c1.indexOf('abierto') >= 0 && c2 === 'clicado', c1 + ' / ' + c2);
+  // Desde el 2026-09-11 el booth se llama "Draft Rankings" y su puerta vive
+  // tras draft-only (la hoja semanal ocupa el rotulo de siempre). Fuera de
+  // temporada la puerta NO debe estar: se exige que su ausencia sea por
+  // no-draft y se entra por el tab programatico, porque este gate prueba el
+  // booth, no el calendario. La puerta visible la vigila qa-nav.
+  let c2 = await clicEnCajon(pg, 'Draft Rankings');
+  if (c2 === 'NO ESTA EN EL CAJON') {
+    const noDraft = await eva(pg, () => document.documentElement.classList.contains('no-draft'));
+    ok('(A-' + tag + ') la puerta Draft Rankings solo falta por estar fuera de temporada',
+      c1.indexOf('abierto') >= 0 && noDraft === true, c1 + ' / no-draft=' + JSON.stringify(noDraft));
+    if (noDraft !== true) { await pg.close(); continue; }
+    await pg.evaluate(async () => {
+      mobMenuCloseForNav();
+      await new Promise(r => setTimeout(r, 400));
+      switchScreen('research');
+      const t = Array.from(document.querySelectorAll('#screen-research .inner-tab'))
+        .find(x => (x.getAttribute('onclick') || '').indexOf("'tab-rankings'") >= 0);
+      if (t) t.click();
+    });
+    await pg.waitForTimeout(1500);
+    c2 = 'clicado';
+  } else {
+    ok('(A-' + tag + ') el cajon lleva a Draft Rankings', c1.indexOf('abierto') >= 0 && c2 === 'clicado', c1 + ' / ' + c2);
+  }
   if (c2 !== 'clicado') { await pg.close(); continue; }
   await pg.waitForFunction(() => document.querySelectorAll('#rk-body .rk-pr').length > 0, { timeout: 45000 }).catch(() => { });
   await pg.waitForFunction(() => !TMR.pricing, { timeout: 45000 }).catch(() => { });
