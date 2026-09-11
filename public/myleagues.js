@@ -151,6 +151,34 @@ async function mlLoadProps() {
   return ML.props;
 }
 
+// El candado de partido. Quien ya jugo (o esta jugando) esta BLOQUEADO en la
+// plataforma: no puede entrar ni salir de una alineacion, y recomendarlo es
+// el consejo imposible (caso del dueno, 2026-09-11: "CJ Stroud in for AJ
+// Brown" con el partido de Brown COMPLETO). El estado sale del calendario
+// oficial via nuestro proxy. Si el calendario no responde, no hay candado y
+// el aviso opina como siempre: fallar abierto deja el bug viejo un rato,
+// fallar cerrado callaria el panel entero por un 500 pasajero.
+async function mlLoadCandados() {
+  if (ML.lock && Date.now() - (ML.lockAt || 0) < 5 * 60 * 1000) return ML.lock;
+  try {
+    var r = await fetch('/api/sleeper/schedule');
+    if (!r.ok) return ML.lock || null;
+    var d = await r.json();
+    var lock = {};
+    ((d && d.games) || []).forEach(function (g) {
+      if (Number(g.week) === Number(ML.week) && g.status && g.status !== 'pre_game') {
+        lock[String(g.home).toUpperCase()] = 1;
+        lock[String(g.away).toUpperCase()] = 1;
+      }
+    });
+    ML.lock = lock; ML.lockAt = Date.now();
+  } catch (e) { }
+  return ML.lock || null;
+}
+function mlBloqueado(p) {
+  return !!(ML.lock && p && p.team && ML.lock[String(p.team).toUpperCase()]);
+}
+
 // Nombres: las casas escriben "Marvin Harrison Jr." y Sleeper "Marvin Harrison".
 function mlNorm(s) {
   return String(s || '').toLowerCase()
@@ -464,6 +492,7 @@ function mlRevisarAlineacion(L) {
     if (!sl.x || !sl.x.p) return;
     if (enActual[sl.x.id]) return;        // ya es titular: reacomodo, no cambio
     if (sl.x.guess) return;               // no se recomienda a nadie sin numero propio
+    if (mlBloqueado(sl.x.p)) return;      // su partido ya empezo: no puede entrar
     entran.push({ p: sl.x.p, pts: sl.x.proj, slot: sl.slot });
   });
   var salen = [];
@@ -472,18 +501,29 @@ function mlRevisarAlineacion(L) {
     var pa = players[id];
     var va = pa ? mlProjPlayer(pa, sc) : null;
     if (va == null) return;               // sin numero del que sale, no se opina
+    if (mlBloqueado(pa)) return;          // su partido ya empezo: no puede salir
     salen.push({ p: pa, pts: va, id: id });
   });
-  // El que mas suma entra por el que menos aporta. Cruzar posiciones aqui es
-  // legitimo: en una liga con FLEX, sentar a un WR para arrancar a un RB es un
-  // movimiento real.
+  // El pareo va POR POSICION primero: el QB que entra sale por el QB que se
+  // sienta, no por el WR mas barato de la lista (caso del dueno, 2026-09-11:
+  // "CJ Stroud in for AJ Brown" en una liga 1QB, un movimiento que no existe).
+  // Cruzar posiciones queda SOLO para lo que sobra sin pareja de su posicion,
+  // que es la cadena legitima del FLEX (sentar un WR para arrancar un RB).
   entran.sort(function (a, b) { return b.pts - a.pts; });
   salen.sort(function (a, b) { return a.pts - b.pts; });
   var pares = [];
-  for (var q = 0; q < entran.length && q < salen.length; q++) {
-    var gana = entran[q].pts - salen[q].pts;
-    if (gana >= ML_UMBRAL_CAMBIO) pares.push({ entra: entran[q], sale: salen[q], gana: gana });
-  }
+  entran.forEach(function (e) {
+    var idx = -1;
+    for (var k = 0; k < salen.length; k++) {
+      if (salen[k] && salen[k].p.pos === e.p.pos) { idx = k; break; }
+    }
+    if (idx < 0) {
+      for (var k2 = 0; k2 < salen.length; k2++) { if (salen[k2]) { idx = k2; break; } }
+    }
+    if (idx < 0) return;
+    var gana = e.pts - salen[idx].pts;
+    if (gana >= ML_UMBRAL_CAMBIO) { pares.push({ entra: e, sale: salen[idx], gana: gana }); salen[idx] = null; }
+  });
   if (!pares.length) return { ok: true, gana: 0, cambios: [] };
   var total = pares.reduce(function (a, x) { return a + x.gana; }, 0);
   return { ok: pares.length === 0, gana: Math.round(total * 10) / 10, cambios: pares };
@@ -999,7 +1039,8 @@ async function mlBoot(force) {
     if (st) { ML.week = st.week || 1; ML.season = st.season || ML.season; ML.phase = st.season_type || 'regular'; }
 
     var players = await mlPlayersMap();
-    await Promise.all([mlLoadProps(), mlLoadProySite()]);
+    // Los candados van con la semana ya conocida (ML.week se lee arriba).
+    await Promise.all([mlLoadProps(), mlLoadProySite(), mlLoadCandados()]);
 
     var raw = [];
     if (uname) {

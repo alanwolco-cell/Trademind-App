@@ -271,6 +271,28 @@ router.get('/projections/:week', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/sleeper/schedule
+// El calendario de la temporada con el ESTADO de cada partido (pre_game /
+// in_game / complete). Es el candado del aviso de alineacion: un jugador cuyo
+// partido ya empezo no puede entrar ni salir de un once, y recomendarlo es el
+// consejo imposible que hace que no te crean el resto (caso del dueno,
+// 2026-09-11: "CJ Stroud in for AJ Brown" con Brown ya jugado).
+router.get('/schedule', async (req, res) => {
+  try {
+    const hit = shortCache.get('schedule_nfl');
+    if (hit) return res.json(hit);
+    const st = shortCache.get('state_nfl') || await sleeperFetch('/state/nfl');
+    const season = st.season || new Date().getFullYear();
+    const r = await fetch(`https://api.sleeper.app/schedule/nfl/regular/${season}`);
+    if (!r.ok) throw new Error('schedule ' + r.status);
+    const crudo = await r.json();
+    const games = (crudo || []).map(g => ({ week: g.week, home: g.home, away: g.away, status: g.status }));
+    const doc = { season, updated: Date.now(), games };
+    shortCache.set('schedule_nfl', doc, 300);   // 5 min: el candado cambia con cada kickoff
+    res.json(doc);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // GET /api/sleeper/trending-week
 // Most added / dropped players across ALL of Sleeper over the last 7 days, with counts
 router.get('/trending-week', async (req, res) => {
