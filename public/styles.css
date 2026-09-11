@@ -3344,3 +3344,4 @@ html.no-draft .draft-only{display:none !important}
 .ml-mu-pts.is-real{color:var(--text);font-weight:700}
 .ml-mu-p.is-empty .ml-mu-nom{font-size:11.5px;color:var(--muted);font-style:italic}
 .ml-mu-sinfoto{width:30px;height:30px;border-radius:50%;background:var(--surface2);flex-shrink:0;display:block}
+.ml-card[role="button"]{cursor:pointer}

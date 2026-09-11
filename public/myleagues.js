@@ -192,7 +192,16 @@ function mlScoring(L) {
 // cada ~150 yardas lanzadas.
 var ML_PASS_TD_PER_YD = 1 / 150;
 
+// K y DEF no existen ni en las props de Vegas ni en el feed de proyecciones:
+// sin esto cada equipo perdia ~15 puntos (sus dos a cero) y los totales salian
+// sistematicamente bajos, sobre todo en Yahoo donde la imputacion domina el
+// resto. Media de la liga real, declarada: un kicker medio ronda 7.5 por
+// semana y una defensa 7. Para el TOTAL del equipo, la media es el numero
+// honesto cuando no hay dato que distinga.
+var ML_PROJ_K = 7.5, ML_PROJ_DEF = 7.0;
 function mlProjPlayer(p, sc) {
+  if (p && p.pos === 'K') return ML_PROJ_K;
+  if (p && p.pos === 'DEF') return ML_PROJ_DEF;
   // FUENTE 'site': la proyeccion oficial (Rotowire via Sleeper), por
   // estadistica cruda y preciada con el reglamento de ESTA liga, incluyendo
   // intercepciones y fumbles que Vegas no trae. Los jugadores de Yahoo se
@@ -1342,7 +1351,7 @@ function mlPaintLeagues() {
       // tormenta.
       var izq = vivo ? mlN(vivo.mio) : mlN(myProj);
       var der = vivo ? mlN(vivo.suyo) : mlN(oppProj);
-      cuerpo = '<div class="ml-vs" role="button" tabindex="0" onclick="mlOpenMatchup(\'' + L.id + '\')" onkeydown="if(event.key===\'Enter\')mlOpenMatchup(\'' + L.id + '\')">'
+      cuerpo = '<div class="ml-vs">'
         + '<div class="ml-vs-side">' + mlTeamEscudo(L, mine.roster_id, 'is-sm')
         + '<span class="ml-vs-lbl">You</span><span class="mono ml-vs-num">' + izq + '</span></div>'
         + '<div class="ml-vs-mid"><span class="ml-vs-at">' + (vivo ? 'live' : 'vs') + '</span></div>'
@@ -1373,7 +1382,11 @@ function mlPaintLeagues() {
     if (mlEsIdp(L)) flags.push('IDP');
     var esCampeon = L.champId != null && L.champId === mine.roster_id;
 
-    h += '<article class="ml-card" style="--liga:' + color + '">'
+    // Toda la tarjeta abre el matchup (pedido del dueno): los botones de
+    // adentro paran la propagacion por ser <button>, el manejador los filtra.
+    var abre = mlDrafted(L) && H.opp != null
+      ? ' role="button" tabindex="0" onclick="mlCardClick(event,\'' + L.id + '\')" onkeydown="if(event.key===\'Enter\')mlOpenMatchup(\'' + L.id + '\')"' : '';
+    h += '<article class="ml-card" style="--liga:' + color + '"' + abre + '>'
       + '<header class="ml-card-h">' + mlLigaEscudo(L, 'is-lg')
       + '<div class="ml-card-id"><h3>' + mlEsc(L.name) + '</h3>'
       + '<span class="ml-card-sub">' + (L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper') + ' · ' + mlEsc(mlTeamName(L, mine.roster_id)) + '</span></div>'
@@ -1560,14 +1573,19 @@ function mlFiltrosUI(todas, visibles) {
 // La clave es el NOMBRE normalizado, no el id de la plataforma. Sin esto, el
 // mismo jugador en una liga de Sleeper y en una de Yahoo serian dos personas
 // distintas y toda la pantalla perderia su razon de ser.
-var _mlNombreIdx = null;
+var _mlNombreIdx = null, _mlNombreIdxN = 0;
 function mlIdPorNombre(nombre) {
-  if (!_mlNombreIdx) {
-    _mlNombreIdx = {};
-    var P = ML.players || {};
+  var P = ML.players || {};
+  var n = Object.keys(P).length;
+  // Reconstruir si el maestro CRECIO: la primera version cacheaba el indice
+  // para siempre, y si la primera llamada corria antes de cargar el maestro,
+  // quedaba VACIO y ningun jugador de Yahoo volvia a tener foto (reportado por
+  // el dueno: todas las fotos del matchup en blanco).
+  if (!_mlNombreIdx || n !== _mlNombreIdxN) {
+    _mlNombreIdx = {}; _mlNombreIdxN = n;
     Object.keys(P).forEach(function (id) {
-      var n = mlNorm(P[id] && P[id].name);
-      if (n && !_mlNombreIdx[n]) _mlNombreIdx[n] = id;
+      var k = mlNorm(P[id] && P[id].name);
+      if (k && !_mlNombreIdx[k]) _mlNombreIdx[k] = id;
     });
   }
   return _mlNombreIdx[mlNorm(nombre)] || null;
@@ -1787,7 +1805,7 @@ function mlPaintOdds() {
   var h = mlAvisoDemo() + '<div class="ml-book">';
   h += '<div class="ml-proy-tog" role="group" aria-label="Projection source">'
     + '<span>Projections</span>'
-    + '<button class="ml-chip' + (ML.fuenteProy === 'site' ? ' is-on' : '') + '" onclick="mlSetProy(\'site\')">Sleeper</button>'
+    + '<button class="ml-chip' + (ML.fuenteProy === 'site' ? ' is-on' : '') + '" onclick="mlSetProy(\'site\')">Experts</button>'
     + '<button class="ml-chip' + (ML.fuenteProy === 'vegas' ? ' is-on' : '') + '" onclick="mlSetProy(\'vegas\')">Vegas</button>'
     + '</div>';
   h += '<div class="ml-book-top"><select id="ml-odds-sel" onchange="mlOpenOdds(this.value)" aria-label="League">'
@@ -2010,8 +2028,10 @@ function mlOpenMatchup(id) {
       if (!y) return '<div class="ml-mu-p is-empty ' + lado + '"><span class="ml-mu-nom">Empty</span></div>';
       var ypts = y.points != null ? mlN(y.points) : (mlProjPlayer({ name: y.name, pos: y.pos }, sc) != null ? mlN(mlProjPlayer({ name: y.name, pos: y.pos }, sc)) : '-');
       var sid = mlIdPorNombre(y.name);
-      return '<div class="ml-mu-p ' + lado + '">'
-        + (sid ? '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(sid) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="ml-mu-sinfoto"></span>')
+      var foto = y.pos === 'DEF' && y.team
+        ? '<img src="https://sleepercdn.com/images/team_logos/nfl/' + mlEsc(String(y.team).toLowerCase()) + '.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+        : (sid ? '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(sid) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="ml-mu-sinfoto"></span>');
+      return '<div class="ml-mu-p ' + lado + '">' + foto
         + '<span class="ml-mu-txt"><b>' + mlEsc(y.name) + '</b><i>' + mlEsc(y.pos) + ' · ' + mlEsc(y.team || 'FA') + '</i></span>'
         + '<span class="ml-mu-pts mono' + (y.points != null && y.points !== 0 ? ' is-real' : '') + '">' + ypts + '</span>'
         + '</div>';
@@ -2030,8 +2050,10 @@ function mlOpenMatchup(id) {
     if (!p) {
       return '<div class="ml-mu-p is-empty ' + lado + '"><span class="ml-mu-nom">' + (L.plat === 'yahoo' ? 'Lineup lives on Yahoo' : 'Empty') + '</span></div>';
     }
-    return '<div class="ml-mu-p ' + lado + '">'
-      + '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(p.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+    var fotoS = (p.pos === 'DEF' || /^[A-Z]{2,3}$/.test(String(p.id)))
+      ? '<img src="https://sleepercdn.com/images/team_logos/nfl/' + mlEsc(String(p.team || p.id).toLowerCase()) + '.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+      : '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(p.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';
+    return '<div class="ml-mu-p ' + lado + '">' + fotoS
       + '<span class="ml-mu-txt"><b>' + mlEsc(p.name) + '</b><i>' + mlEsc(p.pos) + ' · ' + mlEsc(p.team || 'FA') + '</i></span>'
       + '<span class="ml-mu-pts mono' + (real != null ? ' is-real' : '') + '">' + pts + '</span>'
       + '</div>';
@@ -2124,6 +2146,13 @@ async function mlCargarLineupYahoo(L) {
   finally { delete _mlLineupEnVuelo[L.id]; }
 }
 
+// El clic de la tarjeta: abre el matchup salvo que el toque haya caido en un
+// control de verdad (Share, Odds, un enlace).
+function mlCardClick(ev, id) {
+  if (ev && ev.target && ev.target.closest && ev.target.closest('button, a, select, input')) return;
+  mlOpenMatchup(id);
+}
+
 function mlCloseMatchup(desdeAtras) {
   var ov = document.getElementById('ml-mu-overlay');
   if (ov) ov.remove();
@@ -2165,6 +2194,7 @@ window.mlSetFiltro = mlSetFiltro;
 window.mlSalirDemo = function () { location.href = '/myleagues'; };
 window.mlSetProy = mlSetProy;
 window.mlOpenMatchup = mlOpenMatchup;
+window.mlCardClick = mlCardClick;
 window.mlCloseMatchup = mlCloseMatchup;
 window.mlEsDemo = mlEsDemo;
 // app.js guarda aqui el token cuando el usuario entra por la puerta vieja.
