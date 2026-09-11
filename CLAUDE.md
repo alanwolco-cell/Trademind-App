@@ -2137,3 +2137,46 @@ notified" y ahora tambien el login de Yahoo desde el iPhone.
   algo nuevo? ¿lo publico lleva su nombre? El sync por servidor ya existe
   (/api/perfil/rankings). Start/Sit debe declarar la fuente ("Wolco has him
   WR12 this week"), sin mezclar sin decirlo.
+
+## Sesion 2026-09-11 (mediodia): Mac's weekly sheet (punto 11, decidido y construido)
+
+Decisiones del dueno (2026-09-11, en chat): panel de owner para editar rankings
+SEMANALES; firma del PRODUCTO ("Mac's weekly sheet", su nombre NO aparece);
+posiciones QB/RB/WR/TE; la hoja de precios de draft (booth) queda detras de
+draft-only como "Draft Rankings" hasta la proxima temporada.
+
+Commit 6b2b788, DESPLEGADO (cache-bust 2026091108, sha256 verificado). En
+produccion: el publico ve el vacio honesto ("No sheet published for this week
+yet"), sin boton Edit, cero pageerrors; /api/perfil/weekly contesta desde el
+Blob. qa-weekly (17 checks) ALL GREEN local; qa-nav ALL GREEN local y contra
+produccion.
+
+**Como funciona:**
+- UNA pagina (tab "Weekly Rankings" en Research, puerta en el cajon): todos
+  ven la hoja; la cuenta del dueno (mismas cuentas vinculadas de PERFIL_ACCTS
+  + codigos) ve "Edit week N" en la misma pagina. Sin URL secreta.
+- Editar siembra del feed oficial (top 25 QB / 40 RB / 45 WR / 25 TE por
+  proyeccion half PPR) y el arrastra/sube/baja/quita, con buscador para
+  anadir. Guardado con debounce; "Publish week N" sella publishedAt.
+- El documento (server/routes/perfil.js): perfil/weekly-sheet.json, UN doc
+  con todas las semanas. GET publico entrega SOLO semanas publicadas (el
+  borrador no se filtra); GET del dueno entrega todo; PUT con rkGuard.
+- Start/Sit cita la hoja como fuente aparte y declarada ("On Mac's weekly
+  sheet (week N): X is QB1"), via wkCite() de weekly.js; si nadie esta en la
+  hoja, calla.
+
+**Trampas nuevas:**
+- qa-rankings: el booth ya no se abre por rotulo ("My Rankings" no existe);
+  se entra por el DESTINO tab-rankings, y su puerta del cajon solo puede
+  faltar por html.no-draft. Ademas: si una corrida del gate CRASHEA, deja un
+  server huerfano en su puerto (3211) y la corrida siguiente habla con el
+  server viejo: S1 fallo asi con flag=1 y 0 targets. Antes de culpar al
+  codigo, `lsof -iTCP:3211`.
+- La fila editable en movil va en grid de dos renglones (:has(.rk-acts)):
+  con los tres botones al lado, los nombres se partian en vertical.
+
+**El proximo paso es del dueno:** abrir Weekly Rankings en su navegador de
+siempre, tocar "Edit week 2", ordenar y "Publish". Si quiere editar desde el
+telefono, vincular el dispositivo con el codigo de siempre (el de My
+Rankings). Queda pendiente del backlog SOLO el 8 (rediseno de Ask Mac, con
+squad y plan aprobado) + las llaves VAPID en Vercel.
