@@ -1335,7 +1335,7 @@ function mlPaintLeagues() {
       // tormenta.
       var izq = vivo ? mlN(vivo.mio) : mlN(myProj);
       var der = vivo ? mlN(vivo.suyo) : mlN(oppProj);
-      cuerpo = '<div class="ml-vs">'
+      cuerpo = '<div class="ml-vs" role="button" tabindex="0" onclick="mlOpenMatchup(\'' + L.id + '\')" onkeydown="if(event.key===\'Enter\')mlOpenMatchup(\'' + L.id + '\')">'
         + '<div class="ml-vs-side">' + mlTeamEscudo(L, mine.roster_id, 'is-sm')
         + '<span class="ml-vs-lbl">You</span><span class="mono ml-vs-num">' + izq + '</span></div>'
         + '<div class="ml-vs-mid"><span class="ml-vs-at">' + (vivo ? 'live' : 'vs') + '</span></div>'
@@ -1962,6 +1962,96 @@ function mlSetProy(f) {
   mlPaint();
 }
 
+/* ------------------------------------------------------- el detalle del duelo */
+// Entrar a un matchup y verlo como lo pinta Sleeper o Yahoo: las dos
+// alineaciones lado a lado, casilla por casilla, con los puntos del que ya
+// jugo y la proyeccion del que no. Los datos ya estaban bajados (starters,
+// players_points y el reglamento de la liga): esta pantalla solo los pone de
+// frente.
+function mlOpenMatchup(id) {
+  var L = (ML.leagues || []).filter(function (x) { return x.id === id; })[0];
+  if (!L || !L._hyd || !L._hyd.mine || L._hyd.opp == null) return;
+  var H = L._hyd;
+  var players = ML.players || {};
+  var sc = H.sc || mlScoring(L);
+  var slots = (L.roster_positions || []).filter(function (x) { return !BANCA_MU[x]; });
+
+  var fila = function (rid) {
+    return (H.matchups || []).filter(function (m) { return m.roster_id === rid; })[0] || {};
+  };
+  var mia = fila(H.mine.roster_id), suya = fila(H.opp);
+  var vivo = mlEnVivo(L);
+
+  // Una celda de jugador: puntos REALES si ya jugo (players_points), y si no,
+  // su proyeccion en gris. Nunca se mezclan sin decirlo: el real va en blanco.
+  var celda = function (m, i, lado) {
+    var id = ((m.starters || [])[i]) || null;
+    if (L.plat === 'yahoo') id = null;   // Yahoo no da alineacion por semana
+    var p = id && id !== '0' ? players[id] : null;
+    if (!p && id && id !== '0') p = { id: id, name: 'Player ' + id, pos: '?', team: '' };
+    // El punto REAL solo existe cuando el duelo tiene puntos. Antes del
+    // kickoff, players_points trae 0.0 para todos, y pintarlos en blanco como
+    // "real" mientras la cabecera suma la proyeccion era decir dos cosas a la
+    // vez: la celda enseña la proyeccion en gris hasta que el duelo arranca.
+    var duelaVivo = (Number(m.points) || 0) > 0 || (Number((m === mia ? suya : mia).points) || 0) > 0;
+    var real = duelaVivo && p && m.players_points ? m.players_points[id] : null;
+    var proj = p ? mlProjPlayer(p, sc) : null;
+    var pts = real != null ? mlN(real) : (proj != null ? mlN(proj) : '-');
+    if (!p) {
+      return '<div class="ml-mu-p is-empty ' + lado + '"><span class="ml-mu-nom">' + (L.plat === 'yahoo' ? 'Lineup lives on Yahoo' : 'Empty') + '</span></div>';
+    }
+    return '<div class="ml-mu-p ' + lado + '">'
+      + '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(p.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+      + '<span class="ml-mu-txt"><b>' + mlEsc(p.name) + '</b><i>' + mlEsc(p.pos) + ' · ' + mlEsc(p.team || 'FA') + '</i></span>'
+      + '<span class="ml-mu-pts mono' + (real != null ? ' is-real' : '') + '">' + pts + '</span>'
+      + '</div>';
+  };
+
+  var mioT = vivo ? vivo.mio : ((H.proj[H.mine.roster_id] || {}).total || 0);
+  var suyoT = vivo ? vivo.suyo : ((H.proj[H.opp] || {}).total || 0);
+
+  var h = '<div class="ml-mu-panel" style="--liga:' + mlLigaColor(L) + '">'
+    + '<header class="ml-mu-h">'
+    + '<button class="ml-mu-x" onclick="mlCloseMatchup()" aria-label="Close">&times;</button>'
+    + '<span class="ml-mu-liga">' + mlEsc(L.name) + (vivo ? ' <i class="ml-live-dot"></i>' : '') + '</span>'
+    + '<div class="ml-mu-score">'
+    + '<div class="ml-mu-side"><span>' + mlEsc(mlTeamName(L, H.mine.roster_id)) + '</span><b class="mono">' + mlN(mioT) + '</b></div>'
+    + '<span class="ml-mu-vs">' + (vivo ? 'live' : 'vs') + '</span>'
+    + '<div class="ml-mu-side is-opp"><span>' + mlEsc(mlTeamName(L, H.opp)) + '</span><b class="mono">' + mlN(suyoT) + '</b></div>'
+    + '</div></header><div class="ml-mu-rows">';
+  for (var i = 0; i < slots.length; i++) {
+    h += '<div class="ml-mu-row">'
+      + celda(mia, i, 'is-me')
+      + '<span class="ml-mu-slot">' + mlEsc(String(slots[i]).replace('SUPER_FLEX', 'SF').replace('_FLEX', '').replace('FLEX', 'FLX')) + '</span>'
+      + celda(suya, i, 'is-opp')
+      + '</div>';
+  }
+  h += '</div>'
+    + '<p class="ml-fine" style="padding:0 16px 16px;margin:0">White numbers are real points from games already played; grey are projections'
+    + (L.plat === 'yahoo' ? '. Yahoo does not share weekly lineups through its API, so this shows the matchup total only' : '') + '.</p>'
+    + '</div>';
+
+  var ov = document.createElement('div');
+  ov.className = 'ml-mu-overlay';
+  ov.id = 'ml-mu-overlay';
+  ov.innerHTML = h;
+  ov.addEventListener('click', function (ev) { if (ev.target === ov) mlCloseMatchup(); });
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  // El boton atras cierra el panel, no abandona la pantalla: mismo contrato que
+  // el resto de los overlays de la app.
+  if (typeof _overlayOpen === 'function') { try { _overlayOpen(function () { mlCloseMatchup(true); }); } catch (e) { } }
+}
+function mlCloseMatchup(desdeAtras) {
+  var ov = document.getElementById('ml-mu-overlay');
+  if (ov) ov.remove();
+  document.body.style.overflow = '';
+  if (!desdeAtras && typeof _overlays !== 'undefined' && _overlays.length) {
+    try { history.back(); } catch (e) { }
+  }
+}
+var BANCA_MU = { BN: 1, IR: 1, TAXI: 1 };
+
 /* -------------------------------------------------------------- entrada */
 function renderMyLeagues() {
   if (mlEsDemo()) {
@@ -1991,6 +2081,8 @@ window.mlShare = mlShare;
 window.mlSetFiltro = mlSetFiltro;
 window.mlSalirDemo = function () { location.href = '/myleagues'; };
 window.mlSetProy = mlSetProy;
+window.mlOpenMatchup = mlOpenMatchup;
+window.mlCloseMatchup = mlCloseMatchup;
 window.mlEsDemo = mlEsDemo;
 // app.js guarda aqui el token cuando el usuario entra por la puerta vieja.
 window.mlYahooSet = mlYahooSet;
