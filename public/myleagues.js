@@ -1397,6 +1397,7 @@ function mlPaintLeagues() {
 
   h += mlCabeceraSemana(visibles);
   h += mlPanelAlineaciones();
+  h += mlRecapCard();
 
   h += '<div class="ml-grid">';
   visibles.forEach(function (L) {
@@ -1476,6 +1477,7 @@ function mlPaintLeagues() {
   }
   box.innerHTML = h;
   if (window.tmPushMontar) tmPushMontar();
+  mlCargarRecap();
 }
 
 /* ------------------------------------------------------------------ el aro */
@@ -1533,6 +1535,62 @@ function mlCabeceraSemana(ligas) {
     + '<div class="ml-week-row"><span>Toughest matchup</span><b>' + (peor ? mlEsc(peor.L.name) : '-') + '</b></div>'
     + (fix.length ? '' : '<div class="ml-week-row"><span>Bench points to claim</span><b class="mono">none</b></div>')
     + '</div></section>';
+}
+
+/* ------------------------------------------------- el recap del martes */
+function mlCargarRecap() {
+  if (ML.recap !== undefined) return;
+  ML.recap = null;
+  fetch('/api/push/recap-doc').then(function (r) { return r.json(); }).then(function (d) {
+    if (d && d.recap && Date.now() - d.recap.at < 3 * 24 * 3600 * 1000) {
+      var visto = 0;
+      try { visto = Number(localStorage.getItem('tm_recap_seen')) || 0; } catch (e) { }
+      if (visto !== d.recap.at) { ML.recap = d.recap; mlPaintLeagues(); }
+    }
+  }).catch(function () { });
+}
+function mlCerrarRecap() {
+  try { localStorage.setItem('tm_recap_seen', String((ML.recap || {}).at || Date.now())); } catch (e) { }
+  ML.recap = null; mlPaintLeagues();
+}
+function mlRecapCard() {
+  var r = ML.recap;
+  if (!r) return '';
+  var h = '<section class="ml-recap"><header class="ml-recap-h">'
+    + '<div><h3>Tuesday recap · Week ' + r.week + '</h3>'
+    + '<p class="ml-sub2">You went <b>' + r.wins + '-' + (r.total - r.wins) + '</b>'
+    + (r.mejor ? ', best win in ' + mlEsc(r.mejor) : '') + '.</p></div>'
+    + '<button class="ml-link" onclick="mlCerrarRecap()" aria-label="Dismiss">Close</button></header>';
+  if ((r.takeaways || []).length > 1) {
+    h += '<ul class="ml-recap-tk">' + r.takeaways.slice(1).map(function (t) {
+      return '<li>' + mlEsc(t) + '</li>';
+    }).join('') + '</ul>';
+  }
+  var buenas = (r.decisiones || []).filter(function (d) { return d.tipo === 'buena'; });
+  var malas = (r.decisiones || []).filter(function (d) { return d.tipo === 'mala'; });
+  if (buenas.length || malas.length) {
+    h += '<div class="ml-recap-cols">';
+    if (buenas.length) {
+      h += '<div><h4>Good calls</h4>' + buenas.slice(0, 3).map(function (d) {
+        return '<p><b>' + mlEsc(d.league) + '</b> ' + mlEsc(d.texto) + '</p>';
+      }).join('') + '</div>';
+    }
+    if (malas.length) {
+      h += '<div><h4>Went against you</h4>' + malas.slice(0, 3).map(function (d) {
+        return '<p><b>' + mlEsc(d.league) + '</b> ' + mlEsc(d.texto) + '</p>';
+      }).join('') + '</div>';
+    }
+    h += '</div>';
+  }
+  if ((r.targets || []).length) {
+    h += '<div class="ml-recap-buy"><h4>Buy-low windows</h4>'
+      + r.targets.map(function (t) {
+        return '<div class="ml-recap-t">' + mlFace(t.id)
+          + '<div><b>' + mlEsc(t.name) + '</b> <span>' + mlEsc(t.pos) + '</span>'
+          + '<p>' + mlEsc(t.reason) + '</p></div></div>';
+      }).join('') + '</div>';
+  }
+  return h + '</section>';
 }
 
 /* --------------------------------------------- el panel de las alineaciones */
@@ -2265,6 +2323,7 @@ function renderMyLeagues() {
 window.renderMyLeagues = renderMyLeagues;
 window.mlConnect = mlConnect;
 window.mlRefresh = mlRefresh;
+window.mlCerrarRecap = mlCerrarRecap;
 window.mlOpenOdds = mlOpenOdds;
 window.mlYahooConnect = mlYahooConnect;
 window.mlYahooDisconnect = mlYahooDisconnect;

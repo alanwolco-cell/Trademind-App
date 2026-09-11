@@ -90,8 +90,8 @@ ok('(c) una suscripcion malformada rebota 400', malo.st === 400, JSON.stringify(
 
 // (d) alta buena, y re-suscribirse NO duplica el dispositivo
 const sub = { endpoint: 'https://push.example/qa-1', keys: { p256dh: 'k'.repeat(20), auth: 'a'.repeat(10) } };
-const alta1 = await j('/api/push/subscribe', conAcct(KEY_B, { subscription: sub, username: 'wolco' }));
-const alta2 = await j('/api/push/subscribe', conAcct(KEY_B, { subscription: sub, username: 'wolco' }));
+const alta1 = await j('/api/push/subscribe', conAcct(KEY_B, { subscription: sub, username: 'qa_user_inexistente_000' }));
+const alta2 = await j('/api/push/subscribe', conAcct(KEY_B, { subscription: sub, username: 'qa_user_inexistente_000' }));
 ok('(d) el alta guarda el dispositivo y repetirla no lo duplica',
   alta1.st === 200 && alta1.body.devices === 1 && alta2.body.devices === 1,
   JSON.stringify({ alta1: alta1.body, alta2: alta2.body }));
@@ -107,7 +107,7 @@ ok('(e2) CANDADO: sw.js no tiene manejador de fetch (nada de cache accidental)',
 // sin esto el disparo se probaria contra una lista vacia (el "todos cumplen"
 // sobre lista vacia que este repo ya conoce).
 const subA = { endpoint: 'https://push.example/qa-A', keys: { p256dh: 'k'.repeat(20), auth: 'a'.repeat(10) } };
-const altaA = await j('/api/push/subscribe', conAcct(KEY_A, { subscription: subA, username: 'demoA' }));
+const altaA = await j('/api/push/subscribe', conAcct(KEY_A, { subscription: subA, username: 'qa_user_inexistente_001' }));
 ok('(d2) la segunda cuenta tambien queda suscrita', altaA.st === 200 && altaA.body.devices === 1, JSON.stringify(altaA.body));
 
 // (f) el disparo del hub: B reclama equipo -> A (miembro suscrito) recibe
@@ -140,7 +140,7 @@ ok('(h) /recap sin el secreto del cron rebota 401 y con el contesta 200',
 
 // (i) darse de baja borra el dispositivo
 const baja = await j('/api/push/unsubscribe', conAcct(KEY_B, { endpoint: sub.endpoint }));
-const altaOtra = await j('/api/push/subscribe', conAcct(KEY_B, { subscription: { endpoint: 'https://push.example/qa-2', keys: sub.keys }, username: 'wolco' }));
+const altaOtra = await j('/api/push/subscribe', conAcct(KEY_B, { subscription: { endpoint: 'https://push.example/qa-2', keys: sub.keys }, username: 'qa_user_inexistente_000' }));
 ok('(i) la baja borra el dispositivo (el alta siguiente vuelve a contar 1)',
   baja.st === 200 && altaOtra.body && altaOtra.body.devices === 1, JSON.stringify(altaOtra.body));
 

@@ -27,7 +27,7 @@
     },
     {
       "path": "/api/push/recap",
-      "schedule": "0 14 * * 1"
+      "schedule": "0 14 * * 2"
     }
   ],
   "github": {

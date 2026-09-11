@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091104">
+<link rel="stylesheet" href="/styles.css?v=2026091105">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091104" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091105" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091104">
+<link rel="stylesheet" href="/theme.css?v=2026091105">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091104">
+<link rel="stylesheet" href="/home.css?v=2026091105">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091104">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091105">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -132,30 +132,49 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
      derecha con un arco y un aleteo corto, y el fondo hace un mini fade que
      revela la app. Dos animaciones compuestas: el arco va en el envoltorio y
      el aleteo en la imagen, porque un transform no puede llevar los dos. -->
-<div id="tm-splash" aria-hidden="true"><span class="tm-splash-bird"><img src="/splash/mark.png" alt="" width="140" height="140"></span></div>
+<div id="tm-splash" aria-hidden="true">
+  <span class="tm-splash-bird"><img src="/splash/mark.png" alt="" width="140" height="140"></span>
+  <video id="tm-splash-v" src="/splash/vuelo.mp4" muted playsinline disablepictureinpicture preload="auto"></video>
+</div>
 <style>
 #tm-splash{display:none}
 @media (display-mode:standalone){
+  /* El arranque: Mac quieto (identico a la imagen fija de iOS), y encima el
+     VIDEO del vuelo (generado con Higgsfield desde ese mismo fotograma:
+     aletea, despega, el balon se queda). Si el video no puede reproducirse,
+     la imagen fija con su fade siguen debajo: el arranque nunca se rompe.
+     El fade final lo dispara el fin del video (app.js) y, pase lo que pase,
+     el candado CSS de los 5.2s: nunca un arranque colgado. */
   #tm-splash{display:flex;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#2a1f4a 0%,#050507 100%);pointer-events:none;
-    animation:tm-splash-out .45s ease-in 1.3s forwards}
-  .tm-splash-bird{display:block;animation:tm-splash-fly .95s cubic-bezier(.5,.05,.7,.4) .5s forwards}
-  #tm-splash img{display:block;width:36vw;height:36vw;max-width:220px;max-height:220px;
-    animation:tm-splash-flap .19s ease-in-out .5s 5}
+    animation:tm-splash-out .45s ease-in 5.2s forwards}
+  #tm-splash.va{animation:tm-splash-out .45s ease-in forwards}
+  .tm-splash-bird{display:block}
+  #tm-splash img{display:block;width:36vw;height:36vw;max-width:220px;max-height:220px}
+  #tm-splash video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}
+  #tm-splash video.rueda{opacity:1}
   @keyframes tm-splash-out{to{opacity:0;visibility:hidden}}
-  @keyframes tm-splash-fly{
-    0%{transform:translate(0,0) rotate(0deg)}
-    28%{transform:translate(7vw,-3vh) rotate(-6deg)}
-    60%{transform:translate(36vw,-9vh) rotate(-10deg)}
-    100%{transform:translate(125vw,-24vh) rotate(-13deg)}
-  }
-  @keyframes tm-splash-flap{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3.5%) scale(1.015,.985)}}
   @media (prefers-reduced-motion:reduce){
-    .tm-splash-bird,#tm-splash img{animation:none}
     #tm-splash{animation:tm-splash-out .45s ease-in .9s forwards}
+    #tm-splash video{display:none}
   }
 }
 </style>
+<script>
+(function(){
+  try{
+    if(!matchMedia('(display-mode:standalone)').matches)return;
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    var s=document.getElementById('tm-splash'),v=document.getElementById('tm-splash-v');
+    if(!s||!v)return;
+    var fuera=function(){s.classList.add('va');};
+    v.addEventListener('ended',fuera);
+    v.addEventListener('error',function(){});
+    var p=v.play&&v.play();
+    if(p&&p.then)p.then(function(){v.classList.add('rueda');}).catch(function(){});
+  }catch(e){}
+})();
+</script>
 
 <nav class="nav">
   <div class="nav-logo" onclick="goHome()" title="Home">
@@ -1872,12 +1891,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091104"></script>
-<script src="/rankings.js?v=2026091104"></script>
-<script src="/live.js?v=2026091104"></script>
-<script src="/myleagues.js?v=2026091104"></script>
-<script src="/push.js?v=2026091104" defer></script>
-<script src="/hub.js?v=2026091104"></script>
+<script src="/app.js?v=2026091105"></script>
+<script src="/rankings.js?v=2026091105"></script>
+<script src="/live.js?v=2026091105"></script>
+<script src="/myleagues.js?v=2026091105"></script>
+<script src="/push.js?v=2026091105" defer></script>
+<script src="/hub.js?v=2026091105"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
