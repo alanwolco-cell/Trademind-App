@@ -427,6 +427,63 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
   ok('(v6) CONTROL: quitar el filtro devuelve todas',
     filtrado.salta === true || filtrado.vuelta === identidad.cards, JSON.stringify(filtrado));
 
+  /* ---- LO QUE SOLO DUELE EN YAHOO: el jugador llega SIN id -------------
+   * Una liga de Sleeper manda ids y no falla nunca. Una de Yahoo manda el
+   * nombre, y el maestro de Sleeper lleva a todo el que paso por la liga: un
+   * nombre repetido son casi siempre un titular y un retirado. Si se elige al
+   * retirado, el titular entra al once con el percentil 25 de su posicion, o
+   * sea con uno o dos puntos, y el total de ESE equipo sale bajo sin que nada
+   * se ponga rojo.
+   * El check es un INVARIANTE, no un jugador concreto: los nombres cambian cada
+   * semana y un check escrito sobre "Kenneth Walker" se pudre. Lleva su control
+   * para no pasar en vacio, que es la trampa que este gate ya documenta. */
+  const homonimos = await seguro(pg, () => {
+    const P = ML.players || {};
+    const porNombre = {};
+    Object.keys(P).forEach(id => {
+      const k = mlNorm(P[id] && P[id].name);
+      if (k) (porNombre[k] = porNombre[k] || []).push(id);
+    });
+    const repes = Object.keys(porNombre).filter(k => porNombre[k].length > 1);
+    const conEquipo = id => { const t = P[id] && P[id].team; return !!t && t !== 'FA'; };
+    const malos = [];
+    repes.forEach(k => {
+      const elegido = mlIdPorNombre(k);
+      if (porNombre[k].some(conEquipo) && !conEquipo(elegido)) {
+        malos.push(P[elegido].name + ' -> ' + elegido + ' (' + (P[elegido].team || 'FA') + ')');
+      }
+    });
+    return { repes: repes.length, malos: malos.slice(0, 5), nMalos: malos.length, maestro: Object.keys(P).length };
+  });
+  ok('(y1) CONTROL: el maestro trae nombres repetidos, asi que el check de al lado no pasa en vacio',
+    homonimos.repes > 0, JSON.stringify(homonimos));
+  ok('(y2) un nombre repetido se resuelve al que juega, no al retirado',
+    homonimos.repes > 0 && homonimos.nMalos === 0, JSON.stringify(homonimos));
+
+  /* ---- un total nunca puede ser NaN ------------------------------------
+   * Un valor raro del feed entra en una multiplicacion y sale NaN; un NaN
+   * dentro de una suma se lleva el total entero y la tarjeta pasa de 118
+   * puntos a "NaN". Se mide con un jugador con la forma de Yahoo (objeto sin
+   * id) y una linea envenenada, que es justo el caso que nadie prueba. */
+  const veneno = await seguro(pg, () => {
+    const L = { id: 's:veneno', roster_positions: ['QB', 'RB', 'WR', 'FLEX', 'BN'], scoring_settings: {} };
+    const sc = mlScoring(L);
+    const antes = ML.props;
+    ML.props = Object.assign({}, ML.props || {}, {
+      'Jugador Envenenado': { player_pass_yds: 'no-es-un-numero', td_price: 'tampoco' }
+    });
+    window._mlPropIdx = null;
+    const roster = [
+      { name: 'Jugador Envenenado', pos: 'QB', team: 'FA', yahoo: true },
+      { name: 'Otro Envenenado', pos: 'RB', team: 'FA', yahoo: true }
+    ];
+    const r = mlBestLineup(roster, L, sc, ML.players || {});
+    ML.props = antes; window._mlPropIdx = null;
+    return { total: r.total, esNumero: typeof r.total === 'number' && isFinite(r.total), needed: r.needed };
+  });
+  ok('(y3) una linea envenenada no convierte el total en NaN',
+    veneno.esNumero === true, JSON.stringify(veneno));
+
   ok('(u) el numero pintado arriba es el maximo real',
     typeof expo.topPintado === 'number' && expo.topPintado > 0 && expo.topPintado === expo.maxCalc,
     JSON.stringify(expo));

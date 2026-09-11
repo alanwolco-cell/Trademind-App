@@ -972,13 +972,35 @@ let idGibbs = null, idSwift = null;
   const o = await fetch(BASE + '/api/perfil/owner', { headers: h(OTHER_KEY) }).then(r => r.json()).catch(() => null);
   const anon = await fetch(BASE + '/api/perfil/rankings').then(r => r.status).catch(() => 0);
   const ajeno = await fetch(BASE + '/api/perfil/rankings', { headers: h(OTHER_KEY) }).then(r => r.status).catch(() => 0);
-  const gordo = await fetch(BASE + '/api/perfil/rankings', { method: 'PUT', headers: { ...h(OWNER_KEY), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ order: [], pad: 'x'.repeat(210 * 1024) }) }).then(r => r.status).catch(() => 0);
+  // El codigo NO basta: hay que mirar el CUERPO. El express.json global corta
+  // antes que la validacion de la ruta, y su manejador de fabrica responde el
+  // 413 en HTML con el rastro de pila dentro. El estado era correcto y el
+  // cliente hacia r.json() sobre una pagina de error, asi que este mismo check
+  // llevaba tiempo en verde sobre una respuesta que nadie podia leer.
+  const cuerpo = async (p) => {
+    try {
+      const r = await p; const txt = await r.text();
+      let j = null; try { j = JSON.parse(txt); } catch (_) { }
+      return { status: r.status, json: j, tipo: r.headers.get('content-type') || '', fuga: /node_modules|at \w+ \(/.test(txt) };
+    } catch (e) { return { status: 0, json: null, tipo: '', fuga: false }; }
+  };
+  const gordoR = await cuerpo(fetch(BASE + '/api/perfil/rankings', { method: 'PUT', headers: { ...h(OWNER_KEY), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order: [], pad: 'x'.repeat(210 * 1024) }) }));
+  const gordo = gordoR.status;
   const malo = await fetch(BASE + '/api/perfil/rankings', { method: 'PUT', headers: { ...h(OWNER_KEY), 'Content-Type': 'application/json' },
     body: JSON.stringify({ order: 'no' }) }).then(r => r.status).catch(() => 0);
+  const sintaxis = await cuerpo(fetch(BASE + '/api/perfil/rankings', { method: 'PUT', headers: { ...h(OWNER_KEY), 'Content-Type': 'application/json' },
+    body: '{no es json' }));
   ok('(O1) /api/perfil/owner: true para el dueno, false para el resto', !!a && a.owner === true && !!o && o.owner === false, JSON.stringify({ a, o }));
   ok('(O2) /api/perfil/rankings: 401 anonimo, 403 ajeno, 413 por encima del tope, 400 con forma mala',
     anon === 401 && ajeno === 403 && (gordo === 413) && malo === 400, JSON.stringify({ anon, ajeno, gordo, malo }));
+  ok('(O3) el 413 se puede LEER: JSON con su mensaje, no una pagina de error',
+    gordoR.status === 413 && !!gordoR.json && typeof gordoR.json.error === 'string' && /json/.test(gordoR.tipo),
+    JSON.stringify({ status: gordoR.status, tipo: gordoR.tipo, json: gordoR.json }));
+  ok('(O4) el 413 no publica el rastro de pila del servidor', gordoR.fuga === false, 'fuga=' + gordoR.fuga);
+  ok('(O5) un JSON mal formado da 400 legible, no una pagina de error',
+    sintaxis.status === 400 && !!sintaxis.json && typeof sintaxis.json.error === 'string' && sintaxis.fuga === false,
+    JSON.stringify({ status: sintaxis.status, tipo: sintaxis.tipo, json: sintaxis.json }));
 }
 
 

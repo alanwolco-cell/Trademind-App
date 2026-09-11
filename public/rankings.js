@@ -703,7 +703,7 @@ async function tmrSyncPush() {
   if (TMR.owner !== true || TMR._syncing) return;
   TMR._syncing = true;
   var doc = tmrSyncDoc();
-  var ok = false, store = '';
+  var ok = false, store = '', grande = false;
   try {
     var r = await fetch('/api/perfil/rankings', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc)
@@ -713,12 +713,21 @@ async function tmrSyncPush() {
       try { j = await r.json(); } catch (_) { }
       ok = true; store = (j && j.store) || '';
       try { localStorage.setItem(TMR_SYNC_AT_KEY, String((j && j.updatedAt) || doc.updatedAt)); } catch (_) { }
+    } else if (r.status === 413) {
+      grande = true;
     }
   } catch (_) { ok = false; }
   TMR._syncing = false;
   if (ok) {
     TMR._dirty = false;
     tmrSyncStatus(store && store !== 'blob' ? 'Synced (' + store + ')' : 'Synced');
+  } else if (grande) {
+    // El documento no cabe, y eso NO se arregla reintentando. Marcarlo como
+    // pendiente lo dejaba reintentando en cada cambio y en cada vuelta al foco,
+    // diciendo "Offline" con la red perfecta: el mensaje mandaba a mirar la
+    // conexion cuando el problema es la lista. Se para y se dice lo que pasa.
+    TMR._dirty = false;
+    tmrSyncStatus('Too big to sync, trim the list', true);
   } else {
     // Se queda pendiente: se reintenta con el siguiente cambio y al volver el foco
     tmrSyncStatus('Offline, will retry', true);

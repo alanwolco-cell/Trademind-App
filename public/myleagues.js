@@ -199,7 +199,16 @@ var ML_PASS_TD_PER_YD = 1 / 150;
 // semana y una defensa 7. Para el TOTAL del equipo, la media es el numero
 // honesto cuando no hay dato que distinga.
 var ML_PROJ_K = 7.5, ML_PROJ_DEF = 7.0;
+// Un valor del feed que no es un numero (una cadena rara, un null que se colo
+// dentro de una cuenta) sale por aqui como NaN, y un NaN dentro de un total se
+// come el total entero: la tarjeta pasa de 118 puntos a "NaN" sin que nada se
+// queje. Se devuelve null, que es lo que ya significa "no hay numero" y
+// dispara la imputacion declarada.
 function mlProjPlayer(p, sc) {
+  var v = _mlProjPlayer(p, sc);
+  return (typeof v === 'number' && isFinite(v)) ? v : null;
+}
+function _mlProjPlayer(p, sc) {
   // K y DEF: su proyeccion REAL sale del feed de expertos (el dueno la pidio y
   // existe: 32 kickers y 32 defensas, las defensas por su abreviatura de
   // equipo). Su puntaje casi no varia entre formatos, asi que vale para las
@@ -309,7 +318,13 @@ var ML_FLEX = {
   SUPER_FLEX: ['QB', 'RB', 'WR', 'TE'],
   WRRB_WRT: ['RB', 'WR', 'TE']
 };
-var ML_SKIP = { BN: 1, IR: 1, TAXI: 1 };
+// Las casillas que NO son un titular. Sleeper manda BN/IR/TAXI; Yahoo manda
+// ademas IR+ (la de lesionados ampliada) y las variantes IL. Una casilla de
+// estas que se cuele en el once es un hueco que ningun jugador puede llenar:
+// no suma puntos, pero cuenta contra la cobertura y contra los titulares que se
+// le enseñan al usuario. Lista explicita a proposito: un patron ancho se
+// llevaria por delante una casilla legitima que hoy no conocemos.
+var ML_SKIP = { BN: 1, IR: 1, TAXI: 1, 'IR+': 1, IL: 1, 'IL+': 1, NA: 1 };
 
 // El mejor once posible con lo que tiene, respetando las casillas de SU liga.
 // Avaro por especificidad (primero las casillas fijas, luego los flex), que es
@@ -336,7 +351,9 @@ function mlBestLineup(playerIds, L, sc, players) {
   var imput = mlImputacion(L, sc, players);
   var covered = 0, needed = 0;
   pool.forEach(function (x) {
-    if (x.proj == null) { x.proj = imput[x.p.pos] != null ? imput[x.p.pos] : 0; x.guess = true; }
+    // "no hay numero" incluye el numero que no lo es: sin el isFinite, un NaN
+    // pasa el `== null` y se lleva por delante el total del equipo.
+    if (x.proj == null || !isFinite(x.proj)) { x.proj = imput[x.p.pos] != null ? imput[x.p.pos] : 0; x.guess = true; }
   });
 
   var used = {}, lineup = [], total = 0;
@@ -374,7 +391,7 @@ function mlBestLineup(playerIds, L, sc, players) {
     }
   });
   return {
-    total: Math.round(total * 10) / 10,
+    total: isFinite(total) ? Math.round(total * 10) / 10 : 0,
     lineup: lineup,
     covered: covered,
     needed: needed,
@@ -1596,9 +1613,25 @@ function mlIdPorNombre(nombre) {
   // el dueno: todas las fotos del matchup en blanco).
   if (!_mlNombreIdx || n !== _mlNombreIdxN) {
     _mlNombreIdx = {}; _mlNombreIdxN = n;
+    // MANDA EL QUE TIENE EQUIPO DE VERDAD, no el primero que aparezca. El
+    // maestro de Sleeper lleva a todo el que paso por la liga, asi que un
+    // nombre repetido casi siempre son un titular y un retirado, y el orden de
+    // las claves no distingue. Medido contra el maestro del 2026-09-10: 40
+    // nombres repetidos, 8 se resuelven distinto con esta regla, 3 de ellos
+    // pasan de NO tener proyeccion a tenerla, y ninguno la pierde.
+    // Duele solo en las ligas de YAHOO, que es donde un jugador llega sin id y
+    // esta es la unica forma de encontrarlo: Kenneth Walker (III) caia en un
+    // receptor retirado y su titular de 14,1 puntos entraba al once como 1,0,
+    // el percentil 25 de los RB. Trece puntos de menos por jugador, en el
+    // lado bajo siempre.
     Object.keys(P).forEach(function (id) {
-      var k = mlNorm(P[id] && P[id].name);
-      if (k && !_mlNombreIdx[k]) _mlNombreIdx[k] = id;
+      var p = P[id];
+      var k = mlNorm(p && p.name);
+      if (!k) return;
+      var antes = _mlNombreIdx[k];
+      if (!antes) { _mlNombreIdx[k] = id; return; }
+      var tiene = function (x) { var t = P[x] && P[x].team; return !!t && t !== 'FA'; };
+      if (!tiene(antes) && tiene(id)) _mlNombreIdx[k] = id;
     });
   }
   return _mlNombreIdx[mlNorm(nombre)] || null;
@@ -2175,7 +2208,7 @@ function mlCloseMatchup(desdeAtras) {
     try { history.back(); } catch (e) { }
   }
 }
-var BANCA_MU = { BN: 1, IR: 1, TAXI: 1 };
+var BANCA_MU = ML_SKIP;   // una sola lista de casillas de banca, no dos que derivan
 
 /* -------------------------------------------------------------- entrada */
 function renderMyLeagues() {

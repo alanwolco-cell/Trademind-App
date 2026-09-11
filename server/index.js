@@ -46,7 +46,29 @@ const _corsOk = (o) => !o
 app.use(cors({ origin: (origin, cb) => cb(null, _corsOk(origin)) }));
 // Capture the raw body so the Stripe webhook can verify its signature (the
 // parsed JSON loses the exact bytes Stripe signed).
-app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+// El tope del cuerpo, con nombre y en un solo sitio. El de fabrica de
+// express.json son estos mismos 100 KB, pero sin nombre nadie sabia cual era el
+// que mandaba: el documento de My Rankings declara un tope propio de 200 KB que
+// este cortaba antes, y el usuario veia el error equivocado.
+const JSON_LIMIT = '100kb';
+app.use(express.json({ limit: JSON_LIMIT, verify: (req, res, buf) => { req.rawBody = buf; } }));
+
+// Un cuerpo que no entra, o un JSON mal formado, son errores del que llama y ya
+// traen su codigo. Sin este manejador salian por el de fabrica de Express, que
+// responde HTML con el RASTRO DE PILA dentro: el cliente hace r.json() sobre
+// una pagina de error y lo que llega a la consola es un SyntaxError que no dice
+// nada del problema real, ademas de publicar las rutas del servidor.
+// Un 413 aqui es un error legitimo: el usuario no lo provoca tecleando.
+app.use((err, req, res, next) => {
+  if (!err || !err.type || res.headersSent) return next(err);
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'That document is too big to sync.', limit: JSON_LIMIT, tooLarge: true });
+  }
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Send a valid JSON body.' });
+  }
+  next(err);
+});
 
 // Un fallo interno no se describe a si mismo en publico. Cualquier 500/502 que lleve
 // un campo `error` de texto sale con un mensaje generico; el texto real queda en los

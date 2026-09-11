@@ -258,7 +258,12 @@ const numY = (v, d) => { const x = Number(v); return isFinite(x) ? x : d; };
 const YSTAT = {
   4: 'pass_yd', 5: 'pass_td', 6: 'pass_int',
   9: 'rush_yd', 10: 'rush_td',
-  11: 'rec', 12: 'rec_yd', 13: 'rec_td'
+  11: 'rec', 12: 'rec_yd', 13: 'rec_td',
+  // 18 es el balon perdido, y faltaba. Sin el, mlScoring caia a su valor por
+  // defecto (-2) en TODA liga de Yahoo: la que castiga con -1 salia con el
+  // doble de castigo y la que no castiga, con un castigo inventado. Es el
+  // unico modificador que el modelo consume y no estaba mapeado.
+  18: 'fum_lost'
 };
 function scoringDeYahoo(ajustes) {
   // Yahoo esconde los modificadores en settings -> stat_modifiers -> stats ->
@@ -274,6 +279,15 @@ function scoringDeYahoo(ajustes) {
     if (k) out[k] = numY(st.value, 0);
   });
   return out;
+}
+
+// Las casillas de la liga, una entrada por hueco (dos RB salen como RB, RB),
+// que es el mismo molde que devuelve Sleeper en roster_positions.
+function rosterPositionsDeYahoo(ajustes) {
+  return deepCollect(ajustes, 'roster_position', [])
+    .map(rp => flattenEntity(rp))
+    .filter(rp => rp.position)
+    .flatMap(rp => Array(Math.max(1, numY(rp.count, 1))).fill(String(rp.position)));
 }
 
 // GET /api/yahoo/leagues - todas las ligas de NFL del usuario, normalizadas al
@@ -323,10 +337,7 @@ router.get('/league/:key', async (req, res) => {
     ]);
     const liga = flattenEntity(deepCollect(ajustes, 'league', [])[0] || {});
     const set = flattenEntity(deepCollect(ajustes, 'settings', [])[0] || {});
-    const roster_positions = deepCollect(ajustes, 'roster_position', [])
-      .map(rp => flattenEntity(rp))
-      .filter(rp => rp.position)
-      .flatMap(rp => Array(Math.max(1, numY(rp.count, 1))).fill(String(rp.position)));
+    const roster_positions = rosterPositionsDeYahoo(ajustes);
 
     const eqs = deepCollect(equipos, 'team', []).map(t => flattenEntity(t)).filter(t => t.team_key);
     const vistos = {};
@@ -606,3 +617,8 @@ router.post('/refresh', async (req, res) => {
 });
 
 module.exports = router;
+// Puras y exportadas para que un test pueda medirlas sin levantar OAuth ni red.
+module.exports.rosterPositionsDeYahoo = rosterPositionsDeYahoo;
+module.exports.scoringDeYahoo = scoringDeYahoo;
+module.exports.flattenEntity = flattenEntity;
+module.exports.deepCollect = deepCollect;
