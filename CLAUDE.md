@@ -2063,3 +2063,11 @@ Reportes SIN atender, en orden de llegada:
 
 Estado del arbol: HEAD empujado y desplegado (cache-bust 2026091106, sha256
 verificado). Los gates qa-nav, qa-push, qa-myleagues en verde en la ultima corrida.
+11. **My Rankings se remodela (o se elimina, decidir con el)**: el dueno quiere
+    hacer SUS rankings cada semana (por matchups) y que se hagan PUBLICOS, y que
+    Start/Sit use esas recomendaciones para todos los usuarios del site. Es un
+    pivote de la feature: de lista privada del dueno a contenido editorial
+    semanal que alimenta el producto. Diseñar antes de tocar: donde edita el,
+    como se publica (el sync por servidor ya existe: /api/perfil/rankings), y
+    como Start/Sit mezcla su ranking con las proyecciones sin mentir sobre la
+    fuente ("Wolco has him WR12 this week").
