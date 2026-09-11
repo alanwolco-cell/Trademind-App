@@ -2180,3 +2180,10 @@ siempre, tocar "Edit week 2", ordenar y "Publish". Si quiere editar desde el
 telefono, vincular el dispositivo con el codigo de siempre (el de My
 Rankings). Queda pendiente del backlog SOLO el 8 (rediseno de Ask Mac, con
 squad y plan aprobado) + las llaves VAPID en Vercel.
+
+**Act. 2026-09-11 (tarde): las VAPID ya estan.** Las puse yo con el CLI de
+Vercel (VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en Production, la privada
+sensible; CRON_SECRET ya existia de hace 51 dias, no se toco), redeploy
+4cdf073, y verificado en produccion: /api/push/vapid sirve la llave y el
+boton del pie de Leagues aparece. El push esta ENCENDIDO; falta solo la
+prueba fisica desde el iPhone del dueno.
