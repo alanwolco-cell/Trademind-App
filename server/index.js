@@ -98,6 +98,7 @@ app.use('/api/yahoo', yahooRoutes);
 app.use('/api/sage', sageRoutes);
 app.use('/api/odds', require('./routes/odds'));
 app.use('/api/scout', require('./routes/scout'));
+app.use('/api/push', require('./routes/push'));
 app.use('/api/room', require('./routes/draftroom'));
 app.use('/api/billing', require('./routes/billing'));
 app.use('/api/perfil', require('./routes/perfil'));

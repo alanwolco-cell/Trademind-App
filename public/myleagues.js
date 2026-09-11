@@ -1470,10 +1470,12 @@ function mlPaintLeagues() {
         ? '<button class="ml-link" onclick="mlRefresh()">Refresh</button>' : '')
       + (mlYahooConectado() ? '' : mlYahooBtn())
       + '<button class="ml-link" onclick="switchScreen(\'hub\')">Have a league code?</button>'
+      + '<button class="ml-link" id="ml-push-btn">Get notified</button>'
       + (ML.yahooErr ? '<span class="ml-err-line">Yahoo: ' + mlEsc(ML.yahooErr) + '</span>' : '')
       + '</footer>';
   }
   box.innerHTML = h;
+  if (window.tmPushMontar) tmPushMontar();
 }
 
 /* ------------------------------------------------------------------ el aro */

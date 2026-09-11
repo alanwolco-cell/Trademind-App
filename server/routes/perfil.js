@@ -403,6 +403,10 @@ async function docWrite(nombre, archivo, doc) {
   catch (_) { _mem[nombre] = doc; return 'memory'; }
 }
 
+// El almacen de documentos se comparte con otras rutas (push.js): el gate que
+// prueba uno prueba el mecanismo de todos.
+router.docRead = docRead;
+router.docWrite = docWrite;
 const rkRead = () => docRead(RK_PATH, RK_FILE);
 const rkWrite = (doc) => docWrite(RK_PATH, RK_FILE, doc);
 

@@ -343,6 +343,10 @@ router.post('/:code/claim', async (req, res) => {
       joinedAt: (doc.members[acct] && doc.members[acct].joinedAt) || Date.now()
     };
     await escribir(doc);
+    avisarHub(doc, acct, {
+      title: doc.name,
+      body: ((doc.members[acct] || {}).name || 'Someone') + ' claimed their team.'
+    });
     res.json({ ok: true, myTeamId: teamId, hub: publico(doc) });
   } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 180) }); }
 });
@@ -426,6 +430,8 @@ router.post('/:code/proposal', async (req, res) => {
       at: Date.now(), votes: {}
     });
     await escribir(doc);
+    const deQuien = (doc.rosters.filter(r => r.teamId === yo.teamId)[0] || {}).owner || 'Someone';
+    avisarHub(doc, acct, { title: doc.name, body: deQuien + ' put a trade on the table. Go vote it.' });
     res.json({ ok: true, hub: publico(doc) });
   } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 180) }); }
 });
@@ -565,6 +571,8 @@ router.post('/:code/bet', async (req, res) => {
       by: acct, at: Date.now()
     });
     await escribir(doc);
+    const retador = (doc.rosters.filter(r => r.teamId === yo.teamId)[0] || {}).owner || 'Someone';
+    avisarHub(doc, acct, { title: doc.name, body: retador + ' opened a side bet: ' + desc.slice(0, 60) });
     res.json({ ok: true, hub: publico(doc) });
   } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 180) }); }
 });
@@ -613,5 +621,17 @@ router.post('/:code/bet/settle', async (req, res) => {
     res.json({ ok: true, hub: publico(doc) });
   } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 180) }); }
 });
+
+// Aviso push a los miembros del hub, menos al actor. Nunca tumba la
+// peticion que lo dispara: el push es cortesia, la accion es lo que importa.
+function avisarHub(doc, actorAcct, payload) {
+  try {
+    const push = require('./push');
+    const dest = Object.keys(doc.members || {}).filter(a => a !== actorAcct);
+    if (!dest.length) return;
+    payload.url = '/hub?c=' + doc.code;
+    push.sendPushTo(dest, payload).catch(() => { });
+  } catch (_) { }
+}
 
 module.exports = router;
