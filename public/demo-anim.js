@@ -122,7 +122,7 @@
     } },
     { id: 'ligas', ms: 3400, pinta: function () {
       HOST.innerHTML = '<div class="da-pane"><div class="da-head">'
-        + '<b>6 leagues</b><span>Week 11 · Sleeper and Yahoo</span></div>'
+        + '<b>6 leagues</b><span>Sleeper and Yahoo, one screen</span></div>'
         + '<div class="ml-grid da-grid">'
         + LIGAS.map(function (L) { return tarjeta(L, true); }).join('')
         + '</div></div>';

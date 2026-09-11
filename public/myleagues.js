@@ -30,7 +30,7 @@ var ML = {
   week: 1,
   phase: 'regular',
   userId: null,
-  username: '',
+  username: (function () { try { return (localStorage.getItem('tm_username') || '').trim(); } catch (e) { return ''; } })(),
   leagues: [],         // [{id,name,teams,status,type,settings,roster_positions,scoring_settings, _hyd:{...}}]
   players: null,       // id -> {id,name,pos,team}
   props: null,         // nombre en minusculas -> {player_pass_yds, ...}
@@ -1787,12 +1787,12 @@ function mlTableroTodas() {
       + ' onkeydown="if(event.key===\'Enter\')mlOpenOdds(\'' + mlEsc(f.L.id) + '\')">'
       + '<div class="ml-game-tag">' + mlEsc(f.L.name) + (f.vivo ? ' <i class="ml-live-dot"></i>' : '') + '</div>'
       + '<div class="ml-bd-row">'
-      + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + ' vs ' + mlEsc(f.rival) + '</b>'
+      + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + ' <span class="ml-you">you</span> vs ' + mlEsc(f.rival) + '</b>'
       + '<span class="mono">' + (f.vivo
         ? 'proj ' + mlN(f.mio) + ' - ' + mlN(f.suyo)
         : mlN(f.mio) + ' - ' + mlN(f.suyo) + (vivoManda ? ' · ' + mlPct(f.wp) + '% to win' : '')) + '</span></div>'
-      + '<div class="ml-cell mono">' + mlN(izq) + '</div>'
-      + '<div class="ml-cell mono ' + (voyGanando ? 'is-fav' : '') + '">' + mlN(der) + '</div>'
+      + '<div class="ml-cell mono' + (voyGanando ? ' is-fav' : '') + '">' + mlN(izq) + '</div>'
+      + '<div class="ml-cell mono">' + mlN(der) + '</div>'
       // Con la jornada en marcha la tercera columna es EL MARGEN. Un partido no
       // empezado no tiene margen: guion, y su % baja a la letra chica. Antes
       // salian porcentajes bajo la cabecera "Margin": dos unidades distintas en
@@ -1870,10 +1870,12 @@ function mlPaintOdds() {
     var wa = mlWinProb(pa, pb), wb = 1 - wa;
     var tot = Math.round((pa + pb) * 2) / 2;
     var isMine = a === H.mine.roster_id || b === H.mine.roster_id;
+    if (b === H.mine.roster_id) { var tmp = a; a = b; b = tmp; var tp = pa; pa = pb; pb = tp; wa = 1 - wa; wb = 1 - wa; }
     var side = function (rid, pts, wp, other) {
       var fav = pts >= other;
       return '<div class="ml-bd-row">'
-        + '<div class="ml-bd-team"><b>' + mlEsc(mlTeamName(sel, rid)) + '</b>'
+        + '<div class="ml-bd-team"><b>' + mlEsc(mlTeamName(sel, rid))
+        + (rid === H.mine.roster_id ? ' <span class="ml-you">you</span>' : '') + '</b>'
         + '<span class="mono">' + mlN(pts) + ' proj</span></div>'
         + '<div class="ml-cell mono">' + (fav ? '-' : '+') + mlSpread(Math.abs(pts - other)) + '</div>'
         + '<div class="ml-cell mono ' + (wp >= 0.5 ? 'is-fav' : '') + '">' + mlAmerican(wp) + '</div>'
@@ -2050,14 +2052,16 @@ function mlOpenMatchup(id) {
       if (!lst) return '<div class="ml-mu-p is-empty ' + lado + '"><span class="ml-mu-nom">Loading lineup...</span></div>';
       var y = lst[i];
       if (!y) return '<div class="ml-mu-p is-empty ' + lado + '"><span class="ml-mu-nom">Empty</span></div>';
-      var ypts = y.points != null ? mlN(y.points) : (mlProjPlayer({ name: y.name, pos: y.pos }, sc) != null ? mlN(mlProjPlayer({ name: y.name, pos: y.pos }, sc)) : '-');
+      var yreal = (y.points != null && y.points !== 0) ? y.points : null;
+      var yproj = mlProjPlayer({ name: y.name, pos: y.pos, team: y.team }, sc);
+      var ypts = yreal != null ? mlN(yreal) : (yproj != null ? mlN(yproj) : '-');
       var sid = mlIdPorNombre(y.name);
       var foto = y.pos === 'DEF' && y.team
         ? '<img src="https://sleepercdn.com/images/team_logos/nfl/' + mlEsc(String(y.team).toLowerCase()) + '.png" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
         : (sid ? '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(sid) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="ml-mu-sinfoto"></span>');
       return '<div class="ml-mu-p ' + lado + '">' + foto
         + '<span class="ml-mu-txt"><b>' + mlEsc(y.name) + '</b><i>' + mlEsc(y.pos) + ' · ' + mlEsc(y.team || 'FA') + '</i></span>'
-        + '<span class="ml-mu-pts mono' + (y.points != null && y.points !== 0 ? ' is-real' : (y.points === 0 ? ' is-cero' : '')) + '">' + ypts + '</span>'
+        + '<span class="ml-mu-pts mono' + (yreal != null ? ' is-real' : '') + '">' + ypts + '</span>'
         + '</div>';
     }
     var id = ((m.starters || [])[i]) || null;
@@ -2069,6 +2073,7 @@ function mlOpenMatchup(id) {
     // vez: la celda enseña la proyeccion en gris hasta que el duelo arranca.
     var duelaVivo = (Number(m.points) || 0) > 0 || (Number((m === mia ? suya : mia).points) || 0) > 0;
     var real = duelaVivo && p && m.players_points ? m.players_points[id] : null;
+    if (real === 0) real = null;
     var proj = p ? mlProjPlayer(p, sc) : null;
     var pts = real != null ? mlN(real) : (proj != null ? mlN(proj) : '-');
     if (!p) {
@@ -2079,7 +2084,7 @@ function mlOpenMatchup(id) {
       : '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(p.id) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';
     return '<div class="ml-mu-p ' + lado + '">' + fotoS
       + '<span class="ml-mu-txt"><b>' + mlEsc(p.name) + '</b><i>' + mlEsc(p.pos) + ' · ' + mlEsc(p.team || 'FA') + '</i></span>'
-      + '<span class="ml-mu-pts mono' + (real != null && real !== 0 ? ' is-real' : (real === 0 ? ' is-cero' : '')) + '">' + pts + '</span>'
+      + '<span class="ml-mu-pts mono' + (real != null ? ' is-real' : '') + '">' + pts + '</span>'
       + '</div>';
   };
 

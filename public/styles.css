@@ -3074,7 +3074,7 @@ html.no-draft .draft-only{display:none !important}
 @media(max-width:640px){
   .ml-chip{min-height:44px;padding:0 14px;font-size:13px}
   .ml-y{min-height:44px;padding:0 16px}
-  .ml-link{min-height:44px}
+  .ml-link{min-height:44px;min-width:44px}
 }
 
 /* ============================================================================
@@ -3298,7 +3298,7 @@ html.no-draft .draft-only{display:none !important}
 .ml-aro-n b{font-weight:700;letter-spacing:-.03em;line-height:1}
 .ml-aro-n b i{font-style:normal;font-size:.55em;color:var(--muted);margin-left:1px}
 .ml-aro-n span{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.ml-week{display:flex;align-items:center;gap:20px;max-width:560px;border:1px solid var(--border2);border-radius:18px;
+.ml-week{display:flex;align-items:center;gap:20px;max-width:560px;min-width:0;border:1px solid var(--border2);border-radius:18px;
   background:var(--surface);padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.28)}
 .ml-week-list{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
 .ml-week-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
@@ -3314,7 +3314,7 @@ html.no-draft .draft-only{display:none !important}
 }
 
 /* El detalle del duelo: las dos alineaciones de frente, como en Sleeper. */
-.ml-mu-overlay{position:fixed;inset:0;z-index:340;background:rgba(5,5,7,.72);backdrop-filter:blur(6px);
+.ml-mu-overlay{position:fixed;inset:0;z-index:360;background:rgba(5,5,7,.72);backdrop-filter:blur(6px);
   display:flex;align-items:flex-end;justify-content:center;overscroll-behavior:contain}
 @media(min-width:700px){.ml-mu-overlay{align-items:center}}
 .ml-mu-panel{width:min(680px,100%);max-height:86vh;overflow:auto;overscroll-behavior:contain;
@@ -3352,3 +3352,7 @@ html.no-draft .draft-only{display:none !important}
 .ml-mu-p.is-empty .ml-mu-nom{font-size:11.5px;color:var(--muted);font-style:italic}
 .ml-mu-sinfoto{width:30px;height:30px;border-radius:50%;background:var(--surface2);flex-shrink:0;display:block}
 .ml-card[role="button"]{cursor:pointer}
+
+@media (prefers-reduced-motion: reduce){.ml-live i,.ml-live-dot{animation:none}}
+
+.ml-you{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-bright);background:var(--accent-dim);border-radius:999px;padding:1px 6px;vertical-align:1px}

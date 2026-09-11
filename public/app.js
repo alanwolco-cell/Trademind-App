@@ -452,10 +452,11 @@ function _renderCmList(leagues,q){
   }else{html+='<div style="height:10px"></div>';}
   html+='<div class="cm-leagues">'+(hits.length?hits.map(function(l){
     var isDyn=tmEjeLiga(l)==='dynasty';
+    var isBB=Number(l.type)===3||Number((l.settings||{}).best_ball)===1;
     var nm=(l.name||'Unnamed').replace(/&/g,'&amp;').replace(/</g,'&lt;');
     return '<div class="cm-league" onclick="_cmPick(\''+l.league_id+'\')">'
       +'<div><div class="cm-lname">'+nm+'</div>'
-      +'<div class="cm-lmeta">'+(l.total_rosters||'?')+' teams · '+(l.season||'')+' · '+(isDyn?'Dynasty':'Redraft')+'</div></div>'
+      +'<div class="cm-lmeta">'+(l.total_rosters||'?')+' teams · '+(l.season||'')+' · '+(isBB?'Best ball':(isDyn?'Dynasty':'Redraft'))+'</div></div>'
       +'<span style="color:var(--muted)">&rsaquo;</span></div>';
   }).join(''):'<div style="padding:10px 2px;font-size:11.5px;color:var(--muted)">No league matches that.</div>')+'</div>';
   box.innerHTML=html;

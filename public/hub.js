@@ -70,7 +70,9 @@ async function hbLoad(code) {
 async function hbComputar() {
   var doc = HUB.doc; if (!doc) return;
   var players = await mlPlayersMap();
-  await mlLoadProps();
+  await Promise.all([mlLoadProySite(), mlLoadProps()]);
+  HUB.fuente = ML.proySite ? 'expert projections' : (ML.props ? 'Vegas lines' : null);
+  if (!HUB.fuente) { HUB.rank = null; HUB.proj = {}; return; }
   var L = {
     roster_positions: doc.roster_positions || [],
     scoring_settings: doc.scoring_settings || {}
@@ -217,6 +219,11 @@ function hbPaintBooth() {
   var el = document.getElementById('hub-booth-body');
   if (!el) return;
   if (!HUB.doc) { el.innerHTML = HUB.code ? hbSk(5) : ''; return; }
+  if (!HUB.rank) {
+    el.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">Rankings are not ready</div>'
+      + '<p>This week\'s player projections have not loaded, and a ranking without them would be made up. Try again in a minute.</p></div>';
+    return;
+  }
   var jugados = (HUB.doc.rosters || []).reduce(function (a, r) { return a + r.wins + r.losses + r.ties; }, 0);
   var h = '<p class="ml-sub2">Power rankings from what each roster projects this week'
     + (jugados ? ' and what it has already done' : ' (nobody has played yet, so the record does not count)') + '.</p>';
@@ -233,7 +240,7 @@ function hbPaintBooth() {
   });
   h += '</div>';
   var cob = HUB.rank.length ? HUB.rank.reduce(function (a, x) { return a + x.p.cobertura; }, 0) / HUB.rank.length : 0;
-  h += '<p class="ml-fine">Projections are built with this league\'s own scoring rules. '
+  h += '<p class="ml-fine">Built from ' + hbEsc(HUB.fuente || 'projections') + ' scored with this league\'s own rules. '
     + Math.round(cob * 100) + '% of the starters across the league have a number of their own; the rest get their position\'s median.</p>';
   el.innerHTML = h;
 }

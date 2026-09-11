@@ -304,7 +304,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
              cuenta se juzga por su portada. app.js lo cambia a "See my leagues"
              en cuanto hay una cuenta conectada. -->
         <a href="/myleagues?demo=1" id="hero-enter-btn" class="mk-btn">See it working</a>
-        <a href="#" class="mk-btnlink" id="hero-second-btn" onclick="event.preventDefault();goConnectLeague()">Connect my leagues</a>
+        <a href="#" class="mk-btnlink" id="hero-second-btn" onclick="event.preventDefault();switchScreen('myleagues')">Connect my leagues</a>
       </div>
     </div>
   </div>
@@ -1815,7 +1815,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div onclick="goHome()" style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;cursor:pointer" title="Back to home">
     <span class="tm-wordmark" style="font-size:15px">Mac Draft</span>
   </div>
-  <div class="footer-sub">Trade advice built on context, not generic rankings. Know the move before you make it.</div>
+  <div class="footer-sub">Every fantasy football league you play, one screen. Sleeper and Yahoo together.</div>
   <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
     <a href="/analyze" class="nav-link" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Trade Analyzer</a>
     <span class="nav-link" onclick="switchScreen('community');loadCommunityFeed();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">Community</span>
