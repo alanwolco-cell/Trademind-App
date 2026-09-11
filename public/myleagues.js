@@ -930,6 +930,32 @@ function mlCargarDemo() {
     };
     return L;
   });
+  // Sunday Money lleva un duelo COMPLETO: 9 titulares reales por lado con
+  // puntos de un domingo a media tarde. Sin esto, tocar la tarjeta de la demo
+  // abria un matchup vacio, que es enseñar la mejor pantalla en blanco.
+  (function () {
+    var extra = [
+      ['4046', 'Patrick Mahomes', 'QB', 'KC'], ['4866', 'Saquon Barkley', 'RB', 'PHI'],
+      ['9509', 'Bijan Robinson', 'RB', 'ATL'], ['6794', 'Justin Jefferson', 'WR', 'MIN'],
+      ['1466', 'Travis Kelce', 'TE', 'KC'], ['4034', 'Christian McCaffrey', 'RB', 'SF'],
+      ['11533', 'Brandon Aubrey', 'K', 'DAL'], ['3198', 'Derrick Henry', 'RB', 'BAL'],
+      ['6813', 'Jonathan Taylor', 'RB', 'IND'], ['4227', 'Harrison Butker', 'K', 'KC'],
+      ['PHI', 'Philadelphia Eagles', 'DEF', 'PHI'], ['KC', 'Kansas City Chiefs', 'DEF', 'KC']
+    ];
+    extra.forEach(function (j) { ML.players[j[0]] = { id: j[0], name: j[1], pos: j[2], team: j[3] }; });
+    var mios = ['4046', '4866', '9509', '6794', '7564', '1466', '4034', '11533', 'PHI'];
+    var suyos = ['4984', '9221', '3198', '6786', '9493', '11604', '6813', '4227', 'KC'];
+    var pmios = { '4046': 21.4, '4866': 17.8, '9509': 6.3, '6794': 12.6, '7564': 15.1, '1466': 6.2, '4034': 9.9, '11533': 8.0, 'PHI': 5.0 };
+    var psuyos = { '4984': 18.9, '9221': 22.3, '3198': 7.4, '6786': 8.7, '9493': 11.2, '11604': 4.8, '6813': 13.0, '4227': 6.0, 'KC': 3.0 };
+    var suma = function (o) { var t = 0; Object.keys(o).forEach(function (k) { t += o[k]; }); return Math.round(t * 10) / 10; };
+    var L0 = ML.leagues[0], H0 = L0._hyd;
+    H0.rosters[0].players = mios.slice(); H0.rosters[1].players = suyos.slice();
+    H0.matchups = [
+      { roster_id: 1, matchup_id: 1, starters: mios, players: mios, points: suma(pmios), players_points: pmios },
+      { roster_id: 2, matchup_id: 1, starters: suyos, players: suyos, points: suma(psuyos), players_points: psuyos }
+    ];
+  })();
+
   // Dos alineaciones con algo que arreglar, para que el ejemplo enseñe la unica
   // pantalla del producto sobre la que se puede ACTUAR.
   var pj = function (id) { return ML.players[id]; };
@@ -1793,7 +1819,7 @@ function mlTableroTodas() {
       + ' onkeydown="if(event.key===\'Enter\')mlOpenOdds(\'' + mlEsc(f.L.id) + '\')">'
       + '<div class="ml-game-tag">' + mlEsc(f.L.name) + (f.vivo ? ' <i class="ml-live-dot"></i>' : '') + '</div>'
       + '<div class="ml-bd-row">'
-      + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + ' <span class="ml-you">you</span> vs ' + mlEsc(f.rival) + '</b>'
+      + '<div class="ml-bd-team"><b>' + mlEsc(f.yo) + (/^you$/i.test(f.yo) ? '' : ' <span class="ml-you">you</span>') + ' vs ' + mlEsc(f.rival) + '</b>'
       + '<span class="mono">' + (f.vivo
         ? 'proj ' + mlN(f.mio) + ' - ' + mlN(f.suyo)
         : mlN(f.mio) + ' - ' + mlN(f.suyo) + (vivoManda ? ' · ' + mlPct(f.wp) + '% to win' : '')) + '</span></div>'
@@ -1881,7 +1907,7 @@ function mlPaintOdds() {
       var fav = pts >= other;
       return '<div class="ml-bd-row">'
         + '<div class="ml-bd-team"><b>' + mlEsc(mlTeamName(sel, rid))
-        + (rid === H.mine.roster_id ? ' <span class="ml-you">you</span>' : '') + '</b>'
+        + (rid === H.mine.roster_id && !/^you$/i.test(mlTeamName(sel, rid)) ? ' <span class="ml-you">you</span>' : '') + '</b>'
         + '<span class="mono">' + mlN(pts) + ' proj</span></div>'
         + '<div class="ml-cell mono">' + (fav ? '-' : '+') + mlSpread(Math.abs(pts - other)) + '</div>'
         + '<div class="ml-cell mono ' + (wp >= 0.5 ? 'is-fav' : '') + '">' + mlAmerican(wp) + '</div>'

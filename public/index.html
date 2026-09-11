@@ -126,18 +126,34 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 <body>
 <!-- Arranque de la PWA instalada: mismo degradado vertical y mismo icono que la imagen
      fija de iOS, asi el traspaso no se ve. Solo en modo standalone (en el sitio normal
-     no hay arranque). Se quita sola por CSS aunque el JS se caiga. -->
-<div id="tm-splash" aria-hidden="true"><img src="/splash/mark.png" alt="" width="140" height="140"></div>
+     no hay arranque). Se quita sola por CSS aunque el JS se caiga.
+     Coreografia (pedido del dueno, 11-sep): Mac arranca QUIETO en el centro
+     (identico a la imagen fija de iOS, medio segundo), sale VOLANDO por la
+     derecha con un arco y un aleteo corto, y el fondo hace un mini fade que
+     revela la app. Dos animaciones compuestas: el arco va en el envoltorio y
+     el aleteo en la imagen, porque un transform no puede llevar los dos. -->
+<div id="tm-splash" aria-hidden="true"><span class="tm-splash-bird"><img src="/splash/mark.png" alt="" width="140" height="140"></span></div>
 <style>
 #tm-splash{display:none}
 @media (display-mode:standalone){
   #tm-splash{display:flex;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#2a1f4a 0%,#050507 100%);pointer-events:none;
-    animation:tm-splash-out .45s ease-in 1.15s forwards}
-  #tm-splash img{width:36vw;height:36vw;max-width:220px;max-height:220px;
-    animation:tm-splash-breathe 1.15s ease-in-out}
+    animation:tm-splash-out .45s ease-in 1.3s forwards}
+  .tm-splash-bird{display:block;animation:tm-splash-fly .95s cubic-bezier(.5,.05,.7,.4) .5s forwards}
+  #tm-splash img{display:block;width:36vw;height:36vw;max-width:220px;max-height:220px;
+    animation:tm-splash-flap .19s ease-in-out .5s 5}
   @keyframes tm-splash-out{to{opacity:0;visibility:hidden}}
-  @keyframes tm-splash-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  @keyframes tm-splash-fly{
+    0%{transform:translate(0,0) rotate(0deg)}
+    28%{transform:translate(7vw,-3vh) rotate(-6deg)}
+    60%{transform:translate(36vw,-9vh) rotate(-10deg)}
+    100%{transform:translate(125vw,-24vh) rotate(-13deg)}
+  }
+  @keyframes tm-splash-flap{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3.5%) scale(1.015,.985)}}
+  @media (prefers-reduced-motion:reduce){
+    .tm-splash-bird,#tm-splash img{animation:none}
+    #tm-splash{animation:tm-splash-out .45s ease-in .9s forwards}
+  }
 }
 </style>
 
@@ -309,12 +325,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     </div>
   </div>
   <!-- El producto, capturado del producto corriendo (scripts/gen-hero-shot.mjs),
-       nunca dibujado a mano: el tablero de odds con los duelos reales de una
-       cuenta. El video del draft salio de aqui el 2026-09-09 al esconderse todo
-       lo de draft; cuando vuelva la temporada, o cuando se filme la pantalla de
-       ligas, este hueco recupera su pelicula. -->
+       nunca dibujado a mano. Desde el 2026-09-11 es el reel de TEMPORADA:
+       node scripts/gen-reel-season.mjs lo regenera filmando /myleagues?demo=1
+       (ligas inventadas, jugadores reales) con sus propias verificaciones.
+       La animacion DOM del hero (demo-anim.js) salio con este cambio. -->
   <div class="mk-hero-shot mk-reveal" aria-hidden="true">
-    <img class="mk-film" src="/hero-leagues.png?v=1" alt="" width="1072" height="657" loading="eager" decoding="async">
+    <video class="mk-film" src="/promo-season.mp4?v=1" poster="/promo-season-poster.jpg?v=1"
+      width="1240" height="780" autoplay muted loop playsinline disablepictureinpicture></video>
   </div>
 </div>
 
@@ -1860,7 +1877,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 <script src="/live.js?v=2026091102"></script>
 <script src="/myleagues.js?v=2026091102"></script>
 <script src="/hub.js?v=2026091102"></script>
-<script src="/demo-anim.js?v=2026091102" defer></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
