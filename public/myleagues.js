@@ -1309,6 +1309,7 @@ function mlPaintLeagues() {
     return void (box.innerHTML = h + '<div class="ml-empty"><p>No leagues match that filter.</p></div>');
   }
 
+  h += mlCabeceraSemana(visibles);
   h += mlPanelAlineaciones();
 
   h += '<div class="ml-grid">';
@@ -1347,8 +1348,14 @@ function mlPaintLeagues() {
           ? '<span class="ml-live"><i></i>' + (vivo.mio >= vivo.suyo ? 'winning by ' + mlN(vivo.mio - vivo.suyo) : 'down ' + mlN(vivo.suyo - vivo.mio)) + '</span>'
             + '<span class="ml-dot">·</span><span>proj ' + mlN(myProj) + ' - ' + mlN(oppProj) + '</span>'
           : '<span class="mono">' + (favorito ? '-' : '+') + mlSpread(Math.abs(myProj - oppProj)) + '</span>'
-            + '<span class="ml-dot">·</span><span class="mono">' + mlAmerican(wp) + '</span>'
-            + '<span class="ml-dot">·</span><span>' + mlPct(wp) + '% to win</span>')
+            + '<span class="ml-dot">·</span><span class="mono">' + mlAmerican(wp) + '</span>')
+        // El aro chico: el % de ganar como veredicto visual, a la derecha.
+        // SOLO antes del partido. En vivo el marcador ES el veredicto, y poner
+        // al lado un aro verde de "61%" calculado antes del kickoff mientras
+        // vas perdiendo por 10 es tener dos veredictos en el mismo plano, que
+        // es exactamente lo que el patron prohibe. Recalcularlo en vivo seria
+        // fingir un modelo de partido que no existe.
+        + (vivo ? '' : '<span class="ml-vs-aro">' + mlAro(wp * 100, 44) + '</span>')
         + '</div>';
     } else {
       cuerpo = '<div class="ml-vs-none">No matchup this week</div>';
@@ -1385,6 +1392,65 @@ function mlPaintLeagues() {
       + '</footer>';
   }
   box.innerHTML = h;
+}
+
+/* ------------------------------------------------------------------ el aro */
+// El patron WHOOP, traido a proposito: UN numero grande que resume, dentro de
+// un aro, y la letra chica debajo que lo explica. El aro es el veredicto; la
+// lista es el porque. Nunca los dos en el mismo plano.
+// El color es semantico y sobrio (regla robada de Sleeper: color solo cuando
+// dice algo): verde ganando o favorito, ambar moneda al aire, rojo por detras.
+function mlAro(pct, size, etiqueta) {
+  var p = Math.max(0, Math.min(100, pct));
+  var r = (size / 2) - Math.max(3, size * 0.06);
+  var c = 2 * Math.PI * r;
+  var color = p >= 55 ? 'var(--green)' : (p >= 45 ? 'var(--yellow)' : 'var(--red)');
+  var grosor = Math.max(3, Math.round(size * 0.065));
+  var fs = Math.round(size * (size > 80 ? 0.24 : 0.3));
+  return '<div class="ml-aro" style="width:' + size + 'px;height:' + size + 'px">'
+    + '<svg viewBox="0 0 ' + size + ' ' + size + '" aria-hidden="true">'
+    + '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="var(--surface3)" stroke-width="' + grosor + '"/>'
+    + '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="' + grosor + '"'
+    + ' stroke-linecap="round" stroke-dasharray="' + (c * p / 100).toFixed(1) + ' ' + c.toFixed(1) + '"'
+    + ' transform="rotate(-90 ' + size / 2 + ' ' + size / 2 + ')"/>'
+    + '</svg>'
+    + '<div class="ml-aro-n"><b class="mono" style="font-size:' + fs + 'px">' + Math.round(p) + '<i>%</i></b>'
+    + (etiqueta ? '<span>' + mlEsc(etiqueta) + '</span>' : '') + '</div></div>';
+}
+
+// La cabecera del domingo: el aro con tu probabilidad media, y las cuatro
+// cifras que lo explican. Solo cuando hay duelos que resumir.
+function mlCabeceraSemana(ligas) {
+  var conDuelo = ligas.filter(function (L) {
+    return mlDrafted(L) && L._hyd && L._hyd.mine && L._hyd.opp != null;
+  });
+  if (conDuelo.length < 2) return '';   // con una liga, la tarjeta ya lo dice todo
+  var enVivo = 0, ganando = 0, puntos = 0, sumaWp = 0;
+  var peor = null;
+  conDuelo.forEach(function (L) {
+    var H = L._hyd;
+    var mio = (H.proj[H.mine.roster_id] || {}).total || 0;
+    var suyo = (H.proj[H.opp] || {}).total || 0;
+    var wp = mlWinProb(mio, suyo);
+    var vivo = mlEnVivo(L);
+    if (vivo) { enVivo++; puntos += vivo.mio; if (vivo.mio >= vivo.suyo) ganando++; }
+    else { puntos += 0; if (wp >= 0.5) ganando++; }
+    sumaWp += wp;
+    if (!peor || wp < peor.wp) peor = { L: L, wp: wp };
+  });
+  var media = sumaWp / conDuelo.length * 100;
+  var fix = mlAlineacionesRotas();
+  var fixPts = fix.reduce(function (a, x) { return a + x.r.gana; }, 0);
+  return '<section class="ml-week">'
+    + mlAro(media, 118, 'this week')
+    + '<div class="ml-week-list">'
+    + '<div class="ml-week-row"><span>' + (enVivo ? 'Winning' : 'Favored') + '</span>'
+    + '<b class="mono">' + ganando + ' of ' + conDuelo.length + '</b></div>'
+    + (enVivo ? '<div class="ml-week-row"><span>Points scored</span><b class="mono">' + mlN(puntos, 0) + '</b></div>' : '')
+    + '<div class="ml-week-row"><span>Toughest matchup</span><b>' + (peor ? mlEsc(peor.L.name) + ' <i class="mono">' + mlPct(peor.wp) + '%</i>' : '-') + '</b></div>'
+    + '<div class="ml-week-row"><span>Bench points to claim</span><b class="mono' + (fixPts > 0 ? ' is-warn' : '') + '">'
+    + (fixPts > 0 ? '+' + mlN(fixPts) : 'none') + '</b></div>'
+    + '</div></section>';
 }
 
 /* --------------------------------------------- el panel de las alineaciones */

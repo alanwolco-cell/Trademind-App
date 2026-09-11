@@ -3282,3 +3282,28 @@ html.no-draft .draft-only{display:none !important}
 .hb-bet-side{display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0}
 .hb-bet-won{font-size:12px;font-weight:700;color:var(--green)}
 @media(max-width:560px){.hb-bet-row2{grid-template-columns:1fr;gap:6px}}
+
+/* ============================================================================
+   EL ARO (patron WHOOP): un numero grande que resume, la letra chica que lo
+   explica. El aro es el veredicto, la lista el porque, nunca en el mismo plano.
+   ============================================================================ */
+.ml-aro{position:relative;flex-shrink:0}
+.ml-aro svg{display:block;width:100%;height:100%}
+.ml-aro-n{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.ml-aro-n b{font-weight:700;letter-spacing:-.03em;line-height:1}
+.ml-aro-n b i{font-style:normal;font-size:.55em;color:var(--muted);margin-left:1px}
+.ml-aro-n span{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ml-week{display:flex;align-items:center;gap:20px;border:1px solid var(--border2);border-radius:18px;
+  background:var(--surface);padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.28)}
+.ml-week-list{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.ml-week-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  border-bottom:1px solid rgba(255,255,255,.045);padding-bottom:7px}
+.ml-week-row:last-child{border-bottom:0;padding-bottom:0}
+.ml-week-row span{font-size:12px;color:var(--muted)}
+.ml-week-row b{font-size:13.5px;font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ml-week-row b i{font-style:normal;color:var(--muted);font-weight:500;margin-left:4px}
+.ml-week-row b.is-warn{color:var(--green)}
+.ml-vs-aro{margin-left:auto}
+@media(max-width:560px){
+  .ml-week{gap:16px;padding:16px}
+}
