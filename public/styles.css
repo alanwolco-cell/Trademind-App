@@ -3310,9 +3310,10 @@ html.no-draft .draft-only{display:none !important}
 
 /* El detalle del duelo: las dos alineaciones de frente, como en Sleeper. */
 .ml-mu-overlay{position:fixed;inset:0;z-index:340;background:rgba(5,5,7,.72);backdrop-filter:blur(6px);
-  display:flex;align-items:flex-end;justify-content:center}
+  display:flex;align-items:flex-end;justify-content:center;overscroll-behavior:contain}
 @media(min-width:700px){.ml-mu-overlay{align-items:center}}
-.ml-mu-panel{width:min(680px,100%);max-height:88vh;overflow:auto;background:var(--surface);
+.ml-mu-panel{width:min(680px,100%);max-height:86vh;overflow:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;background:var(--surface);
   border:1px solid var(--border2);border-radius:22px 22px 0 0;box-shadow:0 -12px 60px rgba(0,0,0,.5)}
 @media(min-width:700px){.ml-mu-panel{border-radius:22px}}
 .ml-mu-h{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);
@@ -3342,3 +3343,4 @@ html.no-draft .draft-only{display:none !important}
 .ml-mu-pts{font-size:13px;color:var(--muted);flex-shrink:0;font-variant-numeric:tabular-nums}
 .ml-mu-pts.is-real{color:var(--text);font-weight:700}
 .ml-mu-p.is-empty .ml-mu-nom{font-size:11.5px;color:var(--muted);font-style:italic}
+.ml-mu-sinfoto{width:30px;height:30px;border-radius:50%;background:var(--surface2);flex-shrink:0;display:block}

@@ -559,7 +559,24 @@ router.post('/chat', async (req, res) => {
       if (lineas && lineas.length) {
         tendenciasTxt = 'SELF-SCOUTING (this manager\'s real tendencies, mined from his own Sleeper history; each line passed a statistical threshold and carries its sample size):\n'
           + lineas.join('\n')
-          + '\nUse these when the question touches his habits, his trades or his drafting. Speak to them as observed facts about HIM ("you tend to..."), cite the count when it helps, and NEVER invent a tendency that is not on this list.';
+          + '\nUse these when the question touches his habits, his trades or his drafting. Speak to them as observed facts about HIM ("you tend to..."), cite the count when it helps, and NEVER invent a tendency that is not on this list. Lines tagged [dynasty] or [redraft] apply to THAT format only: in a redraft conversation, dynasty tendencies stay out unless he asks.';
+      }
+    } catch (_) { }
+
+    // SCOUT DEL RIVAL: si el cliente dice contra quien juega esta semana (un
+    // username de Sleeper), Mac recibe tambien las tendencias de ESE manager.
+    // Misma tuberia, apuntada al otro lado de la mesa: "el de enfrente abre
+    // las mesas de trade el mismo" es informacion que nadie mas da.
+    try {
+      const rival = String((req.body || {}).rival || '').trim().toLowerCase();
+      if (rival && rival !== user && /^[A-Za-z0-9_.-]{1,40}$/.test(rival)) {
+        const rl = await require('./perfil').tendenciasParaMac(rival);
+        if (rl && rl.length) {
+          tendenciasTxt = (tendenciasTxt ? tendenciasTxt + '\n\n' : '')
+            + 'OPPONENT SCOUT (this week\'s rival, "' + rival + '", same mining, same thresholds):\n'
+            + rl.join('\n')
+            + '\nUse these when he asks about his matchup or how to deal with this manager. Same format rule applies.';
+        }
       }
     } catch (_) { }
 

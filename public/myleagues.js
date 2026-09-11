@@ -1984,9 +1984,32 @@ function mlOpenMatchup(id) {
 
   // Una celda de jugador: puntos REALES si ya jugo (players_points), y si no,
   // su proyeccion en gris. Nunca se mezclan sin decirlo: el real va en blanco.
+  // Yahoo SI da la alineacion semanal (roster;week=N con selected_position y
+  // player_points): se pide al abrir el panel y se rellena en cuanto llega. La
+  // primera version asumio que no existia y pintaba "Lineup lives on Yahoo" en
+  // todas las filas, que fue exactamente lo que el dueno reporto.
+  if (L.plat === 'yahoo' && !(H.lineups && H.lineups[ML.week])) {
+    mlCargarLineupYahoo(L);
+  }
+  var yhMio = (H.lineups && H.lineups[ML.week] && H.lineups[ML.week][H.mine.roster_id]) || null;
+  var yhSuyo = (H.lineups && H.lineups[ML.week] && H.lineups[ML.week][H.opp]) || null;
+
   var celda = function (m, i, lado) {
+    // En Yahoo la fila sale de la alineacion semanal pedida aparte.
+    if (L.plat === 'yahoo') {
+      var lst = (m === mia) ? yhMio : yhSuyo;
+      if (!lst) return '<div class="ml-mu-p is-empty ' + lado + '"><span class="ml-mu-nom">Loading lineup...</span></div>';
+      var y = lst[i];
+      if (!y) return '<div class="ml-mu-p is-empty ' + lado + '"><span class="ml-mu-nom">Empty</span></div>';
+      var ypts = y.points != null ? mlN(y.points) : (mlProjPlayer({ name: y.name, pos: y.pos }, sc) != null ? mlN(mlProjPlayer({ name: y.name, pos: y.pos }, sc)) : '-');
+      var sid = mlIdPorNombre(y.name);
+      return '<div class="ml-mu-p ' + lado + '">'
+        + (sid ? '<img src="https://sleepercdn.com/content/nfl/players/thumb/' + mlEsc(sid) + '.jpg" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="ml-mu-sinfoto"></span>')
+        + '<span class="ml-mu-txt"><b>' + mlEsc(y.name) + '</b><i>' + mlEsc(y.pos) + ' · ' + mlEsc(y.team || 'FA') + '</i></span>'
+        + '<span class="ml-mu-pts mono' + (y.points != null && y.points !== 0 ? ' is-real' : '') + '">' + ypts + '</span>'
+        + '</div>';
+    }
     var id = ((m.starters || [])[i]) || null;
-    if (L.plat === 'yahoo') id = null;   // Yahoo no da alineacion por semana
     var p = id && id !== '0' ? players[id] : null;
     if (!p && id && id !== '0') p = { id: id, name: 'Player ' + id, pos: '?', team: '' };
     // El punto REAL solo existe cuando el duelo tiene puntos. Antes del
@@ -2019,6 +2042,10 @@ function mlOpenMatchup(id) {
     + '<span class="ml-mu-vs">' + (vivo ? 'live' : 'vs') + '</span>'
     + '<div class="ml-mu-side is-opp"><span>' + mlEsc(mlTeamName(L, H.opp)) + '</span><b class="mono">' + mlN(suyoT) + '</b></div>'
     + '</div></header><div class="ml-mu-rows">';
+  if (L.plat === 'yahoo' && yhMio) {
+    // Los rotulos de casilla, de la alineacion real de Yahoo (W/R, etc).
+    slots = yhMio.map(function (y) { return y.slot || '?'; });
+  }
   for (var i = 0; i < slots.length; i++) {
     h += '<div class="ml-mu-row">'
       + celda(mia, i, 'is-me')
@@ -2028,24 +2055,73 @@ function mlOpenMatchup(id) {
   }
   h += '</div>'
     + '<p class="ml-fine" style="padding:0 16px 16px;margin:0">White numbers are real points from games already played; grey are projections'
-    + (L.plat === 'yahoo' ? '. Yahoo does not share weekly lineups through its API, so this shows the matchup total only' : '') + '.</p>'
+    + '.</p>'
     + '</div>';
 
+  var existente = document.getElementById('ml-mu-overlay');
+  if (existente) {
+    // Recarga en sitio (llegaron las alineaciones de Yahoo): mismo overlay,
+    // mismo cierre, contenido nuevo.
+    existente.innerHTML = h;
+    return;
+  }
   var ov = document.createElement('div');
   ov.className = 'ml-mu-overlay';
   ov.id = 'ml-mu-overlay';
   ov.innerHTML = h;
   ov.addEventListener('click', function (ev) { if (ev.target === ov) mlCloseMatchup(); });
   document.body.appendChild(ov);
+  // En los dos: la pagina scrollea en <html>, y bloquear solo el body dejaba
+  // la rueda moviendo el fondo mientras el panel se quedaba quieto (reportado
+  // por el dueno la misma noche).
   document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
   // El boton atras cierra el panel, no abandona la pantalla: mismo contrato que
   // el resto de los overlays de la app.
   if (typeof _overlayOpen === 'function') { try { _overlayOpen(function () { mlCloseMatchup(true); }); } catch (e) { } }
 }
+// Trae las dos alineaciones semanales de un duelo de Yahoo y repinta el panel
+// si sigue abierto. Cacheado en la liga por semana: abrir dos veces no repide.
+var _mlLineupEnVuelo = {};
+async function mlCargarLineupYahoo(L) {
+  var H = L._hyd;
+  if (!H || _mlLineupEnVuelo[L.id]) return;
+  _mlLineupEnVuelo[L.id] = 1;
+  try {
+    var claves = {};
+    (H.rosters || []).forEach(function (r) { claves[r.roster_id] = r.owner_id; });
+    var pares = [H.mine.roster_id, H.opp];
+    var res = await Promise.all(pares.map(function (rid) {
+      return mlYahooGet('/team/' + encodeURIComponent(claves[rid]) + '/lineup?week=' + (ML.week || 1))
+        .catch(function () { return null; });
+    }));
+    H.lineups = H.lineups || {};
+    var porSemana = {};
+    pares.forEach(function (rid, i) {
+      var d = res[i];
+      if (!d || !d.players) return;
+      // Solo titulares, en el orden de casillas que manda Yahoo.
+      porSemana[rid] = d.players.filter(function (y) {
+        return y.slot && ['BN', 'IR', 'IL'].indexOf(y.slot) === -1;
+      });
+    });
+    if (Object.keys(porSemana).length) {
+      H.lineups[ML.week] = porSemana;
+      // Repintar solo si el panel de ESTE duelo sigue abierto.
+      // Rellenar EN SITIO: cerrar y reabrir apilaria un segundo cierre en el
+      // boton atras.
+      var ov = document.getElementById('ml-mu-overlay');
+      if (ov) { ov.dataset.relleno = '1'; mlOpenMatchup(L.id); }
+    }
+  } catch (e) { }
+  finally { delete _mlLineupEnVuelo[L.id]; }
+}
+
 function mlCloseMatchup(desdeAtras) {
   var ov = document.getElementById('ml-mu-overlay');
   if (ov) ov.remove();
   document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
   if (!desdeAtras && typeof _overlays !== 'undefined' && _overlays.length) {
     try { history.back(); } catch (e) { }
   }

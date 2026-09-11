@@ -270,15 +270,25 @@ async function tendenciasParaMac(user) {
   if (armado.error) { cache.set(kk, [], 3600); return null; }
   const lineas = [];
   const vistos = new Set();
-  (function cosechar(x) {
+  // Cada linea lleva su FORMATO cuando el arbol lo declara (los ejes del motor
+  // son dynasty/redraft): la mayoria de las ligas del mundo no son dynasty, y
+  // Mac no puede citarle una tendencia de dynasty a una conversacion de
+  // redraft. Y el motor emite algunos textos duplicados en español: fuera los
+  // acentuados, el producto habla ingles.
+  (function cosechar(x, formato) {
     if (!x || typeof x !== 'object' || lineas.length >= 14) return;
-    if (Array.isArray(x)) return x.forEach(cosechar);
+    if (Array.isArray(x)) return x.forEach(y => cosechar(y, formato));
     if (x.estado === 'confirmado' && x.texto && !vistos.has(x.texto)) {
-      vistos.add(x.texto);
-      lineas.push('- ' + x.texto + (x.n ? ' (n=' + x.n + ')' : ''));
+      if (!/[áéíóúñ¿¡]/.test(x.texto)) {
+        vistos.add(x.texto);
+        lineas.push('- ' + (formato ? '[' + formato + '] ' : '') + x.texto + (x.n ? ' (n=' + x.n + ')' : ''));
+      }
     }
-    Object.keys(x).forEach(k => cosechar(x[k]));
-  })(armado.salida);
+    Object.keys(x).forEach(k => {
+      const f = (k === 'dynasty' || k === 'redraft') ? k : formato;
+      cosechar(x[k], f);
+    });
+  })(armado.salida, null);
   cache.set(kk, lineas, 24 * 3600);
   return lineas.length ? lineas : null;
 }

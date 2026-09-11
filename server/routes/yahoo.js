@@ -465,6 +465,127 @@ router.get('/league/:key/scoreboard', async (req, res) => {
   } catch (e) { respondeYahoo(res, e); }
 });
 
+// GET /api/yahoo/team/:teamKey/lineup?week=N
+// La alineacion SEMANAL de un equipo, con quien esta en cada casilla y sus
+// puntos de la semana. Existe en el API (roster;week=N + selected_position +
+// player_points); la primera version del detalle de matchup asumio que no y
+// pintaba "Lineup lives on Yahoo" en todas las filas.
+router.get('/team/:teamKey/lineup', async (req, res) => {
+  const token = exigeToken(req, res); if (!token) return;
+  const key = String(req.params.teamKey || '');
+  const week = parseInt(req.query.week, 10);
+  if (!/^[\w.-]{3,40}$/.test(key)) return res.status(400).json({ error: 'bad team key' });
+  if (!Number.isInteger(week) || week < 1 || week > 22) return res.status(400).json({ error: 'week must be 1-22' });
+  try {
+    const j = await yahooGet(`/team/${key}/roster;week=${week}/players/stats;type=week;week=${week}`, token);
+    const jugadores = deepCollect(j, 'player', []).map(nodo => {
+      const p = flattenEntity(nodo);
+      if (!p.name || !p.name.full) return null;
+      // selected_position y player_points viven anidados: del nodo crudo.
+      const sel = deepCollect(nodo, 'selected_position', []).map(x => flattenEntity(x))
+        .filter(x => x && x.position)[0] || {};
+      const pts = deepCollect(nodo, 'player_points', []).map(x => flattenEntity(x))
+        .filter(x => x && x.total != null)[0] || {};
+      return {
+        name: p.name.full,
+        pos: p.display_position || '',
+        team: p.editorial_team_abbr || '',
+        slot: sel.position || null,          // QB, WR, W/R, BN, IR...
+        points: pts.total != null ? Number(pts.total) : null
+      };
+    }).filter(Boolean);
+    res.json({ week, players: jugadores });
+  } catch (e) { respondeYahoo(res, e); }
+});
+
+/* ── EL RESTO DEL API DE YAHOO, cableado (2026-09-10) ───────────────────────
+ * Barrido pedido por el dueno. Las tres rutas que faltaban con valor real:
+ * transacciones (traen la PUJA FAAB de cada waiver, el dato que el Waiver Room
+ * necesita para calibrar ligas de Yahoo), resultados del draft (la historia
+ * para el hub) y agentes libres (el mercado de waivers). Todas normalizan al
+ * mismo molde que Sleeper y todas parsean DEFENSIVO: escritas sin poder
+ * verificarse con una sesion real (el OAuth solo cierra en produccion), lo
+ * que devuelvan raro se descarta en vez de romper. */
+
+// GET /api/yahoo/league/:key/transactions
+router.get('/league/:key/transactions', async (req, res) => {
+  const token = exigeToken(req, res); if (!token) return;
+  const key = String(req.params.key || '');
+  if (!/^[\w.-]{3,40}$/.test(key)) return res.status(400).json({ error: 'bad league key' });
+  try {
+    const j = await yahooGet(`/league/${key}/transactions`, token);
+    const out = deepCollect(j, 'transaction', []).map(nodo => {
+      const t = flattenEntity(nodo);
+      if (!t.transaction_key) return null;
+      const jugadores = deepCollect(nodo, 'player', []).map(pn => {
+        const p = flattenEntity(pn);
+        const td = deepCollect(pn, 'transaction_data', []).map(x => flattenEntity(x))[0] || {};
+        return p.name && p.name.full ? {
+          name: p.name.full, pos: p.display_position || '',
+          type: td.type || null,                    // add | drop
+          team_key: td.destination_team_key || td.source_team_key || null
+        } : null;
+      }).filter(Boolean);
+      return {
+        key: t.transaction_key,
+        type: t.type || '',                          // add/drop | trade | commish
+        status: t.status || '',
+        timestamp: numY(t.timestamp, null),
+        // LA PUJA: en waivers FAAB Yahoo la declara aqui. Es el dato que el
+        // Waiver Room necesita para calibrar contra lo que ESTA liga paga.
+        faab_bid: t.faab_bid != null ? numY(t.faab_bid, null) : null,
+        players: jugadores
+      };
+    }).filter(Boolean);
+    res.json({ transactions: out });
+  } catch (e) { respondeYahoo(res, e); }
+});
+
+// GET /api/yahoo/league/:key/draftresults
+router.get('/league/:key/draftresults', async (req, res) => {
+  const token = exigeToken(req, res); if (!token) return;
+  const key = String(req.params.key || '');
+  if (!/^[\w.-]{3,40}$/.test(key)) return res.status(400).json({ error: 'bad league key' });
+  try {
+    const j = await yahooGet(`/league/${key}/draftresults`, token);
+    const out = deepCollect(j, 'draft_result', []).map(x => flattenEntity(x))
+      .filter(d => d && d.pick != null)
+      .map(d => ({
+        pick: numY(d.pick, 0), round: numY(d.round, 0),
+        team_key: d.team_key || null, player_key: d.player_key || null,
+        // en subastas Yahoo pone el precio aqui
+        cost: d.cost != null ? numY(d.cost, null) : null
+      }));
+    res.json({ picks: out });
+  } catch (e) { respondeYahoo(res, e); }
+});
+
+// GET /api/yahoo/league/:key/free-agents?pos=RB&start=0
+// Los 25 mejores agentes libres de la liga, ordenados por el rank actual de
+// Yahoo. Es el universo del Waiver Room en ligas de Yahoo.
+router.get('/league/:key/free-agents', async (req, res) => {
+  const token = exigeToken(req, res); if (!token) return;
+  const key = String(req.params.key || '');
+  if (!/^[\w.-]{3,40}$/.test(key)) return res.status(400).json({ error: 'bad league key' });
+  const pos = String(req.query.pos || '').toUpperCase();
+  const start = Math.max(0, parseInt(req.query.start, 10) || 0);
+  if (pos && !/^(QB|RB|WR|TE|K|DEF)$/.test(pos)) return res.status(400).json({ error: 'bad pos' });
+  try {
+    const filtro = ';status=FA' + (pos ? `;position=${pos}` : '') + `;sort=AR;start=${start};count=25`;
+    const j = await yahooGet(`/league/${key}/players${filtro}`, token);
+    const out = deepCollect(j, 'player', []).map(x => flattenEntity(x))
+      .filter(p => p && p.name && p.name.full)
+      .map(p => ({
+        player_key: p.player_key || null,
+        name: p.name.full,
+        pos: p.display_position || '',
+        team: p.editorial_team_abbr || 'FA',
+        status: p.status || null
+      }));
+    res.json({ players: out, start });
+  } catch (e) { respondeYahoo(res, e); }
+});
+
 // POST /api/yahoo/refresh - un token de acceso dura una hora. El de refresco lo
 // guarda el navegador y se cambia aqui, que es donde vive el secreto de la app.
 router.post('/refresh', async (req, res) => {
