@@ -38,25 +38,11 @@ html.v13{
   --muted:#98948a;
   --muted2:#c7c2b6;
 
-  /* Acento ESMERALDA (variante por defecto). La alternativa cian vive en
-     html.v13.v13-cyan, abajo. Un solo acento, plano, nunca en degradado.
-     Los -rgb alimentan los ~150 tintes rgba(var(--accent-rgb),...) del sitio. */
-  --accent:#2aa579;
-  --accent-bright:#3ecf9a;
-  --accent-btn:#22996f;
-  --accent-dim:rgba(62,207,154,.13);
-  --accent-rgb:62,207,154;
-  --accent-deep-rgb:42,165,121;
-  --accent-btn-rgb:34,153,111;
-
-  --font-head:"General Sans","Familjen Grotesk",system-ui,sans-serif;
-  --font-body:"General Sans","Familjen Grotesk",system-ui,sans-serif;
-}
-
-/* Variante CIAN PROFUNDO: mas lejos del verde semantico de "vas ganando"
-   (con esmeralda, acento y semaforo comparten familia; con cian no hay roce).
-   Se activa con ?v13=cyan para comparar lado a lado. */
-html.v13.v13-cyan{
+  /* Acento CIAN PROFUNDO, elegido por el dueno el 12-sep sobre la comparativa
+     en vivo (gano a la esmeralda: el cian deja el semaforo verde/ambar/rojo
+     completamente solo, nada que no sea dato lleva su color). Un solo acento,
+     plano, nunca en degradado. Los -rgb alimentan los ~150 tintes
+     rgba(var(--accent-rgb),...) del sitio. */
   --accent:#2492ad;
   --accent-bright:#3db8d4;
   --accent-btn:#1f8aa5;
@@ -64,7 +50,14 @@ html.v13.v13-cyan{
   --accent-rgb:61,184,212;
   --accent-deep-rgb:36,146,173;
   --accent-btn-rgb:31,138,165;
+
+  --font-head:"General Sans","Familjen Grotesk",system-ui,sans-serif;
+  --font-body:"General Sans","Familjen Grotesk",system-ui,sans-serif;
 }
+
+/* La variante esmeralda que compitio en el preview murio aqui el 12-sep,
+   cuando el dueno eligio cian. Si algun dia se quiere comparar otro acento,
+   el patron es una clase encima (html.v13.v13-X) con los siete tokens. */
 
 /* El grano de Linear: textura sutil en el fondo en vez de cualquier
    degradado. Un SVG de turbulencia diminuto, repetido, al 3%: se siente mas
