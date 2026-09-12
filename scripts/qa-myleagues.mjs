@@ -175,7 +175,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
 
   const est = await seguro(pg, () => ({
     ligas: (ML.leagues || []).length,
-    tarjetas: document.querySelectorAll('#screen-myleagues .ml-card').length,
+    tarjetas: document.querySelectorAll('#screen-myleagues .ml-liga').length,
     err: ML.err,
     props: !!ML.props,
     conMio: (ML.leagues || []).every(L => L._hyd && L._hyd.mine)
@@ -393,12 +393,12 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     const t = document.querySelector('#screen-myleagues .inner-tab[data-tab="tab-ml-leagues"]');
     if (t) t.click();
     await new Promise(r => setTimeout(r, 900));
-    const cards = [...document.querySelectorAll('#screen-myleagues .ml-card')];
+    const cards = [...document.querySelectorAll('#screen-myleagues .ml-liga')];
     const colores = cards.map(c => c.style.getPropertyValue('--liga')).filter(Boolean);
     const sinEscudo = cards.filter(c => !c.querySelector('.ml-shield, .ml-mono')).length;
     // Un color por liga que cambie entre repintados no sirve para reconocer.
     mlPaintLeagues();
-    const otra = [...document.querySelectorAll('#screen-myleagues .ml-card')].map(c => c.style.getPropertyValue('--liga'));
+    const otra = [...document.querySelectorAll('#screen-myleagues .ml-liga')].map(c => c.style.getPropertyValue('--liga'));
     return {
       cards: cards.length, colores: colores.length,
       distintos: new Set(colores).size, sinEscudo,
@@ -414,6 +414,51 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     identidad.distintos >= Math.min(4, identidad.cards), JSON.stringify(identidad));
   ok('(v4) hay filtros con su conteo', identidad.chips >= 2, JSON.stringify(identidad));
 
+  // --- ANTI-VIBECODED, MEDIDO ---------------------------------------------
+  // La queja del dueno sobre esta pantalla era exacta: N tarjetas identicas en
+  // rejilla perfecta, ninguna manda. La recomposicion Flight Deck (12-sep) dice
+  // que UNA manda con su aro y el resto son filas densas. Eso se mide, no se
+  // confia: como mucho UNA tarjeta, un aro dentro de ella, y toda liga con
+  // duelo que no sea la lider tiene que ser fila.
+  const jerarquia = await seguro(pg, () => {
+    const raiz = document.getElementById('screen-myleagues');
+    const lider = raiz.querySelectorAll('.ml-liga.ml-card');
+    const filas = raiz.querySelectorAll('.ml-liga.ml-lrow');
+    const cifras = [...filas].map(f => f.querySelector('.ml-lrow-n')).filter(Boolean);
+    const cs = cifras[0] ? getComputedStyle(cifras[0]) : null;
+    // Las cifras de todas las filas tienen que caer en la MISMA columna: una
+    // lista con los numeros bailando no se puede barrer de un vistazo.
+    const izq = [...filas].map(f => {
+      const c = f.querySelector('.ml-lrow-cifras');
+      return c ? Math.round(c.getBoundingClientRect().right) : null;
+    }).filter(x => x != null);
+    // El aro del lider SOLO existe fuera de la jornada: en vivo la unica
+    // probabilidad que tenemos es la de antes del partido, y meterla en un aro
+    // rotulado "live" seria la probabilidad inventada que este producto ya
+    // decidio no enseñar. En vivo el veredicto es el marcador.
+    const enVivo = lider.length ? lider[0].classList.contains('is-live') : false;
+    return {
+      lideres: lider.length,
+      enVivo,
+      arosEnLider: lider.length ? lider[0].querySelectorAll('.ml-aro').length : 0,
+      veredictoVivo: lider.length ? lider[0].querySelectorAll('.ml-vs-odds .ml-live').length : 0,
+      filas: filas.length,
+      tabular: cs ? cs.fontVariantNumeric.indexOf('tabular-nums') > -1 : false,
+      columnasDistintas: new Set(izq).size
+    };
+  });
+  ok('(v7) manda UNA sola tarjeta y el resto son filas densas',
+    jerarquia.lideres === 1 && jerarquia.filas === identidad.cards - 1,
+    JSON.stringify(jerarquia));
+  ok('(v7b) el lider lleva su aro, o el marcador en vivo, nunca los dos ni ninguno',
+    jerarquia.enVivo
+      ? (jerarquia.arosEnLider === 0 && jerarquia.veredictoVivo === 1)
+      : (jerarquia.arosEnLider === 1 && jerarquia.veredictoVivo === 0),
+    JSON.stringify(jerarquia));
+  ok('(v8) las cifras de las filas son tabulares y caen todas en la misma columna',
+    jerarquia.filas > 1 && jerarquia.tabular === true && jerarquia.columnasDistintas === 1,
+    JSON.stringify(jerarquia));
+
   const filtrado = await seguro(pg, async () => {
     const chips = [...document.querySelectorAll('#screen-myleagues .ml-chip')];
     const objetivo = chips.filter(c => !/^All/.test(c.textContent))[0];
@@ -422,12 +467,12 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
     const n = parseInt((objetivo.querySelector('span') || {}).textContent || '0', 10);
     objetivo.click();
     await new Promise(r => setTimeout(r, 500));
-    const tras = document.querySelectorAll('#screen-myleagues .ml-card').length;
+    const tras = document.querySelectorAll('#screen-myleagues .ml-liga').length;
     // Control: volver a "All" tiene que devolver TODAS.
     const todo = [...document.querySelectorAll('#screen-myleagues .ml-chip')].filter(c => /^All/.test(c.textContent))[0];
     if (todo) todo.click();
     await new Promise(r => setTimeout(r, 500));
-    return { salta: false, etiqueta, prometido: n, pintadas: tras, vuelta: document.querySelectorAll('#screen-myleagues .ml-card').length };
+    return { salta: false, etiqueta, prometido: n, pintadas: tras, vuelta: document.querySelectorAll('#screen-myleagues .ml-liga').length };
   });
   ok('(v5) el filtro pinta exactamente las que promete su conteo',
     filtrado.salta === true || filtrado.prometido === filtrado.pintadas, JSON.stringify(filtrado));
@@ -512,7 +557,7 @@ console.log('== MY LEAGUES ==  base=' + BASE + '  usuario=' + USER + '\n');
       activa: !!(s && s.classList.contains('active')),
       scroll: document.documentElement.scrollWidth,
       desbordan: anchos,
-      tarjetas: document.querySelectorAll('#screen-myleagues .ml-card').length
+      tarjetas: document.querySelectorAll('#screen-myleagues .ml-liga').length
     };
   });
   ok('(w) a 390px no hay desborde ni elementos fuera de pantalla',

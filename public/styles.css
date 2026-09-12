@@ -3626,3 +3626,69 @@ html:not(.is-app) .app-home-link{display:none}
   .tool-head{gap:4px;margin-bottom:14px}
   .tool-sub{flex-basis:100%}
 }
+
+/* ═══ FASE 2 · FLIGHT DECK: Leagues deja de ser una rejilla de clones ════════
+   La violacion medida: N tarjetas IDENTICAS en rejilla perfecta, y con las
+   trece ligas del dueno una columna de 7.730px donde ninguna manda. Ahora
+   manda UNA (la mas apretada, que es donde todavia puedes hacer algo) con su
+   propio aro, y el resto son filas densas. Una entrada por liga sigue siendo
+   el invariante: las dos formas llevan .ml-liga. */
+/* El aro de la tarjeta lider es MAS CHICO que el de la cabecera a proposito:
+   el de arriba resume la semana entera y este es una liga. Dos aros del mismo
+   tamaño seguidos se leen como el mismo dato dos veces (y en la demo, con seis
+   ligas, la media hasta coincide con el lider). */
+.ml-card.is-lead{
+  display:grid;grid-template-columns:74px minmax(0,1fr);gap:16px;align-items:start;
+  padding:18px;margin-bottom:14px;
+  border-color:var(--border2);
+}
+/* El duelo del lider no se estira a todo lo ancho: con 1.150px entre los dos
+   marcadores dejan de leerse como un enfrentamiento. */
+.ml-card.is-lead .ml-vs{max-width:520px}
+/* Sin aro (jornada en marcha): el cuerpo ocupa la tarjeta entera. */
+.ml-card.is-lead.is-live{grid-template-columns:minmax(0,1fr)}
+.ml-card.is-lead.is-live .ml-vs-odds{font-size:14px}
+.ml-lead-aro{padding-top:2px}
+.ml-lead-body{display:flex;flex-direction:column;gap:11px;min-width:0}
+.ml-card.is-lead .ml-vs-num{font-size:26px}
+.ml-card.is-lead .ml-card-h h3{font-size:19px}
+
+/* La lista. Filas, hilo entre ellas, cero tarjeta y cero sombra. La rejilla es
+   fija para que los marcadores de todas las ligas caigan en la MISMA columna:
+   la pantalla existe para barrerlas de un vistazo. */
+.ml-rows-ligas{display:flex;flex-direction:column}
+.ml-lrow{
+  display:grid;grid-template-columns:34px minmax(0,1fr) auto 62px;
+  align-items:center;gap:12px;padding:10px 4px;
+  border-bottom:1px solid var(--border);cursor:pointer;
+  transition:background .15s ease;
+}
+.ml-lrow:last-child{border-bottom:0}
+.ml-lrow:hover{background:var(--surface2)}
+.ml-lrow:focus-visible{outline:2px solid var(--accent-bright);outline-offset:-2px;border-radius:8px}
+.ml-lrow-id{min-width:0}
+/* Sin ellipsis: el nombre de la liga NO se corta. Envuelve si hace falta. */
+.ml-lrow-id b{display:block;font-size:13.5px;font-weight:600;line-height:1.3;color:var(--text)}
+.ml-lrow-champ{color:var(--yellow);font-size:11px;margin-left:5px;vertical-align:1px}
+.ml-lrow-meta{display:block;font-size:11px;color:var(--muted);line-height:1.45;margin-top:1px}
+.ml-lrow-cifras{display:flex;align-items:baseline;gap:7px;justify-self:end;white-space:nowrap}
+.ml-lrow-n{font-size:15px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ml-lrow-n.is-them{color:var(--muted2)}
+.ml-lrow-at{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-style:normal}
+.ml-lrow-nota{font-size:11.5px;color:var(--muted)}
+.ml-lrow-v{justify-self:end;font-size:13px;font-weight:600;text-align:right;
+  font-variant-numeric:tabular-nums;color:var(--muted2)}
+.ml-lrow-v.is-fav{color:var(--green)}
+.ml-lrow-v.is-dog{color:var(--yellow)}
+.ml-lrow-v.ml-live{font-size:12px;gap:4px}
+
+@media(max-width:700px){
+  .ml-card.is-lead{grid-template-columns:66px minmax(0,1fr);gap:12px;padding:15px}
+  .ml-card.is-lead .ml-vs-num{font-size:22px}
+  .ml-card.is-lead .ml-card-h h3{font-size:16.5px}
+  /* En el telefono el marcador y el veredicto bajan a su propio renglon:
+     cuatro columnas en 390px dejarian el nombre de la liga en 90px. */
+  .ml-lrow{grid-template-columns:30px minmax(0,1fr) 56px;gap:9px;row-gap:6px;padding:10px 2px}
+  .ml-lrow-cifras{grid-column:2;grid-row:2;justify-self:start}
+  .ml-lrow-v{grid-column:3;grid-row:1/span 2;align-self:center}
+}

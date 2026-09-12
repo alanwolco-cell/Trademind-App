@@ -1479,70 +1479,138 @@ function mlPaintLeagues() {
   h += mlPanelAlineaciones();
   h += mlRecapCard();
 
-  h += '<div class="ml-grid">';
-  visibles.forEach(function (L) {
-    var H = L._hyd, mine = H.mine;
-    var color = mlLigaColor(L);
+  // ── Flight Deck (12-sep) ───────────────────────────────────────────────────
+  // Antes esto eran N tarjetas IDENTICAS en rejilla perfecta: con las trece
+  // ligas del dueno, una columna de 7.730px donde ninguna manda y todas pesan
+  // igual. Ahora manda UNA: la primera del orden (la mas apretada, que es
+  // donde todavia puedes hacer algo) va de tarjeta grande CON SU ARO, y el
+  // resto baja a filas densas sin tarjeta, que es como lista Sleeper.
+  // Las dos formas comparten la clase .ml-liga: una entrada por liga, sea
+  // tarjeta o fila, que es el invariante que mide el gate.
+  var lider = visibles.filter(function (L) {
+    return mlDrafted(L) && L._hyd && L._hyd.opp != null;
+  })[0] || null;
+  var resto = visibles.filter(function (L) { return L !== lider; });
+
+  if (lider) h += mlTarjetaLider(lider);
+  if (resto.length) h += '<div class="ml-rows-ligas">' + resto.map(mlFilaLiga).join('') + '</div>';
+  h += mlPieLigas(orden);
+  box.innerHTML = h;
+  if (window.tmPushMontar) tmPushMontar();
+  mlCargarRecap();
+}
+
+/* ------------------------------------------------- la tarjeta que SI manda */
+// El aro de esta liga (WHOOP a escala de tarjeta) + el duelo. Es la unica
+// tarjeta de la pantalla: si todo es tarjeta, nada destaca.
+function mlTarjetaLider(L) {
+  var H = L._hyd, mine = H.mine;
+  var myProj = (H.proj[mine.roster_id] || {}).total || 0;
+  var oppId = H.opp;
+  var oppProj = ((H.proj[oppId] || {}).total || 0);
+  var vivo = mlEnVivo(L);
+  var wp = mlWinProb(myProj, oppProj);
+  var favorito = myProj >= oppProj;
+  var izq = vivo ? mlN(vivo.mio) : mlN(myProj);
+  var der = vivo ? mlN(vivo.suyo) : mlN(oppProj);
+  // Con la jornada EN MARCHA no hay aro: la probabilidad que tenemos es la de
+  // ANTES del partido, y pintarla dentro de un aro rotulado "live" es
+  // exactamente la probabilidad inventada que este producto ya decidio no
+  // enseñar (arbitraje del 11-sep sobre las filas vivas). En vivo el veredicto
+  // es el marcador, y lo dice la linea de abajo.
+  return '<article class="ml-liga ml-card is-lead' + (vivo ? ' is-live' : '') + '" style="--liga:' + mlLigaColor(L) + '"'
+    + mlAbre(L) + '>'
+    + (vivo ? '' : '<div class="ml-lead-aro">' + mlAro(mlPct(wp), 74, 'to win') + '</div>')
+    + '<div class="ml-lead-body">'
+    + '<header class="ml-card-h">' + mlLigaEscudo(L, 'is-lg')
+    + '<div class="ml-card-id"><h3>' + mlEsc(L.name) + '</h3>'
+    + '<span class="ml-card-sub">' + (L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper') + '</span></div>'
+    + (mlRecord(mine) === '0-0' ? '' : '<span class="ml-rec mono">' + mlRecord(mine) + '</span>') + '</header>'
+    + mlBanderas(L, mine)
+    + '<div class="ml-vs">'
+    + '<div class="ml-vs-side">' + mlTeamEscudo(L, mine.roster_id, 'is-sm')
+    + '<span class="ml-vs-lbl">You</span><span class="mono ml-vs-num">' + izq + '</span></div>'
+    + '<div class="ml-vs-mid"><span class="ml-vs-at">' + (vivo ? 'live' : 'vs') + '</span></div>'
+    + '<div class="ml-vs-side ml-vs-opp">' + mlTeamEscudo(L, oppId, 'is-sm')
+    + '<span class="ml-vs-lbl">' + mlEsc(mlTeamName(L, oppId)) + '</span>'
+    + '<span class="mono ml-vs-num">' + der + '</span></div>'
+    + '</div>'
+    // En vivo manda el marcador y el aro se rotula "live": dos veredictos en
+    // el mismo plano jamas (veredicto Jobs, 11-sep).
+    + (vivo
+      ? '<div class="ml-vs-odds ' + (favorito ? 'is-fav' : 'is-dog') + '"><span class="ml-live"><i></i>'
+        + (vivo.mio >= vivo.suyo ? 'winning by ' + mlN(vivo.mio - vivo.suyo) : 'down ' + mlN(vivo.suyo - vivo.mio))
+        + '</span></div>'
+      : '')
+    + '</div></article>';
+}
+
+/* --------------------------------------------------- las demas, como filas */
+// Fila densa estilo Sleeper: escudo, nombre, reglamento, marcador en mono y
+// UNA cifra de veredicto. Sin tarjeta, sin sombra, sin borde propio.
+function mlFilaLiga(L) {
+  var H = L._hyd, mine = H.mine;
+  var vivo = mlEnVivo(L);
+  var oppId = H.opp;
+  var cifras = '', veredicto = '';
+  if (!mlDrafted(L)) {
+    var cuando = mlCuandoDraftea(L);
+    cifras = '<span class="ml-lrow-nota">' + (cuando ? mlEsc(cuando) : 'Rosters are not set yet.') + '</span>';
+  } else if (oppId != null) {
     var myProj = (H.proj[mine.roster_id] || {}).total || 0;
-    var oppId = H.opp;
-    var oppProj = oppId != null ? ((H.proj[oppId] || {}).total || 0) : null;
-    var vivo = mlEnVivo(L);
-    var cuerpo = '';
+    var oppProj = (H.proj[oppId] || {}).total || 0;
+    var wp = mlWinProb(myProj, oppProj);
+    var favorito = myProj >= oppProj;
+    cifras = '<span class="mono ml-lrow-n">' + (vivo ? mlN(vivo.mio) : mlN(myProj)) + '</span>'
+      + '<i class="ml-lrow-at">' + (vivo ? 'live' : 'vs') + '</i>'
+      + '<span class="mono ml-lrow-n is-them">' + (vivo ? mlN(vivo.suyo) : mlN(oppProj)) + '</span>';
+    veredicto = vivo
+      ? '<span class="ml-lrow-v ml-live"><i></i>' + (vivo.mio >= vivo.suyo ? '+' : '−') + mlN(Math.abs(vivo.mio - vivo.suyo)) + '</span>'
+      : '<span class="ml-lrow-v mono ' + (favorito ? 'is-fav' : 'is-dog') + '">' + mlPct(wp) + '%</span>';
+  } else {
+    cifras = '<span class="ml-lrow-nota">No matchup this week</span>';
+  }
+  return '<div class="ml-liga ml-lrow" style="--liga:' + mlLigaColor(L) + '"' + mlAbre(L) + '>'
+    + mlLigaEscudo(L, '')
+    + '<div class="ml-lrow-id"><b>' + mlEsc(L.name)
+    + (L.champId != null && L.champId === mine.roster_id ? '<span class="ml-lrow-champ" title="Defending champion">&#9733;</span>' : '')
+    + '</b><span class="ml-lrow-meta">' + mlBanderasTexto(L, mine) + '</span></div>'
+    + '<div class="ml-lrow-cifras">' + cifras + '</div>'
+    + veredicto + '</div>';
+}
 
-    if (!mlDrafted(L)) {
-      var cuando = mlCuandoDraftea(L);
-      cuerpo = '<div class="ml-vs-none">' + (cuando
-        ? '<b class="ml-when">' + mlEsc(cuando) + '</b>'
-        : 'Rosters are not set yet.') + '</div>';
-    } else if (oppId != null) {
-      var wp = mlWinProb(myProj, oppProj);
-      var favorito = myProj >= oppProj;
-      // Con la jornada en marcha manda el MARCADOR; la proyeccion baja a letra
-      // chica. Al reves seria enseñar el pronostico del tiempo durante la
-      // tormenta.
-      var izq = vivo ? mlN(vivo.mio) : mlN(myProj);
-      var der = vivo ? mlN(vivo.suyo) : mlN(oppProj);
-      cuerpo = '<div class="ml-vs">'
-        + '<div class="ml-vs-side">' + mlTeamEscudo(L, mine.roster_id, 'is-sm')
-        + '<span class="ml-vs-lbl">You</span><span class="mono ml-vs-num">' + izq + '</span></div>'
-        + '<div class="ml-vs-mid"><span class="ml-vs-at">' + (vivo ? 'live' : 'vs') + '</span></div>'
-        + '<div class="ml-vs-side ml-vs-opp">' + mlTeamEscudo(L, oppId, 'is-sm')
-        + '<span class="ml-vs-lbl">' + mlEsc(mlTeamName(L, oppId)) + '</span>'
-        + '<span class="mono ml-vs-num">' + der + '</span></div>'
-        + '</div>'
-        // UNA cifra de veredicto por tarjeta (veredicto Jobs 11-sep): en vivo
-        // el delta del marcador; antes, el porcentaje en texto plano. El
-        // spread firmado se leia al reves (el menos del favorito) y el aro
-        // chico era el mismo trazo del aro grande a otra escala.
-        + '<div class="ml-vs-odds ' + (favorito ? 'is-fav' : 'is-dog') + '">'
-        + (vivo
-          ? '<span class="ml-live"><i></i>' + (vivo.mio >= vivo.suyo ? 'winning by ' + mlN(vivo.mio - vivo.suyo) : 'down ' + mlN(vivo.suyo - vivo.mio)) + '</span>'
-          : '<span>' + mlPct(wp) + '% to win</span>')
-        + '</div>';
-    } else {
-      cuerpo = '<div class="ml-vs-none">No matchup this week</div>';
-    }
+// Toda la entrada abre el matchup (pedido del dueno): los botones de adentro
+// paran la propagacion por ser <button>, el manejador los filtra.
+function mlAbre(L) {
+  return mlDrafted(L) && L._hyd.opp != null
+    ? ' role="button" tabindex="0" onclick="mlCardClick(event,\'' + L.id + '\')" onkeydown="if(event.key===\'Enter\')mlOpenMatchup(\'' + L.id + '\')"' : '';
+}
+// El reglamento de la liga: una sola fuente para la tarjeta y para la fila.
+function mlFlags(L, mine) {
+  var f = [mlFormat(L), mlScoringLabel(L) + (L._scoringGuess ? ' (assumed)' : ''), L.teams + ' teams'];
+  if (mlSuperflex(L)) f.push('Superflex');
+  if (mlEsIdp(L)) f.push('IDP');
+  return f;
+}
+function mlBanderas(L, mine) {
+  var esCampeon = L.champId != null && L.champId === mine.roster_id;
+  return (esCampeon ? '<div class="ml-champ-tag">Defending champion</div>' : '')
+    + '<div class="ml-flags">' + mlFlags(L, mine).map(function (f) {
+      return '<span>' + mlEsc(f) + '</span>';
+    }).join('') + '</div>';
+}
+// En la fila el reglamento va como texto seguido y no como capsulas: cinco
+// capsulas por fila en una lista de doce son sesenta capsulas.
+function mlBanderasTexto(L, mine) {
+  var partes = mlFlags(L, mine);
+  var rec = mlRecord(mine);
+  if (rec !== '0-0') partes.push(rec);
+  return partes.map(mlEsc).join(' <i class="ml-dot">·</i> ');
+}
 
-    var flags = [mlFormat(L), mlScoringLabel(L) + (L._scoringGuess ? ' (assumed)' : ''), L.teams + ' teams'];
-    if (mlSuperflex(L)) flags.push('Superflex');
-    if (mlEsIdp(L)) flags.push('IDP');
-    var esCampeon = L.champId != null && L.champId === mine.roster_id;
-
-    // Toda la tarjeta abre el matchup (pedido del dueno): los botones de
-    // adentro paran la propagacion por ser <button>, el manejador los filtra.
-    var abre = mlDrafted(L) && H.opp != null
-      ? ' role="button" tabindex="0" onclick="mlCardClick(event,\'' + L.id + '\')" onkeydown="if(event.key===\'Enter\')mlOpenMatchup(\'' + L.id + '\')"' : '';
-    h += '<article class="ml-card' + (L === visibles[0] && mlDrafted(L) && H.opp != null ? ' is-lead' : '') + '" style="--liga:' + color + '"' + abre + '>'
-      + '<header class="ml-card-h">' + mlLigaEscudo(L, 'is-lg')
-      + '<div class="ml-card-id"><h3>' + mlEsc(L.name) + '</h3>'
-      + '<span class="ml-card-sub">' + (L.plat === 'yahoo' ? 'Yahoo' : 'Sleeper') + '</span></div>'
-      + (mlRecord(mine) === '0-0' ? '' : '<span class="ml-rec mono">' + mlRecord(mine) + '</span>') + '</header>'
-      + (esCampeon ? '<div class="ml-champ-tag">Defending champion</div>' : '')
-      + '<div class="ml-flags">' + flags.map(function (f) { return '<span>' + mlEsc(f) + '</span>'; }).join('') + '</div>'
-      + cuerpo
-      + '</article>';
-  });
-  h += '</div>';
+/* -------------------------------------------------------------- el pie */
+function mlPieLigas(orden) {
+  var h = '';
   // El pie: las dos acciones de UNA VEZ (conectar Yahoo, abrir una liga con un
   // codigo). Encontrables, pero fuera del camino de lo que se mira a diario.
   if (!ML.demo) {
@@ -1560,9 +1628,7 @@ function mlPaintLeagues() {
       + (mlYahooConectado() ? '' : '<span class="ml-hint" style="flex-basis:100%">Yahoo leagues connect per device. If yours are missing here, tap Sign in with Yahoo on this device once.</span>')
       + '</footer>';
   }
-  box.innerHTML = h;
-  if (window.tmPushMontar) tmPushMontar();
-  mlCargarRecap();
+  return h;
 }
 
 /* ------------------------------------------------------------------ el aro */

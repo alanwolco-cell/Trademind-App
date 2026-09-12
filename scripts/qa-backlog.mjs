@@ -78,14 +78,26 @@ async function nuevaPagina(w, h, movil) {
   const pg = await nuevaPagina(390, 844, true);
   await pg.addInitScript(u => { try { localStorage.setItem('tm_username', u); } catch (_) { } }, USER);
   await pg.goto(BASE + '/myleagues', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  // La hidratacion de ~12 ligas tarda; se espera a que haya tarjetas.
-  await pg.waitForSelector('.ml-card', { timeout: 90000 }).catch(() => { });
+  // La hidratacion de ~12 ligas tarda; se espera a que haya entradas de liga.
+  // OJO: desde la recomposicion Flight Deck del 12-sep una liga se pinta de DOS
+  // formas, tarjeta lider (.ml-card, reglamento en capsulas .ml-flags) o fila
+  // densa (.ml-lrow, reglamento como texto seguido). Las dos llevan .ml-liga,
+  // que es el invariante "una entrada por liga"; este lector entiende las dos,
+  // porque un gate que solo mira la tarjeta deja de ver once de las doce ligas.
+  await pg.waitForSelector('.ml-liga', { timeout: 90000 }).catch(() => { });
   await pg.waitForTimeout(2500);
 
-  const ligas = await pg.evaluate(() => Array.from(document.querySelectorAll('.ml-card')).map(c => ({
-    nombre: (c.querySelector('h3') || {}).textContent || '',
-    formato: (c.querySelector('.ml-flags span') || {}).textContent || ''
-  })));
+  const ligas = await pg.evaluate(() => Array.from(document.querySelectorAll('.ml-liga')).map(c => {
+    const fila = c.classList.contains('ml-lrow');
+    const meta = (c.querySelector('.ml-lrow-meta') || {}).textContent || '';
+    return {
+      nombre: ((fila ? c.querySelector('.ml-lrow-id b') : c.querySelector('h3')) || {}).textContent || '',
+      // el reglamento empieza SIEMPRE por el formato, en las dos formas
+      formato: fila
+        ? meta.split('\u00b7')[0].trim()
+        : ((c.querySelector('.ml-flags span') || {}).textContent || '')
+    };
+  }));
   const chopped = ligas.filter(l => /chopped/i.test(l.nombre));
   ok('(1a) las ligas Chopped del dueno estan en la parrilla', chopped.length >= 2,
     'vistas: ' + ligas.length + ' | chopped: ' + JSON.stringify(chopped));
