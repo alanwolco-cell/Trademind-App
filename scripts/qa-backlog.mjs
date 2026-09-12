@@ -309,6 +309,85 @@ const LIGA_SIN_TRADES = '1402829686446268416';
   await pg.close();
 }
 
+/* ── 8: la fila de Buy/Sell tras la recomposicion Flight Deck (12-sep) ──────
+   Dos cosas que la pantalla no tenia y una que se rompio al hacerlas.
+   (8a) la fila dice la CIFRA del movimiento de 30 dias, en mono tabular. Antes
+        decia "Rising fast" donde va un numero: la pantalla entera existe para
+        comparar movimientos y no pintaba ni uno.
+   (8b) la fila ENTERA es el boton que abre el porque, y abre al PRIMER toque.
+        Este check es la razon de que exista el bloque: al mover el estado
+        cerrado de un style inline a la clase .bs-why, toggleBsWhy siguio
+        preguntando por w.style.display, que con la fila cerrada ya venia
+        VACIO, asi que el primer toque cerraba algo ya cerrado y no pasaba
+        nada. Se toca DOS veces, porque un check de un solo toque pasaba
+        igual con el fallo invertido. */
+{
+  const pg = await nuevaPagina(390, 844, true);
+  await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.waitForFunction(() => typeof loadUser === 'function', { timeout: 30000 });
+  await pg.evaluate(([u, lid]) => {
+    document.getElementById('sleeper-username').value = u;
+    return loadUser(lid);
+  }, [USER, LIGA_REDRAFT]);
+  // Hay que dejar que loadUser TERMINE y deje su rastro antes de navegar: ir a
+  // /research en caliente recarga la pagina a mitad de la carga y la liga se
+  // restaura vacia, con lo que Buy/Sell no tiene de que hablar (y el check
+  // fallaba por la prisa del gate, no por el producto).
+  await pg.waitForFunction(() => window.leagueRosters && leagueRosters.length > 0, { timeout: 40000 }).catch(() => { });
+  await pg.goto(BASE + '/research', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.waitForFunction(() => window.leagueRosters && leagueRosters.length > 0, { timeout: 40000 }).catch(() => { });
+  await pg.waitForTimeout(1500);
+  await pg.evaluate(() => {
+    const t = [...document.querySelectorAll('#screen-research .inner-tab')]
+      .find(x => (x.getAttribute('onclick') || '').includes("'tab-buysell'"));
+    if (t) t.click();
+  });
+  const hayFilas = await pg.waitForFunction(
+    () => document.querySelectorAll('#buysell-content .bs-row').length > 0,
+    { timeout: 40000 }).then(() => true).catch(() => false);
+
+  const cifra = await pg.evaluate(() => {
+    const nums = [...document.querySelectorAll('#buysell-content .bs-move-num')];
+    if (!nums.length) return { n: 0 };
+    const cs = getComputedStyle(nums[0]);
+    return {
+      n: nums.length,
+      // toda cifra visible tiene que ser un numero con signo, no una palabra
+      todasNumero: nums.every(x => /^[+−-]?[\d,]+$/.test(x.textContent.trim())),
+      mono: /mono/i.test(cs.fontFamily),
+      tabular: cs.fontVariantNumeric.indexOf('tabular-nums') > -1
+    };
+  });
+  ok('(8a) la fila de Buy/Sell pinta la CIFRA del movimiento, en mono tabular',
+    hayFilas && cifra.n > 0 && cifra.todasNumero === true && cifra.mono === true && cifra.tabular === true,
+    JSON.stringify(cifra));
+
+  const cerrado0 = await pg.evaluate(() => {
+    const w = document.querySelector('#buysell-content .bs-why');
+    return w ? getComputedStyle(w).display : 'sin-why';
+  });
+  let abre1 = 'no-toco', cierra2 = 'no-toco';
+  try {
+    await pg.locator('#buysell-content .bs-main').first().tap();
+    await pg.waitForTimeout(350);
+    abre1 = await pg.evaluate(() => {
+      const w = document.querySelector('#buysell-content .bs-why');
+      const c = document.querySelector('#buysell-content .bs-caret');
+      return (w ? getComputedStyle(w).display : 'sin-why') + '|' + (c && c.classList.contains('is-open') ? 'flecha-girada' : 'flecha-quieta');
+    });
+    await pg.locator('#buysell-content .bs-main').first().tap();
+    await pg.waitForTimeout(350);
+    cierra2 = await pg.evaluate(() => {
+      const w = document.querySelector('#buysell-content .bs-why');
+      return w ? getComputedStyle(w).display : 'sin-why';
+    });
+  } catch (_) { }
+  ok('(8b) UN toque en la fila abre el porque (y el segundo lo cierra)',
+    cerrado0 === 'none' && abre1 === 'block|flecha-girada' && cierra2 === 'none',
+    'cerrada:' + cerrado0 + ' toque1:' + abre1 + ' toque2:' + cierra2);
+  await pg.close();
+}
+
 ok('(z) consola limpia', errsConsola.length === 0, errsConsola.slice(0, 5).join(' | '));
 
 await b.close();

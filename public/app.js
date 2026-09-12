@@ -8899,17 +8899,23 @@ function renderBuySell(){
     var col=posColors[p.pos]||'var(--muted)';
     var trendCol=p.trend>0?'var(--green)':'var(--red)';
     var trendStr=trendWord(p.trend).txt;
+    // La CIFRA del movimiento, que es el dato entero de esta pantalla y no se
+    // pintaba en ninguna parte: la fila decia "Rising fast" donde iba un
+    // numero. Ahora manda la cifra en mono tabular y la palabra queda debajo,
+    // que ademas es la que da el umbral (trendLabel es el vocabulario unico).
+    var tn=Math.round(Number(p.trend)||0);
+    var trendNum=(tn>0?'+':tn<0?'−':'')+Math.abs(tn).toLocaleString('en-US');
     return '<div class="bs-row">'
-      +'<div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleBsWhy('+idx+')">'
-      +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex-shrink:0" onclick="event.stopPropagation();openBsCard('+idx+')" onerror="this.style.display=\'none\'">'
-      +'<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">'+p.name
+      +'<div class="bs-main" onclick="toggleBsWhy('+idx+')">'
+      +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" class="bs-face" onclick="event.stopPropagation();openBsCard('+idx+')" onerror="this.style.display=\'none\'">'
+      +'<div class="bs-id"><div class="bs-name">'+p.name
       +' <span style="font-size:10px;font-weight:700;color:'+col+'">'+p.pos+'</span>'
       +(p.age?'<span style="font-size:10px;color:var(--muted);margin-left:4px">Age '+p.age+'</span>':'')+'</div>'
-      +'<div style="font-size:11px;color:var(--muted)">'+(p.posRank?p.pos+' #'+p.posRank:playerTierLabel(p.value).short)+' · '+teamLogo(p.team)+(p.team||'FA')+'</div></div>'
-      +'<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:'+trendCol+'">'+trendStr+'</div>'
-      +'<div style="font-size:10px;color:var(--muted)">30d</div></div>'
-      +'<span id="bs-caret-'+idx+'" style="font-size:10px;color:var(--accent-bright);font-weight:700;white-space:nowrap;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:100px;padding:3px 10px">Why?</span></div>'
-      +(p.reason?'<div id="bs-why-'+idx+'" style="display:none;font-size:11px;color:var(--muted2);line-height:1.6;padding:10px 2px 2px 40px;margin-top:6px;border-top:1px solid var(--border)">'+p.reason+'</div>':'')
+      +'<div class="bs-meta">'+(p.posRank?p.pos+' #'+p.posRank:playerTierLabel(p.value).short)+' · '+teamLogo(p.team)+(p.team||'FA')+'</div></div>'
+      +'<div class="bs-move"><div class="bs-move-num" style="color:'+trendCol+'">'+trendNum+'</div>'
+      +'<div class="bs-move-word">'+trendStr+'</div></div>'
+      +'<span id="bs-caret-'+idx+'" class="bs-caret" aria-hidden="true">&#9656;</span></div>'
+      +(p.reason?'<div id="bs-why-'+idx+'" class="bs-why">'+p.reason+'</div>':'')
       +'</div>';
   }
   function section(pill,pillClass,list,empty){
@@ -8947,9 +8953,15 @@ function toggleBsWhy(idx){
   var w=document.getElementById('bs-why-'+idx);
   var c=document.getElementById('bs-caret-'+idx);
   if(!w)return;
-  var open=w.style.display!=='none';
-  w.style.display=open?'none':'block';
-  if(c)c.textContent=open?'Why?':'Hide';
+  // Por CLASE y no por style.display. El estado cerrado ahora lo pone el CSS
+  // (.bs-why), asi que w.style.display arranca VACIO: preguntarle si era
+  // distinto de 'none' devolvia true con la fila cerrada y el primer toque no
+  // hacia nada. Lo cazo tocando la fila en el telefono, no el gate.
+  var abre=!w.classList.contains('is-open');
+  w.classList.toggle('is-open',abre);
+  // El texto "Why?/Hide" era una chapa cian por fila: veinte acentos en una
+  // lista. Ahora la fila entera es el boton y solo gira su punta de flecha.
+  if(c){c.classList.toggle('is-open',abre);c.parentElement.setAttribute('aria-expanded',String(abre));}
 }
 function openBsCard(idx){
   var p=window._bsPlayers&&window._bsPlayers[idx];

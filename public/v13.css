@@ -81,3 +81,25 @@ html.v13 h1, html.v13 h2, html.v13 h3{letter-spacing:-.018em}
    el degradado decorativo: la firma pasa a ser el acento PLANO. Un token, los
    cinco sitios. */
 html.v13{--tm-grad:var(--accent)}
+
+/* ═══ FASE 2 · FLIGHT DECK: las listas dejan de ser rejillas de tarjetas ══════
+   Estas reglas viven aqui y no en styles.css a proposito: pisan a theme.css,
+   que carga despues de styles.css. Lo nuevo de cero (clases .bs-*) va en
+   styles.css como manda el repo; lo que RE-DEFINE algo existente, aqui.
+
+   Buy/Sell pintaba veinte tarjetas identicas, cada una con su fondo, su borde
+   redondeado y un filo cian de 2px a la izquierda: veinte acentos en una
+   pantalla que solo deberia llevar uno. Y cada fila decia "Rising fast" donde
+   iba un numero. Regla de Sleeper: una lista son filas densas, y el color
+   saturado solo donde significa algo (aqui, el signo del movimiento). */
+html.v13 .bs-row{
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--border);
+  border-radius:0;
+  padding:9px 2px;
+  margin-bottom:0;
+}
+html.v13 .bs-row::before{display:none}          /* el filo cian por fila */
+html.v13 .bs-row:hover{background:var(--surface2);border-color:var(--border2)}
+html.v13 .bs-row:last-child{border-bottom:0}
