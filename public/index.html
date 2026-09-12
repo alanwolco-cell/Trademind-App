@@ -83,18 +83,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091204">
+<link rel="stylesheet" href="/styles.css?v=2026091205">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091204" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091205" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091204">
+<link rel="stylesheet" href="/theme.css?v=2026091205">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091204">
+<link rel="stylesheet" href="/home.css?v=2026091205">
 <!-- v13 FLIGHT DECK, el vestido vivo desde el 2026-09-12 (direccion y acento
      cian elegidos por el dueno sobre el preview en vivo). Es una CAPA sobre
      v12 (el html lleva las dos clases arriba) y carga EL ULTIMO para ganar la
@@ -103,7 +103,7 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
      vuelo.mp4 y las imagenes fijas de iOS) sigue en los colores viejos A
      PROPOSITO: son un juego atado por la ley del primer fotograma identico y
      se regeneran JUNTOS en su propio commit. -->
-<link rel="stylesheet" href="/v13.css?v=2026091204">
+<link rel="stylesheet" href="/v13.css?v=2026091205">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -117,7 +117,7 @@ if(_skin){
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   document.querySelectorAll('link[href^="/v13.css"]').forEach(function(l){l.remove();});
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091204">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091205">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -623,42 +623,51 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="result-panel" id="result-panel">
 
         <div id="vs-arena-box"></div>
+        <!-- Flight Deck: el chequeo de signos vitales de un trade. El ARO manda
+             (la brecha de valor, una sola cifra), el veredicto y su rotulo van
+             AL LADO del titular y no apilados, y Mac es un avatar chico y
+             constante, nunca un poster. La barra de balance de antes vivia en
+             su propia tarjeta repitiendo el mismo dato que el aro: se fundio
+             aqui, con los nombres de cada lado en una fila densa. -->
         <div class="verdict-card" id="verdict-card">
           <div class="verdict-top">
-            <!-- REX -->
+            <div class="vd-ring" id="vd-ring">
+              <svg viewBox="0 0 96 96" aria-hidden="true">
+                <circle class="vd-ring-bg" cx="48" cy="48" r="41"/>
+                <circle class="vd-ring-fg" id="vd-ring-arc" cx="48" cy="48" r="41"/>
+              </svg>
+              <div class="vd-ring-num" id="vd-ring-num">-</div>
+              <div class="vd-ring-sub" id="vd-ring-sub">value edge</div>
+            </div>
+            <div class="verdict-right">
+              <div class="vd-head">
+                <div class="verdict-headline" id="verdict-headline">-</div>
+                <div class="vd-tag" id="balance-label">-</div>
+              </div>
+              <div class="verdict-body" id="verdict-body">-</div>
+              <div class="vd-sides">
+                <div class="vd-side" id="you-give-label">You give</div>
+                <div class="vd-side vd-side-get" id="you-get-label">You get</div>
+              </div>
+            </div>
+            <!-- Mac: mismo nodo de siempre (setSageState le cambia la clase para
+                 la expresion); lo que cambia es el tamaño y su sitio. -->
             <div class="sage-wrap" id="sage-wrap">
               <img class="sage-asset" id="sage-owl" src="/sage/sage-256.png" alt="Mac" style="object-fit:contain">
               <div class="sage-tag">Mac</div>
             </div>
-            <!-- Verdict text -->
-            <div class="verdict-right">
-              <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem">Mac says...</div>
-              <div class="verdict-headline" id="verdict-headline" style="font-family:var(--font-head);font-size:28px;font-weight:700;letter-spacing:-.03em;margin-bottom:.5rem">-</div>
-              <div class="verdict-body" id="verdict-body" style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:.75rem">-</div>
-            </div>
           </div>
+          <!-- La regla del balance: el mismo dato que el aro, dicho como
+               posicion en vez de como cifra. Un hilo de 3px bajo el veredicto,
+               no una tarjeta acolchada con su propio titulo. -->
+          <div class="vd-balance"><div id="balance-bar"></div><span class="vd-balance-mid"></span></div>
 
           <!-- OPPONENT PERCEPTION - how will they see this offer -->
           <div id="opp-perception" style="display:none;margin-bottom:1rem;padding:.625rem .875rem;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)">
-            <span style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em">How they'll see it · </span>
+            <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">How they'll see it · </span>
             <span id="opp-perception-text" style="font-size:12px;color:var(--muted2)">-</span>
           </div>
 
-          <!-- TRADE BALANCE BAR -->
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Trade Balance</div>
-              <div style="font-size:12px;color:var(--muted)" id="balance-label">-</div>
-            </div>
-            <div style="position:relative;height:10px;background:var(--surface3);border-radius:5px;overflow:hidden">
-              <div id="balance-bar" style="position:absolute;top:0;height:100%;border-radius:5px;transition:all 1s cubic-bezier(.4,0,.2,1);width:50%;left:0"></div>
-              <div style="position:absolute;top:0;left:50%;width:2px;height:100%;background:var(--border2)"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-top:4px">
-              <div style="font-size:11px;color:var(--muted)" id="you-give-label">You give</div>
-              <div style="font-size:11px;color:var(--muted)" id="you-get-label">You get</div>
-            </div>
-          </div>
         </div>
 
         <button class="breakdown-toggle" onclick="toggleBreakdown()">
@@ -708,7 +717,6 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
         <div class="signals-card" style="margin-bottom:12px">
           <div class="signal-title" style="display:flex;align-items:center;justify-content:space-between">Reading your opponent<span id="opp-explain-toggle" onclick="toggleOppExplain()" style="font-size:10px;font-weight:500;color:var(--accent-bright);cursor:pointer;letter-spacing:0;text-transform:none">How we calculate this ▾</span></div>
           <div id="opp-explain-box" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted2);line-height:1.7">These are <strong style="color:var(--text)">behavioral estimates, not probabilities</strong>. We build them from two real signals: their <strong style="color:var(--text)">roster shape</strong> (average experience and total market value → which manager archetype they fit) and their <strong style="color:var(--text)">actual trade history in this league</strong> (how often they trade, whether they hoard or ship picks, and whether they win or lose value in deals).<br><strong style="color:var(--text)">Urgency</strong> - archetype baseline, pushed higher if they've been trading picks away for players (win-now behavior).<br><strong style="color:var(--text)">Stubbornness</strong> - pushed higher if they barely trade, lower if they're a high-volume dealer.<br><strong style="color:var(--text)">Hype chaser</strong> - how much their archetype historically overvalues recent performance. Use it to decide WHICH of your players to feature in the pitch.</div>
-          <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="oppGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9b72e8"/><stop offset="1" stop-color="#9b72e8"/></linearGradient></defs></svg>
           <div id="oppread-calc-wrap" style="text-align:center;margin:10px 0 16px">
             <button id="oppread-calc-btn" class="oppread-calc" onclick="calculateOppRead()">Calculate the read</button>
           </div>
@@ -716,7 +724,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div class="oppread-cell">
               <div class="oppread-q">How bad do they need a deal?</div>
               <div class="oppread-ring">
-                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig1-ring" cx="44" cy="44" r="38" stroke="url(#oppGrad)"/></svg>
+                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig1-ring" cx="44" cy="44" r="38"/></svg>
                 <div class="oppread-pct" id="sig1-val">-</div>
               </div>
               <div class="oppread-label">Their urgency</div>
@@ -724,7 +732,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div class="oppread-cell">
               <div class="oppread-q">How attached are they to their guys?</div>
               <div class="oppread-ring">
-                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig2-ring" cx="44" cy="44" r="38" stroke="url(#oppGrad)"/></svg>
+                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig2-ring" cx="44" cy="44" r="38"/></svg>
                 <div class="oppread-pct" id="sig2-val">-</div>
               </div>
               <div class="oppread-label">How stubborn they are</div>
@@ -732,7 +740,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
             <div class="oppread-cell">
               <div class="oppread-q">Do they chase hype?</div>
               <div class="oppread-ring">
-                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig3-ring" cx="44" cy="44" r="38" stroke="url(#oppGrad)"/></svg>
+                <svg viewBox="0 0 88 88"><circle class="ring-bg" cx="44" cy="44" r="38"/><circle class="ring-fg" id="sig3-ring" cx="44" cy="44" r="38"/></svg>
                 <div class="oppread-pct" id="sig3-val">-</div>
               </div>
               <div class="oppread-label">Easy to sell to</div>
@@ -1925,13 +1933,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091204"></script>
-<script src="/rankings.js?v=2026091204"></script>
-<script src="/weekly.js?v=2026091204"></script>
-<script src="/live.js?v=2026091204"></script>
-<script src="/myleagues.js?v=2026091204"></script>
-<script src="/push.js?v=2026091204" defer></script>
-<script src="/hub.js?v=2026091204"></script>
+<script src="/app.js?v=2026091205"></script>
+<script src="/rankings.js?v=2026091205"></script>
+<script src="/weekly.js?v=2026091205"></script>
+<script src="/live.js?v=2026091205"></script>
+<script src="/myleagues.js?v=2026091205"></script>
+<script src="/push.js?v=2026091205" defer></script>
+<script src="/hub.js?v=2026091205"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

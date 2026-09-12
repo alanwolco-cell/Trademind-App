@@ -295,6 +295,17 @@ const LIGA_SIN_TRADES = '1402829686446268416';
   ok('(7b) el cajon ofrece "The home page" y el clic LLEGA a la portada',
     puerta.existe === true && puerta.visible === true && tras.hero === true,
     JSON.stringify({ puerta, tras }));
+  // (7c) el wordmark tambien: "quiero que me lleve al home page si clickeo
+  // arriba donde dice mac draft" (dueno, 2026-09-12). Con cuenta, el logo
+  // llevaba a Leagues; ahora la portada.
+  await pg.goto(BASE + '/myleagues', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.waitForTimeout(2000);
+  await pg.evaluate(() => { const l = document.querySelector('.nav-logo'); if (l) l.click(); });
+  await pg.waitForTimeout(1000);
+  const logo = await pg.evaluate(() => ({
+    hero: (() => { const h = document.querySelector('.hero'); if (!h) return false; const r = h.getBoundingClientRect(); return r.height > 50 && getComputedStyle(h).display !== 'none'; })()
+  }));
+  ok('(7c) conectado, el clic en el wordmark lleva a la portada', logo.hero === true, JSON.stringify(logo));
   await pg.close();
 }
 

@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body{margin:0;background:#0A0A10;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:#9B72E8;text-decoration:none} a:hover{color:#B49BF0}
+    .lbl{font-size:10.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#9A9AA3}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  </style>
+</helmet>
+
+<div style="width:390px;background:#0A0A10;color:#F5F5F7;display:flex;flex-direction:column">
+
+  <div style="display:flex;align-items:center;gap:9px;height:52px;padding:0 16px">
+    <img src="mac-64.png" alt="" style="width:26px;height:26px;object-fit:contain;flex:none">
+    <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em">Mac Draft</div>
+    <div style="flex-grow:1"></div>
+    <div style="display:flex;align-items:center;justify-content:center;height:44px;padding:0 4px;font-size:14px;font-weight:500;color:#9B72E8">Connect league</div>
+  </div>
+
+  <!-- ═══ EL TITULAR, A LA IZQUIERDA ══════════════════════════════════════
+       Nada centrado. El titular baja de 40 a 32 porque aqui no es el
+       argumento: el argumento es la linea de dato que va debajo. -->
+  <div style="padding:22px 16px 0">
+    <h1 style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-size:32px;font-weight:700;line-height:1.06;letter-spacing:-.03em;margin:0">Draft like it's<br>draft night.</h1>
+    <p style="font-size:16px;line-height:1.5;letter-spacing:-.01em;color:#9A9AA3;margin:12px 0 0;max-width:31em">Mock drafts that behave like your league. Snake or auction, with Mac on the headset.</p>
+  </div>
+
+  <!-- La prueba pegada al titular, no en un "about" aparte. Patron KeepTradeCut. -->
+  <div style="margin:18px 16px 0;border-top:1px solid rgba(255,255,255,.10);border-bottom:1px solid rgba(255,255,255,.10);padding:13px 0;display:flex;align-items:center;gap:12px">
+    <div class="mono" style="font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1;flex:none">280</div>
+    <div style="font-size:12.5px;line-height:1.45;color:#9A9AA3">real auction lots transcribed and priced against, before a single mock runs.</div>
+  </div>
+
+  <!-- ═══ LO QUE MAC LEE HOY ══════════════════════════════════════════════
+       Un solo formato de tarjeta, con TRES pesos distintos. Repetir el
+       formato resuelve la densidad; variar el peso evita la retícula muerta. -->
+  <div style="display:flex;align-items:center;gap:9px;padding:26px 16px 12px">
+    <div style="width:22px;height:2px;background:#9B72E8"></div>
+    <div class="lbl">Mac's read today</div>
+  </div>
+
+  <!-- Peso 1: el hallazgo. Con su grafico chico, que acompana y no domina. -->
+  <div style="margin:0 16px;background:#14141D;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <img src="mac-shocked-128.png" alt="Mac" style="width:60px;height:60px;object-fit:contain;flex:none;margin-top:-3px">
+      <div style="flex-grow:1;min-width:0">
+        <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-size:19px;font-weight:600;line-height:1.3;letter-spacing:-.02em;text-wrap:pretty">Two real rooms paid <span class="mono" style="color:#E6C07A">$56</span> for the RB2 tier. The board says <span class="mono">$38</span>.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="lbl" style="width:74px;flex:none;letter-spacing:.09em">Room paid</div>
+        <div style="flex-grow:1;height:12px;background:#1E1E29;border-radius:6px;overflow:hidden"><div style="width:100%;height:12px;background:#E6C07A;border-radius:6px"></div></div>
+        <div class="mono" style="font-size:14px;width:38px;text-align:right;flex:none">$56</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="lbl" style="width:74px;flex:none;letter-spacing:.09em">Board</div>
+        <div style="flex-grow:1;height:12px;background:#1E1E29;border-radius:6px;overflow:hidden"><div style="width:68%;height:12px;background:#9B72E8;border-radius:6px"></div></div>
+        <div class="mono" style="font-size:14px;width:38px;text-align:right;flex:none;color:#9B72E8">$38</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;line-height:1.5;color:#9A9AA3;border-top:1px solid rgba(255,255,255,.10);padding-top:11px">Chase Brown, Kenneth Walker, Omarion Hampton. Nominate them early and let the room burn its money.</div>
+  </div>
+
+  <!-- Peso 2 y 3: el mismo formato, comprimido a una fila. -->
+  <div style="margin:12px 16px 0;display:flex;flex-direction:column;gap:1px">
+
+    <div style="display:flex;align-items:center;gap:12px;background:#14141D;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px 14px">
+      <img src="mac-skeptical-128.png" alt="" style="width:38px;height:38px;object-fit:contain;flex:none">
+      <div style="flex-grow:1;min-width:0;font-size:14px;line-height:1.4;letter-spacing:-.008em">Quarterbacks went both ways in the two rooms. Mac charges you neither.</div>
+      <div class="mono" style="font-size:17px;font-weight:600;color:#9A9AA3;flex:none">±0</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;background:#14141D;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px 14px;margin-top:8px">
+      <img src="mac-excited-128.png" alt="" style="width:38px;height:38px;object-fit:contain;flex:none">
+      <div style="flex-grow:1;min-width:0;font-size:14px;line-height:1.4;letter-spacing:-.008em">Thirty-eight of a hundred and thirty lots sold for a dollar. Your last five spots are free.</div>
+      <div class="mono" style="font-size:17px;font-weight:600;color:#22C55E;flex:none">$1</div>
+    </div>
+
+  </div>
+
+  <!-- ═══ LA CAPA QUE ESTA DIRECCION EXIGE ════════════════════════════════
+       Cada numero se puede abrir. Es la promesa entera y hoy no esta escrita
+       para todas las pantallas: por eso va declarada, no insinuada. -->
+  <div style="margin:22px 16px 0;background:#12111B;border-left:2px solid #9B72E8;border-radius:0 14px 14px 0;padding:15px 16px">
+    <div class="lbl" style="color:#9B72E8;margin-bottom:8px">Every number opens</div>
+    <div style="font-size:13.5px;line-height:1.55;color:#C6C6CE">Tap any price and Mac shows the lots it came from, the room size it was measured in, and what it would be in yours.</div>
+  </div>
+
+  <div style="padding:24px 16px 22px;display:flex;flex-direction:column;gap:11px">
+    <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;background:#7C47E1;color:#fff;font-size:16.5px;font-weight:600;letter-spacing:-.012em">Start a mock draft</div>
+    <div style="display:flex;align-items:center;justify-content:center;height:44px;font-size:14.5px;color:#9A9AA3">Connect your league</div>
+  </div>
+
+  <div style="display:flex;align-items:stretch;height:66px;background:#0D0D14;border-top:1px solid rgba(255,255,255,.08)">
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9B72E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5.5 9.5V20h13V9.5"></path></svg>
+      <span style="font-size:10.5px;color:#9B72E8;font-weight:600">Home</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 3h6v3H9z"></path><path d="M9 11h6M9 15h4"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">Draft</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+      <img src="mac-64.png" alt="" style="width:26px;height:26px;object-fit:contain">
+      <span style="font-size:10.5px;color:#9A9AA3">Mac</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h14l-3-3"></path><path d="M21 16H7l3 3"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">Analyze</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">More</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

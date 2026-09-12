@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body{margin:0;background:#0A0A10;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:#9B72E8;text-decoration:none} a:hover{color:#B49BF0}
+    .lbl{font-size:10.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#9A9AA3}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+    .chip{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;font-weight:600;letter-spacing:.06em;padding:3px 6px;border-radius:6px;color:#0A0A10}
+    .brow{display:flex;align-items:center;gap:12px;padding:0 16px;height:46px;border-bottom:1px solid rgba(255,255,255,.10)}
+  </style>
+</helmet>
+
+<div style="width:1440px;height:900px;background:#0A0A10;color:#F5F5F7;display:flex;flex-direction:column;overflow:hidden">
+
+  <!-- NAV -->
+  <div style="display:flex;align-items:center;gap:10px;height:64px;padding:0 40px;flex:none">
+    <img src="mac-64.png" alt="" style="width:28px;height:28px;object-fit:contain;flex:none">
+    <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-weight:700;font-size:17px;letter-spacing:.04em">Mac Draft</div>
+    <div style="display:flex;align-items:center;gap:26px;margin-left:36px">
+      <span style="font-size:14px;font-weight:600;color:#F5F5F7">Mock Draft</span>
+      <span style="font-size:14px;color:#9A9AA3">Ask Mac</span>
+      <span style="font-size:14px;color:#9A9AA3">Analyze</span>
+      <span style="font-size:14px;color:#9A9AA3">Research</span>
+      <span style="font-size:14px;color:#9A9AA3">Community</span>
+    </div>
+    <div style="flex-grow:1"></div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    <div style="margin-left:14px;background:#7C47E1;color:#fff;font-size:14px;font-weight:600;padding:9px 20px;border-radius:999px">Connect league</div>
+  </div>
+
+  <!-- TICKER a lo ancho: en escritorio corre entero, no se corta -->
+  <div style="height:46px;background:#14141D;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;padding:0 40px;gap:16px;white-space:nowrap;overflow:hidden;flex:none">
+    <div style="display:flex;align-items:center;gap:7px;flex:none">
+      <img src="mac-excited-128.png" alt="" style="width:24px;height:24px;object-fit:contain">
+      <span style="font-size:13px;font-weight:600;color:#9B72E8">Room is 18% under book</span>
+    </div>
+    <div style="width:1px;height:18px;background:rgba(255,255,255,.16);flex:none"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#FBBF24"></span><span style="font-size:13px">A. St. Brown</span><span class="mono" style="font-size:13px;color:#9A9AA3">$44 · Ness</span></div>
+    <div style="width:1px;height:18px;background:rgba(255,255,255,.16);flex:none"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#4ADE80"></span><span style="font-size:13px">James Cook</span><span class="mono" style="font-size:13px;color:#9A9AA3">$51 · Titus</span></div>
+    <div style="width:1px;height:18px;background:rgba(255,255,255,.16);flex:none"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#FBBF24"></span><span style="font-size:13px">CeeDee Lamb</span><span class="mono" style="font-size:13px;color:#9A9AA3">$47 · Luna</span></div>
+    <div style="width:1px;height:18px;background:rgba(255,255,255,.16);flex:none"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#F87171"></span><span style="font-size:13px">Brock Bowers</span><span class="mono" style="font-size:13px;color:#9A9AA3">$32 · Dev</span></div>
+    <div style="width:1px;height:18px;background:rgba(255,255,255,.16);flex:none"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:#A78BFA"></span><span style="font-size:13px">Josh Allen</span><span class="mono" style="font-size:13px;color:#9A9AA3">$36 · Marco</span></div>
+  </div>
+
+  <!-- TRES COLUMNAS: cabina | tablero | presupuestos -->
+  <div style="flex-grow:1;display:grid;grid-template-columns:392px minmax(0, 1fr) 288px;gap:28px;padding:28px 40px;min-height:0">
+
+    <!-- IZQUIERDA: la cabina + la voz de Mac -->
+    <div style="display:flex;flex-direction:column;gap:20px;min-height:0">
+
+      <div style="border-radius:22px;border:1px solid rgba(255,255,255,.10);background:radial-gradient(150% 100% at 82% 0%,#241B3D 0%,#171326 46%,#12111B 100%);padding:20px;display:flex;flex-direction:column;gap:18px;flex:none">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#22C55E;flex:none"></div>
+          <div class="lbl" style="color:#F5F5F7">On the block</div>
+          <div style="flex-grow:1"></div>
+          <div style="font-size:12px;color:#9A9AA3">Fantazy 2026 · $200</div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="flex-grow:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+              <span class="chip" style="background:#4ADE80">RB</span>
+              <span style="font-size:11.5px;color:#9A9AA3">DET · Lot 11 of 150</span>
+            </div>
+            <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-size:30px;font-weight:700;letter-spacing:-.028em;line-height:1.06">Jahmyr Gibbs</div>
+          </div>
+          <div style="text-align:right;flex:none">
+            <div class="mono" style="font-size:58px;font-weight:500;line-height:.9;letter-spacing:-.035em">0:38</div>
+            <div class="lbl" style="margin-top:6px">clock</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:12px;padding-top:16px;border-top:1px solid rgba(255,255,255,.10)">
+          <div>
+            <div class="lbl" style="margin-bottom:7px">Bid</div>
+            <div class="mono" style="font-size:32px;font-weight:500;letter-spacing:-.02em;line-height:1">$62</div>
+          </div>
+          <div>
+            <div class="lbl" style="margin-bottom:7px">Held by</div>
+            <div style="font-size:16px;font-weight:600;padding-top:6px">Ness</div>
+          </div>
+          <div>
+            <div class="lbl" style="margin-bottom:7px;color:#9B72E8">Your ceiling</div>
+            <div class="mono" style="font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1;color:#9B72E8">$92</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;flex:none">
+        <img src="mac-scrutiny-128.png" alt="Mac" style="width:88px;height:88px;object-fit:contain;flex:none;margin-top:-6px">
+        <div style="flex-grow:1;min-width:0">
+          <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-size:21px;font-weight:600;line-height:1.3;letter-spacing:-.02em;text-wrap:pretty">The room pays about <span class="mono" style="font-weight:600">$77</span> for Gibbs. Do not go past <span class="mono" style="color:#9B72E8;font-weight:600">$92</span>.</div>
+          <div style="font-size:12.5px;line-height:1.55;color:#9A9AA3;margin-top:10px">Priced off 2026 redraft ADP, calibrated against two real auctions.</div>
+        </div>
+      </div>
+
+      <div style="flex-grow:1"></div>
+
+      <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;background:#7C47E1;color:#fff;font-size:16.5px;font-weight:600;letter-spacing:-.012em;flex:none">Start a mock draft</div>
+    </div>
+
+    <!-- CENTRO: el tablero. En escritorio caben doce filas: la pantalla grande
+         se paga con MAS dato, no con mas aire. -->
+    <div style="display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;align-items:center;gap:9px;padding-bottom:11px;flex:none">
+        <div style="width:22px;height:2px;background:#9B72E8"></div>
+        <div class="lbl">Available</div>
+        <div style="flex-grow:1"></div>
+        <div style="font-size:12px;color:#9A9AA3">139 left · sorted by what the room pays</div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.10);display:flex;flex-direction:column;flex:none">
+        <div style="display:flex;align-items:center;gap:12px;padding:6px 16px 8px;border-bottom:1px solid rgba(255,255,255,.10)">
+          <div style="width:34px;flex:none"></div>
+          <div class="lbl" style="flex-grow:1;font-size:9.5px">Player</div>
+          <div class="lbl" style="width:56px;text-align:right;flex:none;font-size:9.5px">Bye</div>
+          <div class="lbl" style="width:64px;text-align:right;flex:none;font-size:9.5px">Pays</div>
+          <div class="lbl" style="width:64px;text-align:right;flex:none;font-size:9.5px">Up to</div>
+        </div>
+
+        <div class="brow"><span class="chip" style="background:#4ADE80;width:34px;flex:none;text-align:center">RB</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Bijan Robinson</span> <span style="font-size:12.5px;color:#9A9AA3">ATL</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">5</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$75</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$90</div></div>
+
+        <div class="brow"><span class="chip" style="background:#FBBF24;width:34px;flex:none;text-align:center">WR</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Ja'Marr Chase</span> <span style="font-size:12.5px;color:#9A9AA3">CIN</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">10</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$68</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$82</div></div>
+
+        <div class="brow"><span class="chip" style="background:#FBBF24;width:34px;flex:none;text-align:center">WR</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Puka Nacua</span> <span style="font-size:12.5px;color:#9A9AA3">LAR</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">8</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$65</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$78</div></div>
+
+        <div class="brow"><span class="chip" style="background:#4ADE80;width:34px;flex:none;text-align:center">RB</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Christian McCaffrey</span> <span style="font-size:12.5px;color:#9A9AA3">SF</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">14</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$64</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$77</div></div>
+
+        <div class="brow"><span class="chip" style="background:#FBBF24;width:34px;flex:none;text-align:center">WR</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Jaxon Smith-Njigba</span> <span style="font-size:12.5px;color:#9A9AA3">SEA</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">6</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$61</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$73</div></div>
+
+        <!-- El hallazgo rompe la fila. Es la unica que gana peso. -->
+        <div style="background:rgba(155,114,232,.13);border-left:2px solid #9B72E8;border-bottom:1px solid rgba(255,255,255,.10)">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 16px 4px">
+            <span class="chip" style="background:#4ADE80;width:34px;flex:none;text-align:center">RB</span>
+            <div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">D'Andre Swift</span> <span style="font-size:12.5px;color:#9A9AA3">CHI</span></div>
+            <div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">7</div>
+            <div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;font-weight:600;color:#22C55E">$13</div>
+            <div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$16</div>
+          </div>
+          <div style="padding:0 16px 10px 62px;font-size:12.5px;color:#C6C6CE">Same tier as James Cook. Saves you <span class="mono" style="color:#22C55E;font-weight:600">$40</span>.</div>
+        </div>
+
+        <div class="brow"><span class="chip" style="background:#F87171;width:34px;flex:none;text-align:center">TE</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Brock Bowers</span> <span style="font-size:12.5px;color:#9A9AA3">LV</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">10</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$34</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$41</div></div>
+
+        <div class="brow"><span class="chip" style="background:#4ADE80;width:34px;flex:none;text-align:center">RB</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Ashton Jeanty</span> <span style="font-size:12.5px;color:#9A9AA3">LV</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">10</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$45</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$54</div></div>
+
+        <div class="brow"><span class="chip" style="background:#FBBF24;width:34px;flex:none;text-align:center">WR</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Drake London</span> <span style="font-size:12.5px;color:#9A9AA3">ATL</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">5</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$35</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$42</div></div>
+
+        <div class="brow"><span class="chip" style="background:#A78BFA;width:34px;flex:none;text-align:center">QB</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Josh Allen</span> <span style="font-size:12.5px;color:#9A9AA3">BUF</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">12</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$36</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$43</div></div>
+
+        <div class="brow"><span class="chip" style="background:#4ADE80;width:34px;flex:none;text-align:center">RB</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Derrick Henry</span> <span style="font-size:12.5px;color:#9A9AA3">BAL</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">7</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$39</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$47</div></div>
+
+        <div class="brow"><span class="chip" style="background:#A78BFA;width:34px;flex:none;text-align:center">QB</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Joe Burrow</span> <span style="font-size:12.5px;color:#9A9AA3">CIN</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">9</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$10</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$12</div></div>
+
+        <div class="brow"><span class="chip" style="background:#4ADE80;width:34px;flex:none;text-align:center">RB</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Kyren Williams</span> <span style="font-size:12.5px;color:#9A9AA3">LAR</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">8</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$31</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$37</div></div>
+
+        <div class="brow" style="border-bottom:none"><span class="chip" style="background:#F87171;width:34px;flex:none;text-align:center">TE</span><div style="flex-grow:1;min-width:0"><span style="font-size:15px;font-weight:600">Trey McBride</span> <span style="font-size:12.5px;color:#9A9AA3">ARI</span></div><div class="mono" style="width:56px;text-align:right;flex:none;font-size:13px;color:#9A9AA3">11</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px">$33</div><div class="mono" style="width:64px;text-align:right;flex:none;font-size:15px;color:#9A9AA3">$40</div></div>
+      </div>
+    </div>
+
+    <!-- DERECHA: presupuestos, el #au-budgets real -->
+    <div style="display:flex;flex-direction:column;min-height:0">
+      <div style="display:flex;align-items:center;gap:9px;padding-bottom:11px;flex:none">
+        <div class="lbl">Budgets</div>
+        <div style="flex-grow:1"></div>
+        <div class="lbl" style="font-size:9.5px">Left · Spots</div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.10);display:flex;flex-direction:column;flex:none">
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(155,114,232,.13);padding:0 12px;border-left:2px solid #9B72E8">
+          <div style="flex-grow:1;font-size:14px;font-weight:600">You</div>
+          <div class="mono" style="font-size:14px;font-weight:600">$186</div>
+          <div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">14</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Ness</div><div class="mono" style="font-size:14px">$138</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">13</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Titus</div><div class="mono" style="font-size:14px">$149</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">14</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Luna</div><div class="mono" style="font-size:14px">$153</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">14</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Dev</div><div class="mono" style="font-size:14px">$168</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">14</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Marco</div><div class="mono" style="font-size:14px">$164</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">14</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Carlos</div><div class="mono" style="font-size:14px">$200</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">15</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Vinny</div><div class="mono" style="font-size:14px">$200</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">15</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">Falafel</div><div class="mono" style="font-size:14px">$179</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">14</div></div>
+        <div style="display:flex;align-items:center;gap:10px;height:40px;border-bottom:1px solid rgba(255,255,255,.10);padding:0 12px"><div style="flex-grow:1;font-size:14px">rana jr</div><div class="mono" style="font-size:14px">$191</div><div class="mono" style="font-size:12px;color:#9A9AA3;width:26px;text-align:right">15</div></div>
+      </div>
+
+      <div style="margin-top:18px;background:#14141D;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:14px">
+        <div class="lbl" style="margin-bottom:9px;color:#E6C07A">Room phase</div>
+        <div style="font-size:13.5px;line-height:1.5;color:#C6C6CE">Six of ten still hold more than <span class="mono">$150</span>. Nothing goes cheap yet.</div>
+      </div>
+
+      <!-- La forma de roster de la liga: QB1 RB2 WR2 TE1 FLEX1 K1 DEF1 mas 6 de banca -->
+      <div style="margin-top:18px;display:flex;flex-direction:column;flex:none">
+        <div style="display:flex;align-items:center;gap:9px;padding-bottom:9px">
+          <div class="lbl">Your roster</div>
+          <div style="flex-grow:1"></div>
+          <div class="mono" style="font-size:12px;color:#9A9AA3">1 of 15</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:6px">
+          <div style="display:flex;align-items:center;gap:8px;height:30px;border-radius:6px;background:#14141D;padding:0 9px"><span class="lbl" style="font-size:9.5px;width:28px;flex:none">QB</span><span style="font-size:12.5px;color:#6B6B75">open</span></div>
+          <div style="display:flex;align-items:center;gap:8px;height:30px;border-radius:6px;background:#14141D;padding:0 9px"><span class="lbl" style="font-size:9.5px;width:28px;flex:none">TE</span><span style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:visible">Loveland</span><span class="mono" style="font-size:11.5px;color:#9A9AA3;margin-left:auto">$14</span></div>
+          <div style="display:flex;align-items:center;gap:8px;height:30px;border-radius:6px;background:#14141D;padding:0 9px"><span class="lbl" style="font-size:9.5px;width:28px;flex:none">RB</span><span style="font-size:12.5px;color:#6B6B75">2 open</span></div>
+          <div style="display:flex;align-items:center;gap:8px;height:30px;border-radius:6px;background:#14141D;padding:0 9px"><span class="lbl" style="font-size:9.5px;width:28px;flex:none">FLEX</span><span style="font-size:12.5px;color:#6B6B75">open</span></div>
+          <div style="display:flex;align-items:center;gap:8px;height:30px;border-radius:6px;background:#14141D;padding:0 9px"><span class="lbl" style="font-size:9.5px;width:28px;flex:none">WR</span><span style="font-size:12.5px;color:#6B6B75">2 open</span></div>
+          <div style="display:flex;align-items:center;gap:8px;height:30px;border-radius:6px;background:#14141D;padding:0 9px"><span class="lbl" style="font-size:9.5px;width:28px;flex:none">BN</span><span style="font-size:12.5px;color:#6B6B75">6 open</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

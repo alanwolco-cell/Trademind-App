@@ -3496,3 +3496,94 @@ body.hub-guest #screen-hub{padding-bottom:64px}
    2026-09-12. La portada queda accesible por el cajon (.app-home-link). */
 html.is-app #tabbar .tabbar-item[data-tab=home]{display:none!important}
 html:not(.is-app) .app-home-link{display:none}
+
+/* ═══ FASE 2 · FLIGHT DECK: el veredicto del analizador ══════════════════════
+   El aro manda. Antes la tarjeta era un poster: Mac a 96px, el rotulo "Mac
+   says...", un titular de 28px y un muro de prosa, con la cifra que de verdad
+   decide (la brecha de valor) sin aparecer en ninguna parte. Y debajo, una
+   tarjeta "Trade Balance" entera para repetir ese mismo dato como barra.
+   Ahora: UNA cifra en el aro, el rotulo del veredicto AL LADO del titular
+   (disciplina Linear, nada apilado), los dos lados en una fila densa, la
+   barra reducida al hilo que es, y Mac de avatar chico y constante. */
+.verdict-top{display:grid;grid-template-columns:118px minmax(0,1fr) auto;gap:20px;align-items:start;margin-bottom:14px}
+
+.vd-ring{position:relative;width:118px;height:118px;flex:none}
+.vd-ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block}
+.vd-ring-bg{fill:none;stroke:var(--surface3);stroke-width:6}
+/* 2*pi*41 = 257.6. El arco arranca vacio y lo llena el JS. */
+.vd-ring-fg{fill:none;stroke-width:6;stroke-linecap:round;stroke:var(--muted2);
+  stroke-dasharray:257.6;stroke-dashoffset:257.6;
+  transition:stroke-dashoffset 1s cubic-bezier(.22,1,.36,1),stroke .3s ease}
+.vd-ring-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-62%);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-variant-numeric:tabular-nums;font-size:26px;font-weight:600;line-height:1;
+  letter-spacing:-.03em;white-space:nowrap}
+.vd-ring-sub{position:absolute;top:50%;left:50%;transform:translate(-50%,13px);
+  font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+
+/* La jerarquia secundaria va AL LADO del titular, nunca debajo. */
+.vd-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.verdict-headline{font-family:var(--font-head);font-size:23px;font-weight:600;
+  letter-spacing:-.025em;line-height:1.12;margin:0;text-transform:none}
+.vd-tag{font-size:11.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+/* Medida de lectura. Sin tope, en escritorio la prosa del veredicto salia en
+   renglones de 1.500px: se lee como un muro y es la razon de que el veredicto
+   no se distinguiera del relleno. */
+.verdict-body{font-size:13px;color:var(--muted2);line-height:1.62;margin:0;max-width:74ch}
+.verdict-body>div,.verdict-body>button{max-width:none}
+
+/* Mac lleva su nombre en gris: el cian de esta pantalla es del boton que
+   analiza y del desplegable que abre el razonamiento, y de nada mas. */
+.verdict-top .sage-tag{color:var(--muted)}
+
+/* Los dos lados: fila densa, sin tarjeta, con los nombres que antes colgaban
+   del pie de la barra de balance. */
+.vd-sides{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:12px;
+  padding-top:11px;border-top:1px solid var(--border);
+  font-size:11.5px;color:var(--muted);line-height:1.5}
+.vd-side{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 200px}
+.vd-side img{vertical-align:-2px;margin-right:3px}
+.vd-side-get{justify-content:flex-end;text-align:right}
+
+/* Mac: el tamaño de la W de WHOOP, en la esquina, constante. */
+.verdict-top .sage-wrap{width:auto;flex-direction:column;gap:3px;align-items:center}
+.verdict-top .sage-asset{width:38px;height:38px}
+.verdict-top .sage-tag{font-size:8px;letter-spacing:.12em}
+
+/* La barra: un hilo, no una tarjeta. Su marca de centro dice donde esta el
+   reparto justo sin gastar un rotulo. */
+.vd-balance{position:relative;height:3px;background:var(--surface3);border-radius:999px;
+  overflow:hidden;margin:0 0 2px}
+.vd-balance #balance-bar{position:absolute;top:0;left:0;height:100%;width:50%;
+  border-radius:999px;transition:width 1s cubic-bezier(.22,1,.36,1)}
+.vd-balance-mid{position:absolute;top:0;left:50%;width:1px;height:100%;background:var(--border2)}
+
+/* El trazo de los aros del opponent-read perdio su degradado (dos paradas del
+   mismo morado muerto): va plano y NEUTRO, porque urgencia o terquedad no son
+   buenas ni malas y pintarlas del acento les daria un significado que no
+   tienen. */
+.oppread-ring .ring-fg{stroke:var(--muted2);filter:none}
+
+/* ── El telefono, que es donde se lee de verdad ──────────────────────────────
+   Apilar aro / texto / Mac en una columna de 72px dejaba la cifra desbordada
+   fuera de su aro y a Mac abandonado al final de la tarjeta. Aqui la fila de
+   arriba es el chequeo entero (aro + veredicto + Mac, como la cabecera de
+   WHOOP) y la prosa cae DEBAJO a todo lo ancho, que es lo unico que hace que
+   se lea en 390px. display:contents sube los hijos de .verdict-right a la
+   rejilla para poder colocarlos uno por uno. */
+@media(max-width:760px){
+  .verdict-top{grid-template-columns:102px minmax(0,1fr) 30px;gap:10px;row-gap:12px;align-items:center}
+  .vd-ring{width:102px;height:102px;grid-column:1;grid-row:1}
+  .vd-ring-num{font-size:19px}
+  .vd-ring-sub{font-size:7px;transform:translate(-50%,10px)}
+  .verdict-right{display:contents}
+  .vd-head{grid-column:2;grid-row:1;flex-direction:column;align-items:flex-start;gap:3px;margin:0}
+  .verdict-headline{font-size:19px}
+  .verdict-body{grid-column:1/-1;grid-row:2;max-width:none}
+  .vd-sides{grid-column:1/-1;grid-row:3}
+  #meet-sage-strip{grid-column:1/-1;grid-row:4}
+  .verdict-top .sage-wrap{grid-column:3;grid-row:1;width:34px;align-self:start}
+  .verdict-top .sage-asset{width:28px;height:28px}
+  .verdict-top .sage-tag{font-size:7px;letter-spacing:.08em}
+  .vd-side-get{justify-content:flex-start;text-align:left}
+}

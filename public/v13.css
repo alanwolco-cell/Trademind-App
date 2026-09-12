@@ -74,3 +74,10 @@ html.v13 body{
    Familjen, asi que el tracking apretado de v11 se relaja UN punto para que
    los titulares no se toquen. */
 html.v13 h1, html.v13 h2, html.v13 h3{letter-spacing:-.018em}
+
+/* La firma de 2px del producto (la verdict-card del analizador, la tarjeta de
+   jugador, la recomendacion de Mac en el draft y el separador de tier) venia de
+   un degradado morado -> cian. El morado murio el 12-sep y la direccion prohibe
+   el degradado decorativo: la firma pasa a ser el acento PLANO. Un token, los
+   cinco sitios. */
+html.v13{--tm-grad:var(--accent)}

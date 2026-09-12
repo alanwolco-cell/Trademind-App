@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body{margin:0;background:#0A0A10;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:#9B72E8;text-decoration:none} a:hover{color:#B49BF0}
+  </style>
+</helmet>
+
+<div style="width:390px;background:#0A0A10;color:#F5F5F7;display:flex;flex-direction:column">
+
+  <!-- NAV, recreado de public/index.html:145-229 -->
+  <div style="display:flex;align-items:center;gap:8px;height:56px;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.08)">
+    <img src="mac-64.png" alt="" style="width:28px;height:28px;object-fit:contain;flex:none">
+    <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em">Mac Draft</div>
+    <div style="flex-grow:1"></div>
+    <div style="background:#7C47E1;color:#fff;font-size:13px;font-weight:600;padding:7px 16px;border-radius:100px">Connect</div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+  </div>
+
+  <!-- HERO. Fondo real: foto de estadio desenfocada + degradado a #0A0A10 (home.css:1345-1351) -->
+  <div style="position:relative;padding:52px 22px 0;text-align:center;background:radial-gradient(120% 70% at 50% 0%,#221838 0%,#12101E 42%,#0A0A10 100%);overflow:hidden">
+
+    <div style="position:absolute;inset:0;background:radial-gradient(46px 30px at 22% 30%,rgba(155,114,232,.16),transparent 70%),radial-gradient(60px 34px at 76% 22%,rgba(103,232,249,.10),transparent 70%),radial-gradient(50px 30px at 55% 46%,rgba(155,114,232,.10),transparent 70%);pointer-events:none"></div>
+
+    <div style="position:relative">
+      <div style="font-size:15px;font-weight:600;letter-spacing:-.01em;color:#9B72E8;margin-bottom:14px">Mac Draft</div>
+      <h1 style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-size:40px;font-weight:700;line-height:1.04;letter-spacing:-.03em;color:#F5F5F7;margin:0 0 18px">Draft like it's<br>draft night.</h1>
+      <p style="font-size:18px;line-height:1.45;letter-spacing:-.014em;color:#9A9AA3;margin:0 auto;max-width:320px">Mock drafts that behave like your league. Snake or auction, with Mac on the headset.</p>
+
+      <div style="display:flex;align-items:center;justify-content:center;gap:26px;flex-wrap:wrap;margin-top:54px">
+        <div style="background:#7C47E1;color:#fff;font-size:17px;font-weight:500;letter-spacing:-.014em;padding:13px 28px;border-radius:980px">Start a mock draft</div>
+        <div style="font-size:17px;font-weight:400;letter-spacing:-.014em;color:#9B72E8">Connect your league ›</div>
+      </div>
+    </div>
+
+    <!-- El reel del producto: 1282x806 pintado a 346px de ancho. Todo texto de la sala
+         queda por debajo de 5px. Esto no es exageracion: es la escala real. -->
+    <div style="position:relative;margin:44px auto 0;width:346px;border-radius:14px;overflow:hidden;box-shadow:0 30px 90px -20px rgba(0,0,0,.7),0 8px 28px -12px rgba(0,0,0,.5);background:#0D0D14;border:1px solid rgba(255,255,255,.08)">
+      <div style="display:flex;height:218px">
+        <div style="width:124px;border-right:1px solid rgba(255,255,255,.06);padding:6px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;gap:4px;align-items:center;background:#1E1E29;border-radius:4px;padding:4px">
+            <div style="width:20px;height:20px;border-radius:50%;background:#38BDF8;flex:none"></div>
+            <div style="flex-grow:1;min-width:0">
+              <div style="font-size:5px;font-weight:700;color:#F5F5F7;white-space:nowrap;overflow:hidden">Jahmyr Gibbs</div>
+              <div style="font-size:4px;color:#9A9AA3">RB DET</div>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#F5F5F7">$62</div>
+          </div>
+          <div style="display:flex;gap:3px">
+            <div style="flex-grow:1;height:11px;background:#1E1E29;border-radius:3px"></div>
+            <div style="width:34px;height:11px;background:#7C47E1;border-radius:3px"></div>
+          </div>
+          <div style="font-size:4px;color:#9A9AA3;line-height:1.5">Wins offer $63 · Budget $200 · 10 spots</div>
+          <div style="flex-grow:1"></div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:4px;color:#6B6B75;margin-bottom:1px">BUDGETS</div>
+            <div style="display:flex;justify-content:space-between;font-size:4px;color:#9A9AA3"><span>Titus</span><span style="font-family:'IBM Plex Mono',monospace">$200</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:4px;color:#9A9AA3"><span>Dev</span><span style="font-family:'IBM Plex Mono',monospace">$200</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:4px;color:#9A9AA3"><span>Carlos</span><span style="font-family:'IBM Plex Mono',monospace">$200</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:4px;color:#9A9AA3"><span>Luna</span><span style="font-family:'IBM Plex Mono',monospace">$200</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:4px;color:#9A9AA3"><span>Marco</span><span style="font-family:'IBM Plex Mono',monospace">$200</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:4px;color:#9A9AA3"><span>Ness</span><span style="font-family:'IBM Plex Mono',monospace">$200</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:4px;color:#9A9AA3"><span>Vinny</span><span style="font-family:'IBM Plex Mono',monospace">$200</span></div>
+          </div>
+        </div>
+        <div style="flex-grow:1;padding:6px;display:flex;flex-direction:column;gap:3px;min-width:0">
+          <div style="display:flex;gap:3px;margin-bottom:2px">
+            <div style="flex-grow:1;height:8px;background:#1E1E29;border-radius:3px"></div>
+            <div style="flex-grow:1;height:8px;background:#14141D;border-radius:3px"></div>
+          </div>
+          <div style="display:flex;gap:2px;margin-bottom:2px">
+            <div style="width:12px;height:7px;background:#1E1E29;border-radius:2px"></div>
+            <div style="width:12px;height:7px;background:#1E1E29;border-radius:2px"></div>
+            <div style="width:12px;height:7px;background:#1E1E29;border-radius:2px"></div>
+            <div style="width:12px;height:7px;background:#1E1E29;border-radius:2px"></div>
+            <div style="flex-grow:1;height:7px;background:#14141D;border-radius:2px"></div>
+          </div>
+          <div style="font-size:4px;color:#6B6B75;margin-bottom:1px">AVAILABLE PLAYERS</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Jahmyr Gibbs</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$77</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Bijan Robinson</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$75</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#FBBF24;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Ja'Marr Chase</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$68</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#FBBF24;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Puka Nacua</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$65</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Christian McCaffrey</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$64</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#FBBF24;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Jaxon Smith-Njigba</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$61</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Jonathan Taylor</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$61</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#FBBF24;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Amon-Ra St. Brown</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$59</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">James Cook</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$54</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#FBBF24;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">CeeDee Lamb</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$53</div></div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;flex:none"></div><div style="flex-grow:1;min-width:0"><div style="font-size:5px;color:#F5F5F7;white-space:nowrap;overflow:hidden">Saquon Barkley</div></div><div style="font-family:'IBM Plex Mono',monospace;font-size:5px;color:#9A9AA3">$53</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:64px"></div>
+  </div>
+
+  <!-- La franja sin contenido que muestran las dos capturas del 7-sep, entre el reel
+       y el pie. En movil son mas de 10.000px; aqui va comprimida a 260. -->
+  <div style="height:260px;background:#000;display:flex;align-items:center;justify-content:center">
+    <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#3A3A44;text-align:center;line-height:1.9">franja sin contenido<br>de la captura del 7-sep<br><span style="color:#2C2C34">(&gt;10.000px, comprimida aqui)</span></div>
+  </div>
+
+  <!-- TABBAR, public/index.html:1831-1854 -->
+  <div style="display:flex;align-items:stretch;height:66px;background:#0D0D14;border-top:1px solid rgba(255,255,255,.08)">
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9B72E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5.5 9.5V20h13V9.5"></path></svg>
+      <span style="font-size:10.5px;color:#9B72E8;font-weight:600">Home</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 3h6v3H9z"></path><path d="M9 11h6M9 15h4"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">Draft</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+      <img src="mac-64.png" alt="" style="width:26px;height:26px;object-fit:contain">
+      <span style="font-size:10.5px;color:#9A9AA3">Mac</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h14l-3-3"></path><path d="M21 16H7l3 3"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">Analyze</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">More</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

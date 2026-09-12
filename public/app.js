@@ -398,10 +398,11 @@ function _hayCuenta(){
   try{return !!(localStorage.getItem('tm_username')||localStorage.getItem('tm_yahoo_tok'));}catch(e){return false;}
 }
 function goHome(){
-  // Con cuenta, "home" es TU pantalla (Leagues), no la portada de venta: un
-  // usuario conectado no vuelve al folleto. El wordmark sigue siendo la
-  // puerta de la portada solo para quien no ha conectado.
-  if(_hayCuenta()){switchScreen('myleagues');return;}
+  // El wordmark SIEMPRE lleva a la portada (orden del dueno, 2026-09-12:
+  // "quiero que me lleve al home page si clickeo arriba donde dice mac
+  // draft"). Deroga el "logo va a Leagues" del modo app del 11-sep. El
+  // ARRANQUE conectado sigue cayendo en Leagues: eso es la ruta de entrada,
+  // no el logo.
   _heroDismissed=false;
   window._noAnchorOnce=true;
   switchScreen('home');
@@ -1204,8 +1205,8 @@ function buildTradeBodyText(giveInputEls, getInputEls, valueTier, ktcGap, oppPro
   var getScout=buildScoutBlock(getInputEls,'rgba(34,197,94,.8)');
   var scoutBlock='';
   if(giveScout||getScout){
-    scoutBlock='<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">';
-    scoutBlock+='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">Scout\'s Take</div>';
+    scoutBlock='<div style="margin-top:14px;padding:0 0 0 13px;border-left:2px solid var(--border2)">';
+    scoutBlock+='<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">Scout\'s Take</div>';
     if(giveScout)scoutBlock+='<div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:2px">You give</div>'+giveScout;
     if(getScout)scoutBlock+=(giveScout?'<div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-top:8px;margin-bottom:2px">You get</div>':'')+''+getScout;
     // Show the methodology right where the read is made, not just in the footer -
@@ -4559,7 +4560,15 @@ async function runAnalysis(){
       +'<div class="tm-skel" style="height:14px;width:85%;margin:0 0 16px"></div>'
       +'<div class="tm-skel" style="height:96px;width:100%"></div>';
     var _vh0=document.getElementById('verdict-headline');
-    if(_vh0)_vh0.innerHTML='<span class="tm-skel" style="display:block;height:28px;width:70%"></span>';
+    if(_vh0)_vh0.innerHTML='<span class="tm-skel" style="display:block;height:23px;width:70%"></span>';
+    // El aro tambien espera vacio: dejar la cifra del trade ANTERIOR mientras
+    // se calcula el nuevo es la clase de mentira que este repo ya pago.
+    var _vr0=document.getElementById('vd-ring-arc');
+    if(_vr0)_vr0.style.strokeDashoffset='257.6';
+    var _vn0=document.getElementById('vd-ring-num');
+    if(_vn0){_vn0.textContent='';_vn0.style.color='';}
+    var _vs0=document.getElementById('vd-ring-sub');
+    if(_vs0)_vs0.textContent='reading the trade';
   }catch(_){}
   // Deduct BK (only if user is logged in)
   var bkOk=await chargeBK();
@@ -4704,15 +4713,18 @@ async function runAnalysis(){
   try{
     if(!localStorage.getItem('tm_met_sage')){
       localStorage.setItem('tm_met_sage','1');
-      var vh=document.getElementById('verdict-headline');
-      if(vh&&!document.getElementById('meet-sage-strip')){
+      // Va al FINAL del bloque del veredicto, no encima del titular: partia en
+      // dos la fila del aro y empujaba el veredicto fuera de su propia linea.
+      // Una presentacion se lee despues de lo que uno vino a leer.
+      var vr=document.querySelector('#verdict-card .verdict-right');
+      if(vr&&!document.getElementById('meet-sage-strip')){
         var ms=document.createElement('div');
         ms.id='meet-sage-strip';
-        ms.style.cssText='margin:0 0 14px;padding:12px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.35);border-radius:12px;font-size:12.5px;color:var(--muted2);line-height:1.6';
-        ms.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Meet Mac</div>'
+        ms.style.cssText='margin:12px 0 0;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;font-size:12.5px;color:var(--muted2);line-height:1.6';
+        ms.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Meet Mac</div>'
           +'Knows your team. Knows your league. Never gets emotional. Always in your corner. What you are about to read is one clear recommendation, built for YOUR situation - not a ranking.'
           +'<span style="float:right;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;margin-left:10px" onclick="this.parentElement.remove()">&times;</span>';
-        vh.parentElement.insertBefore(ms,vh);
+        vr.appendChild(ms);
       }
     }
   }catch(_){}
@@ -4773,11 +4785,11 @@ async function runAnalysis(){
   document.getElementById("verdict-headline").style.color='var(--text)';
   var rexState=valueTier==="crushing"||valueTier==="winning"?"win":valueTier==="even"?"neutral":"reject";
   setTimeout(function(){setSageState(rexState);},120);
+  // El filo de 4px y el tinte de fondo se van con el rediseño: el veredicto lo
+  // dice el ARO, que es donde el color significa algo. Se limpian a mano porque
+  // los escribia este mismo sitio como estilo en linea y sobreviven al repintado.
   var vc=document.getElementById("verdict-card");
-  if(vc){
-    vc.style.borderTop=valueTier==="getting_fleeced"||valueTier==="losing"?"4px solid var(--red)":valueTier==="even"?"4px solid var(--yellow)":"4px solid var(--green)";
-    vc.style.background=valueTier==="getting_fleeced"?"rgba(217,138,160,0.05)":valueTier==="losing"?"rgba(217,138,160,0.03)":valueTier==="even"?"rgba(230,192,122,0.03)":"rgba(34,197,94,0.03)";
-  }
+  if(vc){vc.style.borderTop='';vc.style.background='';}
   // Wolco's manager profile - drives Mac's personalized coaching line
 var USER_PROFILE={risk:'upside',window:'builder-adaptive-active',youth:'context',nego:'fair-options'};
 function sageStyleNote(valueTier){
@@ -4800,7 +4812,7 @@ function sageStyleNote(valueTier){
     ?"<button class='sage-more-toggle' onclick='toggleSageMore(this)'>Why Mac says this <span>&#9662;</span></button><div id='sage-more-detail'>"+whyHtml+depthHtml+styleHtml+"</div>"
     :"";
   if(valueTier==='even')bodyText+=' A fair trade is not a failed trade: if each side fills a different need, you both walk away better. That is what trading is for.';
-  document.getElementById("verdict-body").innerHTML=bodyText+"<div style='margin-top:12px'><span style='font-size:11px;font-weight:600;color:var(--accent-bright);background:var(--accent-dim);border:1px solid rgba(167,139,250,.3);border-radius:100px;padding:4px 11px;display:inline-block'>"+p.icon+" Opponent profile: "+oppName(p)+"</span></div>"+moreHtml;
+  document.getElementById("verdict-body").innerHTML=bodyText+"<div style='margin-top:12px'><span style='font-size:11px;font-weight:600;color:var(--muted2);background:var(--surface2);border:1px solid var(--border2);border-radius:100px;padding:4px 11px;display:inline-block'>Opponent profile: "+oppName(p)+"</span></div>"+moreHtml;
   // Trade balance bar (50% = even, >50% = you win, <50% = you lose)
   // Scale: ±3000 KTC maps to ±40% from center (50±40 = 10–90%), clamped to 5–95%
   // effGap, not ktcGap. The bar was positioned from the raw gap while its own
@@ -4817,7 +4829,43 @@ function sageStyleNote(valueTier){
     if(bar){bar.style.width=balancePct+"%";bar.style.background=barColor;}
   },100);
   var bl=document.getElementById("balance-label");
-  if(bl){bl.textContent=balanceLabel;bl.style.color=barColor;}
+  if(bl){
+    // El rotulo va AL LADO del titular, asi que cuando los dos dicen lo mismo
+    // ("YOU'RE GETTING ROBBED" / "You're getting robbed", que es un choque real
+    // del repertorio aleatorio de titulares) se calla en vez de repetirse.
+    var _norm=function(t){return String(t||"").toLowerCase().replace(/[^a-z0-9]/g,"");};
+    // El texto se escribe SIEMPRE: shareTradeToForum lee de aqui el veredicto
+    // para la tarjeta de comunidad. Lo que se esconde es la vista, no el dato.
+    var _dup=_norm(balanceLabel)===_norm(headline);
+    bl.textContent=balanceLabel;
+    bl.style.color=barColor;
+    bl.style.display=_dup?"none":"";
+  }
+
+  // ── EL ARO: la cifra que manda en la pantalla ──────────────────────────────
+  // El arco es la MISMA posicion que la barra (balancePct), asi que aro y barra
+  // nunca pueden contradecirse: son un solo dato dicho dos veces, cifra y sitio.
+  // La cifra es effGap, que es sobre la que se decide el tier y de la que sale
+  // el rotulo del veredicto. Sin valores de mercado NO se inventa un numero:
+  // el aro lo declara y se queda con el arco de respaldo que ya usaba la barra.
+  (function(){
+    var num=document.getElementById("vd-ring-num");
+    var sub=document.getElementById("vd-ring-sub");
+    var arc=document.getElementById("vd-ring-arc");
+    if(!num||!arc)return;
+    if(hasKtc){
+      var g=Math.round(effGap);
+      num.textContent=(g>0?"+":g<0?"−":"")+Math.abs(g).toLocaleString("en-US");
+      if(sub)sub.textContent=g>0?"value your way":g<0?"value against you":"dead even";
+    }else{
+      num.textContent="–";
+      if(sub)sub.textContent="no market values";
+    }
+    num.style.color=barColor;
+    arc.style.stroke=barColor;
+    // El arco dibuja el reparto: 257.6 es 2*pi*41, el perimetro del circulo.
+    setTimeout(function(){arc.style.strokeDashoffset=String(257.6*(1-balancePct/100));},140);
+  })();
   var yg=document.getElementById("you-give-label");
   var ygv=document.getElementById("you-get-label");
   // Render names with a team logo in front (picks have none).
@@ -9033,6 +9081,14 @@ function renderCompare(){
 var pdbAllPlayers=[];
 var pdbFiltered=[];
 var pdbAdvOpen=false;
+
+// La llave de busqueda del tab Players. Se USABA en tres sitios y no existia en
+// ningun archivo: la lista entera reventaba con ReferenceError antes de pintar
+// una fila. Es la misma normalizacion que _mdNormName (minusculas, fuera todo
+// lo que no sea alfanumerico, espacios colapsados), que es exactamente lo que
+// el comentario del sitio de uso ya declaraba: asi "Jamarr Chase" encuentra a
+// "Ja'Marr Chase" y "St Brown" a "Amon-Ra St. Brown".
+function _pdbKey(s){return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();}
 
 // Advanced stats for top dynasty players (2023/2024 season data)
 // Sources: Next Gen Stats, PFF, Matt Harmon Reception Perception, FantasyCalc

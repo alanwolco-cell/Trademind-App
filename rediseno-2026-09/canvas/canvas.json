@@ -1,0 +1,47 @@
+{
+  "artboards": [
+    { "file": "Actual.dc.html", "x": 0, "y": 0, "w": 390, "h": 1160, "title": "Hoy" },
+    { "file": "Main.dc.html", "x": 470, "y": 0, "w": 390, "h": 1160, "title": "A. Cabina de transmision" },
+    { "file": "DireccionB.dc.html", "x": 940, "y": 0, "w": 390, "h": 1130, "title": "B. El numero al lado" },
+    { "file": "DireccionC.dc.html", "x": 1410, "y": 0, "w": 390, "h": 1180, "title": "C. El loro afuera" },
+    { "file": "EscritorioA.dc.html", "x": 0, "y": 1320, "w": 1440, "h": 900, "title": "A en escritorio" }
+  ],
+  "annotations": [
+    {
+      "id": "nota-hoy",
+      "x": 0,
+      "y": -420,
+      "w": 390,
+      "text": "HOY\nRecreado desde public/index.html y home.css, no desde la captura.\n\nEl problema no es el gusto, es la escala. El hero de marketing se come la ventana entera y termina en un reel de la sala de subasta de 1282x806 pintado a 346px de ancho: todo el texto del producto queda por debajo de 5px. Se ensena el tablero y no se puede leer ni un nombre.\n\nTodo centrado, un solo bloque, y detras la franja sin contenido de la captura del 7-sep."
+    },
+    {
+      "id": "nota-a",
+      "x": 470,
+      "y": -420,
+      "w": 390,
+      "text": "A. CABINA DE TRANSMISION (la que recomiendo)\nEje: la sala en vivo entra en lugar del hero, no encima.\n\nA favor: el copy ya dice \"draft like it's draft night\" y por primera vez el diseno lo cumple. El reloj, el lote y el techo se leen a tamano real en vez de ir dentro de un video de 346px. Y ataca el hallazgo 3 del propio repo: la subasta es la parte fiable del motor, aqui es el gancho.\n\nEn contra: pelea por altura en movil. Se resuelve quitando (el hero desaparece, la barra baja de 56 a 52), no sumando. Y a quien nunca ha draftado le abre una sala en la que no esta: hace falta un estado para el visitante nuevo que aqui no esta dibujado."
+    },
+    {
+      "id": "nota-b",
+      "x": 940,
+      "y": -420,
+      "w": 390,
+      "text": "B. EL NUMERO AL LADO\nEje: ninguna afirmacion de Mac viaja sin su cifra, en la misma linea.\n\nA favor: es la mas honesta y la que mejor envejece. Un solo formato de tarjeta repetido a tres pesos distintos resuelve la densidad sin retícula muerta. Y las cifras son reales del repo: 280 lotes de subasta transcritos, la franja RB2 inflada en las dos salas.\n\nEn contra: la promesa \"cada numero se abre\" hoy solo esta escrita para el perfil privado. Firmarla en la portada obliga a escribir esa capa en las nueve pantallas antes de publicar, o el diseno miente."
+    },
+    {
+      "id": "nota-c",
+      "x": 1410,
+      "y": -420,
+      "w": 390,
+      "text": "C. EL LORO AFUERA\nEje: Mac protagoniza la marca; adentro la herramienta se queda sobria.\n\nA favor: es la unica que usa el activo mas valioso del proyecto a tamano de marca, y el corte seco entre el campo morado y el tablero gris es memorable. La posicion adentro es texto, no color: disciplina de verdad.\n\nEn contra: es la mas especulativa de las tres. Underdog, la referencia que la sostiene, no se pudo verificar visualmente. Y un loro de 238px en la portada de un producto que se vende por credibilidad de dato puede leerse como app para ninos. Riesgo real, no teorico."
+    },
+    {
+      "id": "nota-sistema",
+      "x": 1520,
+      "y": 1320,
+      "w": 460,
+      "text": "EL SISTEMA, IGUAL EN LAS TRES\n\nRADIOS. Los 19 valores de hoy se unifican en cuatro escalones mas capsula: 6 chips y etiquetas, 10 celdas e inputs, 14 tarjetas, 22 paneles, 999 capsula. Los cuatro ya existen en el CSS actual, no son invencion.\n\nTIPOGRAFIA. Familjen Grotesk se queda para display (ya esta autohospedada). El cuerpo deja de declarar Inter sin servirla y pasa a IBM Plex Sans, con IBM Plex Mono para reloj, dinero y todo numero que cambia: tabular, no salta de ancho al subir la puja.\n\nCONTRASTE, medido con Python, no a ojo. Texto #F5F5F7 sobre #0A0A10: 18.13. Secundario #9A9AA3: 7.07. Acento #9B72E8: 5.61. Boton relleno #7C47E1 con blanco: 5.46. Morado como superficie con tinta #0A0A10 encima (la portada de C): 5.61. Verde #22C55E: 8.66. Los seis colores de posicion sobre tarjeta: entre 6.62 y 10.96. Todo pasa AA.\n\nEl unico que NO pasa y por eso no se usa: blanco sobre #9B72E8, 3.52. El relleno de boton es siempre #7C47E1.\n\nDATOS. Los precios son los del motor real tras calibrar VAL_CURVE a 1.3 contra dos subastas reales (Gibbs 77, Bijan 75, Chase 68, Swift 13). Nada inventado. Los presupuestos por equipo si son de muestra."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

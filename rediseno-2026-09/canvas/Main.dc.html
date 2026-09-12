@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    body{margin:0;background:#0A0A10;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:#9B72E8;text-decoration:none} a:hover{color:#B49BF0}
+    .lbl{font-size:10.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#9A9AA3}
+    .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+    .chip{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;font-weight:600;letter-spacing:.06em;padding:3px 6px;border-radius:6px;color:#0A0A10}
+  </style>
+</helmet>
+
+<div style="width:390px;background:#0A0A10;color:#F5F5F7;display:flex;flex-direction:column">
+
+  <!-- TOP BAR: mas fino que hoy (52 vs 56). El espacio que gana la cabina sale de aqui
+       y del hero de marketing que desaparece, no se suma encima. -->
+  <div style="display:flex;align-items:center;gap:9px;height:52px;padding:0 16px">
+    <img src="mac-64.png" alt="" style="width:26px;height:26px;object-fit:contain;flex:none">
+    <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em">Mac Draft</div>
+    <div style="flex-grow:1"></div>
+    <div style="display:flex;align-items:center;justify-content:center;height:44px;padding:0 4px;font-size:14px;font-weight:500;color:#9B72E8">Connect league</div>
+  </div>
+
+  <!-- ═══ LA CABINA ═══════════════════════════════════════════════════════
+       Reemplaza al hero de marketing. Lo que estaba en el video ahora esta
+       en vivo y a tamano legible: reloj, lote, puja, techo. -->
+  <div style="margin:0 16px;border-radius:22px;border:1px solid rgba(255,255,255,.10);background:radial-gradient(150% 100% at 82% 0%,#241B3D 0%,#171326 46%,#12111B 100%);padding:18px 18px 16px;display:flex;flex-direction:column;gap:16px">
+
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:7px;height:7px;border-radius:50%;background:#22C55E;flex:none"></div>
+      <div class="lbl" style="color:#F5F5F7">On the block</div>
+      <div style="flex-grow:1"></div>
+      <div style="font-size:12px;color:#9A9AA3">Fantazy 2026 · $200</div>
+    </div>
+
+    <!-- lote a la izquierda, reloj a la derecha: nada centrado -->
+    <div style="display:flex;align-items:flex-start;gap:14px">
+      <div style="flex-grow:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+          <span class="chip" style="background:#4ADE80">RB</span>
+          <span style="font-size:11.5px;color:#9A9AA3">DET · Lot 11 of 150</span>
+        </div>
+        <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-size:27px;font-weight:700;letter-spacing:-.025em;line-height:1.08">Jahmyr Gibbs</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div class="mono" style="font-size:52px;font-weight:500;line-height:.92;letter-spacing:-.03em;color:#F5F5F7">0:38</div>
+        <div class="lbl" style="margin-top:5px">clock</div>
+      </div>
+    </div>
+
+    <!-- la fila de dato: puja, quien la tiene, techo. El techo es lo unico morado. -->
+    <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;padding-top:14px;border-top:1px solid rgba(255,255,255,.10)">
+      <div>
+        <div class="lbl" style="margin-bottom:6px">Bid</div>
+        <div class="mono" style="font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1">$62</div>
+      </div>
+      <div>
+        <div class="lbl" style="margin-bottom:6px">Held by</div>
+        <div style="font-size:15px;font-weight:600;line-height:1.28;padding-top:5px">Ness</div>
+      </div>
+      <div>
+        <div class="lbl" style="margin-bottom:6px;color:#9B72E8">Your ceiling</div>
+        <div class="mono" style="font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1;color:#9B72E8">$92</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EL TICKER ══════════════════════════════════════════════════════
+       Chyron de television en una sola linea. En el telefono cabe la lectura
+       de Mac, la ultima venta entera y el conteo: ningun nombre se corta.
+       El resto se lee en escritorio, donde el mismo ticker abre a seis. -->
+  <div style="margin-top:16px;height:46px;background:#14141D;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);overflow:hidden">
+    <div style="display:flex;align-items:center;height:46px;padding:0 16px;gap:12px;white-space:nowrap">
+      <div style="display:flex;align-items:center;gap:7px;flex:none">
+        <img src="mac-excited-128.png" alt="" style="width:24px;height:24px;object-fit:contain">
+        <span style="font-size:13px;font-weight:600;color:#9B72E8">Room 18% under book</span>
+      </div>
+      <div style="width:1px;height:18px;background:rgba(255,255,255,.16);flex:none"></div>
+      <div style="display:flex;align-items:center;gap:6px;flex:none">
+        <span style="width:6px;height:6px;border-radius:50%;background:#FBBF24"></span>
+        <span style="font-size:13px;color:#F5F5F7">A. St. Brown</span>
+        <span class="mono" style="font-size:13px;color:#9A9AA3">$44</span>
+      </div>
+      <div style="flex-grow:1"></div>
+      <div class="mono" style="font-size:12.5px;color:#9A9AA3;flex:none">+9</div>
+    </div>
+  </div>
+
+  <!-- ═══ LA VOZ DE MAC ═══════════════════════════════════════════════════
+       El respiro entre las dos zonas densas. Cada afirmacion con su cifra. -->
+  <div style="padding:26px 16px 24px;display:flex;gap:14px;align-items:flex-start">
+    <img src="mac-scrutiny-128.png" alt="Mac" style="width:76px;height:76px;object-fit:contain;flex:none;margin-top:-4px">
+    <div style="flex-grow:1;min-width:0">
+      <div style="font-family:'Familjen Grotesk',system-ui,sans-serif;font-size:20px;font-weight:600;line-height:1.28;letter-spacing:-.02em;text-wrap:pretty">The room pays about <span class="mono" style="font-weight:600">$77</span> for Gibbs. Do not go past <span class="mono" style="color:#9B72E8;font-weight:600">$92</span>.</div>
+      <div style="font-size:12.5px;line-height:1.55;color:#9A9AA3;margin-top:9px">Priced off 2026 redraft ADP, calibrated against two real auctions.</div>
+    </div>
+  </div>
+
+  <!-- ═══ EL TABLERO ══════════════════════════════════════════════════════
+       Densidad al estilo Wealthsimple / The Athletic: sin tarjeta, sin sombra,
+       sin icono por fila. El color entra solo por la posicion. -->
+  <div style="display:flex;align-items:baseline;gap:9px;padding:0 16px 10px">
+    <div style="width:22px;height:2px;background:#9B72E8;align-self:center"></div>
+    <div class="lbl">Available</div>
+    <div style="flex-grow:1"></div>
+    <div style="font-size:12px;color:#9A9AA3">139 left</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.10)">
+
+    <div style="display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.10)">
+      <span class="chip" style="background:#4ADE80;flex:none">RB</span>
+      <div style="flex-grow:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;letter-spacing:-.012em">Bijan Robinson</div>
+        <div style="font-size:11.5px;color:#9A9AA3;margin-top:1px">ATL · Bye 5</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div class="mono" style="font-size:15px;font-weight:500">$75</div>
+        <div class="mono" style="font-size:11px;color:#9A9AA3;margin-top:1px">up to 90</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.10)">
+      <span class="chip" style="background:#FBBF24;flex:none">WR</span>
+      <div style="flex-grow:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;letter-spacing:-.012em">Ja'Marr Chase</div>
+        <div style="font-size:11.5px;color:#9A9AA3;margin-top:1px">CIN · Bye 10</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div class="mono" style="font-size:15px;font-weight:500">$68</div>
+        <div class="mono" style="font-size:11px;color:#9A9AA3;margin-top:1px">up to 82</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.10)">
+      <span class="chip" style="background:#FBBF24;flex:none">WR</span>
+      <div style="flex-grow:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;letter-spacing:-.012em">Puka Nacua</div>
+        <div style="font-size:11.5px;color:#9A9AA3;margin-top:1px">LAR · Bye 8</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div class="mono" style="font-size:15px;font-weight:500">$65</div>
+        <div class="mono" style="font-size:11px;color:#9A9AA3;margin-top:1px">up to 78</div>
+      </div>
+    </div>
+
+    <!-- La unica fila destacada: el hallazgo, no una fila mas. Rompe la retícula
+         a proposito, con superficie morada tenue y una linea de Mac. -->
+    <div style="background:rgba(155,114,232,.13);border-bottom:1px solid rgba(255,255,255,.10);border-left:2px solid #9B72E8">
+      <div style="display:flex;align-items:center;gap:11px;padding:13px 16px 8px">
+        <span class="chip" style="background:#4ADE80;flex:none">RB</span>
+        <div style="flex-grow:1;min-width:0">
+          <div style="font-size:15px;font-weight:600;letter-spacing:-.012em">D'Andre Swift</div>
+          <div style="font-size:11.5px;color:#9A9AA3;margin-top:1px">CHI · Bye 7</div>
+        </div>
+        <div style="text-align:right;flex:none">
+          <div class="mono" style="font-size:15px;font-weight:600;color:#22C55E">$13</div>
+          <div class="mono" style="font-size:11px;color:#9A9AA3;margin-top:1px">up to 16</div>
+        </div>
+      </div>
+      <div style="padding:0 16px 12px 16px;font-size:12.5px;line-height:1.5;color:#C6C6CE">Same tier as James Cook. Saves you <span class="mono" style="color:#22C55E;font-weight:600">$40</span>.</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.10)">
+      <span class="chip" style="background:#FBBF24;flex:none">WR</span>
+      <div style="flex-grow:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;letter-spacing:-.012em">Jaxon Smith-Njigba</div>
+        <div style="font-size:11.5px;color:#9A9AA3;margin-top:1px">SEA · Bye 6</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div class="mono" style="font-size:15px;font-weight:500">$61</div>
+        <div class="mono" style="font-size:11px;color:#9A9AA3;margin-top:1px">up to 73</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.10)">
+      <span class="chip" style="background:#A78BFA;flex:none">QB</span>
+      <div style="flex-grow:1;min-width:0">
+        <div style="font-size:15px;font-weight:600;letter-spacing:-.012em">Joe Burrow</div>
+        <div style="font-size:11.5px;color:#9A9AA3;margin-top:1px">CIN · Bye 9</div>
+      </div>
+      <div style="text-align:right;flex:none">
+        <div class="mono" style="font-size:15px;font-weight:500">$10</div>
+        <div class="mono" style="font-size:11px;color:#9A9AA3;margin-top:1px">up to 12</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ACCION UNICA -->
+  <div style="padding:20px 16px 22px;display:flex;flex-direction:column;gap:11px">
+    <div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;background:#7C47E1;color:#fff;font-size:16.5px;font-weight:600;letter-spacing:-.012em">Start a mock draft</div>
+    <div style="display:flex;align-items:center;justify-content:center;height:44px;font-size:14.5px;color:#9A9AA3">See the full board</div>
+  </div>
+
+  <!-- TABBAR -->
+  <div style="display:flex;align-items:stretch;height:66px;background:#0D0D14;border-top:1px solid rgba(255,255,255,.08)">
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9B72E8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5.5 9.5V20h13V9.5"></path></svg>
+      <span style="font-size:10.5px;color:#9B72E8;font-weight:600">Home</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"></rect><path d="M9 3h6v3H9z"></path><path d="M9 11h6M9 15h4"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">Draft</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+      <img src="mac-64.png" alt="" style="width:26px;height:26px;object-fit:contain">
+      <span style="font-size:10.5px;color:#9A9AA3">Mac</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h14l-3-3"></path><path d="M21 16H7l3 3"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">Analyze</span>
+    </div>
+    <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9A9AA3" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      <span style="font-size:10.5px;color:#9A9AA3">More</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
