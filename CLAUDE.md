@@ -2295,3 +2295,18 @@ Flight Deck, y la Fase 2 de composicion pantalla por pantalla (Leagues
 primero: anti-vibecoded medido en las 12 tarjetas identicas; hub 85% vacio
 en desktop). Las 4 familias semanticas sin token se tokenizan cuando la
 Fase 2 toque app.js.
+
+**Act. 12-sep (tarde): FLIGHT DECK ES EL SITIO.** El dueno eligio CIAN sobre
+el preview en vivo. Commit 875f346 (cache-bust 2026091203): v13 default (html
+"v12 v13" + v13.css cargando el ultimo), esmeralda borrada, theme-color +
+html/body + manifest a #171614 (el manifest venia del morado #2a1f4a), home
+con acento cian (#197a93 claro / #3db8d4 oscuro), General Sans precargada.
+NO tocados a proposito: el estadio del hero (bg-stage.jpg, pedido por el
+dueno: se re-renderiza con los assets de Fase 2) y el trio del arranque
+(overlay + vuelo.mp4 + startup images de iOS, atados por la ley del primer
+fotograma: se regeneran JUNTOS, con wolco-esteta). Reversion: quitar v13 de
+la clase html + su link, o el tag pre-rediseno-2026-09-12.
+Fase 2 pendiente (composicion): Leagues (12 tarjetas identicas), hub (85%
+vacio en desktop), hero del home (muere el poster de promesa), re-filmar
+promo-season con el vestido nuevo (gen-reel-season.mjs lo hace solo), tema
+claro de Flight Deck, 4 familias semanticas sin token en app.js.
