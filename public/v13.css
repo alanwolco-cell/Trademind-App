@@ -1,0 +1,83 @@
+/* ── v13 FLIGHT DECK ─────────────────────────────────────────────────────────
+   La direccion B del rediseño de septiembre 2026, elegida por el dueno el
+   12-sep sobre el board de referencias: el aro de Leagues se vuelve la
+   identidad entera, el producto como un chequeo de signos vitales de tus
+   equipos. Roba de WHOOP (aro + numero + lista corta), Wealthsimple
+   (mini-tarjetas de tendencia) y Linear (grano sutil, cero degradado).
+
+   MECANICA (del inventario de la Fase 0): v13 NO es hermano de v12, es una
+   CAPA encima. <html class="v12 v13">: toda la base v11+v12 sigue aplicando
+   y este archivo, cargado EL ULTIMO (despues de home.css), solo redefine los
+   tokens y lo poco estructural que la direccion pide. Revertir es quitar la
+   clase v13. Preview: ?v13 (esmeralda) o ?v13=cyan, ver index.html.
+
+   El morado muere aqui por decision del dueno (12-sep). Los semanticos
+   green/red/yellow NO cambian: son color-que-significa, no vestido. */
+
+/* La tipografia de la direccion: General Sans (Fontshare, ITF Free Font
+   License), grotesco humanista mas calido que Familjen. Autohospedada como
+   el resto de las fuentes del sitio. Los @font-face viven aqui y no en
+   index.html a proposito: mientras v13 sea preview, nadie mas paga los KB. */
+@font-face{font-family:'General Sans';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/general-sans-regular.woff2) format('woff2')}
+@font-face{font-family:'General Sans';font-style:normal;font-weight:500;font-display:swap;src:url(/fonts/general-sans-medium.woff2) format('woff2')}
+@font-face{font-family:'General Sans';font-style:normal;font-weight:600;font-display:swap;src:url(/fonts/general-sans-semibold.woff2) format('woff2')}
+@font-face{font-family:'General Sans';font-style:normal;font-weight:700;font-display:swap;src:url(/fonts/general-sans-bold.woff2) format('woff2')}
+
+html.v13{
+  /* Grafito CALIDO: la familia de grises lleva un sesgo marron deliberado
+     (el "no negro puro" deja de ser cumplimiento tecnico y pasa a ser
+     expresion). Nada de tinte violeta: el acento es el unico color de una
+     pantalla que no es dato. */
+  --bg:#171614;
+  --surface:#1e1d1a;
+  --surface2:#262420;
+  --surface3:#302e28;
+  --border:rgba(236,231,220,.09);
+  --border2:rgba(236,231,220,.16);
+  --text:#f0ede5;
+  --muted:#98948a;
+  --muted2:#c7c2b6;
+
+  /* Acento ESMERALDA (variante por defecto). La alternativa cian vive en
+     html.v13.v13-cyan, abajo. Un solo acento, plano, nunca en degradado.
+     Los -rgb alimentan los ~150 tintes rgba(var(--accent-rgb),...) del sitio. */
+  --accent:#2aa579;
+  --accent-bright:#3ecf9a;
+  --accent-btn:#22996f;
+  --accent-dim:rgba(62,207,154,.13);
+  --accent-rgb:62,207,154;
+  --accent-deep-rgb:42,165,121;
+  --accent-btn-rgb:34,153,111;
+
+  --font-head:"General Sans","Familjen Grotesk",system-ui,sans-serif;
+  --font-body:"General Sans","Familjen Grotesk",system-ui,sans-serif;
+}
+
+/* Variante CIAN PROFUNDO: mas lejos del verde semantico de "vas ganando"
+   (con esmeralda, acento y semaforo comparten familia; con cian no hay roce).
+   Se activa con ?v13=cyan para comparar lado a lado. */
+html.v13.v13-cyan{
+  --accent:#2492ad;
+  --accent-bright:#3db8d4;
+  --accent-btn:#1f8aa5;
+  --accent-dim:rgba(61,184,212,.13);
+  --accent-rgb:61,184,212;
+  --accent-deep-rgb:36,146,173;
+  --accent-btn-rgb:31,138,165;
+}
+
+/* El grano de Linear: textura sutil en el fondo en vez de cualquier
+   degradado. Un SVG de turbulencia diminuto, repetido, al 3%: se siente mas
+   de lo que se ve. Sobre el color de fondo, nunca en su lugar. */
+html.v13 body{
+  background-color:var(--bg);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* El casi-blanco puro de v11 (--text #ffffff) muere con el vestido: sobre
+   grafito calido, el marfil de --text ya viene del bloque de tokens. Aqui
+   solo lo estructural minimo que la direccion pide y que un token no puede:
+   los titulares en el peso 600 ya lo pone v11; General Sans es mas ancha que
+   Familjen, asi que el tracking apretado de v11 se relaja UN punto para que
+   los titulares no se toquen. */
+html.v13 h1, html.v13 h2, html.v13 h3{letter-spacing:-.018em}

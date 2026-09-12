@@ -81,22 +81,38 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091201">
+<link rel="stylesheet" href="/styles.css?v=2026091202">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091201" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091202" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091201">
+<link rel="stylesheet" href="/theme.css?v=2026091202">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091201">
+<link rel="stylesheet" href="/home.css?v=2026091202">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
 // a concept is never mistaken for the real site. A bare ?v12 is just the default.
+// v13 (Flight Deck) es distinto a los conceptos viejos: es una CAPA sobre
+// v12, no un reemplazo. ?v13 = acento esmeralda, ?v13=cyan = acento cian.
+// El document.write cae aqui, DESPUES de home.css: v13.css debe cargar el
+// ultimo para ganar la cascada sin !important (inventario Fase 0).
+var _cap=/[?&]v13(?:=(cyan))?(?:&|$)/.exec(location.search);
+if(_cap){
+  document.documentElement.classList.add('v13');
+  if(_cap[1]==='cyan')document.documentElement.classList.add('v13-cyan');
+  document.write('<link rel="stylesheet" href="/v13.css?v=2026091202">');
+  window.addEventListener('DOMContentLoaded',function(){
+    var pill=document.createElement('div');
+    pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#171614;color:#f0ede5;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
+    pill.innerHTML='FLIGHT DECK PREVIEW ('+(_cap[1]==='cyan'?'cian':'esmeralda')+') <button onclick="location.href=\'/\'" style="background:#3ecf9a;border:none;border-radius:100px;padding:5px 14px;font-weight:800;cursor:pointer;color:#171614">Back to normal</button>';
+    document.body.appendChild(pill);
+  });
+}
 var _skin=/[?&](v2|v3|v4|v5|v6|v7|v8|v9|v10|v11)\b/.exec(location.search);
 if(_skin){
   var _el=document.documentElement;
@@ -104,7 +120,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091201">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091202">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -1905,13 +1921,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091201"></script>
-<script src="/rankings.js?v=2026091201"></script>
-<script src="/weekly.js?v=2026091201"></script>
-<script src="/live.js?v=2026091201"></script>
-<script src="/myleagues.js?v=2026091201"></script>
-<script src="/push.js?v=2026091201" defer></script>
-<script src="/hub.js?v=2026091201"></script>
+<script src="/app.js?v=2026091202"></script>
+<script src="/rankings.js?v=2026091202"></script>
+<script src="/weekly.js?v=2026091202"></script>
+<script src="/live.js?v=2026091202"></script>
+<script src="/myleagues.js?v=2026091202"></script>
+<script src="/push.js?v=2026091202" defer></script>
+<script src="/hub.js?v=2026091202"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

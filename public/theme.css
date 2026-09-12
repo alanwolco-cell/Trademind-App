@@ -70,25 +70,25 @@
    belong to the mobile pass, so nothing here reaches under 701px. */
 @media(min-width:701px){
   html.v11 .inner-tab-bar, html.v12 .inner-tab-bar{
-    background:rgba(155,114,232,.07);
-    border-color:rgba(155,114,232,.16);
+    background:rgba(var(--accent-rgb),.07);
+    border-color:rgba(var(--accent-rgb),.16);
   }
   html.v11 .inner-tab.active, html.v12 .inner-tab.active{
-    background:rgba(155,114,232,.20);
+    background:rgba(var(--accent-rgb),.20);
     color:var(--accent-bright);
     font-weight:600;
-    box-shadow:0 0 0 1px rgba(155,114,232,.32) inset;
+    box-shadow:0 0 0 1px rgba(var(--accent-rgb),.32) inset;
   }
   html.v11 .inner-tab:hover:not(.active), html.v12 .inner-tab:hover:not(.active){
     color:var(--text);
-    background:rgba(155,114,232,.07);
+    background:rgba(var(--accent-rgb),.07);
   }
 
   /* Community's Refresh is the only button in the header row; grey made the
      one interactive element up there the quietest thing on the screen. */
   .comm-head .btn-sm{
-    background:rgba(155,114,232,.13);
-    border-color:rgba(155,114,232,.30);
+    background:rgba(var(--accent-rgb),.13);
+    border-color:rgba(var(--accent-rgb),.30);
     color:var(--accent-bright);
   }
 }
@@ -119,7 +119,7 @@
 .comm-card:hover,
 .bs-row:hover,
 .mkt-stat:hover,
-.pdb-card:hover{border-color:rgba(155,114,232,.38)}
+.pdb-card:hover{border-color:rgba(var(--accent-rgb),.38)}
 
 /* v11 removed lift-on-hover everywhere else; Buy/Sell rows still had it. */
 .bs-row:hover{transform:none}
@@ -170,14 +170,14 @@
 .stand-table td:nth-child(2){text-align:left}
 
 .stand-table tbody tr{transition:background .15s}
-.stand-table tbody tr:hover td{background:rgba(155,114,232,.07)}
+.stand-table tbody tr:hover td{background:rgba(var(--accent-rgb),.07)}
 
 /* The user's own row was tinted with a 90deg gradient set on the cell, so it
    restarted at every <td> and striped the row. A flat tint plus one accent
    edge marks the row without the banding. */
-.stand-table tr.st-me td{background:rgba(155,114,232,.10)}
+.stand-table tr.st-me td{background:rgba(var(--accent-rgb),.10)}
 .stand-table tr.st-me td:first-child{box-shadow:inset 2px 0 0 var(--accent-bright)}
-.stand-table tr.st-me:hover td{background:rgba(155,114,232,.16)}
+.stand-table tr.st-me:hover td{background:rgba(var(--accent-rgb),.16)}
 
 /* Roster grade breakdown: same row rhythm and hover as the tables above. */
 .pos-grade-row{
@@ -185,7 +185,7 @@
   border-radius:var(--radius);
   transition:background .15s;
 }
-.pos-grade-row:hover{background:rgba(155,114,232,.06)}
+.pos-grade-row:hover{background:rgba(var(--accent-rgb),.06)}
 .pos-grade-row > :last-child{font-variant-numeric:tabular-nums}
 
 /* Market movers were the one dense list with no vertical rhythm of its own. */
@@ -225,11 +225,11 @@
    skin's own specificity, which targets these directly and would otherwise
    keep winning. */
 html.v11 .inner-tab.active,html.v12 .inner-tab.active,.inner-tab.active{
-  background:rgba(155,114,232,.19);
-  border-color:rgba(155,114,232,.45);color:var(--text);
+  background:rgba(var(--accent-rgb),.19);
+  border-color:rgba(var(--accent-rgb),.45);color:var(--text);
 }
 html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.inner-tab:hover:not(.active){
-  color:var(--text);border-color:rgba(155,114,232,.28);
+  color:var(--text);border-color:rgba(var(--accent-rgb),.28);
 }
 
 /* A hairline of brand colour down the leading edge of each row. Enough to tie
@@ -237,11 +237,11 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .comm-card,.pdb-card,.bs-row{position:relative;overflow:hidden}
 .comm-card::before,.pdb-card::before,.bs-row::before{
   content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
-  background:rgba(155,114,232,.7);
+  background:rgba(var(--accent-rgb),.7);
   opacity:.34;transition:opacity .16s ease;
 }
 .comm-card:hover::before,.pdb-card:hover::before,.bs-row:hover::before{opacity:1}
-.comm-card:hover,.pdb-card:hover,.bs-row:hover{border-color:rgba(155,114,232,.4)}
+.comm-card:hover,.pdb-card:hover,.bs-row:hover{border-color:rgba(var(--accent-rgb),.4)}
 
 /* The market figure is the reason these screens exist, so it stops sharing a
    colour with its own label. Up and down keep theirs: those carry meaning. */
@@ -251,17 +251,17 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
    column the eye can run down. First column is the team name and stays left. */
 .stand-table th{
   color:var(--muted2);font-size:11px;font-weight:700;letter-spacing:.07em;
-  text-transform:uppercase;border-bottom:1px solid rgba(155,114,232,.22);
+  text-transform:uppercase;border-bottom:1px solid rgba(var(--accent-rgb),.22);
 }
-.stand-table tbody tr:hover td{background:rgba(155,114,232,.055)}
+.stand-table tbody tr:hover td{background:rgba(var(--accent-rgb),.055)}
 .stand-table td:not(:first-child),.stand-table th:not(:first-child){
   text-align:right;font-variant-numeric:tabular-nums;
 }
 
 /* Empty states are the first thing a new manager sees on all three screens. */
 .mkt-empty,.ideas-empty,.comm-empty{
-  border:1px dashed rgba(155,114,232,.28);border-radius:var(--radius);
-  background:rgba(155,114,232,.045);padding:22px 18px;color:var(--muted2);
+  border:1px dashed rgba(var(--accent-rgb),.28);border-radius:var(--radius);
+  background:rgba(var(--accent-rgb),.045);padding:22px 18px;color:var(--muted2);
 }
 
 
@@ -318,7 +318,7 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 /* your column: marked by the brand, quietly - a tint and a gradient baseline */
 .mdb-head.mdb-me{
   background:var(--accent-dim);color:var(--accent-bright);
-  box-shadow:inset 0 -2px 0 0 rgba(155,114,232,.75);
+  box-shadow:inset 0 -2px 0 0 rgba(var(--accent-rgb),.75);
 }
 .mdb-round{font-size:10px;letter-spacing:.04em}
 .mdb-cell{border-radius:8px}
@@ -335,14 +335,14 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .mdb-cell.mdb-pk .mdb-sub{color:var(--pos,var(--muted))}
 .mdb-pickno{font-variant-numeric:tabular-nums}
 /* your own picks: hairline brand outline on top of the position edge */
-.mdb-cell.mdb-minepick{outline:1px solid rgba(155,114,232,.35);outline-offset:-1px}
+.mdb-cell.mdb-minepick{outline:1px solid rgba(var(--accent-rgb),.35);outline-offset:-1px}
 
 /* MOMENT 1 - the lock-in. A new pick settles with a soft spring while the
    brand's light passes over it once. Replaces the plain scale pop. */
 .mdb-cell.mdb-latest{animation:tmSettle .38s cubic-bezier(.2,1.4,.4,1) both}
 .mdb-cell.mdb-latest::after{
   content:'';position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(105deg,transparent 32%,rgba(155,114,232,.32) 46%,rgba(103,232,249,.38) 54%,transparent 68%);
+  background:linear-gradient(105deg,transparent 32%,rgba(var(--accent-rgb),.32) 46%,rgba(103,232,249,.38) 54%,transparent 68%);
   transform:translateX(-130%);
   animation:tmSweep .5s ease-out .08s forwards;
 }
@@ -352,12 +352,12 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 /* MOMENT 4 - on the clock. The one cell that matters breathes the accent;
    everything else on the board holds still. */
 .mdb-cell.mdb-onclock{
-  border:1px solid rgba(155,114,232,.55);
+  border:1px solid rgba(var(--accent-rgb),.55);
   animation:tmClock 1.8s ease-in-out infinite;
 }
 @keyframes tmClock{
-  0%,100%{box-shadow:0 0 0 0 rgba(155,114,232,0)}
-  50%{box-shadow:0 0 16px 1px rgba(155,114,232,.32)}
+  0%,100%{box-shadow:0 0 0 0 rgba(var(--accent-rgb),0)}
+  50%{box-shadow:0 0 16px 1px rgba(var(--accent-rgb),.32)}
 }
 
 /* ── the available list ─────────────────────────────────────────────────────
@@ -371,11 +371,11 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   border-radius:10px;cursor:pointer;
   transition:border-color .16s var(--ap-ease,ease),background .16s var(--ap-ease,ease);
 }
-.md-ch-row:hover{border-color:rgba(155,114,232,.45);border-left-color:var(--pos,var(--border));background:var(--surface3)}
+.md-ch-row:hover{border-color:rgba(var(--accent-rgb),.45);border-left-color:var(--pos,var(--border));background:var(--surface3)}
 /* Sage's pick: carries a wash of the brand, not a shout */
 .md-ch-row.md-ch-rec{
-  border-color:rgba(155,114,232,.55);border-left-color:var(--pos,var(--border));
-  background:linear-gradient(100deg,rgba(155,114,232,.10) 0%,rgba(0,0,0,0) 60%),var(--surface2);
+  border-color:rgba(var(--accent-rgb),.55);border-left-color:var(--pos,var(--border));
+  background:linear-gradient(100deg,rgba(var(--accent-rgb),.10) 0%,rgba(0,0,0,0) 60%),var(--surface2);
 }
 .md-ch-row.md-ch-on{outline:2px solid var(--accent-bright);outline-offset:1px}
 
@@ -432,9 +432,9 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
    radius (the 14px/16px inline values were edited in index.html). The section
    chips get a real selected state instead of a bare border swap. */
 .md-sec-btn{transition:border-color .16s var(--ap-ease,ease),color .16s var(--ap-ease,ease),background .16s var(--ap-ease,ease)}
-.md-sec-btn.on{background:var(--accent-dim);border-color:rgba(155,114,232,.5);color:var(--accent-bright)}
+.md-sec-btn.on{background:var(--accent-dim);border-color:rgba(var(--accent-rgb),.5);color:var(--accent-bright)}
 .md-strat-card{border-radius:var(--radius)}
-.md-pos-chip.active{border-color:rgba(155,114,232,.5)}
+.md-pos-chip.active{border-color:rgba(var(--accent-rgb),.5)}
 /* a position filter chip wears its own position colour while selected */
 .md-pos-chip[data-pos="QB"].active{color:var(--pos-qb);border-color:var(--pos-qb);background:rgba(167,139,250,.12)}
 .md-pos-chip[data-pos="RB"].active{color:var(--pos-rb);border-color:var(--pos-rb);background:rgba(74,222,128,.10)}
@@ -445,7 +445,7 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 /* the flag chips (Rookies / Drafted) wear the pos-chip body with the brand's
    selected state - they toggle a view, they don't pick a position */
 .md-flag-chip{background:var(--surface2);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-size:10px;font-weight:700;padding:5px 11px;cursor:pointer;transition:all .15s;font-family:var(--font-body)}
-.md-flag-chip.active{color:var(--accent-bright);border-color:rgba(155,114,232,.5);background:var(--accent-dim)}
+.md-flag-chip.active{color:var(--accent-bright);border-color:rgba(var(--accent-rgb),.5);background:var(--accent-dim)}
 
 /* ── the projection columns (Stacked parity) ────────────────────────────────
    With a position filter on and projections loaded, the available list drops
@@ -506,8 +506,8 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 /* Every empty state in the app takes the one dashed-accent treatment the
    Community/Research pass established - the mock's included. */
 .empty-state{
-  border:1px dashed rgba(155,114,232,.28);border-radius:var(--radius);
-  background:rgba(155,114,232,.045);color:var(--muted2);
+  border:1px dashed rgba(var(--accent-rgb),.28);border-radius:var(--radius);
+  background:rgba(var(--accent-rgb),.045);color:var(--muted2);
 }
 
 /* ── stillness is a feature ────────────────────────────────────────────────*/
@@ -1017,8 +1017,8 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
 .md-bd-row:last-child{border-radius:0 0 10px 10px}
 @media(hover:hover){.md-bd-row:hover{background:var(--accent-dim);transform:translateX(2px)}}
 .md-bd-row.is-rec{
-  background:linear-gradient(100deg,rgba(155,114,232,.14) 0%,rgba(0,0,0,0) 62%),var(--surface2);
-  border-color:rgba(155,114,232,.4);
+  background:linear-gradient(100deg,rgba(var(--accent-rgb),.14) 0%,rgba(0,0,0,0) 62%),var(--surface2);
+  border-color:rgba(var(--accent-rgb),.4);
 }
 .md-bd-row.is-on{outline:2px solid var(--accent-bright);outline-offset:-2px}
 .md-bd-row.is-taken{opacity:.5;cursor:default}
