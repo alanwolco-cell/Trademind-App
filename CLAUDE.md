@@ -2220,3 +2220,25 @@ decision del dueno.** Reportes completos en el scratchpad de la sesion
 - Referencias: tarjeta de contexto fija (Notion/Linear), cita del dato
   detras de cada recomendacion (Perplexity), veredicto-primero (ChatGPT).
   En el rubro fantasy no hay referente de diseño: el hueco esta abierto.
+
+## Sesion 2026-09-11 (tarde 2): Ask Mac, direcciones A+B desplegadas
+
+El dueno eligio "las dos: B y luego C". A+B DESPLEGADAS (commit e3db7e9,
+cache-bust 2026091110, sha256 verificado, qa-askmac ALL GREEN contra
+produccion; en rojo contra el codigo viejo: 8 fallos).
+
+Lo aplicado: fuera el saludo-poster (el composer arranca arriba), boton de
+enviar como icono 44px en telefono (el campo pasa de 152 a 232px), muerto el
+alto fijo del chat (OJO: eran DOS reglas, la de vh en styles.css:1363 y su
+gemela dvh en la seccion iOS ~1549; matar solo una no hace nada), ejemplos en
+una fila deslizable, conectar como linea bajo el composer, cuota + New chat
+en un renglon, anillo de foco unico (excepcion en v12.css), placeholder
+honesto sin llave, y dedupe de chips de navegacion (draft/mock compartian
+etiqueta exacta).
+
+**PENDIENTE: direccion C ("la respuesta con forma"), aprobada por el dueno,
+para sesion propia.** Veredicto en una linea + numeros en tabla chica + chip,
+en vez del muro de prosa. Toca el prompt de Mac y /api/sage (ruta de pago):
+pide contrato de salida, gates propios, y el juez Jobs antes de entregar.
+Referencias listas en el board del scratchpad (Perplexity: cita del dato;
+tarjeta de contexto fija estilo Notion/Linear tambien quedo propuesta).
