@@ -471,6 +471,83 @@ const p2 = await persona('qa_hub_dos_bbbbbbbbbbbbbbbbbbbbbb', 390, 844, true);
     publico.indexOf('qa_hub_') === -1 && publico.indexOf('createdBy') === -1);
 }
 
+/* ── La recomposicion Flight Deck del hub (12-sep) ──────────────────────────
+   El power ranking eran diez TARJETAS identicas en una columna de 1.550px:
+   cada una con un numero, un nombre y una cifra, o sea 1.100px de vacio por
+   fila. Ahora es una lista de filas densas con medida de documento.
+   El (y3) es cobertura que no existia: la barra fija del invitado vive pegada
+   abajo y nadie habia comprobado NUNCA que no tape la ultima fila. Se mide
+   scrolleando AL FINAL DE VERDAD, porque una captura de pagina entera pinta
+   los position:fixed en el primer viewport y eso no es lo que ve una persona
+   (asi me invente un fallo que no existia antes de medirlo). */
+{
+  // Contexto de INVITADO de verdad: sin tm_username y sin token de Yahoo, que
+  // es lo que hbInvitado() mira. persona() siembra el usuario, asi que con ella
+  // la barra del invitado nunca se pinta y (y3) pasaria sin medir nada.
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const pg = await ctx.newPage();
+  pg.on('console', m => {
+    if (m.type() !== 'error') return;
+    const url = (m.location() && m.location().url) || '';
+    if (RUIDO.some(r => r.test(m.text()) || r.test(url))) return;
+    errsConsola.push(m.text().slice(0, 130) + (url ? ' <- ' + url.slice(0, 70) : ''));
+  });
+  pg.on('pageerror', e => errsConsola.push('PAGEERROR ' + String(e).slice(0, 160)));
+  await pg.addInitScript(P => { window._ML_PROPS_FIXTURE = P; }, PROPS);
+  await pg.goto(BASE + '/hub?c=' + CODE, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.waitForFunction(() => {
+    const e = document.getElementById('hub-booth-body');
+    return e && e.textContent.length > 120 && !e.querySelector('.tm-skel');
+  }, { timeout: 40000 }).catch(() => { });
+  await pg.waitForTimeout(1200);
+
+  const lista = await pg.evaluate(() => {
+    const filas = [...document.querySelectorAll('.hb-row')];
+    if (!filas.length) return { filas: 0 };
+    // Una fila de lista no puede tener borde y fondo propios: eso es tarjeta.
+    const conTarjeta = filas.filter(f => {
+      const cs = getComputedStyle(f);
+      if (f.classList.contains('is-mine')) return false;   // tu equipo si se marca
+      return cs.borderTopWidth !== '0px' || cs.borderLeftWidth !== '0px'
+        || parseFloat(cs.borderTopLeftRadius) > 2;
+    }).length;
+    const nums = filas.map(f => f.querySelector('.hb-nums span')).filter(Boolean);
+    const cs = nums[0] ? getComputedStyle(nums[0]) : null;
+    const der = nums.map(n => Math.round(n.getBoundingClientRect().right));
+    const ancho = Math.round(document.getElementById('screen-hub').getBoundingClientRect().width);
+    return {
+      filas: filas.length, conTarjeta,
+      mono: cs ? /mono/i.test(cs.fontFamily) : false,
+      columnas: new Set(der).size,
+      ancho
+    };
+  });
+  ok('(y1) el ranking del hub son filas densas, no diez tarjetas iguales',
+    lista.filas >= 5 && lista.conTarjeta === 0, JSON.stringify(lista));
+  ok('(y2) las cifras van en mono, todas en la misma columna, con medida de documento',
+    lista.mono === true && lista.columnas === 1 && lista.ancho > 0 && lista.ancho <= 900,
+    JSON.stringify(lista));
+
+  // (y3) la barra fija del invitado, al final del scroll DE VERDAD
+  await pg.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await pg.waitForTimeout(600);
+  const tapa = await pg.evaluate(() => {
+    const bar = document.getElementById('hub-guest-foot');
+    const filas = [...document.querySelectorAll('.hb-row')];
+    const ultima = filas[filas.length - 1];
+    if (!bar || !ultima) return { sinBarra: !bar, sinFilas: !ultima };
+    const rb = bar.getBoundingClientRect(), ru = ultima.getBoundingClientRect();
+    return {
+      visible: getComputedStyle(bar).display !== 'none',
+      solapa: ru.bottom > rb.top && ru.top < rb.bottom,
+      alFinal: Math.round(scrollY + innerHeight) >= Math.round(document.documentElement.scrollHeight) - 2
+    };
+  });
+  ok('(y3) el invitado VE la barra y, al final del scroll, no le tapa la ultima fila',
+    tapa.visible === true && tapa.solapa === false && tapa.alFinal === true, JSON.stringify(tapa));
+  await ctx.close();
+}
+
 ok('(z6) consola limpia', errsConsola.length === 0, errsConsola.slice(0, 4).join(' | '));
 
 await p1.ctx.close(); await p2.ctx.close();

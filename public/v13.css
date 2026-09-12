@@ -103,3 +103,28 @@ html.v13 .bs-row{
 html.v13 .bs-row::before{display:none}          /* el filo cian por fila */
 html.v13 .bs-row:hover{background:var(--surface2);border-color:var(--border2)}
 html.v13 .bs-row:last-child{border-bottom:0}
+
+/* El hub: diez tarjetas identicas en una columna de 1.550px, cada una con un
+   numero, un nombre y una cifra, o sea 1.100px de vacio por fila. Es la misma
+   enfermedad de Leagues. Filas densas, y medida de documento para la pantalla
+   entera: un listado a todo lo ancho de un monitor no se lee, se barre. */
+html.v13 #screen-hub{max-width:840px}
+html.v13 .hb-rank{gap:0}
+html.v13 .hb-row{
+  border:0;
+  border-bottom:1px solid var(--border);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  padding:10px 4px;
+}
+html.v13 .hb-row:last-child{border-bottom:0}
+/* Tu equipo se marca con un filo, no pintando la fila entera del acento: el
+   acento es de interaccion y una fila de lista no es un boton. */
+html.v13 .hb-row.is-mine{
+  background:var(--surface2);
+  border-color:var(--border2);
+  box-shadow:inset 2px 0 0 var(--accent);
+  border-radius:8px;
+  padding-left:12px;
+}
