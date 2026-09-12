@@ -1507,6 +1507,13 @@ async function loadLeague(lid,name,rosters,season){
   }
   leagueRosters=rosterData;
   leagueUsers=userData||[];
+  // Ligas con los trades APAGADOS en su reglamento (settings.disable_trades,
+  // tipico de best ball): el producto no ofrece tradear ahi (pedido del
+  // dueno, 2026-09-12). Cada superficie de trades consulta esta bandera.
+  window.leagueNoTrades=Number(leagueInfo&&leagueInfo.settings&&leagueInfo.settings.disable_trades)===1;
+  var _ntb=document.getElementById('no-trades-banner');
+  if(_ntb){_ntb.style.display=window.leagueNoTrades?'block':'none';
+    if(window.leagueNoTrades)_ntb.innerHTML='<b>'+leagueName+'</b> has trades disabled in its league settings. You can still analyze hypotheticals here, but no trade you build can actually be made in that league.';}
 
   leaguePicks=pRes||[];
   var thisSeason=(tRes||[]).map(function(t){t._season=season;return t;});
@@ -8684,6 +8691,8 @@ function renderBuySell(){
   // decia y con 13 ligas conectadas cada lista parecia de ninguna).
   var _sub=document.getElementById('bs-sub');
   if(_sub)_sub.textContent=(leagueName?leagueName+' · ':'')+'30-day value moves in FantasyCalc '+(leagueMode==='redraft'?'redraft':'dynasty')+' rankings';
+  // Liga sin trades: comprar y vender ES tradear. No se predica lo imposible.
+  if(window.leagueNoTrades){el.innerHTML=tmNoTradesNote();return;}
   if(!myRoster.length||!Object.keys(ktcFull).length){
     el.innerHTML="<div class='empty-state'>Connect a league first so player values can load.<br><button class='btn-load' style='width:auto;padding:10px 22px;margin-top:10px' onclick='goConnectLeague()'>Connect your league</button>"+_sageEscHtml()+"</div>";
     return;
@@ -16193,7 +16202,18 @@ function showAnalyzeTab(tab){
   // work with zero setup - this is the core "drop a trade, get an answer" flow.
   if(tab==='analyzer')_warmAnalyzerData();
   if(tab==='ideas')renderIdeasTab();
-  if(tab==='desk'){ _warmAnalyzerData(); try{tgtRenderPanel();}catch(_){} try{ofrRender();}catch(_){} }
+  if(tab==='desk'){
+    _warmAnalyzerData();
+    var td=document.getElementById('tab-desk');
+    if(window.leagueNoTrades){
+      // Se guarda el esqueleto para poder restaurarlo al cambiar a una liga
+      // que si tradea: el Desk entero no tiene sentido sin trades.
+      if(td&&!td.dataset.markup){td.dataset.markup=td.innerHTML;td.innerHTML=tmNoTradesNote();}
+    }else{
+      if(td&&td.dataset.markup){td.innerHTML=td.dataset.markup;delete td.dataset.markup;}
+      try{tgtRenderPanel();}catch(_){} try{ofrRender();}catch(_){}
+    }
+  }
   _tabPush(tab==='analyzer'?'analyzer':tab,'analyze');
 }
 function _warmAnalyzerData(){
@@ -16207,12 +16227,24 @@ function _warmAnalyzerData(){
   }
 }
 
+// El aviso compartido de las superficies de trades cuando la liga los tiene
+// apagados: se dice la verdad y se ofrece cambiar de liga, no se predica un
+// trade que no se puede hacer.
+function tmNoTradesNote(){
+  return '<div class="empty-state"><b>'+(leagueName||'This league')+'</b> has trades disabled in its league settings, so there is nothing to trade here.'
+    +'<br><button class="btn-sm" style="margin-top:12px" onclick="openSwitchLeague()">Switch league</button></div>';
+}
 function renderIdeasTab(){
   var subEl=document.getElementById('ideas-tab-sub');
+  var listEl=document.getElementById('ideas-list-tab');
   if(!leagueRosters.length||!userId){
-    var listEl=document.getElementById('ideas-list-tab');
     if(listEl)listEl.innerHTML='<div class="ideas-empty">Connect your league to get trade ideas built for your roster.'
       +'<br><button class="btn-load" style="width:auto;padding:11px 24px;margin-top:12px" onclick="goConnectLeague()">Connect your league</button></div>';
+    return;
+  }
+  if(window.leagueNoTrades){
+    if(subEl)subEl.textContent='Trades are disabled in '+(leagueName||'this league');
+    if(listEl)listEl.innerHTML=tmNoTradesNote();
     return;
   }
   if(subEl)subEl.textContent='Based on your roster needs vs the rest of the league';

@@ -222,6 +222,82 @@ async function nuevaPagina(w, h, movil) {
   await pg.close();
 }
 
+/* ── 6: liga SIN trades (best ball con disable_trades) no ofrece tradear ──── */
+// bestball 39 del dueno: settings.disable_trades=1 (medido 2026-09-11).
+const LIGA_SIN_TRADES = '1402829686446268416';
+{
+  const pg = await nuevaPagina(390, 844, true);
+  await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.waitForFunction(() => typeof loadUser === 'function', { timeout: 30000 });
+  await pg.evaluate(([u, lid]) => {
+    document.getElementById('sleeper-username').value = u;
+    return loadUser(lid);
+  }, [USER, LIGA_SIN_TRADES]);
+  await pg.waitForFunction(() => window.leagueNoTrades !== undefined && leagueRosters.length > 0, { timeout: 40000 }).catch(() => { });
+  const st = await pg.evaluate(async () => {
+    switchScreen('research');
+    await new Promise(r => setTimeout(r, 1200));
+    const bs = document.getElementById('buysell-content');
+    showAnalyzeTab('ideas');
+    await new Promise(r => setTimeout(r, 600));
+    const ideas = document.getElementById('ideas-list-tab');
+    showAnalyzeTab('analyzer');
+    const banner = document.getElementById('no-trades-banner');
+    return {
+      flag: window.leagueNoTrades,
+      bsNota: /trades disabled/i.test((bs || {}).textContent || ''),
+      bsPills: bs ? bs.querySelectorAll('.signal-pill').length : -1,
+      ideasNota: /trades disabled/i.test((ideas || {}).textContent || ''),
+      bannerVisible: banner ? getComputedStyle(banner).display !== 'none' : false,
+      bannerNombra: /bestball 39/i.test((banner || {}).textContent || '')
+    };
+  });
+  ok('(6a) la liga sin trades queda marcada al conectarla', st.flag === true, JSON.stringify(st));
+  ok('(6b) Buy/Sell no predica trades imposibles: nota y cero señales',
+    st.bsNota === true && st.bsPills === 0, JSON.stringify(st));
+  ok('(6c) Trade Ideas dice que no hay trades en esa liga', st.ideasNota === true, JSON.stringify(st));
+  ok('(6d) el analizador declara el candado con el nombre de la liga',
+    st.bannerVisible === true && st.bannerNombra === true, JSON.stringify(st));
+  await pg.close();
+}
+
+/* ── 7: en modo app la portada tiene puerta (y la pestana Home no rebota) ── */
+{
+  const pg = await nuevaPagina(390, 844, true);
+  await pg.addInitScript(u => { try { localStorage.setItem('tm_username', u); } catch (_) { } }, USER);
+  await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.waitForTimeout(2500);
+  const homeTab = await pg.evaluate(() => {
+    const t = document.querySelector('#tabbar .tabbar-item[data-tab="home"]');
+    return t ? getComputedStyle(t).display : 'no-existe';
+  });
+  ok('(7a) conectado, la pestana Home esta escondida DE VERDAD (antes rebotaba)',
+    homeTab === 'none', 'display: ' + homeTab);
+  await pg.evaluate(() => {
+    const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+    const btns = [document.querySelector('#tabbar .tabbar-item[data-tab="more"]'), document.getElementById('nav-burger')].filter(e => e && vis(e));
+    if (btns[0]) btns[0].click();
+  });
+  await pg.waitForTimeout(600);
+  const puerta = await pg.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#mob-menu button')).find(x => /The home page/i.test(x.textContent));
+    if (!b) return { existe: false };
+    const r = b.getBoundingClientRect();
+    if (!(r.width > 0)) return { existe: true, visible: false };
+    b.click();
+    return { existe: true, visible: true };
+  });
+  await pg.waitForTimeout(1200);
+  const tras = await pg.evaluate(() => ({
+    pantalla: (document.querySelector('.screen.active') || {}).id || 'NINGUNA',
+    hero: (() => { const h = document.querySelector('.hero'); if (!h) return false; const r = h.getBoundingClientRect(); return r.height > 50 && getComputedStyle(h).display !== 'none'; })()
+  }));
+  ok('(7b) el cajon ofrece "The home page" y el clic LLEGA a la portada',
+    puerta.existe === true && puerta.visible === true && tras.hero === true,
+    JSON.stringify({ puerta, tras }));
+  await pg.close();
+}
+
 ok('(z) consola limpia', errsConsola.length === 0, errsConsola.slice(0, 5).join(' | '));
 
 await b.close();

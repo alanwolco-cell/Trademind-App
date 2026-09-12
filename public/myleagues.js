@@ -507,8 +507,20 @@ function mlRevisarAlineacion(L) {
   // El pareo va POR POSICION primero: el QB que entra sale por el QB que se
   // sienta, no por el WR mas barato de la lista (caso del dueno, 2026-09-11:
   // "CJ Stroud in for AJ Brown" en una liga 1QB, un movimiento que no existe).
-  // Cruzar posiciones queda SOLO para lo que sobra sin pareja de su posicion,
-  // que es la cadena legitima del FLEX (sentar un WR para arrancar un RB).
+  // Cruzar posiciones SOLO cuando el par es EJECUTABLE como un movimiento: la
+  // casilla donde entra el nuevo tiene que admitir la posicion del que sale
+  // (la cadena legitima del FLEX: sentar un WR para arrancar un RB). Segundo
+  // caso del dueno (2026-09-12): "Stroud in for Rodriguez" salio del fallback
+  // que pareaba con CUALQUIERA cuando no habia pareja de posicion; la verdad
+  // era una casilla de QB VACIA, y eso ahora se dice como lo que es.
+  var admite = function (slot, pos) { return (ML_FLEX[slot] || [slot]).indexOf(pos) >= 0; };
+  // Las casillas titulares vacias ('0'): starters se alinea 1:1 con las
+  // casillas de la liga sin banca, asi que el indice dice CUAL esta vacia.
+  var slotsTit = (L.roster_positions || []).filter(function (s) { return !ML_SKIP[s]; });
+  var vacantes = {};
+  titulares.forEach(function (id, i) {
+    if ((!id || id === '0') && slotsTit[i]) vacantes[slotsTit[i]] = (vacantes[slotsTit[i]] || 0) + 1;
+  });
   entran.sort(function (a, b) { return b.pts - a.pts; });
   salen.sort(function (a, b) { return a.pts - b.pts; });
   var pares = [];
@@ -518,11 +530,21 @@ function mlRevisarAlineacion(L) {
       if (salen[k] && salen[k].p.pos === e.p.pos) { idx = k; break; }
     }
     if (idx < 0) {
-      for (var k2 = 0; k2 < salen.length; k2++) { if (salen[k2]) { idx = k2; break; } }
+      for (var k2 = 0; k2 < salen.length; k2++) {
+        if (salen[k2] && admite(e.slot, salen[k2].p.pos)) { idx = k2; break; }
+      }
     }
-    if (idx < 0) return;
-    var gana = e.pts - salen[idx].pts;
-    if (gana >= ML_UMBRAL_CAMBIO) { pares.push({ entra: e, sale: salen[idx], gana: gana }); salen[idx] = null; }
+    if (idx >= 0) {
+      var gana = e.pts - salen[idx].pts;
+      if (gana >= ML_UMBRAL_CAMBIO) { pares.push({ entra: e, sale: salen[idx], gana: gana }); salen[idx] = null; }
+      return;
+    }
+    // Sin pareja ejecutable: si su casilla esta VACIA en la alineacion real,
+    // el consejo honesto es llenar el hueco, y el hueco se nombra.
+    if (vacantes[e.slot] > 0 && e.pts >= ML_UMBRAL_CAMBIO) {
+      vacantes[e.slot]--;
+      pares.push({ entra: e, sale: null, hueco: e.slot, gana: e.pts });
+    }
   });
   if (!pares.length) return { ok: true, gana: 0, cambios: [] };
   var total = pares.reduce(function (a, x) { return a + x.gana; }, 0);
@@ -1676,8 +1698,11 @@ function mlPanelAlineaciones() {
       + '<span>' + mlEsc(L.name) + '</span></div>'
       + '<div class="ml-fix-moves">'
       + x.r.cambios.slice(0, 2).map(function (c) {
-        return '<span class="ml-fix-move"><b>' + mlEsc(c.entra.p.name) + '</b> in for '
-          + mlEsc(c.sale.p ? c.sale.p.name : 'an empty slot')
+        // c.sale null = la casilla estaba VACIA: se dice el hueco, no se
+        // inventa una pareja (caso Stroud/Rodriguez, 2026-09-12).
+        return '<span class="ml-fix-move"><b>' + mlEsc(c.entra.p.name) + '</b> '
+          + (c.sale ? 'in for ' + mlEsc(c.sale.p ? c.sale.p.name : 'an empty slot')
+            : 'into your empty ' + mlEsc(c.hueco || 'starting') + ' slot')
           + ' <i class="mono">+' + mlN(c.gana) + '</i></span>';
       }).join('')
       + '</div></div>';

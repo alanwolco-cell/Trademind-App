@@ -74,20 +74,24 @@ function liga() {
     }
   };
 }
-function correr(lock) {
+function correr(lock, starters) {
   const sandbox = {
     ML: { players, lock, week: 1 },
     mlDrafted: () => true,
     mlEsBestBall: () => false,
     mlScoring: () => ({}),
     mlProjPlayer: (p) => (p && PROJ[p.id] != null ? PROJ[p.id] : null),
-    ML_UMBRAL_CAMBIO: 3
+    ML_UMBRAL_CAMBIO: 3,
+    ML_FLEX: { FLEX: ['RB', 'WR', 'TE'], WRRB_FLEX: ['RB', 'WR'], REC_FLEX: ['WR', 'TE'], SUPER_FLEX: ['QB', 'RB', 'WR', 'TE'], WRRB_WRT: ['RB', 'WR', 'TE'] },
+    ML_SKIP: { BN: 1, IR: 1, TAXI: 1, 'IR+': 1, IL: 1, 'IL+': 1, NA: 1 }
   };
   vm.createContext(sandbox);
   if (fnBloqueado) vm.runInContext(fnBloqueado, sandbox);
   else vm.runInContext('function mlBloqueado(){return false;}', sandbox);
   vm.runInContext(fnRevisar, sandbox);
-  sandbox._L = liga();
+  const L = liga();
+  if (starters) { L._hyd.mine.starters = starters; L._hyd.matchups[0].starters = starters; }
+  sandbox._L = L;
   return vm.runInContext('mlRevisarAlineacion(_L)', sandbox);
 }
 
@@ -117,6 +121,25 @@ ok('(4) sin partidos empezados, los pares van por posicion: Stroud por el QB y e
 // ── control del control: el espejo tiene que poder recomendar ──────────────
 ok('(5) canario: el espejo produce cambios (no esta midiendo el vacio)',
   sinLock && (sinLock.cambios || []).length > 0, JSON.stringify(sinLock));
+
+// ── el segundo caso del dueno (2026-09-12): la casilla de QB esta VACIA ────
+// "me estas diciendo que meta a stroud por rodriguez cuando eso no se puede
+// porque stroud es qb". Titulares: QB vacio ('0'), Brown de WR titular. El
+// mejor once mete a Stroud (QB) y al WR bueno, y banquea a Brown. El par
+// Stroud<->WR es INEJECUTABLE en una casilla QB: lo honesto es "into your
+// empty QB slot", y el WR bueno si sale por Brown.
+const conHueco = correr({}, ['0', 'ajb', 'wr2', 'rbFlex']);
+const movs = (conHueco && conHueco.cambios || []).map(c =>
+  c.entra.p.name + (c.sale ? ' in for ' + c.sale.p.name : ' into empty ' + c.hueco));
+ok('(6) un QB que entra JAMAS "sale por" un WR (par inejecutable)',
+  conHueco && (conHueco.cambios || []).every(c => !(c.sale && c.entra.p.pos === 'QB' && c.sale.p.pos !== 'QB')),
+  JSON.stringify(movs));
+ok('(7) la casilla vacia se dice como lo que es: Stroud into empty QB',
+  conHueco && (conHueco.cambios || []).some(c => c.entra.p.id === 'stroud' && !c.sale && c.hueco === 'QB'),
+  JSON.stringify(movs));
+ok('(8) y el WR bueno sale por el WR flojo, como par de su posicion',
+  conHueco && (conHueco.cambios || []).some(c => c.entra.p.id === 'wrGood' && c.sale && c.sale.p.id === 'ajb'),
+  JSON.stringify(movs));
 
 console.log(fails ? '\n' + fails + ' FALLOS' : '\nALL GREEN');
 process.exit(fails ? 1 : 0);
