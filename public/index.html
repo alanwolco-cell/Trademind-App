@@ -81,18 +81,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091109">
+<link rel="stylesheet" href="/styles.css?v=2026091110">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091109" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091110" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091109">
+<link rel="stylesheet" href="/theme.css?v=2026091110">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091109">
+<link rel="stylesheet" href="/home.css?v=2026091110">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -104,7 +104,7 @@ if(_skin){
   var _base=document.getElementById('skin-default');
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091109">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091110">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -1188,21 +1188,22 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
            Every visit starts a fresh chat; past conversations live in the sidebar. -->
       <div class="sage-layout">
       <aside class="sage-side" id="sage-side" aria-label="Past chats"></aside>
+      <!-- Rediseño 2026-09-11 (direccion B, aprobada por el dueno): fuera el
+           saludo-poster (lechuza de 78px + titular + subtitulo centrados). El
+           composer manda: entras y escribes. Los ejemplos van en UNA fila
+           deslizable, la banda de conectar es una linea bajo el composer, y
+           la cara de Mac vive solo junto a sus respuestas. #sage-greeting
+           queda vacio porque el JS lo enciende y apaga entre chats. -->
       <div class="card sage-centered" id="sage-chat-card" style="margin-bottom:14px">
-        <div id="sage-greeting" style="text-align:center;margin:8px 0 30px">
-          <img src="/sage/sage-128.png" alt="Mac" id="sage-greet-owl" class="sage-greet-owl" style="width:76px;height:76px;object-fit:contain;margin-bottom:12px">
-          <div style="font-family:var(--font-head);font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--text)">Ask me anything.</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:7px">The friend everyone texts before hitting Accept.</div>
-          <button class="btn-sm" id="sage-connect-hint" style="display:none;margin-top:12px" onclick="goConnectLeague()">Connect your Sleeper league so Mac sees your roster →</button>
-        </div>
+        <div id="sage-greeting"></div>
         <div id="sage-chat-log" class="sage-chat-log"></div>
         <div class="sage-composer" id="sage-composer">
           <textarea id="sage-chat-input" rows="2" placeholder="Ask Mac anything about fantasy football..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sageChatSend();}" oninput="sageGrowInput(this)" disabled></textarea>
-          <button id="sage-chat-send" onclick="sageChatSend()" title="Send" disabled>Ask Mac</button>
+          <button id="sage-chat-send" onclick="sageChatSend()" title="Ask Mac" aria-label="Ask Mac" disabled><span class="sage-send-txt">Ask Mac</span><svg class="sage-send-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
         </div>
-        <div id="sage-quota" style="display:none;text-align:center;margin-top:8px;font-size:12px;color:var(--muted)"></div>
-        <div id="sage-suggestions" style="display:none;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center"></div>
-        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn-sm" id="sage-new-chat" style="display:none" onclick="sageNewChat()">New chat</button></div>
+        <button id="sage-connect-hint" class="sage-connect-line" style="display:none" onclick="goConnectLeague()">Connect your Sleeper league so Mac sees your roster →</button>
+        <div id="sage-suggestions" style="display:none"></div>
+        <div class="sage-underbar"><div id="sage-quota" style="display:none"></div><button class="btn-sm" id="sage-new-chat" style="display:none" onclick="sageNewChat()">New chat</button></div>
       </div>
       </div><!-- /sage-layout -->
     </div>
@@ -1904,13 +1905,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091109"></script>
-<script src="/rankings.js?v=2026091109"></script>
-<script src="/weekly.js?v=2026091109"></script>
-<script src="/live.js?v=2026091109"></script>
-<script src="/myleagues.js?v=2026091109"></script>
-<script src="/push.js?v=2026091109" defer></script>
-<script src="/hub.js?v=2026091109"></script>
+<script src="/app.js?v=2026091110"></script>
+<script src="/rankings.js?v=2026091110"></script>
+<script src="/weekly.js?v=2026091110"></script>
+<script src="/live.js?v=2026091110"></script>
+<script src="/myleagues.js?v=2026091110"></script>
+<script src="/push.js?v=2026091110" defer></script>
+<script src="/hub.js?v=2026091110"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

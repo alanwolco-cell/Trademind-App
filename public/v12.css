@@ -116,6 +116,10 @@ html.v12 .ideas-refresh{
     border-color:var(--accent-bright);
     box-shadow:0 0 0 3px rgba(155,114,232,.22);
   }
+  /* El textarea del composer de Mac vive DENTRO de una capsula que ya marca
+     su foco (:focus-within): el anillo generico pintaba un rectangulo filoso
+     dentro del pill, doble señal de foco (auditoria Ask Mac, 2026-09-11). */
+  html.v12 .sage-composer textarea:focus{box-shadow:none;border-color:transparent}
 }
 
 /* ══ HERO v12: let the two-column composition through ══════════════════════

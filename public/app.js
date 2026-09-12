@@ -1944,13 +1944,20 @@ function initSageChat(){
   _sageRenderThreads();
   _sageRenderSuggestions();
   fetch('/api/sage/status').then(function(r){return r.json();}).then(function(d){
+    var inp=document.getElementById('sage-chat-input');
+    var btn=document.getElementById('sage-chat-send');
     if(d&&d.configured){
-      var inp=document.getElementById('sage-chat-input');
-      var btn=document.getElementById('sage-chat-send');
       if(inp){inp.disabled=false;inp.placeholder='Ask Mac anything about fantasy football...';}
       if(btn){btn.disabled=false;}
+    }else if(inp){
+      // Sin llave del lado del servidor el campo queda apagado: se DICE, en
+      // vez de invitar a escribir en un input muerto (auditoria 2026-09-11).
+      inp.placeholder='Mac is offline right now. Come back in a bit.';
     }
-  }).catch(function(){});
+  }).catch(function(){
+    var inp=document.getElementById('sage-chat-input');
+    if(inp&&inp.disabled)inp.placeholder='Mac is offline right now. Come back in a bit.';
+  });
 }
 function _sageChatAppend(role,text){
   var log=document.getElementById('sage-chat-log');
@@ -2456,8 +2463,13 @@ function _sageRenderNav(container,txt){
   var keys=_sageNavKeys(txt);if(!keys.length||!container)return;
   var wrap=document.createElement('div');
   wrap.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:11px';
+  // draft y mock comparten la etiqueta exacta: sin esto, dos marcadores de Mac
+  // pintaban dos chips identicos lado a lado (auditoria 2026-09-11).
+  var vistos={};
   keys.forEach(function(k){
-    var nav=MAC_NAV[k];var b=document.createElement('button');
+    var nav=MAC_NAV[k];
+    if(vistos[nav.label])return;vistos[nav.label]=1;
+    var b=document.createElement('button');
     b.className='sage-nav-chip';b.innerHTML=nav.label+' <span style="opacity:.75">&rarr;</span>';
     b.onclick=function(){try{nav.go();}catch(_){}};
     wrap.appendChild(b);
