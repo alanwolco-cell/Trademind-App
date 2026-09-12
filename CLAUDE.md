@@ -2242,3 +2242,56 @@ en vez del muro de prosa. Toca el prompt de Mac y /api/sage (ruta de pago):
 pide contrato de salida, gates propios, y el juez Jobs antes de entregar.
 Referencias listas en el board del scratchpad (Perplexity: cita del dato;
 tarjeta de contexto fija estilo Notion/Linear tambien quedo propuesta).
+
+## Sesion 2026-09-12: el rediseño arranca (Flight Deck)
+
+**El pedido del dueno**: rediseño estetico COMPLETO. La informacion se queda
+(se puede reescribir, no eliminar); colores, tipografia y composicion cambian;
+sigue siendo Mac Draft y sigue siendo el pajaro.
+
+**Proceso cumplido**: snapshot (tag pre-rediseno-2026-09-12 + 14 capturas en
+~/Backups/macdraft-snapshot-2026-09-12), inventario del sistema (dis-inventario),
+board de referencias con capturas reales (ref-rediseno, en scratchpad), board
+presentado como artifact, y el dueno ELIGIO: **direccion B, Flight Deck**
+(WHOOP + Wealthsimple + Linear: el aro como identidad, grafito calido, un
+acento frio unico, General Sans, grano sutil, cero degradados). Decisiones
+amarradas: el morado MUERE, Mac pasa a avatar chico constante.
+
+**Fase 0 (commit 3c6d17f, ing-fase0)**: el color consolidado en tokens sin
+mover un pixel. POS_COLORS (23 copias -> 1), CANVAS_PALETTE (+ fuentes muertas
+Unbounded/Outfit -> Familjen en los canvas de compartir), bloque :root de
+styles.css ahora dice los valores VIVOS (v11 lo pisa; antes mentia), los siete
+2px muertos. TRAMPA ANOTADA: theme.css:1282 arregla el tema claro barriendo
+por atributo [style*="color:#a78bfa"]: depende de que app.js siga escribiendo
+el hex literal; si esos sitios pasan a var(), el tema claro se rompe en
+silencio. Y quedan 4 familias semanticas sin token (pick #a78bfa, alerta
+#f87171, arquetipos, etiqueta #38bdf8) + los -dim desincronizados.
+
+**Fase 1 (commit be1d4c2)**: ~150 tintes rgba(155,114,232 / 124,92,191 /
+107,72,196) promovidos a rgba(var(--accent-rgb / --accent-deep-rgb /
+--accent-btn-rgb)) declarados en v11.css + espejo en styles.css. v13.css NUEVO:
+capa Flight Deck ENCIMA de v12 (html "v12 v13", carga al final), tokens de
+grafito calido, DOS acentos (esmeralda default, cian con .v13-cyan), General
+Sans autohospedada (public/fonts/general-sans-*.woff2, Fontshare ITF license,
+@font-face DENTRO de v13.css), grano SVG 3%. Preview: ?v13 y ?v13=cyan
+(index.html; v13 NO reemplaza a v12, a diferencia de ?v2-v11). v13 NO es
+default: produccion pinta identica.
+
+**Verificacion del cero-cambio (trampas del MEDIDOR, pagadas dos veces)**:
+el diff de pixeles contra HEAD dio 2 distintas y las 2 eran del instrumento:
+(1) el VIDEO del hero clava un fotograma distinto en cada captura (pausarlo
+no basta: hay que quitarlo o fijar currentTime y esperar el decode), y
+(2) el server es bimodal frio/caliente (primera vs segunda peticion: mismos
+DOS hashes en todas las corridas). Sin videos y en secuencia identica: las
+6 capturas iguales. qa-nav/myleagues/askmac/backlog ALL GREEN (con el 500
+pasajero del proxy apareciendo una vez, ya documentado).
+
+**PENDIENTE AHORA**: el dueno elige acento (esmeralda vs cian) sobre el
+artifact comparativo y los previews vivos macdraft.app/myleagues?v13 y
+?v13=cyan. DESPUES de esa eleccion: hacer v13 default (mover manifest +
+theme-color + splash iOS + primer fotograma del vuelo JUNTOS, regenerar con
+scripts/gen-pwa-assets.mjs, avisarle que reinstale la PWA), tema claro de
+Flight Deck, y la Fase 2 de composicion pantalla por pantalla (Leagues
+primero: anti-vibecoded medido en las 12 tarjetas identicas; hub 85% vacio
+en desktop). Las 4 familias semanticas sin token se tokenizan cuando la
+Fase 2 toque app.js.
