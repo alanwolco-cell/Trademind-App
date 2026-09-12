@@ -126,6 +126,40 @@ function navSearchBlur(){
 const SLEEPER='https://api.sleeper.app/v1';
 let userId=null,allPlayers={},myRoster=[],oppRoster=[],leagueRosters=[],leagueUsers=[],leagueId=null,leagueName='',leagueSeason='';
 let ACTIVE_SEASON='2026';
+// ── La paleta de posicion, una sola vez ──────────────────────────────────────
+// Estos seis hexes estaban copiados a mano en 23 sitios de este archivo, a veces
+// completos y a veces solo los cuatro de skill, con nombres de variable local
+// distintos en cada sitio (posColors, posC, pc, pcQ, pcL, col, posText). Cambiar
+// el color de los QB eran 23 ediciones y la que se te escapaba no se veia hasta
+// una captura.
+//
+// ESPEJO DEL CSS: son los mismos valores que --pos-qb ... --pos-def de
+// theme.css:283 (que ademas tiene su variante de tema claro en theme.css:1267).
+// Las dos listas se mueven JUNTAS. Aqui siguen en hex y no en var() por dos
+// razones: el canvas de las imagenes de compartir no entiende var(), y el tema
+// claro barre estos estilos inline por atributo ([style*="color:#a78bfa"], ver
+// el bloque de theme.css:1282), asi que el literal tiene que salir en el HTML.
+var POS_COLORS={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+// La mitad de los sitios solo mapeaban las cuatro de skill y dejaban que K y DEF
+// cayeran en su propio respaldo. Se conserva tal cual: meterles K y DEF de
+// regalo le cambiaria el color a los pateadores en media pantalla.
+var POS_COLORS_SKILL={QB:POS_COLORS.QB,RB:POS_COLORS.RB,WR:POS_COLORS.WR,TE:POS_COLORS.TE};
+// ── La paleta del canvas ─────────────────────────────────────────────────────
+// Las dos imagenes que la app genera para compartir (la tarjeta de nota del
+// roster y la del mock guardado) se pintan en canvas, donde var() no existe:
+// cada pintor traia su propia lista de hexes a mano. Quedan aqui para que el
+// rediseño las mueva de un sitio. NO son los tokens del sitio: son mas oscuras
+// a proposito, porque una imagen que se ve en WhatsApp no tiene nuestro fondo
+// detras.
+var CANVAS_PALETTE={
+  gradTop:'#141828', gradBottom:'#221a3f',   // fondo de la tarjeta de nota
+  flat:'#0d0817',                            // fondo plano de la del mock
+  accent:'#9b72e8', accentGlow:'rgba(155,114,232,.09)', accentLine:'rgba(155,114,232,.14)',
+  ink:'#e8ecf8', inkBright:'#f5eff0', inkName:'#f4f2fb',
+  muted:'#7c8aaa', muted2:'#a8b0c8', mutedCool:'#8f88b4', faint:'#5e5786',
+  faceWell:'#1c1535',                        // el hueco detras de la foto
+  good:'#22c55e'                             // respaldo cuando el veredicto trae var()
+};
 // ── Temporada de drafts ──────────────────────────────────────────────────────
 // En septiembre los drafts ya pasaron: todo lo de mock draft ocupa sitio sin
 // servir. Esto NO borra nada, esconde: el codigo, el motor de subasta y las
@@ -3343,7 +3377,7 @@ function resetTradeWorkspace(){
 var _boardSel={give:{},get:{}};       // side -> {key: asset}
 var _boardExpand={give:false,get:false};
 var _syncingBoard=false;              // guards clearTradeSide recursion
-var _BB_POS_COLORS={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',PK:'#8b6bff'};
+var _BB_POS_COLORS={QB:POS_COLORS.QB,RB:POS_COLORS.RB,WR:POS_COLORS.WR,TE:POS_COLORS.TE,PK:'#8b6bff'};
 var _BB_VISIBLE=12;                   // tiles shown before "+N more"
 
 function _boardAssets(side){
@@ -4974,7 +5008,7 @@ function sageStyleNote(valueTier){
         atPos.forEach(function(p){alts.push(p);});
       });
       if(alts.length){
-        var posColors={QB:"#a78bfa",RB:"#4ade80",WR:"#fbbf24",TE:"#f87171"};
+        var posColors=POS_COLORS_SKILL;
         var altHtml='<div style="padding:.75rem 1rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)">'
           +'<div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Other targets on their roster</div>'
           +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
@@ -7731,7 +7765,7 @@ function generateTradeIdeas(){
         +"<div><div class='idea-player-name'>"+(p.season||"")+" "+pickNum+"</div>"
         +"<div class='idea-player-sub'>"+pickSub+"</div></div></div>";
     }
-    var posColors={QB:"#a78bfa",RB:"#4ade80",WR:"#fbbf24",TE:"#f87171"};
+    var posColors=POS_COLORS_SKILL;
     var col=posColors[p.pos]||"var(--muted)";
     var ageSub=p.age?" · age "+p.age:"";
     return "<div class='idea-side' onclick='openPlayerCard(\""+p.id+"\",\""+p.name.replace(/"/g,"&quot;")+"\")' style='cursor:pointer'>"
@@ -7930,7 +7964,7 @@ function _tradeRowHtml(t,pid,leagueLabel,rosterNames){
     sides[rid].push({id:null,name:pk.season+' Round '+pk.round+' pick',team:'',pos:'PK',hot:false});
   });
   // the one position palette the whole app uses (theme.css --pos-* tokens)
-  var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
+  var posC=POS_COLORS_SKILL;
   var sideHtml=Object.keys(sides).map(function(rid){
     var who=rosterNames?(rosterNames(parseInt(rid))||'Team '+rid):'Team '+rid;
     return '<div style="flex:1;min-width:150px"><div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">'+who+' got</div>'
@@ -8547,30 +8581,37 @@ function renderRosterGrade(){
 }
 
 // Shareable roster-card PNG, drawn on canvas with proxied headshots
+// Los colores salen de CANVAS_PALETTE y la fuente es la de la marca: hasta el
+// 2026-09-12 este pintor pedia 'Unbounded' y 'Outfit', dos familias que el sitio
+// dejo de cargar hace meses, asi que llevaba todo ese tiempo saliendo con la
+// fuente de respaldo del sistema.
 async function downloadRosterCard(){
   var g=window._gradeData;
   if(!g)return;
+  // El canvas no espera a las fuentes: sin esto, quien pulse antes de que el
+  // navegador tenga la cara cargada se lleva la de respaldo otra vez.
+  try{await document.fonts.load('700 26px "Familjen Grotesk"');await document.fonts.load('500 15px "Familjen Grotesk"');}catch(_){}
   var W=1000,H=600,SCALE=2;
   var cv=document.createElement('canvas');cv.width=W*SCALE;cv.height=H*SCALE;
   var ctx=cv.getContext('2d');ctx.scale(SCALE,SCALE);
   // Background
   var grad=ctx.createLinearGradient(0,0,W,H);
-  grad.addColorStop(0,'#141828');grad.addColorStop(1,'#221a3f');
+  grad.addColorStop(0,CANVAS_PALETTE.gradTop);grad.addColorStop(1,CANVAS_PALETTE.gradBottom);
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='rgba(155,114,232,.09)';
+  ctx.fillStyle=CANVAS_PALETTE.accentGlow;
   ctx.beginPath();ctx.arc(W-120,90,220,0,7);ctx.fill();
   // Brand
-  ctx.fillStyle='#9b72e8';ctx.font='700 26px Unbounded, sans-serif';
+  ctx.fillStyle=CANVAS_PALETTE.accent;ctx.font='700 26px "Familjen Grotesk", sans-serif';
   ctx.fillText('MAC DRAFT',48,70);
-  ctx.fillStyle='#7c8aaa';ctx.font='500 15px Outfit, sans-serif';
+  ctx.fillStyle=CANVAS_PALETTE.muted;ctx.font='500 15px "Familjen Grotesk", sans-serif';
   ctx.fillText('ROSTER GRADE · '+(leagueName||'My League'),48,98);
   // Big letter
-  ctx.fillStyle='#9b72e8';ctx.font='800 150px Unbounded, sans-serif';
+  ctx.fillStyle=CANVAS_PALETTE.accent;ctx.font='800 150px "Familjen Grotesk", sans-serif';
   ctx.fillText(g.letter,48,265);
-  ctx.fillStyle='#e8ecf8';ctx.font='600 22px Outfit, sans-serif';
+  ctx.fillStyle=CANVAS_PALETTE.ink;ctx.font='600 22px "Familjen Grotesk", sans-serif';
   ctx.fillText('#'+g.rank+' of '+g.teams+' teams',48,300);
-  ctx.fillStyle=g.winColor&&g.winColor.indexOf('var')<0?g.winColor:'#22c55e';
-  ctx.font='700 20px Outfit, sans-serif';
+  ctx.fillStyle=g.winColor&&g.winColor.indexOf('var')<0?g.winColor:CANVAS_PALETTE.good;
+  ctx.font='700 20px "Familjen Grotesk", sans-serif';
   ctx.fillText(g.winLabel+'  ·  avg core age '+g.avgAge,48,332);
   // Position grades
   var px=48;
@@ -8578,11 +8619,11 @@ async function downloadRosterCard(){
     var pg=g.pos[pos];if(!pg)return;
     ctx.fillStyle='rgba(255,255,255,.05)';
     ctx.fillRect(px,368,200,90);
-    ctx.fillStyle='#7c8aaa';ctx.font='600 14px Outfit, sans-serif';
+    ctx.fillStyle=CANVAS_PALETTE.muted;ctx.font='600 14px "Familjen Grotesk", sans-serif';
     ctx.fillText(pos,px+16,395);
-    ctx.fillStyle='#e8ecf8';ctx.font='800 40px Unbounded, sans-serif';
+    ctx.fillStyle=CANVAS_PALETTE.ink;ctx.font='800 40px "Familjen Grotesk", sans-serif';
     ctx.fillText(pg.letter,px+16,442);
-    ctx.fillStyle='#7c8aaa';ctx.font='500 13px Outfit, sans-serif';
+    ctx.fillStyle=CANVAS_PALETTE.muted;ctx.font='500 13px "Familjen Grotesk", sans-serif';
     ctx.fillText('#'+pg.rank+' of '+g.teams,px+85,438);
     px+=225;
   });
@@ -8598,11 +8639,11 @@ async function downloadRosterCard(){
       if(img.naturalWidth){
         ctx.save();ctx.beginPath();ctx.arc(hx+30,520,30,0,7);ctx.clip();
         ctx.drawImage(img,hx,490,60,60);ctx.restore();
-        ctx.strokeStyle='#9b72e8';ctx.lineWidth=2;
+        ctx.strokeStyle=CANVAS_PALETTE.accent;ctx.lineWidth=2;
         ctx.beginPath();ctx.arc(hx+30,520,30,0,7);ctx.stroke();
       }
     }catch(_){}
-    ctx.fillStyle='#a8b0c8';ctx.font='500 11px Outfit, sans-serif';
+    ctx.fillStyle=CANVAS_PALETTE.muted2;ctx.font='500 11px "Familjen Grotesk", sans-serif';
     var nm=p.name.split(' ');
     ctx.textAlign='center';
     ctx.fillText(nm[nm.length-1],hx+30,570);
@@ -8610,7 +8651,7 @@ async function downloadRosterCard(){
     hx+=110;
   }
   // Footer
-  ctx.fillStyle='#7c8aaa';ctx.font='500 13px Outfit, sans-serif';
+  ctx.fillStyle=CANVAS_PALETTE.muted;ctx.font='500 13px "Familjen Grotesk", sans-serif';
   ctx.textAlign='right';
   ctx.fillText('Mac Draft',W-40,H-24);
   ctx.textAlign='left';
@@ -8792,7 +8833,7 @@ function renderBuySell(){
   sellNow.forEach(function(p){p.reason+=targetLine();});
   sellSlipping.forEach(function(p){p.reason+=targetLine();});
 
-  var posColors={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
+  var posColors=POS_COLORS_SKILL;
   window._bsPlayers=window._bsPlayers||[];
   window._bsPlayers.length=0;
   function pRow(p){
@@ -8883,7 +8924,7 @@ function cmpAcInput(input,n){
   var results=src.filter(function(p){return p&&p.name&&(!q||p.name.toLowerCase().indexOf(q)>=0)&&['QB','RB','WR','TE'].indexOf(p.pos)>=0;})
     .sort(function(a,b){return (ktcById[b.id]||0)-(ktcById[a.id]||0);}).slice(0,q?8:10);
   if(!results.length){dd.classList.remove('open');return;}
-  var posColors={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
+  var posColors=POS_COLORS_SKILL;
   dd.innerHTML='';
   results.forEach(function(p){
     var col=posColors[p.pos]||'var(--muted)';
@@ -8941,7 +8982,7 @@ function renderCompare(){
       +cellsHtml+'</div>';
   }
 
-  var posColors={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
+  var posColors=POS_COLORS_SKILL;
   var cards=ps.map(function(p,i){
     var col=posColors[poss[i]]||'var(--muted)';
     return '<div style="background:var(--surface2);border-radius:var(--radius);padding:12px;display:flex;align-items:center;gap:10px;min-width:0">'
@@ -9245,7 +9286,7 @@ function _runFilterPlayersDB(){
     (pdbFiltered.length>200?' (showing top 200 - search to narrow)':'');
 
   var posColors={QB:'rgba(167,139,250,.15)',RB:'rgba(74,222,128,.15)',WR:'rgba(251,191,36,.15)',TE:'rgba(248,113,113,.15)'};
-  var posText={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
+  var posText=POS_COLORS_SKILL;
   var tierBadge={elite:'Elite',starter:'Starter',flex:'Flex',bench:'Bench'};
   var tierColor={elite:'var(--accent-bright)',starter:'var(--green)',flex:'var(--yellow)',bench:'var(--muted)'};
 
@@ -9439,7 +9480,7 @@ function renderMarketTab(){
     var arrow=isUp?'▲':'▼';
     var pctStr=(isUp?'+':'')+m.pct+'%';
     var imgSrc=m.pid?'https://sleepercdn.com/content/nfl/players/thumb/'+m.pid+'.jpg':'';
-    var posC={QB:'#a78bfa',WR:'#fbbf24',RB:'#4ade80',TE:'#f87171'};
+    var posC=POS_COLORS_SKILL;
     return '<div class="mkt-mover" onclick="showPlayerChart(\''+m.name.toLowerCase().replace(/'/g,"\\'")+'\')" style="cursor:pointer;flex-wrap:wrap">'
       +(imgSrc?'<img class="mkt-mover-img" src="'+imgSrc+'" onerror="this.style.display=\'none\'">':'<div class="mkt-mover-img"></div>')
       +'<div style="flex:1;min-width:0"><div class="mkt-mover-name">'+m.name+'</div>'
@@ -9497,7 +9538,7 @@ function renderTrendingWeek(){
   });
 }
 function _paintTrendingWeek(d){
-  var posC={QB:'#a78bfa',WR:'#fbbf24',RB:'#4ade80',TE:'#f87171'};
+  var posC=POS_COLORS_SKILL;
   function row(it,isAdd){
     var pid=it.player_id,p=allPlayers[pid];
     var name=p?p.name:null;
@@ -9678,7 +9719,7 @@ function showPlayerChart(nm){
   var slId = findSleeperIdByName(nm);
   var imgHtml = slId ? '<img src="https://sleepercdn.com/content/nfl/players/thumb/'+slId+'.jpg" onerror="this.style.display=\'none\'" style="width:52px;height:52px;border-radius:50%;border:2px solid var(--border2);object-fit:cover">' : '';
 
-  var posC = {QB:'#a78bfa',WR:'#fbbf24',RB:'#4ade80',TE:'#f87171'};
+  var posC = POS_COLORS_SKILL;
   var chgColor = isUp ? '#22c55e' : '#ef4444';
   var chgArrow = isUp ? '▲' : '▼';
 
@@ -9831,7 +9872,7 @@ function mdShowMyRoster(){
   var mine=MD.mine||[];
   if(!mine.length){box.innerHTML='<div style="font-size:12px;color:var(--muted)">You haven\'t drafted anyone yet.</div>';}
   else{
-    var col={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'var(--muted)',DEF:'var(--muted)'};
+    var col={QB:POS_COLORS.QB,RB:POS_COLORS.RB,WR:POS_COLORS.WR,TE:POS_COLORS.TE,K:'var(--muted)',DEF:'var(--muted)'};
     var by={QB:[],RB:[],WR:[],TE:[],K:[],DEF:[]};
     mine.forEach(function(p){if(by[p.pos])by[p.pos].push(p);});
     var html='<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px">Your team ('+mine.length+')</div>';
@@ -11186,7 +11227,7 @@ function mdAdvance(){
   }
 }
 function mdPosTag(pos){
-  var c={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'}[pos]||'#94a3b8';
+  var c=POS_COLORS[pos]||POS_COLORS.DEF;
   return '<span style="font-size:9px;font-weight:700;color:'+c+'">'+pos+'</span>';
 }
 // Mac's recommendation honours the chosen strategy
@@ -12550,7 +12591,7 @@ function mdRenderQueue(){
   var untilMe=0;
   for(var qi=MD.pickIdx;qi<MD.order.length;qi++){if(MD.order[qi]===MD.mySlot){untilMe=qi-MD.pickIdx;break;}}
   var myNextOverall=overallNow+untilMe;
-  var pcQ={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+  var pcQ=POS_COLORS;
   box.innerHTML=(MD.lastSnipe?'<div style="flex-basis:100%;font-size:11px;color:var(--red);font-weight:600">'+MD.lastSnipe+'</div>':'')
     +MD.queue.map(function(pid,i){
     var p=MD.pool.find(function(x){return x.id===pid;});
@@ -13570,7 +13611,7 @@ function _auRenderResults(){
   var host=document.getElementById('au-results');if(!host)return;
   AU.rview=AU.rview||'picks';
   if(AU.rteam==null||!AU.budgets[AU.rteam])AU.rteam=MD.mySlot;
-  var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+  var pc=POS_COLORS;
   var seg='<div class="au-tabs" style="max-width:420px;margin:0 0 10px">'
     +'<button class="au-tab'+(AU.rview==='rosters'?' on':'')+'" onclick="AU.rview=\'rosters\';_auRenderResults()">Teams</button>'
     +'<button class="au-tab'+(AU.rview==='picks'?' on':'')+'" onclick="AU.rview=\'picks\';_auRenderResults()">Round by round</button>'
@@ -13640,7 +13681,7 @@ function _auRosterRow(o,pc){
 }
 function _auRenderMyTeam(){
   var m=document.getElementById('au-myteam');if(!m)return;
-  var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+  var pc=POS_COLORS;
   m.innerHTML=_auSlotAssign((MD.picks||[]).filter(function(pk){return pk.mine;}))
     .map(function(o){return _auRosterRow(o,pc);}).join('');
 }
@@ -13665,7 +13706,7 @@ function _auRenderLast(){
   var s0=AU.sold&&AU.sold[0];
   if(!s0){el.style.display='none';return;}
   var who=s0.slot===MD.mySlot?'YOU':((AU.bots[s0.slot]&&AU.bots[s0.slot].name)||('Team '+s0.slot));
-  var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'}[s0.p.pos]||'var(--muted)';
+  var pc=POS_COLORS[s0.p.pos]||'var(--muted)';
   el.style.display='block';
   // Yahoo detail the owner flagged: the PRICE wears the player's position color
   el.innerHTML='<span style="color:var(--muted)">Last:</span> <b style="font-variant-numeric:tabular-nums;color:'+pc+'">$'+s0.price+'</b> · '+s0.p.name
@@ -14211,7 +14252,7 @@ function auRenderLot(){
   var next=lot.bid+1;
   var myBudget=AU.budgets[MD.mySlot]||0,mySlots=AU.slotsLeft[MD.mySlot]||0;
   var myCap=mySlots>0?myBudget-(mySlots-1):0; // the budget law, pre-chewed: the #1 auction confusion, answered on screen
-  var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'}[p.pos]||'var(--muted2)';
+  var posC=POS_COLORS[p.pos]||'var(--muted2)';
   var srcNote=window._mdAav?'':' <span title="Live auction values are down; these are derived from ADP" style="color:var(--muted)">(derived)</span>';
   var goingTxt=lot.going===1?'going once':lot.going===2?'going twice':'';
   box.innerHTML='<div class="au-card" style="border-color:var(--accent-bright)">'
@@ -14625,7 +14666,7 @@ function mdRenderBoard(){
   // Yahoo-style list: YOUR TEAM + the pick feed pinned in a left rail while
   // the available players stay on the right - both visible at once
   if(MD.viewMode==='list'){
-    var pcL={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+    var pcL=POS_COLORS;
     // MY TEAM block on top of the rail: roster so far, grouped by position
     var myByPos={};
     MD.mine.forEach(function(p){(myByPos[p.pos]=myByPos[p.pos]||[]).push(p);});
@@ -15386,8 +15427,10 @@ function mdRateHistory(i,v){
 async function mdDownloadRoster(i){
   try{
     // the wordmark must render in the real brand face, not a fallback -
-    // wait for Unbounded before any text hits the canvas
-    try{await document.fonts.load('700 20px Unbounded');await document.fonts.load('800 20px Unbounded');}catch(_){}
+    // wait for the face before any text hits the canvas. Pedia 'Unbounded',
+    // que el sitio no carga desde hace meses: esperar una familia que no existe
+    // resuelve al instante y el texto salia con la fuente del sistema.
+    try{await document.fonts.load('700 20px "Familjen Grotesk"');await document.fonts.load('600 20px "Familjen Grotesk"');}catch(_){}
     var hist=JSON.parse(localStorage.getItem('tm_mock_history')||'[]');
     var h=hist[i]; if(!h)return;
     var rows=h.rosterX&&h.rosterX.length?h.rosterX:h.roster.map(function(r){
@@ -15396,19 +15439,19 @@ async function mdDownloadRoster(i){
     var H=HEAD+rows.length*ROW+FOOT;
     var cv=document.createElement('canvas');cv.width=W*S;cv.height=H*S;
     var x=cv.getContext('2d');x.scale(S,S);
-    var posC={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171',K:'#38bdf8',DEF:'#94a3b8'};
+    var posC=POS_COLORS;
     function rr(x0,y0,w,hh,r){x.beginPath();x.moveTo(x0+r,y0);x.arcTo(x0+w,y0,x0+w,y0+hh,r);x.arcTo(x0+w,y0+hh,x0,y0+hh,r);x.arcTo(x0,y0+hh,x0,y0,r);x.arcTo(x0,y0,x0+w,y0,r);x.closePath();}
     // background: flat dark, no gradient
-    x.fillStyle='#0d0817';x.fillRect(0,0,W,H);
+    x.fillStyle=CANVAS_PALETTE.flat;x.fillRect(0,0,W,H);
     // header: plain wordmark, matched to the site nav. No star glyph and no
     // gradient fill - flat light text at the left margin, like the live logo.
-    x.font='700 19px Unbounded, Outfit, Arial';
+    x.font='700 19px "Familjen Grotesk", Arial';
     try{x.letterSpacing='0.5px';}catch(_){}
-    x.fillStyle='#f5eff0';x.fillText('MAC DRAFT',28,51);
+    x.fillStyle=CANVAS_PALETTE.inkBright;x.fillText('MAC DRAFT',28,51);
     try{x.letterSpacing='0px';}catch(_){}
-    x.fillStyle='#8f88b4';x.font='500 12.5px -apple-system, Arial';
+    x.fillStyle=CANVAS_PALETTE.mutedCool;x.font='500 12.5px "Familjen Grotesk", Arial';
     x.fillText('Mock draft · '+h.teams+' teams · pick '+h.slot+' · '+h.strat+' · '+new Date(h.ts).toLocaleDateString(),28,72);
-    x.fillStyle='#5e5786';x.font='700 10px Arial';x.fillText('MY ROSTER',28,HEAD-10);
+    x.fillStyle=CANVAS_PALETTE.faint;x.font='700 10px "Familjen Grotesk", Arial';x.fillText('MY ROSTER',28,HEAD-10);
     var done=0;
     var imgs=rows.map(function(r){
       if(!r.id)return null;
@@ -15430,35 +15473,35 @@ async function mdDownloadRoster(i){
         var y=HEAD+j*ROW;
         // row card
         x.fillStyle='rgba(255,255,255,.035)';rr(24,y,W-48,ROW-10,13);x.fill();
-        x.strokeStyle='rgba(155,114,232,.14)';x.lineWidth=1;rr(24,y,W-48,ROW-10,13);x.stroke();
+        x.strokeStyle=CANVAS_PALETTE.accentLine;x.lineWidth=1;rr(24,y,W-48,ROW-10,13);x.stroke();
         // face circle
         var fx=44,fy=y+(ROW-10)/2;
-        x.save();x.beginPath();x.arc(fx+16,fy,19,0,7);x.closePath();x.fillStyle='#1c1535';x.fill();x.clip();
+        x.save();x.beginPath();x.arc(fx+16,fy,19,0,7);x.closePath();x.fillStyle=CANVAS_PALETTE.faceWell;x.fill();x.clip();
         var im=imgs[j];
         if(im&&im.complete&&im.naturalWidth){
           if(r.pos==='DEF')x.drawImage(im,fx+2,fy-13,28,26);
           else x.drawImage(im,fx-4,fy-19,40,40);
         }
         x.restore();
-        x.strokeStyle=posC[r.pos]||'#8f88b4';x.lineWidth=2;x.beginPath();x.arc(fx+16,fy,19,0,7);x.stroke();
+        x.strokeStyle=posC[r.pos]||CANVAS_PALETTE.mutedCool;x.lineWidth=2;x.beginPath();x.arc(fx+16,fy,19,0,7);x.stroke();
         // name
-        x.fillStyle='#f4f2fb';x.font='700 15.5px -apple-system, Arial';x.fillText(r.name,96,fy-2);
+        x.fillStyle=CANVAS_PALETTE.inkName;x.font='700 15.5px "Familjen Grotesk", Arial';x.fillText(r.name,96,fy-2);
         // position bubble
-        var pc=posC[r.pos]||'#8f88b4';
+        var pc=posC[r.pos]||CANVAS_PALETTE.mutedCool;
         x.font='800 9.5px Arial';var pw=x.measureText(r.pos).width+16;
         x.fillStyle='rgba(255,255,255,.06)';rr(96,fy+6,pw,17,9);x.fill();
         x.strokeStyle=pc;x.lineWidth=1.2;rr(96,fy+6,pw,17,9);x.stroke();
         x.fillStyle=pc;x.fillText(r.pos,104,fy+18);
         // team code next to bubble
-        if(r.team&&r.pos!=='DEF'){x.fillStyle='#8f88b4';x.font='600 10.5px Arial';x.fillText(r.team,96+pw+8,fy+18);}
+        if(r.team&&r.pos!=='DEF'){x.fillStyle=CANVAS_PALETTE.mutedCool;x.font='600 10.5px Arial';x.fillText(r.team,96+pw+8,fy+18);}
         // team logo, right side
         var lg=logos[j];
         if(lg&&lg.complete&&lg.naturalWidth)x.drawImage(lg,W-118,fy-13,26,26);
         // round.pick tag far right
-        if(r.round){x.fillStyle='#5e5786';x.font='700 11px Arial';x.textAlign='right';
+        if(r.round){x.fillStyle=CANVAS_PALETTE.faint;x.font='700 11px Arial';x.textAlign='right';
           x.fillText(r.round+'.'+(r.pickNo<10?'0':'')+r.pickNo,W-44,fy+4);x.textAlign='left';}
       });
-      x.fillStyle='#5e5786';x.font='500 11px Arial';
+      x.fillStyle=CANVAS_PALETTE.faint;x.font='500 11px Arial';
       x.fillText('Mac Draft · Life is good.',28,H-22);
       var a=document.createElement('a');a.download='macdraft-roster.png';a.href=cv.toDataURL('image/png');a.click();
     }
@@ -15677,7 +15720,7 @@ function mdFinish(){
         var line=role+' - '+val+'.'+ctx;
         // one relevant fact, framed as what it means for your lineup
         if(note&&note.note)line+=' '+note.note.split(';')[0].trim()+'.';
-        var pc={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'}[e.p.pos]||'#94a3b8';
+        var pc=POS_COLORS_SKILL[e.p.pos]||POS_COLORS.DEF;
         var _eN=e.p.name.replace(/'/g,"\\'");
         return '<div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:7px">'
           +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+e.p.id+'.jpg" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none;cursor:pointer" title="View player card" onclick="openPlayerCard(\''+e.p.id+'\',\''+_eN+'\')" onerror="this.style.visibility=\'hidden\'">'
@@ -15944,7 +15987,7 @@ function renderWaiverTargets(){
   if(!targets.length){window._stashFloor=0;targets=_mkStash();}
   if(!targets.length){el.innerHTML="<div class='empty-state'>Every fantasy-relevant player is rostered in this league. The wire is truly bare - your upgrades have to come through trades.</div>";return;}
 
-  var posColors={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
+  var posColors=POS_COLORS_SKILL;
   var html='<div style="font-size:12px;color:var(--muted2);padding:8px 12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:14px">'+(leagueMode==='redraft'?'Players who can score for you THIS season and aren\'t on any roster in your league. Priority waiver adds.':'Players with real dynasty value who aren\'t on any roster in your league. Go get them.')+'</div>';
   html+='<div style="display:grid;gap:6px">';
   targets.forEach(function(p,i){
@@ -16664,7 +16707,7 @@ function renderForumPost(p){
     +srcPill+'</div>'
     +'<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.35">'+escHtml(p.title||'')+'</div>'
     +(p.body?'<div style="font-size:13px;color:var(--muted2);margin-bottom:10px;line-height:1.5">'+escHtml(p.body)+'</div>':'')
-    +(totalVotes>0?'<div style="height:3px;border-radius:2px;background:var(--surface3);margin-bottom:10px;overflow:hidden"><div style="height:100%;width:'+upPct+'%;background:var(--green);transition:width .3s"></div></div>':'')
+    +(totalVotes>0?'<div style="height:3px;border-radius:999px;background:var(--surface3);margin-bottom:10px;overflow:hidden"><div style="height:100%;width:'+upPct+'%;background:var(--green);transition:width .3s"></div></div>':'')
     +'<div class="comm-vote-row">'
     +'<button class="comm-vote-btn" onclick="voteForumPost(\''+p.id+'\',1,this)">▲ '+(p.upvotes||0)+'</button>'
     +'<button class="comm-vote-btn" onclick="voteForumPost(\''+p.id+'\',-1,this)">▼ '+(p.downvotes||0)+'</button>'
@@ -17205,7 +17248,7 @@ function playerChipHtml(asset){
   var pid=asset.sleeper_id||getPlayerIdByName(name)||null;
   var pos='',team='';
   if(pid&&allPlayers[pid]){pos=allPlayers[pid].pos||'';team=allPlayers[pid].team||'';}
-  var posColors={QB:'#a78bfa',RB:'#4ade80',WR:'#fbbf24',TE:'#f87171'};
+  var posColors=POS_COLORS_SKILL;
   var posColor=posColors[pos]||'var(--muted)';
   var imgHtml=pid
     ?'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+pid+'.jpg" onerror="this.style.display=\'none\'" style="width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--surface2);border:2px solid '+posColor+'">'
@@ -17288,7 +17331,7 @@ function renderTradePost(p){
     // Verdict badge
     +(p.headline?'<div style="font-size:13px;font-weight:800;color:'+verdictColor+';margin-bottom:10px;letter-spacing:-.01em">'+escHtml(p.headline)+'</div>':'')
     // Vote bar
-    +(totalVotes>0?'<div style="height:3px;border-radius:2px;background:var(--surface3);margin-bottom:10px;overflow:hidden"><div style="height:100%;width:'+upPct+'%;background:'+verdictColor+';transition:width .3s"></div></div>':'')
+    +(totalVotes>0?'<div style="height:3px;border-radius:999px;background:var(--surface3);margin-bottom:10px;overflow:hidden"><div style="height:100%;width:'+upPct+'%;background:'+verdictColor+';transition:width .3s"></div></div>':'')
     // Actions
     +'<div class="comm-vote-row">'
     +'<button class="comm-vote-btn" onclick="votePost(\''+p.id+'\',1,this)">▲ '+(p.upvotes||0)+'</button>'

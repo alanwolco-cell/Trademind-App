@@ -217,7 +217,7 @@
 .mkt-panel-title,.comm-section-title,.pdb-title{position:relative;padding-left:11px}
 .mkt-panel-title::before,.comm-section-title::before,.pdb-title::before{
   content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
-  width:3px;height:1.05em;border-radius:2px;
+  width:3px;height:1.05em;border-radius:999px;
   background:#9b72e8;
 }
 
@@ -281,8 +281,15 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root{
-  /* the position palette - the same six hexes app.js has always used, now
-     owned by CSS so every surface reads them from one place */
+  /* LA paleta de posicion. Es la fuente unica del lado CSS (su variante de tema
+     claro esta en theme.css:1267, y NO se declara en styles.css a proposito).
+     app.js la espeja en POS_COLORS, cerca de sus globales, porque el canvas y
+     los estilos inline no pueden leer var(): las dos listas tienen que moverse
+     JUNTAS. Y ojo con el barrido por atributo de mas abajo
+     ([data-theme="light"] [style*="color:#a78bfa"]): depende de que app.js siga
+     escribiendo el hex LITERAL dentro del style inline. El dia que esos sitios
+     pasen a var(--pos-qb), ese bloque queda muerto y hay que quitarlo en el
+     mismo cambio o el tema claro se rompe en silencio. */
   --pos-qb:#a78bfa; --pos-rb:#4ade80; --pos-wr:#fbbf24;
   --pos-te:#f87171; --pos-k:#38bdf8;  --pos-def:#94a3b8;
   /* the signature: the hero's purple-to-cyan, as a reusable light */
@@ -1073,7 +1080,7 @@ html.v11 .inner-tab:hover:not(.active),html.v12 .inner-tab:hover:not(.active),.i
   font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);
   border-left:1px solid var(--border);border-right:1px solid var(--border);
 }
-.md-bd-tier::before{content:'';width:20px;height:3px;border-radius:2px;background:var(--tm-grad);flex:none}
+.md-bd-tier::before{content:'';width:20px;height:3px;border-radius:999px;background:var(--tm-grad);flex:none}
 .md-bd-tier i{
   font-style:normal;margin-left:auto;font-size:9.5px;letter-spacing:.05em;
   color:var(--accent-bright);background:var(--accent-dim);border-radius:5px;padding:2px 8px;

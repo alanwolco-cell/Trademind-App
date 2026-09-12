@@ -24,16 +24,34 @@
      --accent-bright, que se queda como esta. */
   --accent-btn:#7c47e1;
   --accent-dim:rgba(155,114,232,0.13);
-  --green:#22c55e;
+  /* ATENCION: estos cinco (--green, --red, --yellow, --radius, --radius-lg) los
+     PISA v11.css, que redefine los mismos tokens scopeados a `html.v11,html.v12`.
+     index.html pone class="v12" en <html> siempre, y `html.v12` (0,1,1) gana a
+     `:root` (0,1,0) sin importar el orden de carga: en el sitio real manda v11.
+     Hasta el 2026-09-12 este bloque declaraba OTROS valores (#22c55e, #d98aa0,
+     #e6c07a, 8px, 12px) que llevaban meses sin pintar un pixel, o sea que leer
+     styles.css daba la paleta equivocada. Ahora dice la verdad: los valores de
+     abajo son EXACTAMENTE los de v11.css:32-37. Si se cambia uno, se cambia en
+     los dos sitios o el sitio no se mueve.
+     Los unicos que si pintan desde aqui son los *-dim, que v11 no redefine: y
+     estan derivados de los hexes MUERTOS (el rojo tenue sigue siendo rosa
+     #d98aa0 mientras el rojo solido es #ff453a). Cuadrarlos mueve pixeles, asi
+     que es trabajo del rediseño, no de esta consolidacion. */
+  --green:#30d158;
   --green-dim:rgba(34,197,94,0.12);
-  --red:#d98aa0;
+  --red:#ff453a;
   --red-dim:rgba(217,138,160,0.12);
-  --yellow:#e6c07a;
+  --yellow:#ff9f0a;
   --yellow-dim:rgba(230,192,122,0.12);
   --font-head:'Familjen Grotesk','Inter',system-ui,sans-serif;
   --font-body:'Inter',system-ui,sans-serif;
-  --radius:8px;
-  --radius-lg:12px;
+  --radius:12px;
+  --radius-lg:18px;
+  /* La paleta de posicion (--pos-qb ... --pos-def) NO se declara aqui a
+     proposito: vive en theme.css:283, con su variante de tema claro en
+     theme.css:1267, y app.js la espeja en POS_COLORS. Declararla tambien aqui
+     seria una tercera copia del mismo token, que es la enfermedad que este
+     bloque acaba de curar. */
   /* Vertical rhythm. Landing sections used to set their own gaps ad hoc, which
      is why one section ran 274px of empty black under its last line while the
      next stacked four distinct blocks 18px apart. Three steps only: between
@@ -399,7 +417,7 @@ body.ticker-on{padding-top:calc(var(--nav-h,60px) + var(--sat,0px) + 34px)}
 .ac-pos.TE{background:rgba(239,68,68,0.12);color:#f87171}
 .ac-team{font-size:11px;color:var(--muted);margin-left:auto}
 .ac-ktc{font-size:11px;font-weight:600;color:var(--accent-bright);margin-left:4px}
-.ac-team-logo{width:18px;height:18px;object-fit:contain;flex-shrink:0;border-radius:2px;vertical-align:middle}
+.ac-team-logo{width:18px;height:18px;object-fit:contain;flex-shrink:0;border-radius:4px;vertical-align:middle}
 .ac-thumb{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface3);flex-shrink:0;border:1px solid var(--border)}
 .ac-thumb-placeholder{width:28px;height:28px;border-radius:50%;background:var(--surface3);flex-shrink:0;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--muted)}
 .pos-badge{font-size:10px;font-weight:700;padding:0 7px;border-radius:4px;display:flex;align-items:center;min-width:36px;justify-content:center;flex-shrink:0;border:1px solid var(--border)}
@@ -459,7 +477,7 @@ body.ticker-on{padding-top:calc(var(--nav-h,60px) + var(--sat,0px) + 34px)}
 .profiler-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
 .profiler-sub{font-size:12px;color:var(--muted);margin-bottom:1rem;line-height:1.5}
 .progress-dots{display:flex;gap:6px;margin-bottom:1.25rem}
-.pdot{width:24px;height:3px;background:var(--border2);border-radius:2px;transition:background .3s}
+.pdot{width:24px;height:3px;background:var(--border2);border-radius:999px;transition:background .3s}
 .pdot.done{background:var(--accent-bright)}
 .pdot.active{background:rgba(155,114,232,.5)}
 .q-step{display:none;animation:qslide .25s ease}
@@ -2643,7 +2661,7 @@ html{scroll-padding-top:76px}
 }
 .lv-head:active{cursor:grabbing}
 .lv-head b{font-family:var(--font-head);font-size:13px;letter-spacing:.01em}
-.lv-grip{width:12px;height:12px;flex:none;border-radius:2px;
+.lv-grip{width:12px;height:12px;flex:none;border-radius:4px;
   background:repeating-linear-gradient(0deg,var(--muted) 0 2px,transparent 2px 4px)}
 .lv-money{margin-left:auto;font-size:11px;color:var(--muted2);white-space:nowrap}
 .lv-x{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;font-size:11px}
