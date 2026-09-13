@@ -154,7 +154,7 @@ var POS_COLORS_SKILL={QB:POS_COLORS.QB,RB:POS_COLORS.RB,WR:POS_COLORS.WR,TE:POS_
 var CANVAS_PALETTE={
   gradTop:'#141828', gradBottom:'#221a3f',   // fondo de la tarjeta de nota
   flat:'#0d0817',                            // fondo plano de la del mock
-  accent:'#9b72e8', accentGlow:'rgba(155,114,232,.09)', accentLine:'rgba(155,114,232,.14)',
+  accent:'#3db8d4', accentGlow:'rgba(61,184,212,.09)', accentLine:'rgba(61,184,212,.14)',
   ink:'#e8ecf8', inkBright:'#f5eff0', inkName:'#f4f2fb',
   muted:'#7c8aaa', muted2:'#a8b0c8', mutedCool:'#8f88b4', faint:'#5e5786',
   faceWell:'#1c1535',                        // el hueco detras de la foto
@@ -2378,7 +2378,7 @@ async function sageContextRead(give,get,valueTier){
   if(!el){
     el=document.createElement('div');
     el.id='verdict-ctx';
-    el.style.cssText='margin:10px 0 12px;padding:11px 14px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:11px;font-size:12.5px;color:var(--muted2);line-height:1.6';
+    el.style.cssText='margin:10px 0 12px;padding:11px 14px;background:var(--surface2);border:1px solid rgba(var(--accent-rgb),.3);border-radius:11px;font-size:12.5px;color:var(--muted2);line-height:1.6';
     body.parentElement.insertBefore(el,body.nextSibling);
   }
   el.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Mac on your context</div><span class="sage-status">Factoring it in...</span>';
@@ -3749,7 +3749,7 @@ function _q1Label(oi){
 function _showQ1Chip(oi){
   var chip=document.getElementById('q1-chip');if(!chip)return;
   chip.innerHTML="<span style=\"color:var(--muted2)\">You're set as</span> <strong style=\"color:var(--text)\">"+escHtml(_q1Label(oi))+"</strong>"
-    +"<button type=\"button\" onclick=\"changeQ1()\" style=\"margin-left:10px;display:inline-flex;align-items:center;gap:5px;font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--accent-bright);background:var(--accent-dim);border:1px solid rgba(155,114,232,.45);border-radius:100px;padding:4px 12px;cursor:pointer;vertical-align:middle;transition:background .15s,border-color .15s\" onmouseover=\"this.style.background='rgba(155,114,232,.28)';this.style.borderColor='var(--accent-bright)'\" onmouseout=\"this.style.background='var(--accent-dim)';this.style.borderColor='rgba(155,114,232,.45)'\">"
+    +"<button type=\"button\" onclick=\"changeQ1()\" style=\"margin-left:10px;display:inline-flex;align-items:center;gap:5px;font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--accent-bright);background:var(--accent-dim);border:1px solid rgba(var(--accent-rgb),.45);border-radius:100px;padding:4px 12px;cursor:pointer;vertical-align:middle;transition:background .15s,border-color .15s\" onmouseover=\"this.style.background='rgba(var(--accent-rgb),.28)';this.style.borderColor='var(--accent-bright)'\" onmouseout=\"this.style.background='var(--accent-dim)';this.style.borderColor='rgba(var(--accent-rgb),.45)'\">"
     +"<svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12a9 9 0 0 1 15-6.7L21 8\"/><path d=\"M21 3v5h-5\"/></svg>Change</button>";
   chip.style.display='inline-flex';
 }
@@ -4509,7 +4509,7 @@ function _anzToast(){
     var old=document.getElementById('anz-toast');if(old)old.remove();
     var t=document.createElement('div');
     t.id='anz-toast';
-    t.style.cssText='position:fixed;left:50%;bottom:9vh;transform:translateX(-50%);z-index:250;background:var(--surface3,#1a1530);border:1px solid rgba(155,114,232,.4);border-radius:100px;padding:10px 22px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 10px 34px rgba(5,4,12,.5);white-space:nowrap;transition:opacity .3s ease';
+    t.style.cssText='position:fixed;left:50%;bottom:9vh;transform:translateX(-50%);z-index:250;background:var(--surface3,#1a1530);border:1px solid rgba(var(--accent-rgb),.4);border-radius:100px;padding:10px 22px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 10px 34px rgba(5,4,12,.5);white-space:nowrap;transition:opacity .3s ease';
     document.body.appendChild(t);
     var steps=['Thinking...','Reviewing your roster...','Checking league settings...','Analyzing your opponent...','Comparing player values...','Recommendation ready.'];
     var i=0;
@@ -5685,7 +5685,7 @@ function renderLeaguePersonalities(){
     var avatarHtml=row.avatarUrl
       ?"<img src='"+row.avatarUrl+"' style='width:42px;height:42px;border-radius:12px;object-fit:cover;flex-shrink:0;border:2px solid "+c+"' onerror=\"this.style.display='none'\">"
       :"<div style='width:42px;height:42px;border-radius:12px;background:"+c+"22;color:"+c+";display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:17px;flex-shrink:0;border:2px solid "+c+"55'>"+row.prof.icon+"</div>";
-    return "<div class='lb-row'"+(row.isMe?" style='border-color:rgba(155,114,232,.4);background:rgba(155,114,232,.06)'":"")+">"
+    return "<div class='lb-row'"+(row.isMe?" style='border-color:rgba(var(--accent-rgb),.4);background:rgba(var(--accent-rgb),.06)'":"")+">"
       +avatarHtml
       +"<div class='lb-info'><div class='lb-trade' style='font-size:14px'>"+row.name+(row.isMe?" <span style='font-size:10px;color:var(--accent-bright)'>YOU</span>":"")+"</div>"
       +"<div class='lb-meta'><span style='display:inline-block;padding:1px 9px;border-radius:100px;background:"+c+"22;color:"+c+";font-weight:700;font-size:11px;margin-right:6px'>"+oppName(row.prof)+"</span>"+(row.prof.why||"")+"</div></div>"
@@ -5777,8 +5777,8 @@ async function checkShareParam(){
         })():'')
       +'<div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted)">Mac read the opponent as: <strong style="color:var(--accent-bright)">'+(t.profile||'Unknown')+'</strong></div>'
       +'<div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
-      +'<button onclick="counterSharedTrade()" style="background:var(--surface2);border:1px solid rgba(155,114,232,.45);color:var(--accent-bright);font-weight:700;font-size:13px;padding:10px 24px;border-radius:100px;cursor:pointer;font-family:var(--font-body)">Counter this offer</button>'
-      +'<a href="/" style="display:inline-block;background:#9b72e8;color:#fff;font-weight:700;font-size:13px;padding:10px 26px;border-radius:100px;text-decoration:none">Analyze YOUR trade</a></div>';
+      +'<button onclick="counterSharedTrade()" style="background:var(--surface2);border:1px solid rgba(var(--accent-rgb),.45);color:var(--accent-bright);font-weight:700;font-size:13px;padding:10px 24px;border-radius:100px;cursor:pointer;font-family:var(--font-body)">Counter this offer</button>'
+      +'<a href="/" style="display:inline-block;background:var(--accent-btn);color:#fff;font-weight:700;font-size:13px;padding:10px 26px;border-radius:100px;text-decoration:none">Analyze YOUR trade</a></div>';
     if(t.acc){
       var bar=document.getElementById("balance-bar");
       if(bar){var pct=Math.min(95,Math.max(5,t.acc));bar.style.width=pct+"%";bar.style.background=pct>=60?"var(--green)":pct>=45?"var(--yellow)":"var(--red)";}
@@ -7832,7 +7832,7 @@ function generateTradeIdeas(){
   var buildNote=build.phase==='rebuilding'?"Rebuilding":build.phase==='contending'?"Contending":"Building";
   var rankNote=build.leagueRank&&build.totalTeams?" · #"+build.leagueRank+"/"+build.totalTeams+" in league":"";
   var _fmtBadge="<span style='font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:100px;margin-right:8px;"+(leagueMode==='redraft'?"background:rgba(245,158,11,.16);color:#f59e0b":"background:rgba(167,139,250,.16);color:var(--accent-bright)")+"'>"+(leagueMode==='redraft'?'Redraft':'Dynasty')+"</span>";
-  var phaseHtml="<div style='font-size:11.5px;color:var(--muted2);margin-bottom:14px;padding:10px 14px;background:rgba(155,114,232,.09);border:1px solid rgba(167,139,250,.2);border-left:3px solid var(--accent-bright);border-radius:10px'>"+_fmtBadge+"Team build: <strong style='color:var(--text)'>"+buildNote+"</strong> &middot; avg age "+build.avgAge+rankNote+"</div>";
+  var phaseHtml="<div style='font-size:11.5px;color:var(--muted2);margin-bottom:14px;padding:10px 14px;background:rgba(var(--accent-rgb),.09);border:1px solid rgba(167,139,250,.2);border-left:3px solid var(--accent-bright);border-radius:10px'>"+_fmtBadge+"Team build: <strong style='color:var(--text)'>"+buildNote+"</strong> &middot; avg age "+build.avgAge+rankNote+"</div>";
 
   // Apply the user's filters: never offer a player they said they won't trade, and
   // if their context names a position they want, float those ideas to the top.
@@ -8379,7 +8379,7 @@ function openPlayerCard(pid, name){
       var takeLine=curveTxt?(curveTxt.indexOf(' - ')>=0?curveTxt.split(' - ').slice(1).join(' - '):curveTxt):_clauses4[0];
       // when the headline came from the note itself, the why must not repeat it
       var whyParts=(curveTxt?_clauses4.slice(0,2):_clauses4.slice(1,3)).join('; ')||_clauses4[0];
-      takeEl.innerHTML='<div style="margin:14px 0 4px;padding:14px 16px;background:var(--surface2);border:1px solid rgba(155,114,232,.25);border-radius:12px">'
+      takeEl.innerHTML='<div style="margin:14px 0 4px;padding:14px 16px;background:var(--surface2);border:1px solid rgba(var(--accent-rgb),.25);border-radius:12px">'
         +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Mac\'s Take</div>'
         +'<div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px">'+takeLine.charAt(0).toUpperCase()+takeLine.slice(1)+'</div>'
         +'<div style="font-size:12px;color:var(--muted2);line-height:1.6"><strong style="color:var(--text)">Why:</strong> '+whyParts+'.</div>'
@@ -8431,7 +8431,7 @@ function openPlayerCard(pid, name){
       var _bd=document.getElementById('md-board');
       var _inPool=!!(_bd&&_bd.dataset.live==='1'&&!MP.active&&MD.pool&&MD.pool.some(function(x){return x.id===pid;}));
       _sw.innerHTML=_inPool
-        ?'<div style="margin:0 0 12px;padding:12px 14px;background:var(--surface2);border:1px solid rgba(155,114,232,.3);border-radius:10px">'
+        ?'<div style="margin:0 0 12px;padding:12px 14px;background:var(--surface2);border:1px solid rgba(var(--accent-rgb),.3);border-radius:10px">'
           +'<div style="font-size:10px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Draft day</div>'
           +'<div style="font-size:12px;color:var(--muted2);line-height:1.55;margin-bottom:8px">Still on the board in your mock. One call gets Mac\'s risk lanes for this exact pick.</div>'
           +'<button class="btn-sm md-sage-ask" onclick="mdAskSageLive(\''+pid+'\',\'pm-sage-live\')">Ask Mac: my options here</button>'
@@ -8607,7 +8607,7 @@ function renderRosterGrade(){
     if(g.players.length){
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
       g.players.forEach(function(p){
-        html+='<span onclick="openPlayerCard(\''+p.id+'\',\''+String(p.name).replace(/'/g,"\\'")+'\')" style="display:inline-flex;align-items:center;gap:7px;background:var(--surface3);border:1px solid var(--border);border-radius:100px;padding:4px 13px 4px 4px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor=\'rgba(155,114,232,.5)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+        html+='<span onclick="openPlayerCard(\''+p.id+'\',\''+String(p.name).replace(/'/g,"\\'")+'\')" style="display:inline-flex;align-items:center;gap:7px;background:var(--surface3);border:1px solid var(--border);border-radius:100px;padding:4px 13px 4px 4px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor=\'rgba(var(--accent-rgb),.5)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
           +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.id+'.jpg" style="width:26px;height:26px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">'
           +p.name+'</span>';
       });
@@ -9077,7 +9077,7 @@ function renderCompare(){
   if(ranked.length>=2){
     var top=ranked[0],second=ranked[1],gap=top.v-second.v;
     var gapDesc=gap>2000?'significantly more valuable':gap>700?'more valuable':'slightly ahead right now';
-    html+='<div style="margin-top:12px;padding:12px;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:var(--radius);font-size:12.5px;line-height:1.6;color:var(--muted2)">'
+    html+='<div style="margin-top:12px;padding:12px;background:var(--accent-dim);border:1px solid rgba(var(--accent-rgb),.3);border-radius:var(--radius);font-size:12.5px;line-height:1.6;color:var(--muted2)">'
       +'<strong style="color:var(--text)">'+top.p.name+'</strong> is '+gapDesc
       +(ranked.length===3?' of the three':'')+'. ';
     if(gap<400)html+='Close enough that fit and age should break the tie.';
@@ -14929,7 +14929,7 @@ function mpNote(msg){
     el.id='mp-note';
     el.style.cssText='margin:10px 0 14px;padding:11px 14px;border-radius:10px;font-size:12.5px;'
       +'line-height:1.5;background:var(--accent-dim);color:var(--accent-bright);'
-      +'border:1px solid rgba(155,114,232,.35)';
+      +'border:1px solid rgba(var(--accent-rgb),.35)';
     var head=document.getElementById('mp-card-header');
     if(head&&head.nextSibling)host.insertBefore(el,head.nextSibling);else host.appendChild(el);
   }
@@ -15979,7 +15979,7 @@ async function askSageStartSit(){
     return bits;
   }
 
-  var html='<div style="padding:1rem;background:var(--accent-dim);border:1px solid rgba(155,114,232,.3);border-radius:var(--radius);margin-bottom:12px">'
+  var html='<div style="padding:1rem;background:var(--accent-dim);border:1px solid rgba(var(--accent-rgb),.3);border-radius:var(--radius);margin-bottom:12px">'
     +'<div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">'+confidence+' · Week '+week+'</div>'
     +'<div style="font-size:18px;font-weight:800;color:var(--text)">Start '+top.name+'</div></div>';
 
@@ -16423,7 +16423,10 @@ function tabbarSync(name){
   // estoy", y es el mismo que ya lo hacia para la tabbar del telefono.
   var rail=document.getElementById('app-rail');
   if(rail)rail.querySelectorAll('.rail-item').forEach(function(b){
-    b.classList.toggle('active',b.dataset.screen===name);
+    var on=b.dataset.screen===name;
+    b.classList.toggle('active',on);
+    // La marca semantica ademas de la visual (pulido del juez, 13-sep).
+    if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
   });
   var bar=document.getElementById('tabbar');
   if(!bar)return;

@@ -180,6 +180,28 @@ for (const [w, h] of ANCHOS) {
   await ctx.close();
 }
 
+// (6) el resumen de la semana de Leagues cabe ENTERO en el escalon minimo.
+// Bloqueante de la relectura del juez (13-sep): a 320 el aro (118px) + la
+// lista (minmax 190px) empujaban "4 of 6" y "Last Call" fuera del viewport,
+// sin scroll posible: informacion eliminada. A 320 el bloque se apila.
+{
+  const { ctx, pg } = await abrir(320, 844, '/myleagues?demo=1');
+  await pg.waitForSelector('.ml-week', { timeout: 60000 }).catch(() => { });
+  const semana = await seguro(pg, () => {
+    const filas = Array.from(document.querySelectorAll('.ml-week-row b'));
+    if (!filas.length) return { filas: 0 };
+    const fuera = filas.filter(b => {
+      const r = b.getBoundingClientRect();
+      return r.right > window.innerWidth + 1 || r.width === 0;
+    }).map(b => b.textContent.trim());
+    return { filas: filas.length, fuera, scrollX: document.documentElement.scrollWidth > window.innerWidth };
+  });
+  ok('(6) a 320, las cifras del resumen semanal son alcanzables (4 of 6, Last Call)',
+    semana && semana.filas >= 2 && semana.fuera.length === 0 && !semana.scrollX,
+    JSON.stringify(semana));
+  await ctx.close();
+}
+
 ok('(z) consola limpia', errsConsola.length === 0, errsConsola.slice(0, 4).join(' | '));
 
 await b.close();
