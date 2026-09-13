@@ -8,17 +8,42 @@ analizador de trades, radiografia de liga, y Mac (loro macaw morado) como asiste
 Dominio: macdraft.app. Deploy en Vercel, proyecto `trademind-starter`.
 
 ## Gates obligatorios antes de cualquier deploy
+
+Esta lista decia OCHO y el repo tiene DIECISEIS (act. 2026-09-12). Llevaba
+meses sin actualizarse, asi que quien la leia creia estar corriendo la bateria
+entera con la mitad. Se actualiza AL AÑADIR un gate, no despues.
+
+**Siempre, en cualquier cambio de interfaz:**
 ```
-node scripts/calibrate-room.mjs   # 40 invariantes, ~35 min reales. Debe dar ALL GREEN
-node scripts/qa-flows.mjs         # flujos con el motor real
-node scripts/qa-trades.mjs        # 9.989 escenarios, 32 checks
-node scripts/qa-perfil.mjs        # 156 checks del perfil, instantaneo
-node scripts/qa-rankings.mjs      # 23 checks de My Rankings, navegador real
-node scripts/qa-board.mjs         # 104 checks del tablero, barrido de anchos
-node scripts/qa-nav.mjs           # navegacion CLICANDO desde la portada
-node scripts/qa-live.mjs          # 24 checks de Draft Day, navegador real, entra clicando
+node scripts/qa-nav.mjs         # navegacion CLICANDO desde la portada + el rail de escritorio
+node scripts/qa-flightdeck.mjs  # composicion Flight Deck: negro puro, footer, rieles, fuentes
+node scripts/qa-myleagues.mjs   # Leagues: una entrada por liga, aritmetica, controles negativos
+node scripts/qa-hub.mjs         # el hub, con DOS navegadores de verdad
+node scripts/qa-backlog.mjs     # los reportes del dueno ya cerrados, para que no vuelvan
+node scripts/qa-askmac.mjs      # Ask Mac
+node scripts/qa-weekly.mjs      # la hoja semanal
+node scripts/qa-rankings.mjs    # My Rankings / Draft Rankings, navegador real
+node scripts/qa-board.mjs       # 104 checks del tablero, barrido de anchos
+node scripts/qa-lineup.mjs      # el candado de partido empezado
+node scripts/qa-flows.mjs       # flujos con el motor real
 ```
-Los ocho corren desde cualquier directorio. Un test que no falla contra el codigo
+
+**Ademas, segun lo que se toque:**
+```
+node scripts/calibrate-room.mjs  # SOLO si se toco el motor de draft. ~35 min reales
+node scripts/qa-trades.mjs       # SOLO si se toco la valoracion de trades. 9.989 escenarios
+node scripts/qa-perfil.mjs       # SOLO si se toco /perfil. 156 checks
+node scripts/qa-live.mjs         # SOLO si se toco Draft Day
+node scripts/qa-yahoo-parse.mjs  # SOLO si se toco el parseo de Yahoo
+node scripts/qa-push.mjs         # SOLO si se tocaron las notificaciones
+```
+
+**Intermitencia conocida, para no perseguir fantasmas:** qa-backlog y qa-hub
+pueden dar UN fallo suelto por el 500 pasajero del proxy de Sleeper. Ante un
+fallo unico en esos dos, repetir la corrida antes de tocar nada; si se repite,
+entonces si es real.
+
+Todos corren desde cualquier directorio. Un test que no falla contra el codigo
 roto es un adorno: al anadir un gate, verificar que falla ANTES del fix.
 
 ## Sesion 2026-08-22: auditoria pre-lanzamiento
