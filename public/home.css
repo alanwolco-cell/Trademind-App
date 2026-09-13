@@ -1759,3 +1759,56 @@ html.v11[data-theme="light"] .mk-film, html.v12[data-theme="light"] .mk-film{
   background:#050507;
   box-shadow:0 30px 90px -20px rgba(29,29,31,.42),0 8px 28px -12px rgba(29,29,31,.22);
 }
+
+/* ═══ FASE 2 · FLIGHT DECK: muere el poster centrado de promesa ══════════════
+   La portada abria como un cartel: todo centrado, una promesa enorme, cero
+   producto en el primer viewport y la pelicula del producto empujada debajo
+   del pliegue. Esa es la composicion que el dueno llamo "el mismo look".
+   Flight Deck (Sleeper/Linear): el titular a la IZQUIERDA y el producto REAL
+   al lado, en la misma pantalla. Nada nuevo que inventar: la pelicula ya se
+   filma del producto corriendo (scripts/gen-reel-season.mjs), asi que lo que
+   se ve es el producto, no un dibujo de lo que hace.
+
+   El estadio del fondo NO se toca (pedido del dueno; se re-renderiza aparte).
+
+   Va al final de home.css a proposito: las reglas de .hero de mas arriba
+   llevan el prefijo del skin (html.v11/.v12), asi que hace falta la misma
+   especificidad y llegar despues. */
+html.v11 .hero, html.v12 .hero, .hero{text-align:left}
+.mk-hero-inner{
+  max-width:none;
+  margin:0;
+  text-align:left;
+}
+.mk-sub{margin:0}
+.mk-cta-row{justify-content:flex-start}
+
+@media(min-width:1000px){
+  html.v11 .hero, html.v12 .hero, .hero{
+    display:grid;
+    grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);
+    gap:clamp(28px,3.4vw,56px);
+    align-items:center;
+    max-width:1340px;
+    margin:0 auto;
+    padding:clamp(48px,5.5vw,80px) 28px clamp(52px,6vw,88px);
+  }
+  /* El titular baja un escalon: en media pantalla, 74px se comen tres
+     renglones y dejan de leerse como una frase. */
+  html.v12 .hero h1, .hero h1{font-size:clamp(38px,3.5vw,52px)}
+  .mk-sub{font-size:clamp(16px,1.25vw,18px);max-width:30em}
+  .mk-hero-shot{margin:0;padding:0;max-width:none}
+  html.v11 .mk-film, html.v12 .mk-film{width:100%;max-width:none;margin:0}
+}
+
+/* El resplandor de la pelicula era morado (rgba(107,63,255,.22)), residuo del
+   vestido anterior. Sombra neutra: la direccion no lleva mas color que el dato
+   y el acento. */
+html.v11 .mk-film, html.v12 .mk-film{box-shadow:0 26px 70px rgba(0,0,0,.5)}
+
+@media(max-width:999px){
+  /* Apilado, pero el texto sigue a la izquierda: centrarlo es lo que hacia
+     que la portada se leyera como cartel y no como producto. */
+  .mk-hero-shot{margin-top:clamp(28px,5vw,44px);padding-bottom:clamp(48px,7vw,80px)}
+  html.v11 .mk-film, html.v12 .mk-film{margin:0;width:100%}
+}

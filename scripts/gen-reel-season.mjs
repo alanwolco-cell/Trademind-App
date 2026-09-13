@@ -73,12 +73,16 @@ pg.on('console', m => {
   errs.push((t + ' <- ' + url).slice(0, 200));
 });
 await pg.goto(BASE + '/myleagues?demo=1', { waitUntil: 'domcontentloaded', timeout: 60000 });
-await pg.waitForFunction(() => document.querySelectorAll('#screen-myleagues .ml-card').length >= 6, null, { timeout: 30000 });
+// .ml-liga y no .ml-card: desde la recomposicion Flight Deck del 12-sep una
+// liga se pinta de dos formas (tarjeta lider o fila densa) y las dos llevan
+// esa clase. Esperar tarjetas dejaba de ver cinco de las seis ligas de la demo
+// y el generador moria en este waitFor.
+await pg.waitForFunction(() => document.querySelectorAll('#screen-myleagues .ml-liga').length >= 6, null, { timeout: 30000 });
 // que las fotos del overlay esten calientes antes de abrirlo en camara
 // Se abre SUNDAY MONEY por nombre, no "la primera": el orden de la parrilla
 // es por urgencia y puede poner delante una liga sin el duelo completo.
 const abreSunday = () => {
-  const c = [...document.querySelectorAll('#screen-myleagues .ml-card[role=button]')]
+  const c = [...document.querySelectorAll('#screen-myleagues .ml-liga[role=button]')]
     .find(x => /Sunday Money/.test(x.textContent));
   if (c) c.click();
   return !!c;
