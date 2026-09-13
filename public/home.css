@@ -137,7 +137,7 @@ html.v12 .hero h1 .hl, .hero h1 .hl{color:var(--mk-acc)}
   outline:none;
   background:#fff;
   border-color:var(--mk-acc);
-  box-shadow:0 0 0 4px rgba(106,63,255,.12);
+  box-shadow:0 0 0 4px rgba(25,122,147,.12);
 }
 
 /* ── the two Apple CTAs: one filled pill, one text link with a chevron ────── */
@@ -164,7 +164,7 @@ html.v12 .hero h1 .hl, .hero h1 .hl{color:var(--mk-acc)}
   text-decoration:none;
   transition:transform .2s var(--mk-ease),box-shadow .25s var(--mk-ease),filter .2s var(--mk-ease);
 }
-.mk-btn:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 24px rgba(106,63,255,.28)}
+.mk-btn:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 24px rgba(25,122,147,.28)}
 .mk-btn:active{transform:none;box-shadow:none}
 .mk-btnlink{
   font-family:var(--mk-font);
@@ -819,7 +819,7 @@ html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
 [data-theme="light"]{
   --mk-seg-track:rgba(0,0,0,.06);
   --mk-seg-on:#ffffff;
-  --mk-focus:rgba(106,63,255,.16);
+  --mk-focus:rgba(25,122,147,.16);
 }
 
 /* ── the light region: token flip while the board is hidden ───────────────── */
@@ -836,16 +836,16 @@ html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
   --surface3:#e8e8ed;
   --border:rgba(0,0,0,.09);
   --border2:rgba(0,0,0,.16);
-  --accent:#6a3fff;
-  --accent-bright:#6a3fff;
-  --accent-dim:rgba(106,63,255,.08);
+  --accent:#197a93;
+  --accent-bright:#197a93;
+  --accent-dim:rgba(25,122,147,.08);
   --green:#087a46;
   --red:#d92d3f;
   /* the inline headings reference --font-head; the setup speaks SF */
   --font-head:var(--mk-font);
   --mk-seg-track:rgba(0,0,0,.06);
   --mk-seg-on:#ffffff;
-  --mk-focus:rgba(106,63,255,.16);
+  --mk-focus:rgba(25,122,147,.16);
   font-family:var(--mk-font);
 }
 
@@ -1357,17 +1357,20 @@ html.v11 .hero, html.v12 .hero{
    Owner: "cuando scrolleas se pierde el background." The page and band
    tokens become layered auroras - every section below the hero keeps a soft
    purple/teal breath instead of collapsing to flat charcoal. */
+/* Flight Deck (12-sep): el aliento del scroll sobrevive (pedido del dueno,
+   "cuando scrolleas se pierde el background") pero respira en la familia
+   nueva: grafito calido con un solo matiz cian tenue. El violeta murio. */
 :root{
-  --mk-page-solid:#0a0a10;
+  --mk-page-solid:#131211;
   --mk-page:
-    radial-gradient(1100px 700px at 12% 8%, rgba(107,63,255,.10), transparent 62%),
-    radial-gradient(900px 620px at 88% 42%, rgba(103,232,249,.05), transparent 60%),
-    radial-gradient(1000px 700px at 40% 96%, rgba(107,63,255,.07), transparent 62%),
-    #0a0a10;
+    radial-gradient(1100px 700px at 12% 8%, rgba(61,184,212,.05), transparent 62%),
+    radial-gradient(900px 620px at 88% 42%, rgba(236,231,220,.03), transparent 60%),
+    radial-gradient(1000px 700px at 40% 96%, rgba(61,184,212,.04), transparent 62%),
+    #131211;
   --mk-band:
-    radial-gradient(1000px 640px at 85% 10%, rgba(107,63,255,.09), transparent 60%),
-    radial-gradient(820px 560px at 10% 80%, rgba(103,232,249,.05), transparent 58%),
-    #0d0d14;
+    radial-gradient(1000px 640px at 85% 10%, rgba(61,184,212,.05), transparent 60%),
+    radial-gradient(820px 560px at 10% 80%, rgba(236,231,220,.03), transparent 58%),
+    #161514;
 }
 
 /* Mac rides the phone tab bar - full colour, lifted a touch so he sits like
