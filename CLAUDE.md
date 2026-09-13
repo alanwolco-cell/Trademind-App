@@ -2519,3 +2519,65 @@ En /sage a 320 `#sage-chat-card` declara scrollWidth 319 contra clientWidth 266.
 Apagando sus hijos uno por uno el numero no baja, o sea que no es ninguno de
 ellos; lleva `overflow-x:hidden`, la pagina no scrollea en horizontal (320=320)
 y nada visible sobresale. Queda sin atribuir.
+
+## Sesion 2026-09-12 (noche 2): el rail de navegacion de escritorio
+
+Pedido del dueno, textual: "que el dashboard este a un lado despues de que ya
+estes signed in, vertical en el lado izquierdo, y que desde ahi puedas ir
+rotando tabs, esto solo para la computadora". Calibrado en tres mensajes: WHOOP
+como referencia de ESTRUCTURA (nunca su color), y despues "solo un poco mas
+simple si puedes", que mando sobre todo lo demas.
+
+**Como quedo.** `<aside class="app-rail">` de 228px, fijo, a pantalla completa,
+un paso mas oscuro que el contenido (`--mk-page-solid`, la misma familia).
+Arriba Mac + wordmark (clic a la portada). Cinco puertas y ya: Leagues, Ask
+Mac, Trade Analyzer, Research, News & Learn. Al fondo, "More", que abre EL
+CAJON DE SIEMPRE.
+
+**Por que solo cinco y un More.** Era la calibracion del dueno y ademas resuelve
+la duplicacion: League Trades, la portada, los modos de draft, Draft Day y las
+alertas siguen viviendo en el cajon. Si el rail repitiera esa lista a mano, el
+dia que el cajon cambie el rail mentiria. El rail no duplica: enlaza.
+
+**DOS condiciones, las dos obligatorias:** `html.is-app` (hay cuenta; lo pone
+app.js:210) y `min-width:1001px`. En el telefono manda la tabbar y no se toca
+nada; sin sesion la barra de arriba queda como estaba.
+
+**El activo se pinta en UN solo sitio.** Los botones del rail se marcan desde
+`tabbarSync()`, que es el mismo sitio que ya marcaba la tabbar del telefono.
+Primero los colgue del par `.nav-item-btn[data-screen]` que repinta el
+envoltorio de `switchScreen`, y Leagues y Ask Mac se quedaban SIN MARCAR al
+entrar directo a su URL: **el arranque entra por otro camino** (app.js ~16476)
+y no pasa por ese envoltorio. Lo cazo la medicion, no la lectura.
+
+**Tres cosas que hubo que desactivar arriba, y por que:**
+- `.nav-links` y `.nav-logo`: sus puertas ahora viven en el rail.
+- La rejilla de tres columnas de `.nav` dejaba las utilidades flotando a media
+  barra con la marca fuera: pasa a fila con las utilidades al borde.
+- `#nav-burger`: abre el MISMO cajon que "More". Dos puertas a lo mismo en la
+  misma pantalla. **Necesita `!important`** porque styles.css:2039 lo fuerza a
+  partir de 701px; no es capricho, es ganarle a esa regla.
+
+**La trampa que el encargo ya anticipaba:** `#screen-sage` se sale a `100vw`
+con `margin-left:calc(50% - 50vw)` (styles.css ~1413). Con el rail al lado eso
+lo mete DEBAJO del rail. Con rail no hay sangrado: la pantalla mide lo que su
+columna. Verificado: a 1280 queda en left 252 y 1004 de ancho, sin nada bajo el
+rail y sin desborde de pagina.
+
+### Gate: qa-nav gana nueve checks (patron de puerta nueva)
+(r1) el rail existe con sesion en escritorio, mide entre 200 y 260, tiene sus
+cinco puertas, no tapa contenido y no desborda. (r2) x4: se TOCA cada fila y la
+pantalla cambia Y el rail marca esa fila, exactamente una. (r3) "More" abre el
+cajon y la hamburguesa no lo duplica. (r4) x3 CONTROLES: sin sesion no hay
+rail, en el telefono no hay rail, y a 1000px tampoco (el corte es 1001) -- sin
+estos, un rail pintado siempre pasaria todo lo de arriba.
+**Verificado en ROJO contra 7df8ba2: los seis primeros fallan; los tres
+controles pasan en las dos versiones, que es lo que deben hacer las guardas.**
+
+Cache-bust 2026091213. Los once gates ALL GREEN.
+
+**Desviacion declarada del encargo:** la nota de WHOOP pedia usuario/cuenta al
+fondo del rail, y la especificacion original decia que las utilidades (buscar,
+campana, tema, cuenta) se quedan arriba a la derecha. Se respeto la
+especificacion original: duplicar el control de cuenta en dos sitios es
+exactamente lo que el criterio de simplicidad desempata en contra.

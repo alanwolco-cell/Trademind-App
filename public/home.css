@@ -17,7 +17,8 @@
    Tokens:
    - page #ffffff, band #f5f5f7 (Apple's two page greys)
    - ink #1d1d1f, ink2 #6e6e73 on light; #f5f5f7 / #86868b on dark
-   - the brand purple carries: #6a3fff on white, #9b72e8 on black
+   - el acento es el cian de Flight Deck (var(--mk-acc)); el morado de marca
+     que esta cabecera describia murio el 12-sep-2026
    - type: system SF stack. Headlines semibold, tight, text-wrap:balance.
    - motion: one gesture - sections fade + rise 16px on entry, 600ms,
      one-shot, killed entirely under prefers-reduced-motion.
@@ -212,12 +213,12 @@ html.v12 .hero h1 .hl, .hero h1 .hl{color:var(--mk-acc)}
 }
 .mk-band{background:var(--mk-band)}
 /* El negro PURO muere aqui (bloqueante del juez, 12-sep: 1.842px de rgb(0,0,0)
-   a 1440). La familia es la misma de Flight Deck, un escalon por debajo de
-   --mk-page-solid para que la seccion oscura siga leyendose como un escalon y
-   no como un agujero. Token propio: un hex a mano en dos sitios es como se
-   escaparon estos dos. */
-:root{ --mk-dark-bg:#161514; --mk-ink-on-dark:#f0ede5; }
-.mk-dark{background:var(--mk-dark-bg);color:var(--mk-ink-on-dark)}
+   a 1440). Sale de la familia que YA existe, no de un hex nuevo: --mk-page-solid
+   es el grafito calido sin las auroras, asi que esta seccion se sigue leyendo
+   como un escalon mas quieto entre dos con degradado, y no como un agujero.
+   Un token propio con un hex a mano dentro habria sido el mismo defecto con
+   otra cara (adenda del juez). */
+.mk-dark{background:var(--mk-page-solid);color:var(--mk-ink)}
 
 .mk-wrap{max-width:1040px;margin:0 auto}
 .mk-wrap-narrow{max-width:640px;margin:0 auto}
@@ -1306,8 +1307,8 @@ html.v11 .mk-shot, html.v12 .mk-shot{
   border-radius:16px;
   border:1px solid rgba(255,255,255,.08);
 }
-/* the film: landscape, wide. El resplandor morado murio el 12-sep (ver la
-   regla de sombra neutra mas abajo); aqui ya no se declara ninguna. */
+/* the film: landscape, wide. El resplandor de la familia muerta se fue el
+   12-sep (ver la regla de sombra neutra mas abajo); aqui ya no se declara. */
 html.v11 .mk-film, html.v12 .mk-film{
   width:min(1120px,94vw);
   height:auto;
@@ -1749,7 +1750,7 @@ html[data-theme="light"] .mk-founder p{color:var(--mk-ink2)}
 html[data-theme="light"] .mk-founder .mk-founder-lead{color:var(--mk-ink)}
 html[data-theme="light"] .mk-founder .mk-founder-close{color:var(--mk-acc)}
 html[data-theme="light"] .mk-founder-sign{color:#6e6e73}
-html[data-theme="light"] #home-story > .mk-sec.mk-dark{background:var(--mk-dark-bg);color:var(--mk-ink-on-dark)}
+html[data-theme="light"] #home-story > .mk-sec.mk-dark{background:var(--mk-page-solid);color:var(--mk-ink)}
 html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-sub{color:var(--muted2)}
 html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-eyebrow-acc{color:var(--mk-acc-dark)}
 html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-btnlink{color:var(--mk-acc-dark)}
@@ -1815,9 +1816,10 @@ html.v11 .hero, html.v12 .hero, .hero{text-align:left}
   html.v11 .mk-film, html.v12 .mk-film{width:100%;max-width:none;margin:0}
 }
 
-/* El resplandor de la pelicula era morado (rgba(107,63,255,.22)), residuo del
+/* El resplandor de la pelicula era de la familia morada muerta, residuo del
    vestido anterior. Sombra neutra: la direccion no lleva mas color que el dato
-   y el acento. */
+   y el acento. (El valor viejo NO se cita aqui a proposito: una barrida por el
+   hex tiene que dar cero, y un comentario que lo nombra ensucia el grep.) */
 html.v11 .mk-film, html.v12 .mk-film{box-shadow:0 26px 70px rgba(0,0,0,.5)}
 
 @media(max-width:999px){

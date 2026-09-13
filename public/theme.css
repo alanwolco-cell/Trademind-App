@@ -107,7 +107,7 @@
   width:3px;
   height:13px;
   border-radius:100px;
-  background:#9b72e8;
+  background:var(--accent);
   flex-shrink:0;
 }
 
@@ -218,7 +218,7 @@
 .mkt-panel-title::before,.comm-section-title::before,.pdb-title::before{
   content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
   width:3px;height:1.05em;border-radius:999px;
-  background:#9b72e8;
+  background:var(--accent);
 }
 
 /* Active inner tab was a slightly lighter grey on grey. Scoped to match the

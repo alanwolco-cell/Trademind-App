@@ -178,3 +178,104 @@ html.v13 #tabbar .tabbar-item[data-tab="sage"].active{color:var(--accent-bright)
 @media(max-width:480px){
   html.v13 footer .nav-link{font-size:12.5px}
 }
+
+/* ═══ RAIL DE NAVEGACION: escritorio CON SESION ══════════════════════════════
+   Pedido del dueno del 12-sep. Calcado de WHOOP en estructura y proporciones
+   (rail angosto y quieto, marca arriba, filas con aire, activo sobrio marcado
+   con barrita y rotulo en acento, nunca una caja llena), con nuestro grafito
+   calido y nuestro cian: nada del verde de WHOOP. Y un punto mas simple que
+   WHOOP, que fue su ultima calibracion: cinco puertas y un "More" al cajon.
+
+   DOS CONDICIONES, las dos obligatorias: html.is-app (o sea, hay cuenta; lo
+   pone app.js:210) y ancho de escritorio. En el telefono manda la tabbar y
+   aqui no se toca nada; sin sesion, la barra de arriba queda como estaba. */
+html.v13{--rail-w:228px}
+.app-rail{display:none}
+
+@media(min-width:1001px){
+  html.v13.is-app .app-rail{
+    display:flex;
+    flex-direction:column;
+    position:fixed;
+    top:0; left:0; bottom:0;
+    width:var(--rail-w);
+    z-index:101;                       /* por encima de la barra, que se corre */
+    /* un paso MAS OSCURO que el contenido, que es lo que hace que el rail se
+       quede quieto detras y el contenido pese delante */
+    background:var(--mk-page-solid,#131211);
+    border-right:1px solid var(--border);
+    padding:18px 14px 14px;
+    gap:22px;
+    overflow-y:auto;
+  }
+  /* La barra de arriba se corre y ADELGAZA: las puertas que ahora viven en el
+     rail no se repiten alli. Lo que queda arriba a la derecha son utilidades
+     (buscar, campana, tema, cuenta), que no son navegacion. */
+  html.v13.is-app .nav{left:var(--rail-w)}
+  html.v13.is-app .nav .nav-links,
+  html.v13.is-app .nav .nav-logo{display:none}
+  /* Con la marca y las puertas fuera, la rejilla de tres columnas dejaba las
+     utilidades flotando a media barra. Fila simple, pegadas al borde. */
+  html.v13.is-app .nav{display:flex;justify-content:flex-end;align-items:center}
+  html.v13.is-app .nav .nav-right{margin-left:auto}
+  /* La hamburguesa abre el MISMO cajon que "More" del rail: dos puertas a lo
+     mismo en la misma pantalla. Se queda la del rail, que es donde ahora vive
+     la navegacion, y de paso se va su punto cian (el acento, una vez). */
+  /* styles.css:2039 lo fuerza con !important a partir de 701px, asi que aqui
+     hace falta el mismo peso: no es capricho, es ganarle a esa regla. */
+  html.v13.is-app #nav-burger{display:none!important}
+  html.v13.is-app body,
+  html.v13.is-app.is-app body{padding-left:var(--rail-w)}
+
+  /* Ask Mac se sale a 100vw con un margen negativo (styles.css ~1413). Con el
+     rail al lado eso lo mete DEBAJO del rail. Con rail no hay sangrado: la
+     pantalla mide lo que su columna, que ademas es lo simple. */
+  html.v13.is-app #screen-sage{width:auto;margin-left:0;padding:0 24px}
+
+  /* La marca, arriba, en el sitio donde WHOOP pone la suya. */
+  html.v13.is-app .rail-brand{
+    display:flex;align-items:center;gap:10px;
+    background:none;border:0;padding:6px 8px;cursor:pointer;
+    font-family:var(--font-head);font-size:16px;font-weight:700;
+    color:var(--text);letter-spacing:-.01em;text-align:left;
+    border-radius:10px;
+  }
+  html.v13.is-app .rail-brand:hover{background:var(--surface2)}
+  html.v13.is-app .rail-mac{width:26px;height:26px;object-fit:contain;flex:none}
+
+  html.v13.is-app .rail-nav{display:flex;flex-direction:column;gap:2px}
+  /* Filas con MUCHA respiracion, que es la proporcion que hace que WHOOP se
+     sienta quieto. Sin iconos: el cajon tampoco los tiene, e inventarlos aqui
+     seria un juego de iconos nuevo para cinco filas. */
+  html.v13.is-app .rail-item{
+    position:relative;
+    display:block;width:100%;text-align:left;
+    background:none;border:0;cursor:pointer;
+    padding:11px 12px;border-radius:10px;
+    font-size:14px;font-weight:500;color:var(--muted2);
+    letter-spacing:-.01em;
+    transition:color .15s,background .15s;
+  }
+  html.v13.is-app .rail-item:hover{color:var(--text);background:var(--surface2)}
+  /* El activo: rotulo en acento y una barrita. NO una caja llena de color: el
+     cian se gasta UNA vez por pantalla y esta es esa vez. */
+  html.v13.is-app .rail-item.active{color:var(--accent-bright);font-weight:600;background:none}
+  html.v13.is-app .rail-item.active::before{
+    content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:3px;height:18px;border-radius:999px;background:var(--accent-bright);
+  }
+  html.v13.is-app .rail-item:focus-visible{outline:2px solid var(--accent-bright);outline-offset:-2px}
+
+  /* "More" abre el cajon de siempre, que es donde sigue viviendo todo lo que
+     el rail no lista. Al fondo y callado. */
+  html.v13.is-app .rail-more{
+    margin-top:auto;
+    display:block;width:100%;text-align:left;
+    background:none;border:0;border-top:1px solid var(--border);
+    padding:14px 12px 6px;cursor:pointer;
+    font-size:13px;font-weight:500;color:var(--muted);
+    transition:color .15s;
+  }
+  html.v13.is-app .rail-more:hover{color:var(--text)}
+  html.v13.is-app .rail-more:focus-visible{outline:2px solid var(--accent-bright);outline-offset:-2px}
+}

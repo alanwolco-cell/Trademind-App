@@ -209,6 +209,108 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
   }
 }
 
+/* ── EL RAIL DE ESCRITORIO (12-sep) ────────────────────────────────────────
+   Puerta NUEVA, y por eso entra aqui: el rail solo existe con SESION y en
+   escritorio, asi que hay que sembrar la cuenta (es lo que enciende
+   html.is-app, app.js:210). Se toca cada fila como una persona y se comprueba
+   que la pantalla cambia Y que el rail marca donde estas.
+   Los CONTROLES son la mitad del bloque: sin sesion no hay rail, en el
+   telefono no hay rail, y a 1000px tampoco (el corte es 1001). Sin ellos, un
+   rail pintado siempre pasaria los checks de arriba. */
+{
+  const conSesion = async (w, h) => {
+    const pg = await b.newPage({ viewport: { width: w, height: h } });
+    await pg.addInitScript(() => { try { localStorage.setItem('tm_username', 'wolco'); } catch (e) { } });
+    await pg.goto(BASE + '/myleagues', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await pg.waitForTimeout(2800);
+    return pg;
+  };
+
+  const pg = await conSesion(1440, 900);
+  const base = await pg.evaluate(() => {
+    const r = document.getElementById('app-rail');
+    return {
+      visible: !!(r && getComputedStyle(r).display !== 'none'),
+      ancho: r ? Math.round(r.getBoundingClientRect().width) : 0,
+      puertas: document.querySelectorAll('#app-rail .rail-item').length,
+      // nada del contenido puede quedar debajo del rail
+      bajoRail: [...document.querySelectorAll('.screen.active, footer')]
+        .filter(e => { const x = e.getBoundingClientRect(); return x.width > 0 && x.left < (r ? r.getBoundingClientRect().right : 0) - 1; }).length,
+      desborde: document.documentElement.scrollWidth > window.innerWidth + 1
+    };
+  });
+  ok('(r1) con sesion y en escritorio el rail existe, mide lo suyo y no tapa nada',
+    base.visible === true && base.ancho >= 200 && base.ancho <= 260
+    && base.puertas === 5 && base.bajoRail === 0 && base.desborde === false,
+    JSON.stringify(base));
+
+  // Cada puerta, TOCANDOLA
+  const esperados = [
+    ['Ask Mac', 'screen-sage'],
+    ['Trade Analyzer', 'screen-analyze'],
+    ['Research', 'screen-research'],
+    ['Leagues', 'screen-myleagues']
+  ];
+  for (const [rotulo, pantalla] of esperados) {
+    const r = await pg.evaluate(t => {
+      const x = [...document.querySelectorAll('#app-rail .rail-item')]
+        .find(e => e.textContent.trim() === t);
+      if (!x) return 'sin-puerta';
+      x.click();
+      return 'clicado';
+    }, rotulo);
+    await pg.waitForTimeout(1300);
+    const d = await pg.evaluate(() => {
+      const act = document.querySelector('.screen.active');
+      const marcado = [...document.querySelectorAll('#app-rail .rail-item.active')].map(e => e.textContent.trim());
+      return { pantalla: act ? act.id : 'ninguna', marcados: marcado.length, marcado: marcado[0] || null };
+    });
+    ok('(r2) el rail abre ' + rotulo + ' y lo marca como activo',
+      r === 'clicado' && d.pantalla === pantalla && d.marcados === 1 && d.marcado === rotulo,
+      r + ' | ' + JSON.stringify(d));
+  }
+
+  // "More" es la UNICA puerta al cajon en este modo (la hamburguesa se esconde
+  // para no tener dos puertas a lo mismo): si no abriera, todo lo que no esta
+  // en el rail quedaria inalcanzable en escritorio.
+  const masr = await pg.evaluate(() => {
+    const m = document.querySelector('#app-rail .rail-more');
+    if (!m) return { hay: false };
+    m.click();
+    return { hay: true };
+  });
+  await pg.waitForTimeout(900);
+  const cajon = await pg.evaluate(() => {
+    const mm = document.getElementById('mob-menu');
+    const nb = document.getElementById('nav-burger');
+    return {
+      abierto: !!(mm && mm.classList.contains('open')),
+      burgerVisible: !!(nb && getComputedStyle(nb).display !== 'none')
+    };
+  });
+  ok('(r3) "More" abre el cajon, y la hamburguesa no lo duplica en este modo',
+    masr.hay === true && cajon.abierto === true && cajon.burgerVisible === false,
+    JSON.stringify({ masr, cajon }));
+  await pg.close();
+
+  // CONTROLES
+  const sinRail = async (w, h, sembrar, etiqueta) => {
+    const p2 = await b.newPage({ viewport: { width: w, height: h } });
+    if (sembrar) await p2.addInitScript(() => { try { localStorage.setItem('tm_username', 'wolco'); } catch (e) { } });
+    await p2.goto(BASE + '/myleagues', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await p2.waitForTimeout(2500);
+    const v = await p2.evaluate(() => {
+      const r = document.getElementById('app-rail');
+      return { rail: !!(r && getComputedStyle(r).display !== 'none'), pad: getComputedStyle(document.body).paddingLeft };
+    });
+    ok('(r4) CONTROL: ' + etiqueta + ' no hay rail', v.rail === false && v.pad === '0px', JSON.stringify(v));
+    await p2.close();
+  };
+  await sinRail(1440, 900, false, 'sin sesion');
+  await sinRail(390, 844, true, 'en el telefono');
+  await sinRail(1000, 900, true, 'a 1000px, justo bajo el corte');
+}
+
 await b.close();
 cerrar();
 console.log(fails ? '\n' + fails + ' FALLOS' : '\nNAV ALL GREEN');

@@ -16416,6 +16416,15 @@ switchScreen=function(name,_noPush){
 // bar with nothing selected, which reads as broken.
 var _TABBAR_DIRECT=['home','myleagues','sage','analyze'];
 function tabbarSync(name){
+  // El rail de escritorio se marca DESDE AQUI y no desde el envoltorio de
+  // switchScreen: el arranque entra por otro camino (linea ~16476) y ahi
+  // Leagues y Ask Mac se quedaban sin marcar al entrar directo a su URL,
+  // que es justo como entra alguien con sesion. Un solo sitio pinta "donde
+  // estoy", y es el mismo que ya lo hacia para la tabbar del telefono.
+  var rail=document.getElementById('app-rail');
+  if(rail)rail.querySelectorAll('.rail-item').forEach(function(b){
+    b.classList.toggle('active',b.dataset.screen===name);
+  });
   var bar=document.getElementById('tabbar');
   if(!bar)return;
   var target=_TABBAR_DIRECT.indexOf(name)===-1?'more':name;
