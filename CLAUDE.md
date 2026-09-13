@@ -2439,3 +2439,22 @@ Cache-bust 2026091209. 56 capturas antes/despues a 390 y 1280.
   de trade compartido (app.js ~5757), fuera de las pantallas de esta fase.
 - El trio del arranque (overlay + vuelo.mp4 + startup images de iOS) sigue sin
   tocarse: se regeneran JUNTOS por la ley del primer fotograma.
+
+### Nota de honestidad sobre f5faaf7 (el commit del aro)
+
+Ese commit lleva ADEMAS un cambio que no es mio y que su mensaje no menciona:
+`goHome()` pierde el caso de cuenta conectada (el wordmark llevaba a Leagues y
+ahora lleva SIEMPRE a la portada, orden del dueno del 12-sep) y el check (7c)
+de `qa-backlog`. Los dejo otro agente en el arbol compartido antes de mi primer
+commit y mi `git add -A` se los llevo sin que yo lo viera. Se descubrio al
+revisarlo despues, no antes: **`git add -A` en un arbol compartido commitea
+trabajo ajeno bajo un mensaje que habla de otra cosa.** En un arbol compartido
+va `git add` por rutas, o `git status` antes de cada commit.
+
+El cambio en si esta verificado y es correcto, medido en PRODUCCION a 1280 y
+390: el arranque conectado sigue cayendo en `/myleagues` (hero fuera de
+pantalla) y el clic en el wordmark desde ahi abre la portada. Los TRES
+llamadores de `goHome()` quieren la portada (wordmark de la barra, wordmark del
+pie, y `tabGo('home')`), y la pestana Home del tabbar esta escondida con cuenta
+conectada, que es lo que mide (7a). qa-backlog (7a)(7b)(7c) en verde contra
+produccion.
