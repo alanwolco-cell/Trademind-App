@@ -128,3 +128,53 @@ html.v13 .hb-row.is-mine{
   border-radius:8px;
   padding-left:12px;
 }
+
+/* ═══ BLOQUEANTE 5 (juez, 12-sep): el footer se despega en paginas cortas ════
+   Medido: 137px de vacio bajo el footer en /research, 204 en /hub y 306 en
+   /sage a 1280 y 1440. Como el fondo de despues del footer es otro, el hueco
+   se VE, y se lee como que la pagina se acabo antes de tiempo.
+
+   Patron de footer pegajoso, sin envoltorio nuevo: el <body> pasa a columna
+   flex y el <footer> se empuja con margin-top:auto. En una pagina larga el
+   auto no tiene sobrante que repartir y no hace nada, asi que las largas no se
+   tocan. box-sizing:border-box ya es global (styles.css:2), asi que el
+   padding-top de la barra no infla el alto. */
+html.v13 body{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  min-height:100dvh;
+}
+html.v13 body > footer{margin-top:auto}
+/* Los hijos directos del body dejan de poder encogerse por ser items flex:
+   sin esto una seccion alta se comprime para caber en el viewport. */
+html.v13 body > *{flex-shrink:0}
+
+/* ── PULIDO de la segunda ronda del juez (12-sep) ───────────────────────────
+   La fuga de fallback: 19 elementos cayendo a Arial (el "+ Add player or pick",
+   la x de cerrar, los select). Los controles de formulario NO heredan la fuente
+   por defecto, hay que decirselo. Una regla mata la familia entera del defecto,
+   en vez de perseguir cada boton. */
+html.v13 button,
+html.v13 input,
+html.v13 select,
+html.v13 textarea,
+html.v13 optgroup{font-family:inherit}
+
+/* El rotulo de la semana comparte renglon con las pestanas, pero no es una. */
+html.v13 .ml-tabrow{display:flex;align-items:center;gap:12px;min-width:0}
+html.v13 .ml-tabrow .inner-tab-bar{margin-bottom:0;min-width:0}
+html.v13 .ml-tabrow .ml-sub{flex:none;margin-left:auto}
+html.v13 #screen-myleagues .ml-tabrow{margin-bottom:16px}
+
+/* "Mac" iba SIEMPRE en cian, asi que con cualquier otra pestana activa habia
+   dos rotulos cian a la vez y ninguno mandaba. El loro ya distingue esa
+   pestana sin gastar el acento; el cian queda para la que esta activa. */
+html.v13 #tabbar .tabbar-item[data-tab="sage"]{color:var(--muted);font-weight:600}
+html.v13 #tabbar .tabbar-item[data-tab="sage"].active{color:var(--accent-bright);font-weight:700}
+
+/* "Terms of Use" caia solo en su renglon a 390. Con menos hueco entre enlaces
+   los cinco reparten en dos renglones equilibrados. */
+@media(max-width:480px){
+  html.v13 footer .nav-link{font-size:12.5px}
+}

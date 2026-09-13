@@ -55,14 +55,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Sleeper and Yahoo in one screen. Your record, this week's matchup, your exposure across every league, and odds priced with your league's own rules.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://macdraft.app/">
-<meta property="og:image" content="https://macdraft.app/og.png?v=2026091211">
+<meta property="og:image" content="https://macdraft.app/og.png?v=2026091212">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - Every League You Play, One Screen">
 <meta name="twitter:description" content="Every league you play in one screen, with a betting board priced by your league's own rules.">
-<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026091211">
+<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026091212">
 <link rel="canonical" href="https://macdraft.app/">
 <script defer src="/_vercel/insights/script.js"></script>
 <!-- Familjen Grotesk auto-hospedada. Venia de Google Fonts con display=swap y,
@@ -83,18 +83,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091211">
+<link rel="stylesheet" href="/styles.css?v=2026091212">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091211" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091212" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091211">
+<link rel="stylesheet" href="/theme.css?v=2026091212">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091211">
+<link rel="stylesheet" href="/home.css?v=2026091212">
 <!-- v13 FLIGHT DECK, el vestido vivo desde el 2026-09-12 (direccion y acento
      cian elegidos por el dueno sobre el preview en vivo). Es una CAPA sobre
      v12 (el html lleva las dos clases arriba) y carga EL ULTIMO para ganar la
@@ -103,7 +103,7 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
      vuelo.mp4 y las imagenes fijas de iOS) sigue en los colores viejos A
      PROPOSITO: son un juego atado por la ley del primer fotograma identico y
      se regeneran JUNTOS en su propio commit. -->
-<link rel="stylesheet" href="/v13.css?v=2026091211">
+<link rel="stylesheet" href="/v13.css?v=2026091212">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -117,7 +117,7 @@ if(_skin){
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   document.querySelectorAll('link[href^="/v13.css"]').forEach(function(l){l.remove();});
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091211">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091212">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -897,11 +897,16 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
 
     <!-- MY LEAGUES SCREEN -->
     <div class="screen" id="screen-myleagues">
+      <!-- El rotulo de la semana va FUERA de .inner-tab-bar: dentro se leia
+           como una cuarta pestana apagada, y ademas contaba en el ancho del
+           riel deslizable. -->
+      <div class="ml-tabrow">
       <div class="inner-tab-bar">
         <div class="inner-tab active" data-tab="tab-ml-leagues" onclick="switchInnerTab(this,'tab-ml-leagues','screen-myleagues');window.renderMyLeagues&&renderMyLeagues()">Leagues</div>
         <div class="inner-tab" data-tab="tab-ml-players" onclick="switchInnerTab(this,'tab-ml-players','screen-myleagues');window.renderMyLeagues&&renderMyLeagues()">My Players</div>
         <div class="inner-tab" data-tab="tab-ml-odds" onclick="switchInnerTab(this,'tab-ml-odds','screen-myleagues');window.renderMyLeagues&&renderMyLeagues()">Odds</div>
-        <div style="margin-left:auto;flex-shrink:0;display:flex;align-items:center"><span id="ml-sub" class="ml-sub"></span></div>
+      </div>
+      <span id="ml-sub" class="ml-sub"></span>
       </div>
 
       <div id="tab-ml-leagues" class="tab-content active">
@@ -1845,7 +1850,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   <div class="mk-wrap-narrow">
     <div class="mk-eyebrow-acc mk-reveal">Why Mac Draft exists</div>
     <p class="mk-founder-lead mk-reveal">Mac Draft started with a trade I almost blew. One tab on a value chart, another on injury news, a group chat where three friends told me three different things.</p>
-    <p class="mk-reveal">The problem was never a lack of information. The problem is that none of it knew anything about me - my roster, my league, my window.</p>
+    <p class="mk-reveal">The problem was never a lack of information. The problem is that none of it knew anything about me: my roster, my league, my window.</p>
     <p class="mk-reveal">One promise sits above every feature: accuracy. I would rather show you nothing than show you something wrong.</p>
     <p class="mk-founder-close mk-reveal">Life is good when you know the move.</p>
     <div class="mk-cta-row mk-reveal" style="margin-top:22px">
@@ -1883,7 +1888,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
     <span class="tm-wordmark" style="font-size:15px">Mac Draft</span>
   </div>
   <div class="footer-sub">Made for managers who play more than one league.</div>
-  <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;flex-wrap:wrap">
+  <div class="footer-links">
     <a href="/analyze" class="nav-link" onclick="event.preventDefault();switchScreen('analyze');showAnalyzeTab('analyzer')">Trade Analyzer</a>
     <span class="nav-link community-only" onclick="switchScreen('community');loadCommunityFeed();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">Community</span>
     <span class="nav-link community-alt" onclick="goNews();document.getElementById('analyzer').scrollIntoView({behavior:'smooth'})">News &amp; Learn</span>
@@ -1937,13 +1942,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091211"></script>
-<script src="/rankings.js?v=2026091211"></script>
-<script src="/weekly.js?v=2026091211"></script>
-<script src="/live.js?v=2026091211"></script>
-<script src="/myleagues.js?v=2026091211"></script>
-<script src="/push.js?v=2026091211" defer></script>
-<script src="/hub.js?v=2026091211"></script>
+<script src="/app.js?v=2026091212"></script>
+<script src="/rankings.js?v=2026091212"></script>
+<script src="/weekly.js?v=2026091212"></script>
+<script src="/live.js?v=2026091212"></script>
+<script src="/myleagues.js?v=2026091212"></script>
+<script src="/push.js?v=2026091212" defer></script>
+<script src="/hub.js?v=2026091212"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

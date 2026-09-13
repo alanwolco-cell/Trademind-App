@@ -3695,3 +3695,56 @@ html:not(.is-app) .app-home-link{display:none}
   .ml-lrow-cifras{grid-column:2;grid-row:2;justify-self:start}
   .ml-lrow-v{grid-column:3;grid-row:1/span 2;align-self:center}
 }
+
+/* ── La pista de los rieles deslizables (bloqueantes 2 y 4 del juez) ────────
+   El degradado va con mask-image y NO con un pseudo-elemento: un ::after
+   dentro de un contenedor que se desplaza viaja con el contenido y se va de
+   la vista justo cuando hace falta. La mascara pertenece al elemento, asi que
+   se queda clavada en el borde. Las clases las pone tmRieles() solo cuando de
+   verdad hay contenido escondido de ese lado. */
+.riel.riel-der{
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 34px),transparent 100%);
+  mask-image:linear-gradient(to right,#000 calc(100% - 34px),transparent 100%);
+}
+.riel.riel-izq{
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 34px);
+  mask-image:linear-gradient(to right,transparent 0,#000 34px);
+}
+.riel.riel-izq.riel-der{
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 34px,#000 calc(100% - 34px),transparent 100%);
+  mask-image:linear-gradient(to right,transparent 0,#000 34px,#000 calc(100% - 34px),transparent 100%);
+}
+
+/* ── BLOQUEANTE 2: el riel de ejemplos de Ask Mac en el telefono ────────────
+   La causa medida: el primer chip media 350px dentro de un riel de 238px a
+   320, asi que NUNCA cabia y la unica pregunta visible se cortaba a media
+   frase. Un chip que no cabe en una pantalla no es un chip: bajo 700px pasan
+   a tarjetas de dos o tres renglones con tope de ancho, de modo que la
+   siguiente ASOMA de verdad y el riel se lee como deslizable. */
+@media(max-width:700px){
+  #sage-suggestions .sage-sugg{
+    max-width:min(calc(72vw - 60px),260px);
+    white-space:normal;
+    text-align:left;
+    border-radius:16px;
+    line-height:1.4;
+    padding:10px 14px;
+  }
+}
+/* La linea del "como llegar" de un estado vacio del hub: mas callada que el
+   texto que explica QUE hay, porque es la instruccion y no el contenido. */
+.hb-vacio-como{margin-top:10px;font-size:12px;color:var(--muted)}
+.hb-vacio-como .ml-link{font-size:12px;padding:0;min-height:0;vertical-align:baseline}
+/* Los enlaces del pie. El hueco venia en un estilo en linea de 24px fijos, que
+   a 390 dejaba "Terms of Use" solo en su renglon. Con el hueco a escala los
+   cinco reparten en dos renglones parejos, y el estilo deja de estar en linea. */
+.footer-links{display:flex;align-items:center;justify-content:center;
+  gap:10px 24px;margin-top:20px;flex-wrap:wrap}
+/* A 390 los cuatro enlaces no caben en un renglon (438px de texto y huecos en
+   390 de pantalla), asi que uno se quedaba solo abajo. Con la medida acotada
+   caen DOS y DOS, que es un reparto y no una sobra. La medida sale de las
+   cifras: los dos enlaces mas anchos suman 182px con su hueco y los tres mas
+   estrechos 267, asi que cualquier tope entre 182 y 266 deja exactamente dos
+   por renglon. Con 280 cabian tres a 390 y solo dos a 320: el mismo pie se
+   repartia distinto por cuatro pixeles. */
+@media(max-width:480px){.footer-links{gap:10px 18px;max-width:230px;margin-left:auto;margin-right:auto}}

@@ -215,10 +215,29 @@ function hbClaimUI() {
     + '</div></div>';
 }
 
+/* ── BLOQUEANTE 3 (juez, 12-sep): las tres pestanas eran lienzo muerto ──────
+   Sin liga abierta, los tres paneles hacian innerHTML='' y quedaban 270px de
+   vacio bajo una barra de pestanas que si se podia tocar: se toca, no pasa
+   nada, y no hay forma de saber si esta rota o si falta algo. Cada pestana
+   dice ahora QUE habria ahi y COMO llegar. El campo del codigo NO se repite
+   aqui: vive en la cabecera, y un dato en dos sitios es el defecto siguiente. */
+function hbVacio(titulo, que) {
+  return '<div class="ml-empty"><div class="ml-empty-h">' + hbEsc(titulo) + '</div>'
+    + '<p>' + que + '</p>'
+    + '<p class="hb-vacio-como">Open a league with the six character code above, '
+    + 'or share one of yours from <button class="ml-link" onclick="switchScreen(\'myleagues\')">Leagues</button>.</p>'
+    + '</div>';
+}
+
 function hbPaintBooth() {
   var el = document.getElementById('hub-booth-body');
   if (!el) return;
-  if (!HUB.doc) { el.innerHTML = HUB.code ? hbSk(5) : ''; return; }
+  if (!HUB.doc) {
+    el.innerHTML = HUB.code ? hbSk(5) : hbVacio('Power rankings',
+      'Every team in the league ranked by what its roster projects this week, '
+      + 'scored with the league\'s own rules, and one line from Mac on each one.');
+    return;
+  }
   if (!HUB.rank) {
     el.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">Rankings are not ready</div>'
       + '<p>This week\'s player projections have not loaded, and a ranking without them would be made up. Try again in a minute.</p></div>';
@@ -248,7 +267,12 @@ function hbPaintBooth() {
 function hbPaintHistory() {
   var el = document.getElementById('hub-history-body');
   if (!el) return;
-  if (!HUB.doc) { el.innerHTML = ''; return; }
+  if (!HUB.doc) {
+    el.innerHTML = HUB.code ? hbSk(3) : hbVacio('Every season before this one',
+      'Champion by champion, walked back through the league chain with the team '
+      + 'names of THAT year. A finished season never changes, so it is read once and frozen.');
+    return;
+  }
   var hist = HUB.doc.historia || [];
   if (!hist.length) {
     el.innerHTML = '<div class="ml-empty"><div class="ml-empty-h">No past seasons to show</div>'
@@ -294,7 +318,12 @@ function hbPaintHistory() {
 function hbPaintMarket() {
   var el = document.getElementById('hub-market-body');
   if (!el) return;
-  if (!HUB.doc) { el.innerHTML = ''; return; }
+  if (!HUB.doc) {
+    el.innerHTML = HUB.code ? hbSk(3) : hbVacio('The trade block and the league vote',
+      'Who is on the block, the trades your leaguemates propose, and the vote on each one. '
+      + 'You need a team claimed in the league to publish or to vote, and nobody votes their own trade.');
+    return;
+  }
   var d = HUB.doc;
   var players = ML.players || {};
   var nombre = function (pid) {

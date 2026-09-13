@@ -211,7 +211,13 @@ html.v12 .hero h1 .hl, .hero h1 .hl{color:var(--mk-acc)}
   -webkit-font-smoothing:antialiased;
 }
 .mk-band{background:var(--mk-band)}
-.mk-dark{background:#000;color:#f5f5f7}
+/* El negro PURO muere aqui (bloqueante del juez, 12-sep: 1.842px de rgb(0,0,0)
+   a 1440). La familia es la misma de Flight Deck, un escalon por debajo de
+   --mk-page-solid para que la seccion oscura siga leyendose como un escalon y
+   no como un agujero. Token propio: un hex a mano en dos sitios es como se
+   escaparon estos dos. */
+:root{ --mk-dark-bg:#161514; --mk-ink-on-dark:#f0ede5; }
+.mk-dark{background:var(--mk-dark-bg);color:var(--mk-ink-on-dark)}
 
 .mk-wrap{max-width:1040px;margin:0 auto}
 .mk-wrap-narrow{max-width:640px;margin:0 auto}
@@ -240,7 +246,7 @@ html.v11 .mk-h2, html.v12 .mk-h2, .mk-h2{
 }
 .mk-h2-dim{color:#86868b}
 .mk-sec .mk-sub{color:var(--mk-ink2)}
-.mk-dark .mk-sub{color:#a1a1a6}
+.mk-dark .mk-sub{color:var(--muted2)}
 
 /* ── the problem statement (dark): short lines, big air ───────────────────── */
 .mk-lines{
@@ -352,7 +358,7 @@ html.v11 .mk-h2, html.v12 .mk-h2, .mk-h2{
   margin:0;
 }
 .mk-dark .mk-btn{background:var(--accent-btn)}
-.mk-dark .mk-btn:hover{box-shadow:0 8px 24px rgba(155,114,232,.3)}
+.mk-dark .mk-btn:hover{box-shadow:0 8px 24px rgba(var(--accent-deep-rgb),.3)}
 .mk-dark .mk-btnlink{color:var(--mk-acc-dark)}
 .mk-center-row{margin-top:clamp(40px,5vw,56px)}
 
@@ -425,9 +431,9 @@ html.v11 .mk-h2, html.v12 .mk-h2, .mk-h2{
   color:var(--pos,#9a9aa5);
   margin-top:2px;
 }
-.mk-chip-you{outline:1px solid rgba(155,114,232,.5);outline-offset:-1px}
+.mk-chip-you{outline:1px solid rgba(var(--accent-rgb),.5);outline-offset:-1px}
 .mk-clockcell{
-  border:1px dashed rgba(155,114,232,.6);
+  border:1px dashed rgba(var(--accent-rgb),.6);
   border-radius:10px;
   padding:16px 12px;
   text-align:center;
@@ -617,7 +623,7 @@ html.v11 .nav-item-btn.sage-hot, html.v12 .nav-item-btn.sage-hot{
 html.v11 .nav-item-btn.sage-hot:hover, html.v12 .nav-item-btn.sage-hot:hover,
 html.v11 .nav-item-btn.sage-hot.active, html.v12 .nav-item-btn.sage-hot.active{
   background:var(--accent-dim);
-  border-color:rgba(155,114,232,.5);
+  border-color:rgba(var(--accent-rgb),.5);
   color:var(--accent-bright);
 }
 /* Connect: the bar's one filled CTA, Apple-small */
@@ -814,7 +820,7 @@ html.v11 .md-sec-btn.on, html.v12 .md-sec-btn.on{
   /* segmented control track/thumb - dark defaults for the board-on state */
   --mk-seg-track:rgba(255,255,255,.08);
   --mk-seg-on:#3a3a40;
-  --mk-focus:rgba(155,114,232,.28);
+  --mk-focus:rgba(var(--accent-rgb),.28);
 }
 [data-theme="light"]{
   --mk-seg-track:rgba(0,0,0,.06);
@@ -1300,12 +1306,12 @@ html.v11 .mk-shot, html.v12 .mk-shot{
   border-radius:16px;
   border:1px solid rgba(255,255,255,.08);
 }
-/* the film: landscape, wide, lifted off the dark page by a purple-tinted glow */
+/* the film: landscape, wide. El resplandor morado murio el 12-sep (ver la
+   regla de sombra neutra mas abajo); aqui ya no se declara ninguna. */
 html.v11 .mk-film, html.v12 .mk-film{
   width:min(1120px,94vw);
   height:auto;
   border-radius:24px;
-  box-shadow:0 30px 90px rgba(107,63,255,.22);
 }
 /* the burger knows it has secrets: a purple dot that pings three times on
    load, then holds - enough to say "there's more in here" without nagging */
@@ -1743,8 +1749,8 @@ html[data-theme="light"] .mk-founder p{color:var(--mk-ink2)}
 html[data-theme="light"] .mk-founder .mk-founder-lead{color:var(--mk-ink)}
 html[data-theme="light"] .mk-founder .mk-founder-close{color:var(--mk-acc)}
 html[data-theme="light"] .mk-founder-sign{color:#6e6e73}
-html[data-theme="light"] #home-story > .mk-sec.mk-dark{background:#000;color:#f5f5f7}
-html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-sub{color:#a1a1a6}
+html[data-theme="light"] #home-story > .mk-sec.mk-dark{background:var(--mk-dark-bg);color:var(--mk-ink-on-dark)}
+html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-sub{color:var(--muted2)}
 html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-eyebrow-acc{color:var(--mk-acc-dark)}
 html[data-theme="light"] #home-story > .mk-sec.mk-dark .mk-btnlink{color:var(--mk-acc-dark)}
 html[data-theme="light"] .mk-card,
@@ -1783,8 +1789,13 @@ html.v11 .hero, html.v12 .hero, .hero{text-align:left}
   margin:0;
   text-align:left;
 }
-.mk-sub{margin:0}
-.mk-cta-row{justify-content:flex-start}
+/* ACOTADO AL HERO (bloqueante 6 del juez, 12-sep). En la primera pasada estas
+   dos reglas iban SUELTAS y se llevaron por delante el centrado del resto de
+   la portada: el CTA de "Sunday is coming" quedaba en x=200 bajo un titular
+   centrado en x=720, y todo .mk-sub perdia su margin:0 auto. Una regla global
+   escrita para una seccion es una regresion esperando: van con su ancestro. */
+.mk-hero-inner .mk-sub{margin:0}
+.mk-hero-inner .mk-cta-row{justify-content:flex-start}
 
 @media(min-width:1000px){
   html.v11 .hero, html.v12 .hero, .hero{

@@ -17153,6 +17153,11 @@ function loadAnalystCorner(force){
 // flick it on touch, or mouse-wheel it - it politely waits, then resumes drifting.
 function initAutoRail(el,pxPerSec){
   if(!el||el._railOn)return;
+  // Un riel que se desplaza SOLO es movimiento sin que nadie lo pida: con
+  // prefers-reduced-motion se queda quieto y sigue siendo deslizable a mano
+  // (el degradado de .riel dice que hay mas). El resto del sitio ya respeta
+  // esta consulta; este riel se habia quedado fuera.
+  try{ if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){ el._railOn=true; return; } }catch(_){}
   el._railOn=true;
   var speed=(pxPerSec||40)/60,idleT=null,paused=false,dragging=false,sx=0,sl=0,dir=1;
   function pause(ms){paused=true;clearTimeout(idleT);idleT=setTimeout(function(){paused=false;},ms||3500);}
@@ -17988,3 +17993,43 @@ function _perfilNombre(k){
     waiver_faab:'Do you pay up on waivers?',
     draft_rb_temprano:'Do you draft running backs early?'}[k]||k;
 }
+
+/* ── RIELES DESLIZABLES: la pista de que hay mas ────────────────────────────
+   Bloqueantes 2 y 4 del juez (12-sep). Medido: la barra de pestanas de
+   Research escondia 98px a 390 y 168px a 320, con "Weekly Rankings" cortado en
+   la W y ninguna pista de que se pudiera deslizar; el riel de ejemplos de Ask
+   Mac ensenaba 308 de 973px. Un riel que no declara que sigue no se desliza:
+   la persona no sabe que hay algo mas.
+
+   Un solo ayudante para los tres rieles del producto. Marca CUANDO hace falta
+   (si no desborda, no se pinta ninguna pista: una pista falsa es peor que
+   ninguna) y de que LADO queda contenido escondido, para que el degradado no
+   mienta al llegar al final. El CSS hace el resto con mask-image, que viaja
+   con el elemento y no con el contenido, asi que se queda pegado al borde. */
+var TM_RIELES = '.inner-tab-bar,#sage-suggestions,#home-analyst-row';
+function tmRieles(){
+  document.querySelectorAll(TM_RIELES).forEach(function(el){
+    var max = el.scrollWidth - el.clientWidth;
+    var hay = max > 4;
+    el.classList.toggle('riel', hay);
+    el.classList.toggle('riel-izq', hay && el.scrollLeft > 4);
+    el.classList.toggle('riel-der', hay && el.scrollLeft < max - 4);
+  });
+}
+(function tmRielesMontar(){
+  var pedir = null;
+  var repintar = function(){
+    if(pedir) return;
+    pedir = requestAnimationFrame(function(){ pedir = null; try{ tmRieles(); }catch(_){} });
+  };
+  // scroll en captura: los rieles no burbujean su propio scroll
+  document.addEventListener('scroll', repintar, true);
+  window.addEventListener('resize', repintar);
+  // el contenido de estos rieles lo pinta el JS despues de la carga, asi que
+  // mirar una sola vez al arrancar no vale: se observa el arbol.
+  try{
+    new MutationObserver(repintar).observe(document.body, {childList:true, subtree:true});
+  }catch(_){}
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', repintar);
+  else repintar();
+})();
