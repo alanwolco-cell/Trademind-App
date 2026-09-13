@@ -2645,3 +2645,30 @@ es a quien le preguntas); numeros de PostHog del 12-sep: 101 visitantes/30d,
 8 conectaron liga, 2-3 usuarios reales: el cuello es activacion y
 distribucion, no features. La llave de PostHog vive en
 ~/.credenciales/posthog-macdraft (proyecto 527339, solo Query:Read).
+
+## Sesion 2026-09-13 (tarde): MODO PERSONAL, el pivote final
+
+Decision del dueno tras rechazar las ideas de marketing: "solo voy a usar el
+app para mi... que ya no se presente como un website, que solo sea un
+dashboard para mi y mis ligas y que me diga que startear basado en mis
+rankings". Commit fde7acc, DESPLEGADO y verificado (cache-bust 2026091215,
+sha256 y qa-backlog + qa-nav contra produccion).
+
+- PERSONAL_MODE=true en app.js (reversible como las podas): raiz -> Leagues
+  para todos, wordmark -> dashboard, pestana Home muerta, choke de 'home' en
+  switchScreen, y html.personal esconde The home page / Go Pro / referidos.
+  DEROGA el wordmark->portada del 12-sep. Marketing y crecimiento EN PAUSA
+  (memoria global actualizada): no proponer distribucion salvo que el reabra.
+- LA HOJA MANDA: ML.sheet (wkSheet()/wkRankIndex() de weekly.js; para el
+  dueno valen borradores) gobierna el consejo de alineacion con VETO, FIRMA
+  ("your WR3 over WR9") y FALTANTES sin umbral; y elige QUIEN se sienta (el
+  peor rankeado, no el de menos proyeccion: check 10 de qa-lineup en rojo
+  cazo ese hueco). El total del panel solo suma deltas positivos. Start/Sit:
+  misma posicion + todos rankeados = "Your week N sheet decides".
+- Gates a la verdad nueva: qa-lineup 12 checks, qa-backlog 7a-7d reescritos,
+  qa-nav (g). OJO para el futuro: los checks 7b/7c viejos verificaban lo
+  contrario (ordenes del 12-sep); si el dueno reabre el website, se invierten
+  de vuelta con PERSONAL_MODE=false.
+- PENDIENTE VIVO: la hoja del dueno esta VACIA (nunca ha guardado ni un
+  borrador). Sin datos ahi, el dashboard sigue con proyecciones puras. El
+  paso 1 de cualquier proxima sesion: que edite Weekly Rankings una vez.
