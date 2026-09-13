@@ -273,7 +273,11 @@ const LIGA_SIN_TRADES = '1402829686446268416';
   await pg.close();
 }
 
-/* ── 7: en modo app la portada tiene puerta (y la pestana Home no rebota) ── */
+/* ── 7: MODO PERSONAL (13-sep): no hay portada. La raiz cae en el dashboard
+   para todo el mundo, la pestana Home no existe, la puerta "The home page"
+   del cajon murio, y el wordmark lleva a Leagues. (Este bloque reemplaza a
+   los checks del 12-sep que verificaban lo contrario: la orden del dueno
+   del 13 deroga la del 12.) ── */
 {
   const pg = await nuevaPagina(390, 844, true);
   await pg.addInitScript(u => { try { localStorage.setItem('tm_username', u); } catch (_) { } }, USER);
@@ -293,31 +297,38 @@ const LIGA_SIN_TRADES = '1402829686446268416';
   await pg.waitForTimeout(600);
   const puerta = await pg.evaluate(() => {
     const b = Array.from(document.querySelectorAll('#mob-menu button')).find(x => /The home page/i.test(x.textContent));
-    if (!b) return { existe: false };
+    if (!b) return { existe: false, visible: false };
     const r = b.getBoundingClientRect();
-    if (!(r.width > 0)) return { existe: true, visible: false };
-    b.click();
-    return { existe: true, visible: true };
+    return { existe: true, visible: r.width > 0 };
   });
+  ok('(7b) la puerta "The home page" del cajon ya no se ofrece (no hay portada)',
+    puerta.visible === false, JSON.stringify(puerta));
+  // (7c) el wordmark lleva al DASHBOARD (13-sep deroga el wordmark->portada
+  // del 12-sep). Se comprueba desde otra pantalla para ver el movimiento.
+  await pg.goto(BASE + '/research', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.waitForTimeout(2000);
+  await pg.evaluate(() => { const l = document.querySelector('.nav-logo'); if (l) l.click(); });
   await pg.waitForTimeout(1200);
-  const tras = await pg.evaluate(() => ({
+  const logo = await pg.evaluate(() => ({
     pantalla: (document.querySelector('.screen.active') || {}).id || 'NINGUNA',
     hero: (() => { const h = document.querySelector('.hero'); if (!h) return false; const r = h.getBoundingClientRect(); return r.height > 50 && getComputedStyle(h).display !== 'none'; })()
   }));
-  ok('(7b) el cajon ofrece "The home page" y el clic LLEGA a la portada',
-    puerta.existe === true && puerta.visible === true && tras.hero === true,
-    JSON.stringify({ puerta, tras }));
-  // (7c) el wordmark tambien: "quiero que me lleve al home page si clickeo
-  // arriba donde dice mac draft" (dueno, 2026-09-12). Con cuenta, el logo
-  // llevaba a Leagues; ahora la portada.
-  await pg.goto(BASE + '/myleagues', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await pg.waitForTimeout(2000);
-  await pg.evaluate(() => { const l = document.querySelector('.nav-logo'); if (l) l.click(); });
-  await pg.waitForTimeout(1000);
-  const logo = await pg.evaluate(() => ({
+  ok('(7c) el wordmark lleva al dashboard, no a una portada',
+    logo.pantalla === 'screen-myleagues' && logo.hero === false, JSON.stringify(logo));
+  // (7d) la raiz SIN cuenta tambien es el dashboard (pantalla de conectar),
+  // nunca la portada de venta.
+  const pg2 = await nuevaPagina(390, 844, true);
+  await pg2.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg2.waitForTimeout(2500);
+  const raiz = await pg2.evaluate(() => ({
+    pantalla: (document.querySelector('.screen.active') || {}).id || 'NINGUNA',
+    conectar: /Bring your leagues in|Sleeper username/i.test((document.getElementById('ml-leagues-body') || {}).textContent || ''),
     hero: (() => { const h = document.querySelector('.hero'); if (!h) return false; const r = h.getBoundingClientRect(); return r.height > 50 && getComputedStyle(h).display !== 'none'; })()
   }));
-  ok('(7c) conectado, el clic en el wordmark lleva a la portada', logo.hero === true, JSON.stringify(logo));
+  ok('(7d) sin cuenta, la raiz es el dashboard con su pantalla de conectar',
+    raiz.pantalla === 'screen-myleagues' && raiz.conectar === true && raiz.hero === false,
+    JSON.stringify(raiz));
+  await pg2.close();
   await pg.close();
 }
 

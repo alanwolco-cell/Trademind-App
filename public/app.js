@@ -174,12 +174,21 @@ var DRAFT_SEASON = false;
 // Solo en la raiz limpia (sin ruta, sin query, sin hash), para no pisar un
 // enlace compartido, la demo, ni una vuelta atras del navegador. El logo y la
 // pestana Home siguen llevando a la portada.
+// MODO PERSONAL (orden del dueno, 13-sep-2026: "que ya no se presente como un
+// website, que solo sea un dashboard para mi y mis ligas"). Con el flag
+// puesto, macdraft.app ES el dashboard: la raiz cae SIEMPRE en Leagues (con
+// cuenta, sus ligas; sin cuenta, la pantalla de conectar), el wordmark lleva
+// al dashboard, y las puertas de venta (portada, Go Pro, referidos) se
+// esconden por CSS (html.personal). Mismo patron reversible de las podas:
+// volver a ser website = flag en false.
+var PERSONAL_MODE = true;
+try { document.documentElement.classList.toggle('personal', PERSONAL_MODE); } catch (_) { }
 try {
   document.addEventListener('DOMContentLoaded', function () {
     if (location.pathname !== '/' || location.search || location.hash) return;
     var tiene = false;
     try { tiene = !!(localStorage.getItem('tm_username') || localStorage.getItem('tm_yahoo_tok')); } catch (_) { }
-    if (!tiene) return;
+    if (!tiene && !PERSONAL_MODE) return;
     try {
       history.replaceState({ screen: 'myleagues' }, '', '/myleagues');
       switchScreen('myleagues', true);
@@ -398,11 +407,10 @@ function _hayCuenta(){
   try{return !!(localStorage.getItem('tm_username')||localStorage.getItem('tm_yahoo_tok'));}catch(e){return false;}
 }
 function goHome(){
-  // El wordmark SIEMPRE lleva a la portada (orden del dueno, 2026-09-12:
-  // "quiero que me lleve al home page si clickeo arriba donde dice mac
-  // draft"). Deroga el "logo va a Leagues" del modo app del 11-sep. El
-  // ARRANQUE conectado sigue cayendo en Leagues: eso es la ruta de entrada,
-  // no el logo.
+  // En MODO PERSONAL (13-sep) no hay portada: el wordmark lleva al
+  // dashboard. (La orden del 12-sep de wordmark->portada queda derogada por
+  // la del 13: "que ya no se presente como un website".)
+  if(window.PERSONAL_MODE){switchScreen('myleagues');return;}
   _heroDismissed=false;
   window._noAnchorOnce=true;
   switchScreen('home');
@@ -5845,6 +5853,9 @@ var _heroDismissed=false; // once hidden (league connected), stays hidden
 })();
 
 function switchScreen(name,_noPush){
+  // MODO PERSONAL: la portada no existe como destino. Cualquier puerta vieja
+  // (deep link /home, hash, handler cacheado) cae en el dashboard.
+  if(window.PERSONAL_MODE&&name==='home')name='myleagues';
   // Las clases boot-* solo mandan hasta la primera navegacion; a partir de ahi
   // los estilos inline de esta funcion son la fuente de verdad.
   document.documentElement.classList.remove('boot-home','boot-tool');
@@ -15955,9 +15966,29 @@ async function askSageStartSit(){
   var ranked=players.filter(function(p){return !p.missing;}).sort(function(a,b){return b.score-a.score;});
   if(ranked.length<2){out.innerHTML='<div class="empty-state">Couldn\'t find '+missing.map(function(m){return '"'+m.name+'"';}).join(', ')+' - check the spelling.</div>';return;}
 
+  // TUS RANKINGS MANDAN (orden del dueno, 13-sep): si tu hoja semanal rankea
+  // a TODOS los comparados y son de la misma posicion, el orden es el de la
+  // hoja y se declara; el modelo queda de contexto debajo. Si falta uno en
+  // la hoja o cruzan posiciones (la hoja no ordena RB contra WR), decide el
+  // modelo como siempre y la hoja solo se cita.
+  var hojaDecide=0;
+  try{
+    var hoja=window.wkSheet?await wkSheet():null;
+    if(hoja&&ranked.length>=2&&ranked.every(function(p){return p.pos===ranked[0].pos;})){
+      var ranks=ranked.map(function(p){
+        var e=(hoja.ids&&hoja.ids[p.pid])||((hoja.nombres&&window.wkNorm)?hoja.nombres[wkNorm(p.name)]:null);
+        return (e&&e.pos===p.pos)?e.rank:null;
+      });
+      if(ranks.every(function(r){return r!=null;})){
+        ranked.forEach(function(p,i){p._hoja=ranks[i];});
+        ranked.sort(function(a,b){return a._hoja-b._hoja;});
+        hojaDecide=hoja.sem;
+      }
+    }
+  }catch(_){hojaDecide=0;}
   var top=ranked[0],second=ranked[1];
   var gap=top.score-second.score;
-  var confidence=gap>=40?'Clear call':gap>=15?'Lean':'Coin flip - matchups are close, trust your gut';
+  var confidence=hojaDecide?('Your week '+hojaDecide+' sheet decides'):(gap>=40?'Clear call':gap>=15?'Lean':'Coin flip - matchups are close, trust your gut');
 
   function startReason(p){
     var bits=[];
@@ -15987,6 +16018,7 @@ async function askSageStartSit(){
     var verdict=i===0?'START':'SIT';
     var vColor=i===0?'var(--green)':'var(--muted)';
     var reasons=startReason(p);
+    if(p._hoja)reasons.unshift('<strong style="color:var(--text)">your sheet has him '+p.pos+p._hoja+' this week</strong>');
     return '<div style="display:flex;gap:10px;align-items:flex-start;padding:12px;background:var(--surface2);border-radius:var(--radius);margin-bottom:8px;border:1px solid '+(i===0?'rgba(74,222,128,.35)':'var(--border)')+'">'
       +'<div style="font-size:11px;font-weight:800;color:'+vColor+';min-width:44px;padding-top:8px">'+verdict+'</div>'
       +'<img src="https://sleepercdn.com/content/nfl/players/thumb/'+p.pid+'.jpg" style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer" onclick="openPlayerCard(\''+p.pid+'\',\''+p.name.replace(/'/g,"\\'")+'\')" onerror="this.style.display=\'none\'">'

@@ -179,6 +179,17 @@ function mlBloqueado(p) {
   return !!(ML.lock && p && p.team && ML.lock[String(p.team).toUpperCase()]);
 }
 
+// El rank de un jugador en LA HOJA del dueno (Weekly Rankings), o null si no
+// esta. Por id de Sleeper primero; por nombre normalizado para los de Yahoo.
+// Solo vale si la posicion coincide: un rank de WR no ordena a un RB.
+function mlHojaRank(p) {
+  var s = ML.sheet;
+  if (!s || !p) return null;
+  var e = (p.id && s.ids && s.ids[p.id]) || null;
+  if (!e && s.nombres && typeof wkNorm === 'function' && p.name) e = s.nombres[wkNorm(p.name)];
+  return (e && e.pos === p.pos) ? e.rank : null;
+}
+
 // Nombres: las casas escriben "Marvin Harrison Jr." y Sleeper "Marvin Harrison".
 function mlNorm(s) {
   return String(s || '').toLowerCase()
@@ -546,8 +557,83 @@ function mlRevisarAlineacion(L) {
       pares.push({ entra: e, sale: null, hueco: e.slot, gana: e.pts });
     }
   });
+
+  // LA HOJA DEL DUENO MANDA (orden del 13-sep: "que me diga que startear
+  // basado en mis rankings"). Tres reglas, siempre declaradas:
+  // 1. VETO: si la hoja rankea a los dos (misma posicion) y al que SALE lo
+  //    tiene mejor, ese cambio no se sugiere: su criterio pesa mas que la
+  //    proyeccion.
+  // 2. FIRMA: si la hoja rankea a los dos y al que ENTRA lo tiene mejor, el
+  //    cambio lleva fuente 'sheet' y los ranks, para que el consejo diga de
+  //    donde sale.
+  // 3. FALTANTES: un suplente que la hoja tiene por ENCIMA de un titular de
+  //    su misma posicion se sugiere aunque las proyecciones no lo pidan (sin
+  //    umbral: son SUS rankings). Nunca con bloqueados.
+  if (ML.sheet) {
+    pares = pares.filter(function (c) {
+      if (!c.sale || c.entra.p.pos !== c.sale.p.pos) return true;
+      var rE = mlHojaRank(c.entra.p), rS = mlHojaRank(c.sale.p);
+      if (rE != null && rS != null && rS < rE) return false;   // veto
+      if (rE != null && rS != null) { c.fuente = 'sheet'; c.hoja = { e: rE, s: rS, sem: ML.sheet.sem }; }
+      return true;
+    });
+    // Cuando la hoja manda, tambien manda QUIEN se sienta: la proyeccion
+    // elegia banquear al de menos puntos, pero el que sobra segun SUS
+    // rankings es el PEOR rankeado de esa posicion (cazado por el check 10
+    // del gate: la hoja tenia WR9 de titular y el consejo sentaba al WR4).
+    var ocupados = {};
+    pares.forEach(function (c) { if (c.sale) ocupados[c.sale.id || c.sale.p.name] = 1; });
+    pares.forEach(function (c) {
+      if (c.fuente !== 'sheet' || !c.sale) return;
+      var mejorSalida = null, mejorRank = c.hoja.s;
+      puestos.forEach(function (sid) {
+        var ps = players[sid];
+        if (!ps || ps.pos !== c.entra.p.pos || mlBloqueado(ps)) return;
+        if (ocupados[sid] && sid !== c.sale.id) return;
+        var rs = mlHojaRank(ps);
+        if (rs != null && rs > mejorRank) { mejorRank = rs; mejorSalida = sid; }
+      });
+      if (mejorSalida && mejorSalida !== c.sale.id) {
+        delete ocupados[c.sale.id]; ocupados[mejorSalida] = 1;
+        var vs2 = mlProjPlayer(players[mejorSalida], sc);
+        c.sale = { p: players[mejorSalida], pts: vs2 || 0, id: mejorSalida };
+        c.hoja.s = mejorRank;
+        c.gana = c.entra.pts - (vs2 || 0);
+      }
+    });
+    var enParas = {};
+    pares.forEach(function (c) { enParas[c.entra.p.id || c.entra.p.name] = 1; if (c.sale) enParas[c.sale.p.id || c.sale.p.name] = 1; });
+    var titularesSet = {};
+    puestos.forEach(function (id) { titularesSet[id] = 1; });
+    (H.mine.players || []).forEach(function (pid) {
+      if (titularesSet[pid] || enParas[pid]) return;
+      var pb = players[pid];
+      if (!pb || mlNoJuega(pb) || mlBloqueado(pb)) return;
+      var rB = mlHojaRank(pb);
+      if (rB == null) return;
+      // el peor titular de su posicion que la hoja tambien rankee
+      var peorId = null, peorRank = -1;
+      puestos.forEach(function (sid) {
+        if (enParas[sid]) return;
+        var ps = players[sid];
+        if (!ps || ps.pos !== pb.pos || mlBloqueado(ps)) return;
+        var rs = mlHojaRank(ps);
+        if (rs != null && rs > peorRank) { peorRank = rs; peorId = sid; }
+      });
+      if (peorId == null || peorRank <= rB) return;
+      var vb = mlProjPlayer(pb, sc), vs = mlProjPlayer(players[peorId], sc);
+      pares.push({
+        entra: { p: pb, pts: vb || 0 }, sale: { p: players[peorId], pts: vs || 0, id: peorId },
+        gana: (vb || 0) - (vs || 0), fuente: 'sheet', hoja: { e: rB, s: peorRank, sem: ML.sheet.sem }
+      });
+      enParas[pid] = 1; enParas[peorId] = 1;
+    });
+  }
   if (!pares.length) return { ok: true, gana: 0, cambios: [] };
-  var total = pares.reduce(function (a, x) { return a + x.gana; }, 0);
+  // El titular del panel dice "puntos proyectados en tu banca": un cambio
+  // dictado por la hoja con delta de proyeccion negativo no puede restarle a
+  // esa cifra (la hoja discrepa de la proyeccion a proposito).
+  var total = pares.reduce(function (a, x) { return a + Math.max(0, x.gana); }, 0);
   return { ok: pares.length === 0, gana: Math.round(total * 10) / 10, cambios: pares };
 }
 
@@ -1062,8 +1148,15 @@ async function mlBoot(force) {
     if (st) { ML.week = st.week || 1; ML.season = st.season || ML.season; ML.phase = st.season_type || 'regular'; }
 
     var players = await mlPlayersMap();
-    // Los candados van con la semana ya conocida (ML.week se lee arriba).
-    await Promise.all([mlLoadProps(), mlLoadProySite(), mlLoadCandados()]);
+    // Los candados van con la semana ya conocida (ML.week se lee arriba). La
+    // HOJA del dueno viaja en paralelo: es la que decide el start/sit del
+    // dashboard (orden del 13-sep). Si no hay hoja o el visitante no es el
+    // dueno, ML.sheet queda null y mandan las proyecciones, como siempre.
+    var cargas = await Promise.all([
+      mlLoadProps(), mlLoadProySite(), mlLoadCandados(),
+      (window.wkSheet ? wkSheet().catch(function () { return null; }) : Promise.resolve(null))
+    ]);
+    ML.sheet = cargas[3] || null;
 
     var raw = [];
     if (uname) {
@@ -1778,11 +1871,16 @@ function mlPanelAlineaciones() {
       + '<div class="ml-fix-moves">'
       + x.r.cambios.slice(0, 2).map(function (c) {
         // c.sale null = la casilla estaba VACIA: se dice el hueco, no se
-        // inventa una pareja (caso Stroud/Rodriguez, 2026-09-12).
+        // inventa una pareja (caso Stroud/Rodriguez, 2026-09-12). Y cuando
+        // el cambio lo dicta LA HOJA del dueno, la cifra que se enseña son
+        // SUS ranks, no la proyeccion: la fuente se declara siempre.
+        var cifra = c.fuente === 'sheet' && c.hoja
+          ? 'your ' + mlEsc(c.entra.p.pos) + c.hoja.e + ' over ' + mlEsc(c.entra.p.pos) + c.hoja.s
+          : '+' + mlN(c.gana);
         return '<span class="ml-fix-move"><b>' + mlEsc(c.entra.p.name) + '</b> '
           + (c.sale ? 'in for ' + mlEsc(c.sale.p ? c.sale.p.name : 'an empty slot')
             : 'into your empty ' + mlEsc(c.hueco || 'starting') + ' slot')
-          + ' <i class="mono">+' + mlN(c.gana) + '</i></span>';
+          + ' <i class="mono">' + cifra + '</i></span>';
       }).join('')
       + '</div></div>';
   });

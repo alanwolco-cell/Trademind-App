@@ -167,7 +167,9 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
     await pg.close();
   }
 
-  // (g) el boton atras vuelve a la portada, no saca del sitio
+  // (g) el boton atras no saca del sitio. Desde el MODO PERSONAL (13-sep) la
+  // raiz es el dashboard: atras vuelve a Leagues (o a donde estuvieras),
+  // nunca fuera de macdraft.
   {
     const pg = await nueva(w, h);
     await abrirCajon(pg);
@@ -175,8 +177,9 @@ for (const [w, h, quien] of [[390, 844, 'telefono'], [1440, 950, 'escritorio']])
     await pg.goBack({ waitUntil: 'domcontentloaded' }).catch(() => { });
     await pg.waitForTimeout(900);
     const d = await donde(pg);
-    ok('(g) ' + quien + ': atras desde la app vuelve a la portada sin salir del sitio',
-      /macdraft|localhost/.test(await pg.url()) && (d.pantalla === 'screen-home' || d.pantalla === 'NINGUNA' || d.heroEnPantalla),
+    ok('(g) ' + quien + ': atras desde la app se queda dentro del sitio',
+      /macdraft|localhost/.test(await pg.url())
+      && (d.pantalla === 'screen-myleagues' || d.pantalla === 'screen-home' || d.pantalla === 'NINGUNA' || d.heroEnPantalla),
       JSON.stringify(d));
     await pg.close();
   }

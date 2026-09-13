@@ -3521,6 +3521,14 @@ body.hub-guest #screen-hub{padding-bottom:64px}
    2026-09-12. La portada queda accesible por el cajon (.app-home-link). */
 html.is-app #tabbar .tabbar-item[data-tab=home]{display:none!important}
 html:not(.is-app) .app-home-link{display:none}
+/* MODO PERSONAL (13-sep, dueno): sin portada no hay puertas de venta. La
+   pestana Home muere para todos, la puerta "The home page" del cajon muere,
+   y Go Pro / referidos salen del menu de cuenta. Reversible: PERSONAL_MODE
+   en app.js. */
+html.personal #tabbar .tabbar-item[data-tab=home]{display:none!important}
+html.personal .app-home-link{display:none!important}
+html.personal #user-dd-pro{display:none!important}
+html.personal .user-dd-item[onclick*="openReferral"]{display:none!important}
 
 /* ═══ FASE 2 · FLIGHT DECK: el veredicto del analizador ══════════════════════
    El aro manda. Antes la tarjeta era un poster: Mac a 96px, el rotulo "Mac

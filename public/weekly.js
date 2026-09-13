@@ -358,5 +358,44 @@ async function wkCite(nombres) {
   } catch (_) { return ''; }
 }
 
+/* ── el indice de la hoja para el resto del producto ─────────────────────────
+ * El start/sit del dashboard se decide con LOS RANKINGS DEL DUENO (orden del
+ * 13-sep: "que me diga que startear basado en mis rankings"). Este indice es
+ * la fuente: la ultima semana CON DATOS de la hoja (para el dueno valen sus
+ * borradores: es su propio tablero), como {ids: {playerId: {pos, rank}},
+ * nombres: {nombreNormalizado: {pos, rank}}, sem: N}. Los nombres cubren a
+ * los jugadores de Yahoo, que no llevan id de Sleeper. */
+function wkRankIndex() {
+  try {
+    if (!WK.doc || !WK.doc.weeks) return null;
+    var mejor = 0;
+    Object.keys(WK.doc.weeks).forEach(function (w) {
+      var s = WK.doc.weeks[w];
+      var tiene = s && s.pos && WK_POS.some(function (p) { return (s.pos[p] || []).length > 0; });
+      if (tiene && Number(w) <= (WK.week || 99) && Number(w) > mejor) mejor = Number(w);
+    });
+    if (!mejor) return null;
+    var idx = { sem: mejor, ids: {}, nombres: {} };
+    WK_POS.forEach(function (p) {
+      (WK.doc.weeks[String(mejor)].pos[p] || []).forEach(function (id, i) {
+        idx.ids[id] = { pos: p, rank: i + 1 };
+        var pl = WK.players && WK.players[id];
+        if (pl) idx.nombres[wkNorm(pl.name)] = { pos: p, rank: i + 1 };
+      });
+    });
+    return idx;
+  } catch (e) { return null; }
+}
+/* Carga perezosa para quien lo necesite fuera del tab (myleagues, start/sit). */
+async function wkSheet() {
+  try {
+    if (!WK.doc) { await Promise.all([wkPlayers(), wkState(), wkDoc()]); }
+    else if (!WK.players) { await wkPlayers(); }
+    return wkRankIndex();
+  } catch (e) { return null; }
+}
+
 window.renderWeekly = renderWeekly;
 window.wkCite = wkCite;
+window.wkSheet = wkSheet;
+window.wkNorm = wkNorm;

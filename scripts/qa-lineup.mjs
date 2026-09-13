@@ -40,6 +40,7 @@ const ok = (n, c, d) => { console.log((c ? 'PASS  ' : 'FAIL  ') + n + (d ? '\n  
 
 const fnRevisar = extraer('mlRevisarAlineacion');
 const fnBloqueado = extraer('mlBloqueado');
+const fnHoja = extraer('mlHojaRank');
 ok('(0) mlRevisarAlineacion se extrae del cliente', !!fnRevisar, fnRevisar ? fnRevisar.length + ' chars' : 'NO ESTA');
 if (!fnRevisar) { console.log('\n1 FALLOS'); process.exit(1); }
 
@@ -74,13 +75,15 @@ function liga() {
     }
   };
 }
-function correr(lock, starters) {
+function correr(lock, starters, sheet) {
   const sandbox = {
-    ML: { players, lock, week: 1 },
+    ML: { players, lock, week: 1, sheet: sheet || null },
     mlDrafted: () => true,
     mlEsBestBall: () => false,
+    mlNoJuega: () => false,
     mlScoring: () => ({}),
     mlProjPlayer: (p) => (p && PROJ[p.id] != null ? PROJ[p.id] : null),
+    wkNorm: (s) => String(s || '').toLowerCase(),
     ML_UMBRAL_CAMBIO: 3,
     ML_FLEX: { FLEX: ['RB', 'WR', 'TE'], WRRB_FLEX: ['RB', 'WR'], REC_FLEX: ['WR', 'TE'], SUPER_FLEX: ['QB', 'RB', 'WR', 'TE'], WRRB_WRT: ['RB', 'WR', 'TE'] },
     ML_SKIP: { BN: 1, IR: 1, TAXI: 1, 'IR+': 1, IL: 1, 'IL+': 1, NA: 1 }
@@ -88,6 +91,8 @@ function correr(lock, starters) {
   vm.createContext(sandbox);
   if (fnBloqueado) vm.runInContext(fnBloqueado, sandbox);
   else vm.runInContext('function mlBloqueado(){return false;}', sandbox);
+  if (fnHoja) vm.runInContext(fnHoja, sandbox);
+  else vm.runInContext('function mlHojaRank(){return null;}', sandbox);
   vm.runInContext(fnRevisar, sandbox);
   const L = liga();
   if (starters) { L._hyd.mine.starters = starters; L._hyd.matchups[0].starters = starters; }
@@ -140,6 +145,48 @@ ok('(7) la casilla vacia se dice como lo que es: Stroud into empty QB',
 ok('(8) y el WR bueno sale por el WR flojo, como par de su posicion',
   conHueco && (conHueco.cambios || []).some(c => c.entra.p.id === 'wrGood' && c.sale && c.sale.p.id === 'ajb'),
   JSON.stringify(movs));
+
+// ── LA HOJA DEL DUENO MANDA (orden del 13-sep: start/sit por SUS rankings) ──
+// Hoja: AJ Brown WR5, WR Bueno WR12, WR Dos WR9, RB Flex RB20.
+const HOJA = { sem: 1, ids: {
+  ajb: { pos: 'WR', rank: 5 }, wrGood: { pos: 'WR', rank: 12 },
+  wr2: { pos: 'WR', rank: 9 }, rbFlex: { pos: 'RB', rank: 20 }
+}, nombres: {} };
+// (9) VETO: la proyeccion pide "WR Bueno in for AJ Brown" (12 vs 6 pts), pero
+// SU hoja tiene a Brown (WR5) por ENCIMA de WR Bueno (WR12): no se sugiere.
+const conHoja = correr({}, null, HOJA);
+const movsHoja = (conHoja && conHoja.cambios || []).map(c =>
+  c.entra.p.name + (c.sale ? ' in for ' + c.sale.p.name : ' hueco') + (c.fuente ? ' [' + c.fuente + ']' : ''));
+ok('(9) la hoja VETA el cambio que contradice sus rankings (Brown WR5 se queda)',
+  conHoja && !(conHoja.cambios || []).some(c => c.sale && c.sale.p.id === 'ajb'),
+  JSON.stringify(movsHoja));
+// (10) FALTANTE: hoja que rankea al suplente WR Bueno (WR3) por encima del
+// titular WR Dos (WR9), con proyeccion del suplente MAS BAJA (11 vs 12 no:
+// aqui wrGood 12 > wr2 11, asi que bajamos la proyeccion del suplente para
+// probar que manda la hoja y no la proyeccion).
+const HOJA2 = { sem: 1, ids: {
+  wrGood: { pos: 'WR', rank: 3 }, wr2: { pos: 'WR', rank: 9 },
+  ajb: { pos: 'WR', rank: 4 }, qbBad: { pos: 'QB', rank: 30 }, stroud: { pos: 'QB', rank: 31 }, rbFlex: { pos: 'RB', rank: 20 }
+} , nombres: {} };
+const PROJ_BAJA = Object.assign({}, PROJ, { wrGood: 8 }); // proyecta MENOS que wr2 (11)
+const sandboxProj = PROJ.wrGood; PROJ.wrGood = 8;
+const conFaltante = correr({}, ['qbBad', 'ajb', 'wr2', 'rbFlex'], HOJA2);
+PROJ.wrGood = sandboxProj;
+const movsF = (conFaltante && conFaltante.cambios || []).map(c =>
+  c.entra.p.name + (c.sale ? ' in for ' + c.sale.p.name : ' hueco') + (c.fuente ? ' [' + c.fuente + ']' : ''));
+ok('(10) un suplente que TU hoja rankea arriba se sugiere aunque la proyeccion no lo pida',
+  conFaltante && (conFaltante.cambios || []).some(c =>
+    c.entra.p.id === 'wrGood' && c.sale && c.sale.p.id === 'wr2' && c.fuente === 'sheet'
+    && c.hoja && c.hoja.e === 3 && c.hoja.s === 9),
+  JSON.stringify(movsF));
+ok('(11) el cambio dictado por la hoja DECLARA la fuente y los ranks',
+  conFaltante && (conFaltante.cambios || []).every(c => c.fuente !== 'sheet' || (c.hoja && c.hoja.e && c.hoja.s)),
+  JSON.stringify(movsF));
+// (12) control: sin hoja, todo sigue como los checks 1-8 (la capa es opcional)
+const sinHoja = correr({}, null, null);
+ok('(12) sin hoja cargada, la capa no altera nada (mandan las proyecciones)',
+  sinHoja && (sinHoja.cambios || []).length === 2 && (sinHoja.cambios || []).every(c => !c.fuente),
+  JSON.stringify((sinHoja.cambios || []).map(c => c.entra.p.name)));
 
 console.log(fails ? '\n' + fails + ' FALLOS' : '\nALL GREEN');
 process.exit(fails ? 1 : 0);
