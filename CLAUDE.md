@@ -2606,3 +2606,42 @@ fondo del rail, y la especificacion original decia que las utilidades (buscar,
 campana, tema, cuenta) se quedan arriba a la derecha. Se respeto la
 especificacion original: duplicar el control de cuenta en dos sitios es
 exactamente lo que el criterio de simplicidad desempata en contra.
+
+## Sesion 2026-09-13 (madrugada): EL REDISEÑO FLIGHT DECK QUEDO COMPLETO
+
+Veredicto final del juez sobre la relectura completa: PASA (su unico bloqueante
+restante, el resumen semanal desbordado a 320px, cerrado en a38007f con su
+check en qa-flightdeck verificado en rojo contra produccion; ALL GREEN contra
+macdraft.app despues del deploy). Lo que el juez no podia verificar sin liga
+(el borde morado del verdict-card) se cerro de raiz: TODOS los rgba(155,114,232)
+inline de app.js/index.html a rgba(var(--accent-rgb)), y el acento del CANVAS
+de compartir (que no lee var()) a cian literal.
+
+Piezas del rediseño, todas en produccion y verificadas: tokens Flight Deck
+(grafito calido + cian + General Sans + grano), recomposicion de 5 pantallas,
+rail lateral de escritorio con sesion (estructura WHOOP simplificada, 5
+puertas + More), assets nuevos (estadio A, vuelo de Mac con primer fotograma
+clavado, OG, 12 splashes iOS), 6 bloqueantes + pulido de dos lecturas del
+juez, y gate nuevo qa-flightdeck (composicion: negro puro, footers, rieles
+mudos con control negativo, fuentes fugadas, resumen a 320).
+
+PULIDO pendiente sin urgencia (lista del juez): reticula de "From one
+username" (4+3 columnas identicas; no salia sin quitar informacion), topes de
+/sage escritorio desalineados 42px, 4 cianes visibles en portada con sesion
+("How it works" decorativo entre ellos), asomo del riel de /research (mejoro
+con capsulas mas apretadas: medir si ya basta), residuo scrollWidth de /sage
+a 320 sin sintoma. Decision registrada: el texto DOM "CommunityNews &" del
+rail es el par only/alt de la poda reversible, no un descuido. Y la cuenta
+del rail quedo ARRIBA a la derecha (no duplicar control); moverla abajo es
+un nodo si el dueno lo pide.
+
+LA COLA APROBADA (el dueno dijo "corre todo"): 1) waiver advisor del martes
+(push con FAAB por liga; scripts/faab-probe.mjs es la semilla), 2) dossier de
+jugadores "Mac's deep dive" (dossier global cacheado por jugador+semana +
+capa personal por liga; MEDIR costo por informe y avisarselo antes de
+encender), 3) Ask Mac direccion C (veredicto + tabla, con gates, toca
+/api/sage). Nicho decidido: "Mac el analista" (Sleeper es donde juegas, Mac
+es a quien le preguntas); numeros de PostHog del 12-sep: 101 visitantes/30d,
+8 conectaron liga, 2-3 usuarios reales: el cuello es activacion y
+distribucion, no features. La llave de PostHog vive en
+~/.credenciales/posthog-macdraft (proyecto 527339, solo Query:Read).
