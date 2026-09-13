@@ -809,6 +809,7 @@ function mlYahooConnect() {
       mlYahooSet(p.token);
       listo = true;
       window.removeEventListener('message', alLlegar);
+      try { if (typeof tmTrack === 'function') tmTrack('league_connected', { platform: 'yahoo' }); } catch (e) { }
       ML.ready = false; mlPaint();
       mlBoot(true);
     } else if (p.error) {
@@ -1138,6 +1139,17 @@ async function mlBoot(force) {
     ML.yahooErr = null;
     var deYahoo = await mlIngestYahoo(players).catch(function () { return []; });
     ML.leagues = mias.concat(deYahoo || []);
+    // La metrica que faltaba (medido en PostHog el 12-sep: "ligas por
+    // usuario" no existia porque solo el analizador trackeaba). Un evento por
+    // arranque con los conteos: con esto la proxima lectura del nicho tiene
+    // el dato de verdad, incluido Yahoo, que marcaba cero.
+    try {
+      if (typeof tmTrack === 'function') tmTrack('leagues_loaded', {
+        total: ML.leagues.length,
+        sleeper: mias.length,
+        yahoo: (deYahoo || []).length
+      });
+    } catch (e) { }
     ML.stale = null;
     ML.ready = true; ML.err = null;
     mlCacheWrite();
@@ -1418,6 +1430,7 @@ function mlConnect() {
   var err = document.getElementById('ml-conn-err');
   if (!v) { if (err) err.textContent = 'Type your Sleeper username first.'; return; }
   try { localStorage.setItem('tm_username', v); } catch (e) {}
+  try { if (typeof tmTrack === 'function') tmTrack('league_connected', { platform: 'sleeper' }); } catch (e) { }
   if (err) err.textContent = '';
   ML.ready = false;
   mlPaint();

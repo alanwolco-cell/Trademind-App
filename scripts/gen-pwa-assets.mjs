@@ -13,7 +13,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUB = path.join(ROOT, 'public');
 const ICON = path.join(PUB, 'apple-touch-icon.png'); // 180px, la unica fuente que hay
-const TOP = '0x2a1f4a', BOT = '0x050507';           // morado de marca arriba, fondo abajo
+// Flight Deck (12-sep-2026): grafito calido, el morado murio. Estos DOS
+// colores viven atados al degradado de #tm-splash (index.html) y al fondo del
+// video del vuelo: si cambian, cambian LOS TRES JUNTOS (ley del primer
+// fotograma identico). Verificado: la fija del vuelo actual difiere 0.19/255
+// de esta receta.
+const TOP = '0x1e1d1a', BOT = '0x171614';
 const ff = (args) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...args], { stdio: 'inherit' });
 fs.mkdirSync(path.join(PUB, 'splash'), { recursive: true });
 for (const s of [192, 512]) ff(['-i', ICON, '-vf', `scale=${s}:${s}:flags=lanczos`, path.join(PUB, `icon-${s}.png`)]);

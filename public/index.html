@@ -55,14 +55,14 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 <meta property="og:description" content="Sleeper and Yahoo in one screen. Your record, this week's matchup, your exposure across every league, and odds priced with your league's own rules.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://macdraft.app/">
-<meta property="og:image" content="https://macdraft.app/og.png?v=2026078546">
+<meta property="og:image" content="https://macdraft.app/og.png?v=2026091210">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Mac Draft">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Mac Draft - Every League You Play, One Screen">
 <meta name="twitter:description" content="Every league you play in one screen, with a betting board priced by your league's own rules.">
-<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026078546">
+<meta name="twitter:image" content="https://macdraft.app/og.png?v=2026091210">
 <link rel="canonical" href="https://macdraft.app/">
 <script defer src="/_vercel/insights/script.js"></script>
 <!-- Familjen Grotesk auto-hospedada. Venia de Google Fonts con display=swap y,
@@ -83,18 +83,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091209">
+<link rel="stylesheet" href="/styles.css?v=2026091210">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091209" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091210" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091209">
+<link rel="stylesheet" href="/theme.css?v=2026091210">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091209">
+<link rel="stylesheet" href="/home.css?v=2026091210">
 <!-- v13 FLIGHT DECK, el vestido vivo desde el 2026-09-12 (direccion y acento
      cian elegidos por el dueno sobre el preview en vivo). Es una CAPA sobre
      v12 (el html lleva las dos clases arriba) y carga EL ULTIMO para ganar la
@@ -103,7 +103,7 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
      vuelo.mp4 y las imagenes fijas de iOS) sigue en los colores viejos A
      PROPOSITO: son un juego atado por la ley del primer fotograma identico y
      se regeneran JUNTOS en su propio commit. -->
-<link rel="stylesheet" href="/v13.css?v=2026091209">
+<link rel="stylesheet" href="/v13.css?v=2026091210">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -117,7 +117,7 @@ if(_skin){
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   document.querySelectorAll('link[href^="/v13.css"]').forEach(function(l){l.remove();});
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091209">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091210">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -159,7 +159,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
      El fade final lo dispara el fin del video (app.js) y, pase lo que pase,
      el candado CSS de los 3.8s: nunca un arranque colgado. */
   #tm-splash{display:flex;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,#2a1f4a 0%,#050507 100%);pointer-events:none;
+    background:linear-gradient(180deg,#1e1d1a 0%,#171614 100%);pointer-events:none;
     animation:tm-splash-out .45s ease-in 3.8s forwards}
   #tm-splash.va{animation:tm-splash-out .45s ease-in forwards}
   .tm-splash-bird{display:block}
@@ -1937,13 +1937,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091209"></script>
-<script src="/rankings.js?v=2026091209"></script>
-<script src="/weekly.js?v=2026091209"></script>
-<script src="/live.js?v=2026091209"></script>
-<script src="/myleagues.js?v=2026091209"></script>
-<script src="/push.js?v=2026091209" defer></script>
-<script src="/hub.js?v=2026091209"></script>
+<script src="/app.js?v=2026091210"></script>
+<script src="/rankings.js?v=2026091210"></script>
+<script src="/weekly.js?v=2026091210"></script>
+<script src="/live.js?v=2026091210"></script>
+<script src="/myleagues.js?v=2026091210"></script>
+<script src="/push.js?v=2026091210" defer></script>
+<script src="/hub.js?v=2026091210"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the
