@@ -2310,3 +2310,132 @@ Fase 2 pendiente (composicion): Leagues (12 tarjetas identicas), hub (85%
 vacio en desktop), hero del home (muere el poster de promesa), re-filmar
 promo-season con el vestido nuevo (gen-reel-season.mjs lo hace solo), tema
 claro de Flight Deck, 4 familias semanticas sin token en app.js.
+
+## Sesion 2026-09-12 (tarde 2): Fase 2, la RECOMPOSICION pantalla por pantalla
+
+**La queja del dueno, textual**: "por que no rediseñaste todo? solo cambiaste
+los colores. yo queria un rediseño completo de assets y todo. el trade analyzer
+look se sigue viendo igual". Tenia razon: la Fase 1 fue el vestido (tokens,
+General Sans, grano) y ninguna pantalla habia cambiado de COMPOSICION.
+
+Cinco commits, uno por pantalla, cada uno desplegado y verificado.
+
+### f5faaf7 - El veredicto del analizador: de poster a ARO
+Era un poster: Mac a 96px, el rotulo "Mac says...", titular de 28px, prosa a
+1.500px de renglon, y la cifra que decide el trade (la brecha de valor) SIN
+APARECER. Debajo, una tarjeta "Trade Balance" entera repitiendo ese mismo dato
+como barra.
+- EL ARO manda: effGap en mono tabular, arco en la MISMA posicion que la barra
+  (aro y barra no se pueden contradecir: un dato dicho como cifra y como sitio).
+  Sin valores de mercado el aro lo DECLARA, no inventa un numero.
+- Rotulo del veredicto AL LADO del titular, y se calla cuando dice lo mismo
+  (el repertorio aleatorio choca de verdad: "YOU'RE GETTING ROBBED" contra
+  "You're getting robbed"). El texto se sigue escribiendo SIEMPRE porque
+  shareTradeToForum lo lee.
+- La barra queda en el hilo de 3px que es. Los dos lados en fila densa.
+  Scout's Take deja de ser tarjeta dentro de tarjeta. Mac a 38px constante.
+  Medida de lectura 74ch. Telefono recompuesto aparte (aro + veredicto + Mac
+  arriba, prosa debajo a todo lo ancho), medido con el titular MAS LARGO.
+- `--tm-grad` era un degradado morado->cian y pintaba la firma de 2px de cinco
+  sitios: pasa al acento PLANO bajo v13. Los aros del opponent-read colgaban de
+  un `<linearGradient>` con las DOS paradas del mismo morado muerto: fuera.
+- **BUG APARTE**: `_pdbKey` se llamaba en TRES sitios de app.js y NO ESTABA
+  DEFINIDA en ningun archivo. El tab Players reventaba con ReferenceError antes
+  de pintar una fila. Definida con la normalizacion que su propio comentario
+  declaraba (la de `_mdNormName`). Lo cazo la consola del arnes de capturas.
+
+### 4d6e500 - Research: filas densas y CIFRAS
+Buy/Sell eran VEINTE tarjetas identicas con filo cian de 2px cada una, y cada
+fila decia "Rising fast" donde va un numero.
+- Filas densas con hilo, cero tarjeta. El filo cian por fila muere (`.comm-card`
+  y `.pdb-card` lo conservan: esas si son tarjetas).
+- La CIFRA del movimiento de 30 dias en mono tabular, rejilla FIJA para que
+  todas las filas caigan en la misma columna. La palabra de `trendLabel` queda
+  debajo: no se pierde el vocabulario.
+- La chapa cian "Why?" por fila desaparece: la fila ENTERA abre su porque.
+- Compare y Start/Sit: medida de herramienta (760 y 900) y `.tool-head`
+  (titulo + explicacion en la misma linea).
+- **BUG PROPIO, cazado TOCANDO en el telefono y no por el gate**: al mover el
+  estado cerrado de un style inline a la clase `.bs-why`, `toggleBsWhy` siguio
+  preguntando por `w.style.display`, que con la fila cerrada venia VACIO. El
+  primer toque no hacia nada. Ahora va por clase.
+
+### 20c7f36 - Leagues: manda UNA, el resto son filas
+La violacion medida del dueno. Con sus doce ligas reales: columna de 7.730px.
+- La primera del orden (el duelo mas apretado) va de tarjeta lider CON SU ARO
+  de 74px, mas chico que el de la cabecera a proposito. El resto, filas densas
+  con el reglamento como texto seguido y no como cinco capsulas por fila.
+- **Medido con sus doce ligas: de 7.730px a 1.245px.**
+- **HONESTIDAD**: la primera version pintaba el aro del lider tambien EN VIVO,
+  rotulado "live", con la probabilidad de ANTES del partido. Eso es la
+  probabilidad inventada que este producto ya decidio no enseñar (arbitraje del
+  11-sep). En vivo el lider NO lleva aro: el veredicto es el marcador.
+- Las dos formas comparten `.ml-liga`: **ese es el invariante** (una entrada por
+  liga), no la forma que tenga ese dia. Los gates apuntan ahi.
+
+### 1a6cdf6 - El hub: filas y medida de documento
+Diez tarjetas identicas en 1.550px, o sea 1.100px de vacio por fila.
+Filas densas, `#screen-hub` a 840px, tu equipo con filo de acento (no la fila
+entera pintada), titulo + reglamento en la misma linea.
+
+### e4556dc - La portada: muere el poster centrado, y el reel se vuelve a filmar
+Todo centrado, promesa de 74px, CERO producto en el primer viewport.
+- Titular a la IZQUIERDA y el producto REAL al lado. Medido: la pelicula entra
+  en el primer viewport a 1440, 1280 y 390. El hero de ~1.400px a 537px.
+- El estadio del fondo NO se toca (pedido del dueno).
+- `gen-reel-season.mjs` re-filmado: con el producto en el primer viewport, la
+  portada enseñaba EN GRANDE justo lo criticado (la rejilla de tarjetas y el
+  boton morado). Ahora se ve el aro, el panel de alineaciones y la lider.
+
+## TRAMPAS DEL MEDIDOR que pague DOS VECES esta sesion (anotadas para siempre)
+
+Las dos veces la captura invento un fallo que no existia, y las dos veces la
+medicion en el DOM lo desmintio. **Si la imagen y el numero no coinciden, el
+sospechoso es el instrumento.**
+1. **Los paneles `.reveal` entran con IntersectionObserver**: en una captura de
+   pagina entera SIN scrollear se quedan a opacidad 0. El tab Market parecia
+   tener mil pixeles de hueco y el DOM decia 1.366px de contenido. El arnes de
+   capturas recorre la pagina antes de disparar. Market no necesitaba NADA.
+2. **`position:fixed` en una captura fullPage** se pinta en el primer viewport.
+   La barra del invitado del hub "tapaba" la ultima fila; scrolleando al final
+   de verdad no tapa nada, ni a 1280 ni a 390. Le habia puesto un padding y lo
+   quite.
+
+## Gates: de que sirve un selector que describe la forma
+
+Al recomponer, un gate que mira la FORMA (`.ml-card`) deja de ver el producto.
+Los gates ahora miran el INVARIANTE (`.ml-liga`: una entrada por liga). Patron
+de puerta nueva, nunca aserciones debilitadas. Checks NUEVOS, todos verificados
+en ROJO contra el commit anterior con worktree detached:
+- `qa-backlog` 16 -> 18: (8a) la fila de Buy/Sell pinta la cifra en mono tabular
+  y toda cifra visible es un numero con signo; (8b) se TOCA la fila dos veces,
+  porque un check de un solo toque pasaba igual con el fallo invertido.
+- `qa-myleagues` +3: (v7) manda una sola tarjeta y el resto son filas; (v7b) el
+  lider lleva su aro O el marcador en vivo, nunca los dos ni ninguno; (v8) las
+  cifras son tabulares y caen todas en la MISMA columna.
+- `qa-hub` 37 -> 40: (y1) filas y no diez tarjetas; (y2) mono, una columna y
+  medida de documento; (y3) el invitado VE su barra fija y al final del scroll
+  no le tapa la ultima fila (cobertura nueva: esa barra llevaba desde el 8-sep
+  sin que nadie la comprobara). (y3) corre con un contexto de INVITADO de
+  verdad: `persona()` siembra usuario y con el la barra no se pinta.
+- `gen-reel-season.mjs` esperaba seis `.ml-card` y moria en ese waitFor.
+
+**Los diez gates ALL GREEN**: qa-nav, qa-myleagues, qa-backlog, qa-hub,
+qa-askmac, qa-weekly, qa-rankings, qa-board, qa-lineup, qa-flows.
+Cache-bust 2026091209. 56 capturas antes/despues a 390 y 1280.
+
+## Lo que NO se hizo, y por que
+
+- **Las cinco secciones de mas abajo de la portada** (How it works, Meet Mac,
+  Bring your league, Sunday is coming) siguen siendo carteles centrados de 519 a
+  1.042px. El mandato era que muriera el poster del HERO; rediseñar cuatro
+  secciones que el dueno ya aprobo sin que lo pida es lo que este repo prohibe.
+- **Tema claro de Flight Deck**: sigue pendiente de la Fase 1.
+- **Las 4 familias semanticas sin token en app.js** (pick #a78bfa, alerta
+  #f87171, arquetipos, etiqueta #38bdf8): no se tocaron. OJO con la trampa de
+  `theme.css:1282`, que barre por `[style*="color:#a78bfa"]` y depende de que
+  app.js siga escribiendo el hex literal.
+- **Moradas vivas que quedan**: `rgba(155,114,232,.45)` y `#9b72e8` en la vista
+  de trade compartido (app.js ~5757), fuera de las pantallas de esta fase.
+- El trio del arranque (overlay + vuelo.mp4 + startup images de iOS) sigue sin
+  tocarse: se regeneran JUNTOS por la ley del primer fotograma.
