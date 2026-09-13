@@ -2458,3 +2458,64 @@ llamadores de `goHome()` quieren la portada (wordmark de la barra, wordmark del
 pie, y `tabGo('home')`), y la pestana Home del tabbar esta escondida con cuenta
 conectada, que es lo que mide (7a). qa-backlog (7a)(7b)(7c) en verde contra
 produccion.
+
+## Sesion 2026-09-12 (noche): segunda ronda del juez, seis bloqueantes medidos
+
+El juez bloqueo la entrega con cifras. Se reprodujeron TODAS contra el codigo
+viejo antes de tocar nada (arnes en el scratchpad: mide los cuatro anchos
+320/390/1280/1440 en /, /sage, /research y /hub). Commit 7df8ba2.
+
+| # | Bloqueante | Antes | Despues |
+|---|---|---|---|
+| 1 | Negro puro en la portada | 2056/1867/1800/1842 px | 0 en los cuatro |
+| 2 | Chip de /sage sin caber | chip 350px en riel de 238 | chip 170, asoma 60 |
+| 3 | Pestanas del hub vacias | 0 caracteres | 239 / 268 / 297 |
+| 4 | Barra de /research sin pista | 98 y 168px escondidos, mudos | pista medida |
+| 5 | Vacio bajo el footer | 137 /research, 204 /hub, 306 /sage | 0 / 0 / 0 |
+| 6 | CTA descolocado | titulo 720 / CTA 284 | 720 / 720 |
+
+**El 6 ERA UNA REGRESION MIA** de la primera ronda: deje `.mk-cta-row` y
+`.mk-sub` SUELTAS para componer el hero y se llevaron por delante el centrado
+del resto de la portada. Regla aprendida y escrita en el propio CSS: **una
+regla global escrita para una seccion es una regresion esperando**; va con su
+ancestro (`.mk-hero-inner .mk-cta-row`).
+
+**La causa del 2 no era el riel, era el chip.** El primero medía 350px dentro
+de un riel de 238 a 320: no cabia NUNCA. El tope se calcula contra el riel
+(`min(calc(72vw - 60px),260px)`), no contra el viewport, para que la siguiente
+tarjeta ASOME de verdad.
+
+**La pista de los rieles** (2 y 4) es una sola pieza para los tres rieles:
+`tmRieles()` marca cuando hay contenido escondido y de que lado, y el CSS pinta
+el degradado con `mask-image`. **Con `::after` no funciona**: un pseudo-elemento
+dentro de un contenedor que se desplaza viaja con el contenido y se va de la
+vista justo cuando hace falta. La mascara pertenece al elemento y se queda
+clavada en el borde. Si no hay nada escondido no se pinta nada.
+
+**El footer pegajoso** (5) es `body` en columna flex + `footer{margin-top:auto}`,
+sin envoltorio nuevo. En una pagina larga el `auto` no tiene sobrante que
+repartir, asi que las largas no se tocan. `body > *{flex-shrink:0}` es
+obligatorio: sin el, una seccion alta se comprime para caber en el viewport.
+
+### Gate nuevo: scripts/qa-flightdeck.mjs
+Los invariantes de COMPOSICION, que ningun gate vigilaba porque los demas miran
+funcionamiento (puertas, aritmetica, datos). Cuatro rutas por cuatro anchos:
+cero negro puro, footer al fondo en paginas cortas, todo riel que esconde lo
+declara **Y** el que no esconde NO pinta pista (control negativo: sin el
+bastaria con pintarla siempre), las tres pestanas del hub con contenido, y cero
+controles cayendo a la fuente del sistema.
+**Verificado en ROJO contra a4d2c85: 32 FALLOS.** Añadir a la bateria.
+
+### La trampa del medidor, por TERCERA vez
+Creí ver el tabbar tapando el pie del footer en /sage a 390. Medido al final
+del scroll de verdad: el footer termina en 787 y el tabbar empieza en 787, sin
+solape, en los cuatro anchos. Una captura fullPage pinta los `position:fixed`
+en el primer viewport. **Van tres veces esta semana** (paneles .reveal, barra
+del hub, y esta). Regla: ante un desajuste entre imagen y numero, el sospechoso
+es el instrumento, y se mide antes de arreglar nada.
+
+### Residuo declarado, NO arreglado
+En /sage a 320 `#sage-chat-card` declara scrollWidth 319 contra clientWidth 266.
+Apagando sus hijos uno por uno el numero no baja, o sea que no es ninguno de
+ellos; lleva `overflow-x:hidden`, la pagina no scrollea en horizontal (320=320)
+y nada visible sobresale. Queda sin atribuir.
