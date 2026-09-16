@@ -479,6 +479,7 @@ async function connectModalGo(){
     var user=await r.json();
     if(!user||!user.user_id){st.textContent='No account found for that username.';go.disabled=false;return;}
     userId=user.user_id;
+    window._sleeperUserId=user.user_id;
     localStorage.setItem('tm_username',name);
     try{sageSyncUser();}catch(_){}
     try{initBK(name);}catch(_){}
@@ -499,6 +500,7 @@ async function connectModalGo(){
       if(norm)seenNames[norm]=true;
       return true;
     });
+    try{combined=combined.concat(await tmYahooLeagues());}catch(_){}
     window._myLeagues=combined;
     if(!combined.length){st.textContent='No leagues found on that account.';go.disabled=false;return;}
     st.textContent='';go.disabled=false;
@@ -508,6 +510,12 @@ async function connectModalGo(){
 function _renderCmList(leagues,q){
   var box=document.getElementById('cm-list');
   if(!box)return;
+  leagues=(leagues||[]).filter(function(l){return !tmTradesOff(l);});
+  if(!leagues.length){
+    box.innerHTML='<div style="padding:14px 2px;font-size:12px;color:var(--muted2);line-height:1.55">'
+      +'Every league on that account has trades turned off in its settings, so there is no trade to analyze.</div>';
+    return;
+  }
   var ql=(q||'').toLowerCase().trim();
   var hits=leagues.filter(function(l){return !ql||(l.name||'').toLowerCase().indexOf(ql)>=0;});
   var html='';
@@ -1394,6 +1402,7 @@ async function loadUser(autoLeagueId){
       return;
     }
     userId=user.user_id;
+    window._sleeperUserId=user.user_id;   // a donde se vuelve tras una liga de Yahoo
     localStorage.setItem('tm_username', username);
     try{if(window.posthog&&posthog.identify)posthog.identify(username);tmTrack('league_connected',{platform:'sleeper'});}catch(_){}
     try{sageSyncUser();}catch(_){}
@@ -1424,6 +1433,9 @@ async function loadUser(autoLeagueId){
       if(norm)seenLeagueNames[norm]=true;
       return true;
     });
+    // Yahoo va en la MISMA lista. Si la cuenta no tiene Yahoo conectado esto
+    // devuelve [] sin pedir nada, asi que no retrasa a quien solo usa Sleeper.
+    try{combined=combined.concat(await tmYahooLeagues());}catch(_){}
     leagues=combined;
     window._myLeagues=combined;
     if(!leagues.length){
@@ -1440,7 +1452,65 @@ async function loadUser(autoLeagueId){
   }
 }
 
+// ── Ligas donde SI se puede tradear ──────────────────────────────────────────
+// Una liga con los trades apagados en su reglamento no pinta nada en el Trade
+// Analyzer: ahi no hay un solo trade que se pueda ejecutar (pedido del dueno,
+// 2026-09-15). Medido contra SUS ligas reales ese dia: las cuatro de best ball
+// traen best_ball=1 Y disable_trades=1, y "Peluche Chopped" (type=3) trae solo
+// disable_trades=1. Por eso manda disable_trades, que es el contrato de verdad,
+// y best_ball queda de respaldo por si Sleeper sirve una sin la otra casilla.
+//
+// Siguen VISIBLES en el mock draft y en Draft Day, que es donde una liga de
+// best ball sigue sirviendo: lo unico que no se puede hacer en ellas es tradear.
+// Por eso el filtro NO se aplica sobre window._myLeagues, que es la lista cruda
+// que esas dos pantallas necesitan entera.
+// Las ligas de Yahoo entran a la MISMA lista que las de Sleeper y con el molde
+// de Sleeper puesto. Es lo unico que evita ramificar por plataforma en los
+// veinte sitios que leen esta lista. La credencial es la MISMA que usa Leagues
+// (mlYahooVivo/mlYahooGet, en myleagues.js, que index.html carga en esta misma
+// pagina): dos puertas de Yahoo, un solo token, como ya pedia el comentario de
+// startYahooLogin.
+async function tmYahooLeagues(){
+  try{
+    if(typeof mlYahooConectado!=='function'||!mlYahooConectado())return [];
+    var d=await mlYahooGet('/leagues');
+    return ((d&&d.leagues)||[]).map(function(l){
+      return {
+        platform:'yahoo',
+        league_id:l.league_key,          // la clave de Yahoo hace de id en toda la app
+        league_key:l.league_key,
+        name:l.name||'Yahoo league',
+        season:String(l.season||''),
+        total_rosters:l.num_teams||0,
+        status:l.is_finished?'complete':'in_season',
+        // Yahoo no expone nada equivalente a disable_trades, asi que aqui no se
+        // inventa una casilla: sin settings, tmTradesOff las deja pasar.
+        settings:{}
+      };
+    });
+  }catch(_){return [];}
+}
+
+// Hay superficies que no leen "una liga": leen la API de Sleeper. Meterles una
+// clave de Yahoo es una llamada que sale 404 y ensucia la consola. Estas dos
+// funciones son las que las mantienen en su carril.
+function tmIsYahoo(l){
+  return !!(l&&(l.platform==='yahoo'||/^\d+\.l\./.test(String(l.league_id||''))));
+}
+function tmSleeperLeagues(){
+  return (window._myLeagues||[]).filter(function(l){return !tmIsYahoo(l);});
+}
+
+function tmTradesOff(l){
+  var s=(l&&l.settings)||{};
+  return Number(s.disable_trades)===1||Number(s.best_ball)===1;
+}
+function tmTradeLeagues(){
+  return (window._myLeagues||[]).filter(function(l){return !tmTradesOff(l);});
+}
+
 function renderLeagues(leagues, autoSelectId){
+  leagues=(leagues||[]).filter(function(l){return !tmTradesOff(l);});
   document.getElementById("league-panel").style.display="block";
   // Bring the league list into view immediately so the user sees the next step
   if(!window._autoRestoring){setTimeout(function(){
@@ -1449,6 +1519,14 @@ function renderLeagues(leagues, autoSelectId){
   },100);}
   var list=document.getElementById("league-list");
   list.innerHTML="";
+  // Todas las ligas de la cuenta tienen los trades apagados: decirlo. Un panel
+  // vacio sin explicacion se lee como que el producto se rompio.
+  if(!leagues.length){
+    list.innerHTML='<div style="padding:14px 2px;font-size:12.5px;color:var(--muted2);line-height:1.55">'
+      +'Every league on this account has trades turned off in its settings, so there is no trade to analyze. '
+      +'They are still there in the mock draft and in Draft Day.</div>';
+    return;
+  }
   var savedName=(localStorage.getItem('tm_league_name')||'').toLowerCase().trim();
   var autoCard=null;
   leagues.forEach(function(l){
@@ -1458,16 +1536,137 @@ function renderLeagues(leagues, autoSelectId){
     var status=l.status==="in_season"?"In Season":l.status==="pre_draft"?"Pre-Draft":l.status==="complete"?"Complete":(l.status||"");
     var isDyn=tmEjeLiga(l)==='dynasty';
     var modePill='<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;margin-left:6px;background:'+(isDyn?'rgba(99,102,241,.15)':'rgba(251,191,36,.15)')+';color:'+(isDyn?'var(--accent-bright)':'var(--yellow)')+';">'+(isDyn?'Dynasty':'Redraft')+'</span>';
-    card.innerHTML="<div><div class='league-card-name'>"+(l.name||"Unnamed")+modePill+"</div><div class='league-card-meta'>"+(l.total_rosters||"?")+" teams · Season "+season+" · "+status+"</div></div><div class='league-card-arrow'>→</div>";
+    // Con Sleeper y Yahoo en la misma lista, dos ligas de nombre parecido eran
+    // indistinguibles. La plataforma va en la linea de datos, no en otro pill.
+    var plat=tmIsYahoo(l)?"Yahoo · ":"";
+    card.innerHTML="<div><div class='league-card-name'>"+(l.name||"Unnamed")+modePill+"</div><div class='league-card-meta'>"+plat+(l.total_rosters||"?")+" teams · Season "+season+" · "+status+"</div></div><div class='league-card-arrow'>→</div>";
     card.onclick=function(){loadLeague(l.league_id,l.name,l.total_rosters,season);};
     list.appendChild(card);
     // Only auto-select if this league is in the current active season and name matches
     if(!autoCard&&((autoSelectId&&l.league_id===autoSelectId)||(savedName&&(l.name||'').toLowerCase().trim()===savedName&&l.season===ACTIVE_SEASON))) autoCard=card;
   });
   if(autoCard) setTimeout(function(){autoCard.click();},200);
+  // La liga guardada puede ser justo una de las que ya no se listan (trades
+  // apagados). Ahi no hay click que resetee la bandera, y si se queda en alto
+  // ninguna lista de ligas vuelve a hacer scroll en toda la sesion.
+  else window._autoRestoring=false;
+}
+
+// ── Cargar una liga ENTERA de Yahoo en el analizador ─────────────────────────
+// Hasta hoy el boton de Yahoo solo importaba UN plantel suelto: te dejaba sin
+// rivales ("- No league connected -") y la liga nunca aparecia en la lista.
+// Esto la carga de verdad, con sus equipos, siguiendo el mismo patron que ya
+// usa finishEspnImport.
+//
+// Lo que Yahoo NO da, y por lo tanto aqui NO se finge: no hay libro de picks ni
+// historial de trades. Se dejan vacios y se DICE, en vez de valorar picks en
+// cero y ensenar "tendencias" calculadas sobre una lista vacia.
+async function loadYahooLeague(key,name,season){
+  var _seq=++_leagueLoadSeq;
+  resetTradeWorkspace();
+  window.leaguePlatform='yahoo';
+  leagueId=key; leagueName=name||leagueName; leagueSeason=season||ACTIVE_SEASON;
+  setStatus('Loading your Yahoo league...');
+  var d=null;
+  try{ d=await mlYahooGet('/league/'+encodeURIComponent(key)); }
+  catch(e){
+    setStatus((e&&e.message==='yahoo session expired')
+      ? 'Your Yahoo session expired. Sign in with Yahoo again.'
+      : 'Could not load that Yahoo league. Try again.','var(--red)');
+    return;
+  }
+  if(_leagueLoadSeq!==_seq)return;   // cambio de liga mientras esto venia en camino
+  var liga=(d&&d.league)||{}, teams=(d&&d.teams)||[];
+  if(!teams.length){setStatus('That Yahoo league came back with no teams.','var(--red)');return;}
+  await ensurePlayersLoaded();
+  if(_leagueLoadSeq!==_seq)return;
+
+  var mio=teams.filter(function(t){return t.is_owned_by_current_login;})[0];
+  if(!mio){setStatus('Could not tell which team is yours in that Yahoo league.','var(--red)');return;}
+  userId=mio.team_key;
+
+  var noEncontrados=0;
+  leagueRosters=teams.map(function(t){
+    var res=_resolveNames((t.players||[]).map(function(p){return p.name;}));
+    noEncontrados+=res.missed.length;
+    return {roster_id:t.team_id||0,owner_id:t.team_key,
+            players:res.players.map(function(p){return p.id;}),settings:{}};
+  });
+  leagueUsers=teams.map(function(t){
+    return {user_id:t.team_key,display_name:t.name,metadata:{team_name:t.name}};
+  });
+
+  // Yahoo no sirve ni picks ni transacciones por esta puerta: vacios de verdad.
+  myPicks=[];leaguePicks=[];leagueTrades=[];tradeStats={};
+  window.leagueNoTrades=false;
+  window._doneDraftSeasons=_doneSeasonsSeed(leagueSeason);
+  window._draftRounds=0;
+
+  parseLeagueFormat({
+    roster_positions:liga.roster_positions||[],
+    scoring_settings:liga.scoring_settings||{},
+    total_rosters:liga.num_teams||teams.length
+  });
+  // Yahoo no expone un equivalente a settings.type, y sus ligas son redraft en
+  // su inmensa mayoria. Se declara redraft en vez de adivinar dynasty: con el
+  // lente equivocado todos los precios salen mal.
+  leagueMode='redraft';
+  window._detectedMode='redraft';
+  window._isKeeper=false;
+  try{updateModeUI();}catch(_){}
+
+  localStorage.setItem('tm_league_id',key);
+  localStorage.setItem('tm_league_name',leagueName||'Unknown');
+  fetchKtcValues(leagueFormat.has2QB||leagueFormat.hasSuperFlex?2:1,leagueFormat.ppr,false);
+
+  var mineObj=_myRosterObj();
+  if(!mineObj){setStatus('Could not find your roster in that Yahoo league.','var(--red)');return;}
+  myRoster=(mineObj.players||[]).map(function(pid){return allPlayers[pid];})
+    .filter(Boolean).sort(function(a,b){return po(a.pos)-po(b.pos);});
+
+  var sel=document.getElementById('opp-select');
+  if(sel){
+    sel.innerHTML="<option value=''>- Select opponent - </option>";
+    leagueUsers.forEach(function(u){
+      if(u.user_id===userId)return;
+      var o=document.createElement('option');o.value=u.user_id;o.textContent=u.display_name;sel.appendChild(o);
+    });
+  }
+
+  // El mismo cartel que avisa de una liga sin trades sirve para decir que aqui
+  // faltan datos. Callarlo seria vender el analizador completo con medio motor.
+  var ntb=document.getElementById('no-trades-banner');
+  if(ntb){
+    ntb.style.display='block';
+    ntb.innerHTML='<b>'+String(leagueName).replace(/</g,'&lt;')+'</b> is a Yahoo league. '
+      +'Yahoo does not hand over draft picks or past trades, so Mac prices players only: '
+      +'no picks in a deal, and no read on how your league mates trade.'
+      +(noEncontrados?(' '+noEncontrados+' player'+(noEncontrados===1?'':'s')+' on the league\'s rosters could not be matched.'):'');
+  }
+
+  setStatus('');
+  _showBuilderUI(leagueName,'Yahoo · '+leagueFormat.formatLabel+' · Season '+leagueSeason+' · '+myRoster.length+' players');
+  var ip=document.getElementById('ideas-panel');if(ip)ip.style.display='block';
+  try{tmTrack('league_connected',{platform:'yahoo'});}catch(_){}
+  setTimeout(function(){try{generateTradeIdeas();}catch(_){}} ,300);
 }
 
 async function loadLeague(lid,name,rosters,season){
+  // Una liga de Yahoo se carga por otro camino (otra API, otro molde de datos).
+  // Se decide por la marca de plataforma, y de respaldo por la forma de la
+  // clave de Yahoo ("461.l.664858"), que ningun id de Sleeper puede tener.
+  var _lg=(window._myLeagues||[]).filter(function(x){return x.league_id===lid;})[0];
+  if((_lg&&_lg.platform==='yahoo')||/^\d+\.l\./.test(String(lid))){
+    return loadYahooLeague(lid,name||(_lg&&_lg.name),season||(_lg&&_lg.season));
+  }
+  window.leaguePlatform='sleeper';
+  // Volver de una liga de Yahoo (o de un import de ESPN) deja userId con una
+  // clave que no existe en Sleeper. Se devuelve al usuario su identidad de
+  // Sleeper ANTES de buscar su roster.
+  if(window._sleeperUserId)userId=window._sleeperUserId;
+  // BUG 2: la atribucion de Yahoo se quedaba puesta sobre una liga de Sleeper.
+  // Sus terminos la piden mientras haya datos de Yahoo en pantalla, no despues.
+  var _ya0=document.getElementById('yahoo-attrib');if(_ya0)_ya0.style.display='none';
   var _seq=++_leagueLoadSeq;   // identifies this load; guards late background writes
   resetTradeWorkspace();       // clear the previous league's trade before loading the new one
   leagueId=lid; leagueName=name||leagueName; leagueSeason=season||leagueSeason||ACTIVE_SEASON;
@@ -1677,7 +1876,10 @@ function _showBuilderUI(name,metaLabel){
   document.getElementById('league-name').textContent=name;
   document.getElementById('league-meta').textContent=metaLabel;
   // Yahoo API terms: attribution shows only while a Yahoo-imported roster is active.
-  var _ya=document.getElementById('yahoo-attrib');if(_ya)_ya.style.display=(userId==='yahoo')?'block':'none';
+  // Terminos de la API de Yahoo: la atribucion se ve mientras haya datos de
+  // Yahoo en pantalla, sea el plantel importado suelto o una liga entera.
+  var _ya=document.getElementById('yahoo-attrib');
+  if(_ya)_ya.style.display=(userId==='yahoo'||window.leaguePlatform==='yahoo')?'block':'none';
   var ph=document.getElementById('right-placeholder');if(ph)ph.style.display='none';
   var heroEl=document.querySelector('.hero');if(heroEl)heroEl.style.display='none';_heroDismissed=true;
   var howMini=document.getElementById('how-mini');if(howMini)howMini.style.display='';
@@ -1771,6 +1973,35 @@ async function importManualRoster(){
 
 // ── Yahoo OAuth import (button appears only when the server has Yahoo app creds) ──
 var _yahooTeams=null;
+async function loadYahooImportChoices(){
+  var st=document.getElementById('yahoo-status');
+  var pick=document.getElementById('yahoo-team-pick');
+  var sel=document.getElementById('yahoo-team-select');
+  if(st)st.textContent='Loading your Yahoo leagues...';
+  try{
+    var d=await mlYahooGet('/leagues');
+    _yahooTeams=((d&&d.leagues)||[]).map(function(l){
+      return {league_key:l.league_key,team_name:l.name||'Yahoo league',season:String(l.season||'')};
+    });
+    if(!_yahooTeams.length){
+      if(st)st.textContent='No Yahoo fantasy football leagues found on that account.';
+      return;
+    }
+    if(sel){
+      sel.innerHTML='<option value="">Select your league...</option>';
+      _yahooTeams.forEach(function(t,i){
+        var o=document.createElement('option');o.value=i;
+        o.textContent=t.team_name+(t.season?' ('+t.season+')':'');sel.appendChild(o);
+      });
+    }
+    if(pick)pick.style.display='block';
+    if(st)st.textContent='Found '+_yahooTeams.length+' Yahoo league'+(_yahooTeams.length===1?'':'s')+'. Pick one above.';
+  }catch(e){
+    if(st)st.textContent=(e&&e.message==='yahoo session expired')
+      ? 'Your Yahoo session expired. Sign in with Yahoo again.'
+      : 'Could not load your Yahoo leagues. Try signing in again.';
+  }
+}
 function initYahooOAuth(){
   fetch('/api/yahoo/status').then(function(r){return r.json();}).then(function(d){
     if(d&&d.configured){var row=document.getElementById('yahoo-oauth-row');if(row)row.style.display='block';}
@@ -1779,9 +2010,16 @@ function initYahooOAuth(){
 function startYahooLogin(){
   var mb=document.getElementById('manual-roster-box');if(mb)mb.style.display='block';
   var st=document.getElementById('yahoo-status');
+  // Si este navegador ya tiene una sesion viva, no se obliga al usuario a
+  // repetir OAuth. La ruta nueva de ligas es la fuente de verdad y no tiene el
+  // tope viejo de seis planteles del callback.
+  if(typeof mlYahooConectado==='function'&&mlYahooConectado()){
+    loadYahooImportChoices();return;
+  }
   if(st)st.textContent='Waiting for Yahoo login...';
   var w=520,h=680,x=(screen.width-w)/2,y=(screen.height-h)/2;
-  window.open('/api/yahoo/login','trademind-yahoo','width='+w+',height='+h+',left='+x+',top='+y);
+  var popup=window.open('/api/yahoo/login','trademind-yahoo','width='+w+',height='+h+',left='+x+',top='+y);
+  if(!popup&&st)st.textContent='Allow pop-ups, then tap Yahoo again.';
 }
 window.addEventListener('message',function(ev){
   // El mensaje solo puede venir de NUESTRA propia ventana emergente. Sin esta
@@ -1798,6 +2036,12 @@ window.addEventListener('message',function(ev){
     try{ mlYahooSet(d.payload.token); }catch(_){}
   }
   var st=document.getElementById('yahoo-status');
+  // El callback viejo devuelve hasta seis planteles. Ya no se usa como fuente
+  // del import: con el token guardado pedimos todas las ligas al proxy y luego
+  // una liga completa, igual que la pantalla Leagues. Importante: el callback
+  // puede traer token Y el error viejo "Could not read any rosters". El token
+  // gana, porque /leagues es ahora quien sabe si la cuenta se puede importar.
+  if(d.payload.token&&d.payload.token.access_token){loadYahooImportChoices();return;}
   if(d.payload.error){if(st)st.textContent=d.payload.error;return;}
   _yahooTeams=d.payload.teams||[];
   if(!_yahooTeams.length){if(st)st.textContent='No fantasy football teams found on that Yahoo account.';return;}
@@ -2796,7 +3040,9 @@ async function loadTradeAlerts(){
   var dd=document.getElementById('alerts-dd');
   var badge=document.getElementById('alerts-badge');
   if(!dd)return;
-  var leagues=(window._myLeagues||[]).slice(0,3);
+  // Solo Sleeper: esto lee /api/sleeper/.../all-transactions, que no sabe nada
+  // de una liga de Yahoo (y Yahoo no sirve historial de trades por esa puerta).
+  var leagues=tmTradeLeagues().filter(function(l){return !tmIsYahoo(l);}).slice(0,3);
   if(leagueId&&!leagues.some(function(l){return l.league_id===leagueId;}))leagues.unshift({league_id:leagueId,name:leagueName});
   // Was a dead end: it told you to connect a league without giving you any way
   // to do it, so the panel looked broken. Now the message IS the action.
@@ -2951,6 +3197,10 @@ async function finishYahooImport(idx){
   }
   var team=_yahooTeams&&_yahooTeams[idx];
   if(!team)return;
+  if(team.league_key){
+    await loadYahooLeague(team.league_key,team.team_name,team.season||ACTIVE_SEASON);
+    return;
+  }
   if(st)st.textContent='Matching players...';
   await ensurePlayersLoaded();
   var res=_resolveNames(team.players.map(function(p){return p.name;}));
@@ -3000,7 +3250,7 @@ function openLeagueSwitcher(){
 function _renderLeagueSwitcher(q){
   var dd=document.getElementById('lg-switch-dd');
   if(!dd)return;
-  var leagues=window._myLeagues||[];
+  var leagues=tmTradeLeagues();
   var ql=q.toLowerCase().trim();
   var hits=leagues.filter(function(l){return !ql||(l.name||'').toLowerCase().indexOf(ql)>=0;});
   var html='<div style="padding:8px 8px 6px;position:sticky;top:0;background:var(--surface2);z-index:1">'
@@ -3014,7 +3264,7 @@ function _renderLeagueSwitcher(q){
       return '<div class="ac-item" style="'+(active?'color:var(--accent-bright);':'')+'padding:9px 12px;cursor:pointer" '
         +'onmousedown="switchToLeague(\''+l.league_id+'\')">'
         +(active?'&#9679; ':'')+nm
-        +' <span style="font-size:10px;color:var(--muted)">'+(l.season||'')+'</span></div>';
+        +' <span style="font-size:10px;color:var(--muted)">'+(tmIsYahoo(l)?'Yahoo · ':'')+(l.season||'')+'</span></div>';
     }).join('');
   }else{
     html+='<div style="padding:11px 12px;font-size:11.5px;color:var(--muted)">'
@@ -7532,7 +7782,7 @@ function generateTradeIdeas(){
     }
     // Populate every league switcher on the page (inline ideas + the Trade Ideas
     // tab). Only show it when you actually have more than one league to switch to.
-    var _ls=window._myLeagues||[];
+    var _ls=tmTradeLeagues();
     var _opts='<option value="">Switch league...</option>'+_ls.map(function(l){
       return '<option value="'+l.league_id+'"'+(l.league_id===leagueId?' disabled':'')+'>'+(l.name||'League').replace(/</g,'&lt;')+'</option>';
     }).join('');
@@ -8062,11 +8312,15 @@ function renderPlayerTrades(pid,displayName){
       return _tradeRowHtml(t,pid,leagueName||'Your league',getRosterName);
     }).join('');
   }else if(leagueRosters.length){
-    html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px">No trades involving '+displayName+' in '+(leagueName||'this league')+' yet.</div>';
+    // "yet" seria mentira en una liga de Yahoo: no es que no haya trades, es
+    // que Yahoo no los entrega. Decir lo que pasa, no lo que conviene.
+    html+=window.leaguePlatform==='yahoo'
+      ? '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Yahoo does not hand over trade history, so Mac cannot show '+displayName+'\'s past deals in '+(leagueName||'this league')+'.</div>'
+      : '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">No trades involving '+displayName+' in '+(leagueName||'this league')+' yet.</div>';
   }else{
     html+='<div style="font-size:11px;color:var(--muted);margin-bottom:8px">Connect a league to see this player\'s trade history.</div>';
   }
-  var leagues=window._myLeagues||[];
+  var leagues=tmTradeLeagues();
   if(leagues.length>1){
     html+='<button class="btn-sm" style="font-size:10px;margin-right:6px" onclick="searchPlayerTradesAllLeagues(\''+pid+'\',this)">Search all my leagues ('+Math.min(leagues.length,8)+')</button>';
   }
@@ -8111,7 +8365,7 @@ async function searchPlayerTradesAllLeagues(pid,btn){
   var out=document.getElementById('pm-trades-all');
   if(!out)return;
   if(btn){btn.disabled=true;btn.textContent='Searching...';}
-  var leagues=(window._myLeagues||[]).slice(0,8);
+  var leagues=tmTradeLeagues().filter(function(l){return !tmIsYahoo(l);}).slice(0,8);
   window._leagueTradeCache=window._leagueTradeCache||{};
   var found=0;
   for(var i=0;i<leagues.length;i++){
@@ -15247,7 +15501,9 @@ function ldSwitchLeague(lid){
 function ldRenderLeaguePick(){
   var sel=document.getElementById('ld-league-sel');
   if(!sel)return;
-  var ls=window._myLeagues||[];
+  // Draft Day sigue un draft de Sleeper en vivo: una liga de Yahoo no se puede
+  // seguir por aqui, asi que no se ofrece.
+  var ls=tmSleeperLeagues();
   sel.innerHTML='<option value="">'+(leagueName?('Current: '+leagueName):'Pick a league')+'</option>'
     +ls.filter(function(l){return l.league_id!==leagueId;}).map(function(l){
       return '<option value="'+l.league_id+'">'+(l.name||'League').replace(/</g,'&lt;')+'</option>';}).join('');
@@ -16357,7 +16613,11 @@ function openSwitchLeague(){
   if(box){box.remove();return;}
   var dd=document.getElementById('user-dropdown');
   if(!dd)return;
-  var leagues=window._myLeagues||[];
+  // Desde el analizador este conmutador es una puerta a un trade, asi que no
+  // ofrece ligas donde no se puede tradear. Desde el mock o Draft Day si las
+  // ofrece: ahi una liga de best ball sirve igual que cualquier otra.
+  var _scrAn=document.getElementById('screen-analyze');
+  var leagues=(_scrAn&&_scrAn.classList.contains('active'))?tmTradeLeagues():(window._myLeagues||[]);
   if(!leagues.length){goConnectLeague();return;}
   box=document.createElement('div');
   box.id='league-quick-list';

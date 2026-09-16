@@ -99,7 +99,11 @@ async function nuevaPagina(w, h, movil) {
     };
   }));
   const chopped = ligas.filter(l => /chopped/i.test(l.nombre));
-  ok('(1a) las ligas Chopped del dueno estan en la parrilla', chopped.length >= 2,
+  // Pedia DOS y la cuenta del dueno ya solo trae una en 2026 (las ligas cambian
+  // cada temporada). El invariante que este gate protege es que una Chopped se
+  // rotule Chopped, no cuantas tenga: un rojo permanente por el conteo se
+  // ignora a la semana y tapa los rojos de verdad.
+  ok('(1a) las ligas Chopped del dueno estan en la parrilla', chopped.length >= 1,
     'vistas: ' + ligas.length + ' | chopped: ' + JSON.stringify(chopped));
   ok('(1b) todas las Chopped dicen "Chopped", ninguna "Best ball"',
     chopped.length > 0 && chopped.every(l => l.formato === 'Chopped'),
@@ -234,17 +238,67 @@ async function nuevaPagina(w, h, movil) {
   await pg.close();
 }
 
-/* ── 6: liga SIN trades (best ball con disable_trades) no ofrece tradear ──── */
-// bestball 39 del dueno: settings.disable_trades=1 (medido 2026-09-11).
-const LIGA_SIN_TRADES = '1402829686446268416';
+/* ── 6: liga SIN trades (best ball / Chopped con disable_trades) ──────────────
+   ORDEN DEL DUENO 15-sep-2026: esas ligas NO se ofrecen en el Trade Analyzer,
+   "porque igual no puedes hacer nada". Deroga la del 12-sep, que las dejaba
+   entrar con un cartel encima.
+
+   Se comprueban DOS cosas, y hacen falta las dos:
+     - la regla NUEVA: ya no se listan en ninguna superficie de trades;
+     - la proteccion VIEJA, que NO se tira a la basura: si una liga sin trades
+       llega igual por otra puerta (el conmutador del mock draft la carga y
+       despues uno se pasa al analizador), el candado del 12-sep tiene que
+       seguir puesto. Cambiar una regla por otra y perder la proteccion seria
+       dejar el mismo agujero que el dueno reporto aquel dia.
+
+   Medido contra sus ligas reales el 15-sep: cuatro de best ball con
+   best_ball=1 y disable_trades=1, mas "Peluche Chopped" con disable_trades=1
+   a secas. Son CINCO las que salen, no cuatro. */
+const LIGA_SIN_TRADES = '1402829686446268416';   // bestball 39
 {
   const pg = await nuevaPagina(390, 844, true);
   await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await pg.waitForFunction(() => typeof loadUser === 'function', { timeout: 30000 });
-  await pg.evaluate(([u, lid]) => {
+  await pg.evaluate(u => {
     document.getElementById('sleeper-username').value = u;
-    return loadUser(lid);
-  }, [USER, LIGA_SIN_TRADES]);
+    return loadUser();
+  }, USER);
+  await pg.waitForFunction(() => (window._myLeagues || []).length > 0, { timeout: 40000 }).catch(() => { });
+  await pg.waitForTimeout(1500);
+
+  const lista = await pg.evaluate(() => {
+    const nom = l => (l.name || '').toLowerCase();
+    const todas = (window._myLeagues || []).map(nom);
+    // Si la funcion no existe, esto tiene que quedar en null y NO en lista
+    // vacia: una lista vacia hace que "ninguna colo" salga verde sin haber
+    // mirado nada, que es un silencio disfrazado de verde.
+    const deTrade = typeof tmTradeLeagues === 'function' ? tmTradeLeagues().map(nom) : null;
+    const tarjetas = Array.from(document.querySelectorAll('#league-list .league-card'))
+      .map(c => ((c.querySelector('.league-card-name') || {}).textContent || '').toLowerCase());
+    return { todas, deTrade, tarjetas };
+  });
+  const SIN_TRADES = ['bestball 39', 'bestball 22', 'ghost town 27', 'dinosaur central 20', 'peluche chopped'];
+  const hay = (arr, n) => arr.some(x => x.indexOf(n) >= 0);
+  // CONTROL del propio gate: si la cuenta no trajo esas ligas, este bloque no
+  // esta midiendo nada y su verde seria un silencio disfrazado.
+  ok('(6a) CONTROL: la cuenta trae las ligas sin trades que este bloque mide',
+    SIN_TRADES.every(n => hay(lista.todas, n)),
+    'vistas: ' + lista.todas.length + ' | faltan: ' + JSON.stringify(SIN_TRADES.filter(n => !hay(lista.todas, n))));
+  ok('(6b) ninguna liga sin trades entra a la lista del analizador',
+    Array.isArray(lista.deTrade) && lista.deTrade.length > 0
+      && SIN_TRADES.every(n => !hay(lista.deTrade, n)),
+    lista.deTrade === null
+      ? 'tmTradeLeagues() NO EXISTE: el filtro no esta puesto'
+      : 'de trade: ' + lista.deTrade.length + ' | coladas: ' + JSON.stringify(SIN_TRADES.filter(n => hay(lista.deTrade, n))));
+  ok('(6c) ninguna se pinta como tarjeta elegible',
+    lista.tarjetas.length > 0 && SIN_TRADES.every(n => !hay(lista.tarjetas, n)),
+    'tarjetas: ' + lista.tarjetas.length + ' | coladas: ' + JSON.stringify(SIN_TRADES.filter(n => hay(lista.tarjetas, n))));
+  ok('(6d) las ligas tradeables SI siguen ahi (no se filtro de mas)',
+    Array.isArray(lista.deTrade) && lista.deTrade.length >= 5 && lista.tarjetas.length >= 5,
+    JSON.stringify({ deTrade: lista.deTrade && lista.deTrade.length, tarjetas: lista.tarjetas.length }));
+
+  // ── la proteccion del 12-sep, que sigue viva por la puerta de atras ──
+  await pg.evaluate(lid => loadLeague(lid, 'bestball 39', null, '2026'), LIGA_SIN_TRADES);
   await pg.waitForFunction(() => window.leagueNoTrades !== undefined && leagueRosters.length > 0, { timeout: 40000 }).catch(() => { });
   const st = await pg.evaluate(async () => {
     switchScreen('research');
@@ -264,11 +318,11 @@ const LIGA_SIN_TRADES = '1402829686446268416';
       bannerNombra: /bestball 39/i.test((banner || {}).textContent || '')
     };
   });
-  ok('(6a) la liga sin trades queda marcada al conectarla', st.flag === true, JSON.stringify(st));
-  ok('(6b) Buy/Sell no predica trades imposibles: nota y cero señales',
+  ok('(6e) cargada por la puerta de atras, la liga sigue marcada', st.flag === true, JSON.stringify(st));
+  ok('(6f) Buy/Sell no predica trades imposibles: nota y cero señales',
     st.bsNota === true && st.bsPills === 0, JSON.stringify(st));
-  ok('(6c) Trade Ideas dice que no hay trades en esa liga', st.ideasNota === true, JSON.stringify(st));
-  ok('(6d) el analizador declara el candado con el nombre de la liga',
+  ok('(6g) Trade Ideas dice que no hay trades en esa liga', st.ideasNota === true, JSON.stringify(st));
+  ok('(6h) el analizador declara el candado con el nombre de la liga',
     st.bannerVisible === true && st.bannerNombra === true, JSON.stringify(st));
   await pg.close();
 }

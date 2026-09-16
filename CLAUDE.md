@@ -9,7 +9,7 @@ Dominio: macdraft.app. Deploy en Vercel, proyecto `trademind-starter`.
 
 ## Gates obligatorios antes de cualquier deploy
 
-Esta lista decia OCHO y el repo tiene DIECISEIS (act. 2026-09-12). Llevaba
+Esta lista decia OCHO y el repo tiene DIECISIETE (act. 2026-09-15). Llevaba
 meses sin actualizarse, asi que quien la leia creia estar corriendo la bateria
 entera con la mitad. Se actualiza AL AÑADIR un gate, no despues.
 
@@ -34,7 +34,9 @@ node scripts/calibrate-room.mjs  # SOLO si se toco el motor de draft. ~35 min re
 node scripts/qa-trades.mjs       # SOLO si se toco la valoracion de trades. 9.989 escenarios
 node scripts/qa-perfil.mjs       # SOLO si se toco /perfil. 156 checks
 node scripts/qa-live.mjs         # SOLO si se toco Draft Day
-node scripts/qa-yahoo-parse.mjs  # SOLO si se toco el parseo de Yahoo
+node scripts/qa-yahoo-parse.mjs  # SOLO si se toco el parseo de Yahoo (servidor)
+node scripts/qa-yahoo-analyzer.mjs # SOLO si se toco la lista de ligas del analizador
+                                 #      o la carga de una liga de Yahoo (cliente)
 node scripts/qa-push.mjs         # SOLO si se tocaron las notificaciones
 ```
 
@@ -2672,3 +2674,106 @@ sha256 y qa-backlog + qa-nav contra produccion).
 - PENDIENTE VIVO: la hoja del dueno esta VACIA (nunca ha guardado ni un
   borrador). Sin datos ahi, el dashboard sigue con proyecciones puras. El
   paso 1 de cualquier proxima sesion: que edite Weekly Rankings una vez.
+
+## Sesion 2026-09-15: Yahoo entra al analizador, y las ligas sin trades salen
+
+Dos reportes del dueno el mismo dia: "en el Trade Analyzer no me estan
+apareciendo mis ligas de Yahoo" y "las ligas de bestball, ninguna permite
+trades, sacalas del Trade Analyzer porque igual no puedes hacer nada".
+
+### Lo de Yahoo no era un bug: nunca se construyo
+
+El analizador armaba `window._myLeagues` SOLO con Sleeper. El boton Y! era otra
+cosa: importaba UN plantel suelto, dejaba el selector de rival en "- No league
+connected -" y ahi moria. Las rutas del servidor (`/api/yahoo/leagues` y
+`/api/yahoo/league/:key`) ya existian desde el 8-sep, pero solo las consumia la
+pantalla Leagues.
+
+Ahora las ligas de Yahoo entran a la MISMA lista, con el molde de Sleeper
+puesto (`tmYahooLeagues`), y `loadLeague` se ramifica a `loadYahooLeague`, que
+arma rosters y rivales desde `/api/yahoo/league/:key` e identifica su equipo por
+`is_owned_by_current_login`. Se reusa la credencial de Leagues (`mlYahooVivo`),
+que es lo que ya pedia el comentario de `startYahooLogin`: dos puertas, un token.
+
+**Lo que Yahoo NO da, y por eso NO se finge:** no hay libro de picks ni
+historial de trades. Se dejan vacios y el cartel lo DICE. El modal de jugador
+decia "no trades ... yet", que en una liga de Yahoo es mentira: no es que no
+haya, es que Yahoo no los entrega. Tambien se declara redraft en vez de adivinar
+dynasty: con el lente equivocado todos los precios salen mal.
+
+### Las ligas sin trades salen del analizador (deroga la del 12-sep)
+
+El 12-sep se decidio dejarlas entrar con un cartel. El 15-sep el dueno lo
+cambio: que no se ofrezcan. Filtra `tmTradesOff` (`disable_trades`, con
+`best_ball` de respaldo) y `tmTradeLeagues()` es lo que leen las superficies de
+trades. Siguen enteras en el mock draft y en Draft Day, donde si sirven.
+
+**Medido contra sus ligas reales, no asumido:** son CINCO, no cuatro. Sus cuatro
+de best ball traen `best_ball=1` y `disable_trades=1`, y "Peluche Chopped"
+(type=3) trae solo `disable_trades=1`. Por eso manda `disable_trades`.
+
+### Dos bugs que caso el gate nuevo, no la lectura
+
+1. `userId` se quedaba con la clave del equipo de Yahoo al volver a una liga de
+   Sleeper: `loadLeague` nunca tocaba `userId` porque hasta hoy solo lo escribia
+   `loadUser`. Resultado, `_myRosterObj()` buscando una clave de Yahoo entre
+   rosters de Sleeper. Se guarda `window._sleeperUserId` y se restaura.
+2. La atribucion de Yahoo se quedaba puesta sobre una liga de Sleeper. Sus
+   terminos la piden mientras haya datos de Yahoo en pantalla, no despues.
+
+### Superficies que hablan Sleeper, no "ligas"
+
+Meter Yahoo en la lista compartida hacia que la campana de alertas, la busqueda
+de un jugador en todas las ligas y Draft Day pidieran una clave de Yahoo a
+`/api/sleeper/...`: 404 y consola sucia. `tmIsYahoo`/`tmSleeperLeagues` las
+mantienen en su carril.
+
+### Gates
+
+- **Nuevo: `scripts/qa-yahoo-analyzer.mjs`** (22 checks). Existe porque el OAuth
+  de Yahoo solo cierra contra macdraft.app, asi que NINGUN gate puede pedir un
+  token: sin el, el unico que comprueba Yahoo es el dueno abriendo la app.
+  Inyecta una respuesta con la forma exacta de `/api/yahoo/league/:key` y mide
+  el cliente. Verificado que FALLA contra el codigo viejo: 16 rojos.
+  Lleva control de arnes (que `myleagues.js` siga vivo tras la sustitucion) y
+  control de datos (que el plantel resuelva de verdad contra el mapa de Sleeper).
+- `qa-backlog` seccion 6 REESCRITA. La regla nueva (no se listan) va encima,
+  pero la proteccion del 12-sep se conserva como segunda capa: se carga la liga
+  por la puerta de atras y se exige que el candado siga puesto. Cambiar una
+  regla por otra y perder la proteccion seria reabrir el agujero que el reporto.
+- **Un canario que salio verde por silencio, y como se caso:** el primer (6b)
+  hacia `typeof tmTradeLeagues === 'function' ? tmTradeLeagues() : []`, y contra
+  el codigo viejo esa lista vacia hacia que "ninguna colo" pasara sin mirar
+  nada. Ahora devuelve `null` y el check exige lista no vacia.
+- `qa-backlog` (1a) exigia DOS ligas Chopped y la cuenta ya solo trae una:
+  rojo heredado, verificado que fallaba ANTES de tocar nada. Lo que el gate
+  protege es el rotulo, no el conteo. Bajado a >=1.
+
+### Estado: TODO VERDE EN LOCAL, SIN DESPLEGAR
+
+Los trece gates de interfaz mas `qa-yahoo-parse` y `qa-yahoo-analyzer`, verdes.
+Cache-bust bumpeado a `2026091516`.
+
+**Lo que NO esta verificado, y hay que decirlo:** el camino de Yahoo esta medido
+contra un fixture con la forma que devuelve nuestro propio servidor, no contra
+Yahoo de verdad. Nadie ha cargado una liga de Yahoo real en el analizador
+todavia. La primera corrida contra su cuenta es la prueba que falta.
+
+## Sesion 2026-09-16: el import de roster Yahoo deja de depender del callback viejo
+
+Reporte: el boton Yahoo no terminaba de importar el roster. La causa estaba en
+la convivencia de dos caminos: el callback OAuth viejo intentaba bajar hasta
+seis planteles y podia devolver un token valido junto con `Could not read any
+rosters from Yahoo.` El cliente guardaba el token, pero daba prioridad al error
+y se detenia antes de usar las rutas nuevas.
+
+Ahora el token manda. Despues de OAuth, el boton pide todas las ligas por
+`/api/yahoo/leagues`; al escoger una, `finishYahooImport` delega en
+`loadYahooLeague` y carga `/api/yahoo/league/:key`. Si el navegador ya tiene
+sesion Yahoo, no repite OAuth. Tambien declara cuando el popup fue bloqueado.
+El limite viejo de seis planteles ya no gobierna esta entrada.
+
+Gate: `qa-yahoo-analyzer` prueba el boton a 390px y el caso exacto token + error
+viejo. `qa-yahoo-analyzer`, `qa-backlog` y `qa-nav`: ALL GREEN, consola limpia.
+`node --check public/app.js` verde. Cache-bust `2026091601`. Sigue pendiente la
+primera corrida contra una cuenta Yahoo real; el gate usa el fixture del proxy.
