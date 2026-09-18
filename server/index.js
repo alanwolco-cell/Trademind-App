@@ -19,6 +19,23 @@ const PORT = process.env.PORT || 3000;
 // Don't advertise the stack to anyone fingerprinting the service.
 app.disable('x-powered-by');
 
+// Un solo dominio (decision del dueno, 2026-09-18). El alias de Vercel
+// trademind-starter.vercel.app seguia sirviendo la app entera, y ahi el login
+// de Yahoo (que siempre vuelve a macdraft.app) no podia terminar. Las paginas
+// se mandan a macdraft.app; /api/* NO, porque los crons de Vercel entran por
+// ese alias y un 301 los dejaria sin correr. Los previews (otros *.vercel.app)
+// no se tocan: sirven para probar. Coste aceptado: la cuenta guardada y el Pro
+// viven por navegador Y por dominio, asi que quien los tuviera en el alias
+// vuelve a entrar una vez.
+const HOSTS_VIEJOS = new Set(['trademind-starter.vercel.app']);
+app.use((req, res, next) => {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase().split(':')[0];
+  if (HOSTS_VIEJOS.has(host) && (req.method === 'GET' || req.method === 'HEAD') && !req.path.startsWith('/api/')) {
+    return res.redirect(301, 'https://macdraft.app' + req.originalUrl);
+  }
+  next();
+});
+
 // Baseline security headers. No CSP here on purpose: the UI relies on inline
 // styles and inline on* handlers, so a real policy would black out the site.
 // Adding one means moving those to external handlers first - worth doing, but
