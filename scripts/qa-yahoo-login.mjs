@@ -288,6 +288,58 @@ try {
   ok('(6d) el cambiador las lista y deja de ofrecer Yahoo', /QA Merge/.test(merge.sw) && !/Add your Yahoo/.test(merge.sw), merge.sw.replace(/\s+/g, ' ').slice(0, 160));
   ok('(6e) lo dice en una linea y esconde el boton', /1 Yahoo league added/.test(merge.estado) && merge.boton === true, JSON.stringify({ e: merge.estado, b: merge.boton }));
 
+  // ── 7. quien SOLO juega en Yahoo: ninguna pantalla le pide Sleeper
+  const soloY = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await soloY.addInitScript(() => {
+    if (!sessionStorage.getItem('qa-sembrado')) {
+      sessionStorage.setItem('qa-sembrado', '1');
+      localStorage.setItem('tm_yahoo_tok', JSON.stringify({ access_token: 'y', refresh_token: 'r', expires_at: Date.now() + 3600e3 }));
+    }
+  });
+  // TODAS las rutas de Yahoo de mentira: con el token falso, cualquier llamada
+  // al Yahoo real devuelve 401 y la app, con razon, cierra la sesion.
+  await soloY.route('**/api/yahoo/**', r => {
+    const u = r.request().url();
+    if (/\/api\/yahoo\/leagues/.test(u)) return r.fulfill({ json: { leagues: [{ league_key: '461.l.77', name: 'QA Solo Yahoo', season: '2026', num_teams: 10 }] } });
+    if (/\/api\/yahoo\/status/.test(u)) return r.fulfill({ json: { configured: true } });
+    return r.fulfill({ json: {} });
+  });
+  const py = await soloY.newPage(); vigilar(py);
+  await py.goto(BASE + '/', { waitUntil: 'domcontentloaded' });
+  await py.waitForFunction(() => typeof switchScreen === 'function' && typeof mlYahooConectado === 'function', { timeout: 30000 });
+  await py.waitForTimeout(800);
+  const nav = await py.evaluate(() => ({
+    connect: getComputedStyle(document.getElementById('nav-signin')).display,
+    pill: (document.getElementById('user-pill-name') || {}).textContent
+  }));
+  ok('(7a) arriba no le ofrece "Connect": su cuenta es Yahoo', nav.connect === 'none' && nav.pill === 'Yahoo', JSON.stringify(nav));
+  await py.evaluate(() => switchScreen('analyze'));
+  await py.waitForFunction(() => /QA Solo Yahoo/.test((document.getElementById('league-list') || {}).innerText || ''), { timeout: 10000 }).catch(() => { });
+  const an7 = await py.evaluate(() => ({
+    login: getComputedStyle(document.getElementById('login-panel')).display,
+    lista: (document.getElementById('league-list') || {}).innerText || ''
+  }));
+  ok('(7b) el analizador lista sus ligas de Yahoo, sin pedirle usuario de Sleeper',
+    an7.login === 'none' && /QA Solo Yahoo/.test(an7.lista) && /Yahoo/.test(an7.lista), JSON.stringify(an7).slice(0, 200));
+  await py.evaluate(() => switchScreen('sage'));
+  await py.waitForTimeout(300);
+  const mac = await py.evaluate(() => document.getElementById('sage-connect-hint').textContent);
+  ok('(7c) Ask Mac no le pide Sleeper', /Yahoo/.test(mac) && !/Sleeper/.test(mac), mac);
+  await py.evaluate(() => goConnectLeague());
+  await py.waitForFunction(() => /QA Solo Yahoo/.test((document.getElementById('cm-list') || {}).innerText || ''), { timeout: 10000 }).catch(() => { });
+  const modal = await py.evaluate(() => ({ lista: (document.getElementById('cm-list') || {}).innerText || '',
+    boton: document.getElementById('cm-yahoo') && getComputedStyle(document.getElementById('cm-yahoo')).display }));
+  ok('(7d) el boton Connect le muestra sus ligas de Yahoo directo', /QA Solo Yahoo/.test(modal.lista) && modal.boton === 'none', JSON.stringify(modal));
+  await py.evaluate(() => { closeConnectModal(); signOut(); });
+  await py.waitForTimeout(300);
+  const fuera = await py.evaluate(() => ({ tok: localStorage.getItem('tm_yahoo_tok'), connect: getComputedStyle(document.getElementById('nav-signin')).display }));
+  ok('(7e) Sign out tambien cierra Yahoo', !fuera.tok && fuera.connect !== 'none', JSON.stringify(fuera));
+  // Y el modal, a alguien sin nada, le ofrece Yahoo.
+  await py.evaluate(() => goConnectLeague());
+  await py.waitForTimeout(200);
+  const ofrece = await py.evaluate(() => { const bt = document.getElementById('cm-yahoo'); const r = bt && bt.getBoundingClientRect(); return { ve: !!bt && getComputedStyle(bt).display !== 'none', alto: r ? Math.round(r.height) : 0 }; });
+  ok('(7f) sin cuenta, el modal de Connect ofrece Sign in with Yahoo (44px)', ofrece.ve && ofrece.alto >= 44, JSON.stringify(ofrece));
+
   ok('(z) consola limpia', errs.length === 0, errs.join('\n      '));
   await b.close();
 } catch (e) {

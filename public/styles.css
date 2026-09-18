@@ -3044,6 +3044,9 @@ html{scroll-padding-top:76px}
 .yahoo-mark{width:18px;height:18px;border-radius:5px;background:#6001d2;color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
 .yahoo-add-status{font-size:12px;color:var(--muted2);line-height:1.45}
 .yahoo-add-status:empty{display:none}
+.cm-or{margin:12px 0 8px;text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.cm-yahoo{width:100%;justify-content:center;min-height:44px}
+.cm-yahoo[hidden]{display:none!important}
 .ml-y-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
 /* tablero de todas las ligas */
 .ml-slate{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}

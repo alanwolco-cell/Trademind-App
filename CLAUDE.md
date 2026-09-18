@@ -2849,3 +2849,15 @@ en localhost via `YAHOO_TOKEN_URL`, que solo acepta localhost) y `qa-faab` (24).
 Verificado en rojo contra HEAD: 13 y 21 fallos. Un check de visibilidad pasaba
 sobre el bug de CSS (`display:flex` le gana a `[hidden]`): ahora todos miden el
 estilo computado, y se comprobo que se ponen rojos sin la regla.
+
+### Mismo dia: quien SOLO juega en Yahoo
+Pregunta del dueno: "alguien que solo tiene ligas en yahoo puede log in?". Medido
+con una cuenta nueva sin Sleeper: Leagues funcionaba (y aguantaba la recarga),
+pero cuatro pantallas le pedian Sleeper: el analizador (panel de usuario de
+Sleeper tras recargar), Ask Mac ("Connect your Sleeper league"), el boton
+"Connect" de arriba (su modal solo aceptaba usuario de Sleeper) y "Sign out"
+(no cerraba Yahoo). Arreglados: `tmYahooSoloBoot` lista sus ligas en el
+analizador, el modal de Connect ofrece Yahoo y le lista sus ligas directo, el
+boton de cuenta dice "Yahoo", Ask Mac le pide cargar una liga de Yahoo, y
+Sign out cierra las dos. qa-yahoo-login seccion (7), 6 checks, los 6 en rojo
+contra 67f018a. Cache-bust 2026091802.

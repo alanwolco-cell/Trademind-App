@@ -442,6 +442,8 @@ function openConnectModal(){
       +'<input type="text" id="cm-user" class="tm-input" style="flex:1" placeholder="Sleeper username" autocomplete="off" '
       +'onkeydown="if(event.key===\'Enter\')connectModalGo()">'
       +'<button class="btn-primary" id="cm-go" style="padding:10px 18px;font-size:13px" onclick="connectModalGo()">Let\'s go &rarr;</button></div>'
+      +'<div class="cm-or">or</div>'
+      +'<button type="button" class="ml-y cm-yahoo" id="cm-yahoo" onclick="cmYahoo()"><span class="yahoo-mark">Y!</span> Sign in with Yahoo</button>'
       +'<div class="cm-status" id="cm-status"></div>'
       +'<div id="cm-list"></div>'
       +'</div>';
@@ -456,11 +458,39 @@ function openConnectModal(){
   inp.value=localStorage.getItem('tm_username')||'';
   document.getElementById('cm-status').textContent='';
   document.getElementById('cm-list').innerHTML='';
+  // El boton de Yahoo vuelve en cada apertura; cmYahoo lo esconde si ya hay sesion.
+  var _cy=document.getElementById('cm-yahoo');if(_cy)_cy.hidden=false;
   setTimeout(function(){inp.focus();},60);
   // an account we already know: fetch its leagues right away
   if(inp.value.trim())connectModalGo();
+  // Solo Yahoo: sus ligas salen sin teclear nada.
+  else if(localStorage.getItem('tm_yahoo_tok'))cmYahoo();
   _overlayOpen(function(){var el=document.getElementById('connect-modal');if(el)el.style.display='none';});
 }
+// Yahoo dentro del modal de Connect: quien solo juega en Yahoo no tiene
+// usuario de Sleeper que teclear, y este modal era la unica puerta del boton de
+// arriba.
+async function cmYahoo(){
+  var st=document.getElementById('cm-status');
+  if(typeof mlYahooConectado!=='function'){if(st)st.textContent='Still loading. Tap again in a second.';return;}
+  if(!mlYahooConectado()){
+    var modo=mlYahooStart();
+    if(st&&modo==='popup')st.textContent='Finish signing in on the Yahoo window. Your leagues show up here.';
+    return;
+  }
+  if(st)st.textContent='Loading your Yahoo leagues...';
+  var y=await tmYahooLeagues();
+  var base=(window._myLeagues||[]).filter(function(l){return !tmIsYahoo(l);});
+  window._myLeagues=base.concat(y);
+  if(st)st.textContent=y.length?'':'Yahoo is connected, but no leagues came back. Try again in a minute.';
+  _renderCmList(window._myLeagues,'');
+  var b=document.getElementById('cm-yahoo');if(b)b.hidden=true;
+}
+window.addEventListener('tm-yahoo-connected',function(){
+  var m=document.getElementById('connect-modal');
+  if(m&&m.style.display!=='none')cmYahoo();
+  try{updateUserPill();}catch(_){}
+});
 function closeConnectModal(){
   var m=document.getElementById('connect-modal');
   if(m)m.style.display='none';
@@ -2102,9 +2132,22 @@ function startYahooLogin(){
 // de Yahoo se suman a la MISMA lista (y al cambiador de liga) sin recargar
 // nada; el selector del panel de login se sigue llenando para quien entro solo
 // por Yahoo.
+// Quien solo juega en Yahoo: la misma lista de ligas que ve el de Sleeper, en
+// vez del panel que le pide un usuario de Sleeper que no tiene.
+async function tmYahooSoloBoot(){
+  var y=await tmYahooLeagues();
+  if(!y.length){loadYahooImportChoices();return;}
+  window._myLeagues=y;
+  var lp=document.getElementById('login-panel');if(lp)lp.style.display='none';
+  window._autoRestoring=true;
+  renderLeagues(y);
+}
 async function tmYahooAfterConnect(){
   var mias=window._myLeagues||[];
   var conSleeper=mias.some(function(l){return !tmIsYahoo(l);});
+  var sinSleeper=!conSleeper&&!localStorage.getItem('tm_username');
+  var enAnaliz=document.getElementById('screen-analyze');
+  if(sinSleeper&&enAnaliz&&enAnaliz.classList.contains('active')){tmYahooSoloBoot();return;}
   if(conSleeper){
     var y=await tmYahooLeagues();
     var base=(window._myLeagues||[]).filter(function(l){return !tmIsYahoo(l);});
@@ -6283,6 +6326,8 @@ function switchScreen(name,_noPush){
   if(name==='analyze'&&!leagueId&&!window._mlAutoConnect){
     var _u=null; try{_u=localStorage.getItem('tm_username');}catch(_){}
     if(_u){ window._mlAutoConnect=1; try{loadUser();}catch(_){} }
+    // Solo Yahoo: sus ligas en la lista, sin pedirle un usuario de Sleeper.
+    else if(localStorage.getItem('tm_yahoo_tok')){ window._mlAutoConnect=1; try{tmYahooSoloBoot();}catch(_){} }
   }
   document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");});
   document.querySelectorAll(".screen-nav").forEach(function(n){n.classList.remove("active");});
@@ -6295,7 +6340,11 @@ function switchScreen(name,_noPush){
   // loaded yet. For a signed-out visitor it would be a second, competing entry
   // point next to the inline sign-in - which is exactly the double prompt we are
   // killing - so we keep it hidden and let the inline sign-in own onboarding.
-  if(name==='sage'){var sch=document.getElementById('sage-connect-hint');if(sch)sch.style.display=(!localStorage.getItem('tm_username')&&!leagueId)?'inline-flex':'none';try{sageSyncUser();}catch(_){}try{sageUpdateQuota();}catch(_){}}
+  if(name==='sage'){var sch=document.getElementById('sage-connect-hint');
+    // Con Yahoo la cuenta existe; lo que falta es cargar una liga.
+    var _yh=!!localStorage.getItem('tm_yahoo_tok');
+    if(sch){sch.style.display=(!localStorage.getItem('tm_username')&&!leagueId)?'inline-flex':'none';
+      sch.textContent=_yh?'Load one of your Yahoo leagues so Mac sees your roster →':'Connect your Sleeper league so Mac sees your roster →';}try{sageSyncUser();}catch(_){}try{sageUpdateQuota();}catch(_){}}
   // HOME is the landing page (hero + story + news rail); every other screen is
   // a tool page. The hero and marketing live ONLY on home now - the Analyze
   // page shows just the tool.
@@ -16801,6 +16850,8 @@ function updateUserPill(){
   var ddName=document.getElementById('user-dd-name');
   var ddLeague=document.getElementById('user-dd-league');
   var uname=localStorage.getItem('tm_username')||'';
+  // Quien solo entro con Yahoo tambien tiene cuenta: no se le ofrece "Connect".
+  if(!uname&&localStorage.getItem('tm_yahoo_tok'))uname='Yahoo';
   var si=document.getElementById('nav-signin');if(si)si.style.display=uname?'none':'inline-flex';
   var lname=localStorage.getItem('tm_league_name')||'';
   if(uname&&pill){
@@ -17017,6 +17068,8 @@ try{
 
 function signOut(){
   localStorage.removeItem('tm_username');
+  // Salir es salir de todo: la sesion de Yahoo tambien.
+  try{localStorage.removeItem('tm_yahoo_tok');localStorage.removeItem('tm_yahoo_h');}catch(_){}
   localStorage.removeItem('tm_league_id');
   localStorage.removeItem('tm_league_name');
   bkUsername=null; bkBalance=0;
