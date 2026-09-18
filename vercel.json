@@ -8,6 +8,19 @@
   ],
   "routes": [
     {
+      "src": "/((?!api/|_vercel/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "trademind-starter.vercel.app"
+        }
+      ],
+      "status": 301,
+      "headers": {
+        "Location": "https://macdraft.app/$1"
+      }
+    },
+    {
       "src": "/api/(.*)",
       "dest": "server/index.js"
     },
