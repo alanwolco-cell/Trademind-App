@@ -204,7 +204,7 @@ function popupReply(res, payload, ret) {
     '<body style="font-family:-apple-system,system-ui,sans-serif;background:#171614;color:#eee;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:0 20px">' +
     '<div id="msg" style="text-align:center;max-width:320px;line-height:1.5">Finishing up...</div>' +
     '<script type="application/json" id="yahoo-data">' + datos + '</script>' +
-    '<script src="/yahoo-done.js?v=2026091801"></script></body></html>'
+    '<script src="/yahoo-done.js?v=2026091803"></script></body></html>'
   );
 }
 

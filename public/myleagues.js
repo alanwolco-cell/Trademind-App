@@ -953,9 +953,10 @@ async function mlYahooSondeo() {
   if (!h) { if (_mlYWait) { clearInterval(_mlYWait); _mlYWait = null; } return; }
   // El mismo almacenamiento (popup normal o vuelta en la misma pestana): ya esta.
   if (mlYahooConectado()) { mlYahooGot(mlYahooTok()); return; }
-  // Solo la app instalada necesita el relevo; en un navegador normal el token
-  // llega por postMessage o por la vuelta a esta misma pestana.
-  if (!mlYahooInstalada()) return;
+  // El relevo lo necesitan la app instalada del iPhone y la app abierta en
+  // OTRO dominio que el de la vuelta de Yahoo (macdraft.app): en los dos casos
+  // el token no puede llegar por postMessage ni por localStorage. La espera se
+  // corta sola a los diez minutos (mlYahooPendiente) o con un fallo.
   try {
     // Por POST: el secreto no queda en los registros de acceso como una URL.
     var r = await fetch('/api/yahoo/handoff/take', { method: 'POST', cache: 'no-store',

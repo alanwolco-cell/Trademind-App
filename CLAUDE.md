@@ -2861,3 +2861,15 @@ analizador, el modal de Connect ofrece Yahoo y le lista sus ligas directo, el
 boton de cuenta dice "Yahoo", Ask Mac le pide cargar una liga de Yahoo, y
 Sign out cierra las dos. qa-yahoo-login seccion (7), 6 checks, los 6 en rojo
 contra 67f018a. Cache-bust 2026091802.
+
+### Mismo dia: el login de Yahoo desde OTRO dominio (video del dueno)
+Un amigo del dueno abrio la app en trademind-starter.vercel.app. Yahoo siempre
+vuelve a macdraft.app (el unico redirect registrado), y el aviso por
+postMessage va solo al propio dominio: la pagina decia "Yahoo connected" y la
+app se quedaba en "Finish signing in on Yahoo" para siempre. No era su cuenta.
+Ahora la pagina de vuelta detecta que quien la abrio es de otro dominio y va
+por el relevo (con el toque de Connect), y la app espera el relevo en
+cualquier navegador, no solo en la instalada. qa-yahoo-login (8a)(8b), los dos
+en rojo contra e1f3ea3. PREGUNTA ABIERTA para el dueno: redirigir
+trademind-starter.vercel.app a macdraft.app (quien tenga Pro o cuenta guardada
+en ese dominio la perderia, porque son por navegador y por dominio).

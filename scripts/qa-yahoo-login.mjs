@@ -340,6 +340,46 @@ try {
   const ofrece = await py.evaluate(() => { const bt = document.getElementById('cm-yahoo'); const r = bt && bt.getBoundingClientRect(); return { ve: !!bt && getComputedStyle(bt).display !== 'none', alto: r ? Math.round(r.height) : 0 }; });
   ok('(7f) sin cuenta, el modal de Connect ofrece Sign in with Yahoo (44px)', ofrece.ve && ofrece.alto >= 44, JSON.stringify(ofrece));
 
+  // ── 8. EL CASO DEL VIDEO (2026-09-18): la app abierta en OTRO dominio que el
+  // de la vuelta de Yahoo. Aqui: la app en 127.0.0.1 y la vuelta en localhost,
+  // con una ventana emergente de verdad (opener entre dominios).
+  const otro = await b.newContext({ viewport: { width: 390, height: 844 } });
+  await otro.route('**/api/yahoo/**', r => {
+    const u = r.request().url();
+    if (/handoff|callback/.test(u)) return r.continue();
+    if (/\/api\/yahoo\/leagues/.test(u)) return r.fulfill({ json: { leagues: [] } });
+    return r.fulfill({ json: {} });
+  });
+  const po = await otro.newPage(); vigilar(po);
+  const APP2 = 'http://127.0.0.1:' + PORT;
+  await po.goto(APP2 + '/myleagues', { waitUntil: 'domcontentloaded' });
+  await po.waitForFunction(() => typeof mlYahooStart === 'function', { timeout: 30000 });
+  const h8 = await po.evaluate(() => {
+    const real = window.open; let u = '';
+    window.open = (x) => { u = String(x); return { closed: false, close() { } }; };
+    mlYahooStart();
+    window.open = real;
+    return new URL(u, location.href).searchParams.get('h');
+  });
+  const st8 = Buffer.from(JSON.stringify({ h: h8 })).toString('base64url');
+  const [pop] = await Promise.all([
+    po.waitForEvent('popup', { timeout: 10000 }),
+    po.evaluate((url) => { window.open(url, 'yahoo-login', 'width=520,height=680'); }, BASE + '/api/yahoo/callback?code=qa&state=' + st8)
+  ]).catch(() => [null]);
+  let pop8 = '';
+  if (pop) {
+    vigilar(pop);
+    await pop.waitForLoadState('domcontentloaded').catch(() => { });
+    await pop.waitForTimeout(400);
+    pop8 = await pop.evaluate(() => document.body.innerText).catch(() => '');
+  }
+  ok('(8a) la vuelta de Yahoo en otro dominio NO dice "closes on its own": pide confirmar',
+    /Connect Yahoo to Mac Draft\?/.test(pop8), pop8.slice(0, 120));
+  if (pop) await pop.click('button').catch(() => { });
+  await po.waitForFunction(() => { try { return !!JSON.parse(localStorage.getItem('tm_yahoo_tok') || 'null'); } catch (_) { return false; } }, { timeout: 12000 }).catch(() => { });
+  const app8 = await po.evaluate(() => ({ tok: !!localStorage.getItem('tm_yahoo_tok'), pend: localStorage.getItem('tm_yahoo_h') }));
+  ok('(8b) tras el toque, la app del otro dominio recibe el token sola', app8.tok && !app8.pend, JSON.stringify(app8));
+
   ok('(z) consola limpia', errs.length === 0, errs.join('\n      '));
   await b.close();
 } catch (e) {

@@ -18,7 +18,14 @@
   var ret = d.ret || '';
   function texto(t) { msg.textContent = t; }
 
-  if (window.opener) {
+  // Solo se le avisa a la ventana que abrio el login si es de NUESTRO dominio.
+  // Si la app se abrio en otro (trademind-starter.vercel.app: Yahoo siempre
+  // vuelve a macdraft.app), el aviso se perdia en silencio y la app se quedaba
+  // esperando para siempre (reporte del 2026-09-18, en video). Ese caso va por
+  // el relevo, igual que la app instalada del iPhone.
+  var mismoOrigen = false;
+  try { mismoOrigen = !!window.opener && window.opener.location.origin === window.location.origin; } catch (e) { }
+  if (mismoOrigen) {
     try { window.opener.postMessage({ type: 'trademind-yahoo', payload: { token: p.token, error: p.error } }, window.location.origin); } catch (e) { }
     texto(p.error ? ('Yahoo sign-in failed: ' + p.error) : 'Yahoo connected. This window closes on its own.');
     setTimeout(function () { window.close(); }, 1200);
