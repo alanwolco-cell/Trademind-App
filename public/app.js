@@ -5944,7 +5944,7 @@ function renderVsBattle(giveInputEls,getInputEls,ktcGap,hasKtc,valueTier){
     +'<div class="vs-vs">VS</div>'
     +'<div style="display:flex;gap:8px;align-items:flex-start" id="vsb-r">'+bubbles(ts,'vs-right')+'</div>'
     +'</div>'
-    +'<div style="text-align:center;margin-top:-14px;margin-bottom:10px"><button class="btn-sm" style="font-size:10px;padding:3px 10px" onclick="toggleSound(this)">'+(_sndOn?'Sound on':'Sound off')+'</button></div>';
+    +'<div style="text-align:center;margin-top:4px;margin-bottom:10px"><button class="btn-sm" style="font-size:10px;padding:3px 10px" onclick="toggleSound(this)">'+(_sndOn?'Sound on':'Sound off')+'</button></div>';
   var L=document.getElementById('vsb-l'),R=document.getElementById('vsb-r');
   function each(el,fn){el.querySelectorAll('.vs-bubble').forEach(fn);}
   setTimeout(function(){each(L,function(b){b.classList.add('fight');});each(R,function(b){b.classList.add('fight');});sndWhoosh();},250);

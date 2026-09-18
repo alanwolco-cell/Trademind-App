@@ -2870,6 +2870,17 @@ app se quedaba en "Finish signing in on Yahoo" para siempre. No era su cuenta.
 Ahora la pagina de vuelta detecta que quien la abrio es de otro dominio y va
 por el relevo (con el toque de Connect), y la app espera el relevo en
 cualquier navegador, no solo en la instalada. qa-yahoo-login (8a)(8b), los dos
-en rojo contra e1f3ea3. PREGUNTA ABIERTA para el dueno: redirigir
-trademind-starter.vercel.app a macdraft.app (quien tenga Pro o cuenta guardada
-en ese dominio la perderia, porque son por navegador y por dominio).
+en rojo contra e1f3ea3. DECIDIDO por el dueno ("si redirige"): trademind-starter.vercel.app manda
+las PAGINAS a macdraft.app con 301 (primer middleware de server/index.js).
+/api/* NO se redirige: los crons de Vercel entran por ese alias. Los previews
+(otros *.vercel.app) siguen sirviendo. OJO al verificarlo: 40 curl seguidos
+contra el alias disparan el "Vercel Security Checkpoint" (403 con
+x-vercel-mitigated: challenge) para tu IP; no es el codigo.
+
+### Mismo dia: la fila VS del veredicto se salia en el telefono
+Reporte del dueno con captura ("centrea esto"): con 2 contra 4 la fila media
+458px en 390, arrancaba pegada a la izquierda y cortaba a los de la derecha.
+Cada lado ocupa como mucho la mitad menos el VS y parte a sus jugadores en
+filas; sin el escalon de 20px en filas partidas (la corona pisaba el nombre);
+el gap inline del lado le ganaba al row-gap, por eso va con !important; en 360
+o menos los circulos bajan a 50px. qa-faab (8), rojo sin el CSS.

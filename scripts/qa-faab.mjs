@@ -195,6 +195,24 @@ try {
   ok('(7) la nota dice cuanto vale, de donde sale y que baja cada semana',
     typeof f7 === 'string' && /\$30 of \$100 FAAB = \d+/.test(f7) && /7,976 winning bids/.test(f7) && /less every week/.test(f7), String(f7).slice(0, 200));
 
+  // ── 8. la fila VS del veredicto cabe y queda centrada en el telefono
+  // (reporte del dueno, 2026-09-18: con 2 contra 4 media 458px en 390 y cortaba
+  // a los de la derecha).
+  const f8 = await eva(pg, () => {
+    const rp = document.getElementById('result-panel'); if (rp) rp.classList.add('visible');
+    const ids = [['4866', 'Saquon Barkley'], ['4984', 'Josh Allen'], ['7543', 'Travis Etienne'], ['9509', 'Jayden Daniels'], ['8150', 'A B'], ['3198', 'Alvin Kamara']];
+    const el = (p) => ({ value: p[1], dataset: { playerId: p[0] } });
+    renderVsBattle(ids.slice(0, 2).map(el), ids.slice(2, 6).map(el), -5000, true, 'getting_fleeced');
+    const box = document.getElementById('vs-arena-box');
+    const bx = box.getBoundingClientRect();
+    const bs = [...box.querySelectorAll('.vs-bubble')].map(e => e.getBoundingClientRect());
+    const minL = Math.min(...bs.map(r => r.left)), maxR = Math.max(...bs.map(r => r.right));
+    return { n: bs.length, dentro: bx.right <= innerWidth && minL >= bx.left - 1 && maxR <= bx.right + 1,
+      descentrado: Math.round(Math.abs((minL + maxR) / 2 - (bx.left + bx.right) / 2)), sw: document.documentElement.scrollWidth };
+  });
+  ok('(8) la fila VS de 2 contra 4 cabe en 390 y queda centrada (menos de 12px)',
+    f8.n === 6 && f8.dentro && f8.descentrado < 12 && f8.sw <= 390, JSON.stringify(f8));
+
   ok('(z) consola limpia', errs.length === 0, errs.join('\n      '));
 } catch (e) {
   ok('(!) el gate no reviento', false, String(e && e.stack || e).slice(0, 400));

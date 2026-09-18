@@ -1013,6 +1013,17 @@ footer{padding:var(--sp-section) 1.5rem 2.5rem;border-top:1px solid var(--border
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
 .vs-arena{display:flex;align-items:center;justify-content:center;gap:26px;padding:20px 0 26px}
+/* Centrado siempre, quepa o no (reporte del dueno, 2026-09-18): con 2 contra 4
+   la fila media 458px en un telefono de 390, arrancaba pegada a la izquierda y
+   cortaba a los de la derecha. Cada lado ocupa como mucho la mitad menos el VS
+   y, si no le caben sus jugadores, los parte en filas en vez de salirse. */
+#vs-arena-box{max-width:100%;min-width:0}
+/* Partidos en filas, el escalon de 20px de los jugadores secundarios mete la
+   corona de la fila de abajo en el nombre de la de arriba. */
+.vs-bubble.vs-mini{margin-top:0!important}
+@media(max-width:360px){.vs-arena .vs-bubble{width:50px!important;height:50px!important}.vs-arena{gap:6px}}
+.vs-arena>#vsb-l,.vs-arena>#vsb-r{flex:0 1 auto;min-width:0;max-width:calc(50% - 30px);flex-wrap:wrap;justify-content:center;row-gap:46px!important}
+.vs-vs{flex-shrink:0}
 .vs-bubble{position:relative;width:120px;height:120px;border-radius:50%;flex-shrink:0}
 .vs-bubble img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid var(--border2);background:var(--surface2)}
 .vs-bubble .vs-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;white-space:nowrap;color:var(--muted)}
