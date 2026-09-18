@@ -853,71 +853,183 @@ function mlYahooConectado() { var t = mlYahooTok(); return !!(t && t.access_toke
 
 // Devuelve un token vivo, refrescandolo si hace falta. Un token caducado no es
 // un error que se le enseñe al usuario: se cambia y sigue.
-async function mlYahooVivo() {
+//
+// La sesion SOLO se borra cuando Yahoo rechaza el refresco (401). Antes se
+// borraba ante cualquier fallo, incluido un 502 pasajero o el telefono sin
+// señal, y el usuario tenia que volver a loguearse sin haber hecho nada mal.
+// Ademas, varias pantallas piden a la vez: un solo refresco en vuelo.
+var _mlYRefresh = null;
+async function mlYahooVivo(forzar) {
   var t = mlYahooTok();
   if (!t || !t.access_token) return null;
-  if (t.expires_at && Date.now() < t.expires_at - 60000) return t.access_token;
+  if (!forzar && t.expires_at && Date.now() < t.expires_at - 60000) return t.access_token;
   if (!t.refresh_token) { mlYahooSet(null); return null; }
-  try {
-    var r = await fetch('/api/yahoo/refresh', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: t.refresh_token })
-    });
-    if (!r.ok) { mlYahooSet(null); return null; }
-    var d = await r.json();
-    var nuevo = { access_token: d.access_token, refresh_token: d.refresh_token || t.refresh_token,
-      expires_at: Date.now() + (Number(d.expires_in) || 3600) * 1000 };
-    mlYahooSet(nuevo);
-    return nuevo.access_token;
-  } catch (e) { return null; }
+  // Un refresco forzado (tras un 401) no se cuelga de uno normal en vuelo: ese
+  // podria devolver el mismo token que Yahoo acaba de rechazar.
+  if (_mlYRefresh && !forzar) return _mlYRefresh;
+  var vuelo = (async function () {
+    try {
+      var r = await fetch('/api/yahoo/refresh', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: t.refresh_token })
+      });
+      if (r.status === 401 || r.status === 400) { mlYahooSet(null); return null; }
+      if (!r.ok) return forzar ? null : t.access_token;
+      var d = await r.json();
+      var nuevo = { access_token: d.access_token, refresh_token: d.refresh_token || t.refresh_token,
+        expires_at: Date.now() + (Number(d.expires_in) || 3600) * 1000 };
+      mlYahooSet(nuevo);
+      return nuevo.access_token;
+    } catch (e) { return forzar ? null : t.access_token; }
+    finally { if (_mlYRefresh === vuelo) _mlYRefresh = null; }
+  })();
+  if (!forzar) _mlYRefresh = vuelo;
+  return vuelo;
 }
 
 async function mlYahooGet(path) {
   var tok = await mlYahooVivo();
   if (!tok) throw new Error('yahoo not connected');
   var r = await fetch('/api/yahoo' + path, { headers: { 'X-Yahoo-Token': tok } });
-  if (r.status === 401) { mlYahooSet(null); throw new Error('yahoo session expired'); }
+  // Un 401 con el reloj diciendo que el token vivia: se refresca una vez y se
+  // repite, antes de dar la sesion por perdida.
+  if (r.status === 401) {
+    var otro = await mlYahooVivo(true);
+    // Sin token nuevo: si el refresco lo RECHAZO, la sesion ya se borro sola;
+    // si fue un tropiezo de red, la sesion se conserva y se reintenta luego.
+    if (!otro) throw new Error(mlYahooConectado() ? 'yahoo temporarily unavailable' : 'yahoo session expired');
+    r = await fetch('/api/yahoo' + path, { headers: { 'X-Yahoo-Token': otro } });
+    if (r.status === 401) { mlYahooSet(null); throw new Error('yahoo session expired'); }
+  }
   if (!r.ok) throw new Error('yahoo ' + r.status);
   return r.json();
 }
 
-// La ventana emergente devuelve el token por postMessage desde NUESTRO origen.
-function mlYahooConnect() {
-  var w = window.open('/api/yahoo/login', 'yahoo-login', 'width=520,height=680');
-  if (!w) { alert('Allow pop-ups to connect Yahoo.'); return; }
-  var listo = false;
-  function alLlegar(ev) {
-    if (ev.origin !== window.location.origin) return;
-    var d = ev.data || {};
-    if (d.type !== 'trademind-yahoo') return;
-    var p = d.payload || {};
-    if (p.token && p.token.access_token) {
-      mlYahooSet(p.token);
-      listo = true;
-      window.removeEventListener('message', alLlegar);
-      try { if (typeof tmTrack === 'function') tmTrack('league_connected', { platform: 'yahoo' }); } catch (e) { }
-      ML.ready = false; mlPaint();
-      mlBoot(true);
-    } else if (p.error) {
-      ML.yahooErr = String(p.error).slice(0, 160);
-      mlPaint();
-    }
-  }
-  window.addEventListener('message', alLlegar);
-  // Si la ventana se cierra sin contestar, no dejamos el oyente colgado. Y si
-  // el login volvio por el camino sin opener (el callback guarda el token
-  // directo en localStorage: telefono / PWA instalada), lo detectamos aqui y
-  // arrancamos igual que si hubiera llegado el postMessage.
-  var reloj = setInterval(function () {
-    if (!listo && mlYahooConectado()) {
-      listo = true;
-      clearInterval(reloj); window.removeEventListener('message', alLlegar);
-      ML.ready = false; mlPaint(); mlBoot(true);
-      return;
-    }
-    if (w.closed) { clearInterval(reloj); if (!listo) window.removeEventListener('message', alLlegar); }
-  }, 800);
+/* --- Entrar con Yahoo, UNA funcion para todas las puertas -------------------
+   Tres caminos, y la app escucha los tres a la vez:
+   1. Popup en escritorio: el callback avisa por postMessage (lo mas rapido).
+   2. Popup bloqueado: el login se hace en la MISMA pestana y el callback
+      vuelve a donde estabas (r), con el token ya guardado.
+   3. App instalada en el iPhone: el login se abre en una capa de Safari que no
+      comparte almacenamiento con la app. Ahi el token llega por el relevo del
+      servidor (/api/yahoo/handoff), cifrado con un secreto que solo tiene
+      este navegador. La app lo recoge sola al volver.
+   Se sabe que esta pendiente porque el secreto queda en localStorage; al volver
+   a la app (recarga o cambio de pestana) se retoma la espera. */
+var ML_YH_KEY = 'tm_yahoo_h';
+var ML_YH_VIDA = 10 * 60 * 1000;
+var _mlYWait = null;
+
+function mlYahooPendiente() {
+  try {
+    var p = JSON.parse(localStorage.getItem(ML_YH_KEY) || 'null');
+    if (p && p.h && Date.now() - (p.t || 0) < ML_YH_VIDA) return p.h;
+    if (p) localStorage.removeItem(ML_YH_KEY);
+  } catch (e) { }
+  return null;
 }
+function mlYahooNonce() {
+  var a = new Uint8Array(16);
+  crypto.getRandomValues(a);
+  return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+}
+function mlYahooInstalada() {
+  try { return !!(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches); }
+  catch (e) { return false; }
+}
+
+// El token llego, venga por donde venga. Un solo sitio que lo guarda y avisa.
+function mlYahooGot(token) {
+  if (!token || !token.access_token) return;
+  mlYahooSet(token);
+  try { localStorage.removeItem(ML_YH_KEY); } catch (e) { }
+  if (_mlYWait) { clearInterval(_mlYWait); _mlYWait = null; }
+  ML.yahooErr = '';
+  try { window.dispatchEvent(new CustomEvent('tm-yahoo-connected')); } catch (e) { }
+}
+
+async function mlYahooSondeo() {
+  var h = mlYahooPendiente();
+  if (!h) { if (_mlYWait) { clearInterval(_mlYWait); _mlYWait = null; } return; }
+  // El mismo almacenamiento (popup normal o vuelta en la misma pestana): ya esta.
+  if (mlYahooConectado()) { mlYahooGot(mlYahooTok()); return; }
+  // Solo la app instalada necesita el relevo; en un navegador normal el token
+  // llega por postMessage o por la vuelta a esta misma pestana.
+  if (!mlYahooInstalada()) return;
+  try {
+    // Por POST: el secreto no queda en los registros de acceso como una URL.
+    var r = await fetch('/api/yahoo/handoff/take', { method: 'POST', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ h: h }) });
+    if (!r.ok) return;
+    var d = await r.json();
+    if (d && d.token && d.token.access_token) mlYahooGot(d.token);
+  } catch (e) { }
+}
+function mlYahooEsperar() {
+  if (_mlYWait) return;
+  _mlYWait = setInterval(mlYahooSondeo, 2500);
+  mlYahooSondeo();
+}
+
+// Devuelve 'popup', 'redirect' o 'blocked'.
+function mlYahooStart() {
+  if (mlYahooConectado()) { mlYahooGot(mlYahooTok()); return 'connected'; }
+  // Reabrir el login reusa el secreto pendiente: si la persona termina en la
+  // PRIMERA capa de Safari, la app tiene que seguir esperando ese mismo.
+  var h = mlYahooPendiente() || mlYahooNonce();
+  try { localStorage.setItem(ML_YH_KEY, JSON.stringify({ h: h, t: Date.now() })); } catch (e) { }
+  var url = '/api/yahoo/login?h=' + h;
+  var w = null;
+  if (mlYahooInstalada()) {
+    w = window.open(url, '_blank');
+  } else {
+    var ancho = 520, alto = 680;
+    var x = Math.max(0, (screen.width - ancho) / 2), y = Math.max(0, (screen.height - alto) / 2);
+    w = window.open(url, 'yahoo-login', 'width=' + ancho + ',height=' + alto + ',left=' + x + ',top=' + y);
+  }
+  if (!w) {
+    // Sin ventana, el login va en esta misma pestana y el callback nos regresa.
+    location.href = url + '&r=' + encodeURIComponent(location.pathname + location.search);
+    return 'redirect';
+  }
+  mlYahooEsperar();
+  return 'popup';
+}
+
+// El popup de escritorio contesta por postMessage desde NUESTRO origen.
+window.addEventListener('message', function (ev) {
+  if (ev.origin !== window.location.origin) return;
+  var d = ev.data || {};
+  if (d.type !== 'trademind-yahoo') return;
+  var p = d.payload || {};
+  if (p.token && p.token.access_token) { mlYahooGot(p.token); return; }
+  if (p.error && mlYahooPendiente()) {
+    ML.yahooErr = String(p.error).slice(0, 160);
+    try { localStorage.removeItem(ML_YH_KEY); } catch (e) { }
+    try { window.dispatchEvent(new CustomEvent('tm-yahoo-failed', { detail: ML.yahooErr })); } catch (e) { }
+  }
+});
+// Volver a la app (capa de Safari cerrada, pestana recuperada) retoma la espera.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && mlYahooPendiente()) mlYahooEsperar();
+});
+if (mlYahooPendiente()) setTimeout(mlYahooEsperar, 0);
+
+function mlYahooConnect() {
+  ML.yahooErr = '';
+  var modo = mlYahooStart();
+  if (modo === 'popup') { ML.yahooWaiting = true; mlPaint(); }
+}
+window.addEventListener('tm-yahoo-connected', function () {
+  ML.yahooWaiting = false;
+  try { if (typeof tmTrack === 'function') tmTrack('league_connected', { platform: 'yahoo' }); } catch (e) { }
+  // Solo se recarga en el acto si Leagues esta a la vista; si el login vino
+  // del analizador, Leagues se rehace entero la proxima vez que se abra.
+  var s = document.getElementById('screen-myleagues');
+  if (s && s.classList.contains('active')) { ML.ready = false; mlPaint(); mlBoot(true); }
+  else { ML.ready = false; ML.forceNext = true; }
+});
+window.addEventListener('tm-yahoo-failed', function () { ML.yahooWaiting = false; mlPaint(); });
 
 function mlYahooDisconnect() {
   mlYahooSet(null);
@@ -1514,7 +1626,9 @@ function mlNeedsConnect() {
 function mlYahooBtn() {
   return mlYahooConectado()
     ? '<button class="ml-y is-on" onclick="mlYahooDisconnect()"><span class="ml-y-dot"></span>Yahoo connected. Disconnect</button>'
-    : '<button class="ml-y" onclick="mlYahooConnect()">Sign in with Yahoo</button>';
+    : ML.yahooWaiting
+      ? '<button class="ml-y is-wait" onclick="mlYahooConnect()">Finish signing in on Yahoo. Tap to reopen</button>'
+      : '<button class="ml-y" onclick="mlYahooConnect()">Sign in with Yahoo</button>';
 }
 
 function mlConnect() {
@@ -2574,7 +2688,7 @@ function renderMyLeagues() {
     return;
   }
   mlPaint();
-  if (!ML.ready && !ML.loading) mlBoot(false);
+  if (!ML.ready && !ML.loading) { var f = !!ML.forceNext; ML.forceNext = false; mlBoot(f); }
 }
 
 // Si el usuario abrio la pestana antes de que este archivo terminara de cargar,
@@ -2591,6 +2705,7 @@ window.mlRefresh = mlRefresh;
 window.mlCerrarRecap = mlCerrarRecap;
 window.mlOpenOdds = mlOpenOdds;
 window.mlYahooConnect = mlYahooConnect;
+window.mlYahooStart = mlYahooStart;
 window.mlYahooDisconnect = mlYahooDisconnect;
 window.mlShare = mlShare;
 window.mlSetFiltro = mlSetFiltro;

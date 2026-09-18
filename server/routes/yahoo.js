@@ -28,7 +28,11 @@ const router = express.Router();
 // en produccion llevando a una pagina de error de Yahoo.
 
 const YAHOO_AUTH = 'https://api.login.yahoo.com/oauth2/request_auth';
-const YAHOO_TOKEN = 'https://api.login.yahoo.com/oauth2/get_token';
+// El gate de login (scripts/qa-yahoo-login.mjs) apunta el canje a un Yahoo de
+// mentira en localhost. Solo se acepta una direccion LOCAL: aqui viaja el
+// secreto de la app, y en ningun caso puede salir hacia otro host.
+const YAHOO_TOKEN = (/^http:\/\/(127\.0\.0\.1|localhost):\d+\//.test(process.env.YAHOO_TOKEN_URL || '')
+  ? process.env.YAHOO_TOKEN_URL : 'https://api.login.yahoo.com/oauth2/get_token');
 const YAHOO_FANTASY = 'https://fantasysports.yahooapis.com/fantasy/v2';
 
 function configured() {
@@ -85,28 +89,122 @@ async function yahooGet(pathPart, token) {
   return res.json();
 }
 
-function popupReply(res, payload) {
-  const json = JSON.stringify(payload).replace(/</g, '\\u003c');
-  res.set('Content-Type', 'text/html').send(
-    '<!doctype html><html><body style="font-family:sans-serif;background:#111;color:#eee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">' +
-    '<div id="msg">Finishing up...</div>' +
-    '<script>var p=' + json + ';' +
-    // Al propio origen y no a "*": desde que el mensaje lleva un token de
-    // Yahoo, mandarlo a cualquier ventana seria repartirlo.
-    'if(window.opener){window.opener.postMessage({type:"trademind-yahoo",payload:p},window.location.origin);' +
-    'document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster imported. You can close this window.";' +
-    'setTimeout(function(){window.close();},1200);}' +
-    // Sin opener no hay a quien avisar por postMessage: pasa en el telefono
-    // (la PWA instalada abre el login a pantalla completa) y en navegadores
-    // que cortan la cadena de ventanas. Esta pagina corre en NUESTRO origen,
-    // asi que puede guardar el token donde el cliente ya lo busca
-    // (localStorage tm_yahoo_tok, ver myleagues.js) y volver a Leagues.
-    // Antes este camino era un callejon: "abre Mac Draft y prueba otra vez".
-    'else if(p.token&&p.token.access_token){try{localStorage.setItem("tm_yahoo_tok",JSON.stringify(p.token));}catch(_){}' +
-    'document.getElementById("msg").textContent="Yahoo connected. Taking you to your leagues...";' +
-    'setTimeout(function(){window.location.replace("/myleagues");},600);}' +
-    'else{document.getElementById("msg").textContent=p.error?("Import failed: "+p.error):"Roster loaded. Open Mac Draft and try the Yahoo login again.";}' +
-    '</script></body></html>'
+/* ----------------------------------------------------------------------------
+   RELEVO DEL LOGIN (2026-09-18). Por que existe:
+   En la app instalada del iPhone, el login de Yahoo se abre en una capa de
+   Safari que NO comparte almacenamiento con la app. El callback guardaba el
+   token en el localStorage de esa capa y la app nunca lo veia: te logueabas y
+   seguias sin Yahoo. Tambien pasa con un popup bloqueado que cae a otra
+   pestana.
+
+   Arreglo: el navegador que pide el login inventa un secreto de 128 bits (h) y
+   se lo pasa a /login. El callback deja el token CIFRADO con una llave que sale
+   de h, bajo un nombre que tambien sale de h, durante cinco minutos. La app
+   pregunta a /handoff con su h, se lo lleva y se borra. Nuestro almacen nunca
+   tiene nada legible sin el secreto, que solo existe en ese navegador, y nada
+   dura mas de cinco minutos. La decision de fondo (el token vive en el
+   navegador del usuario, no en el servidor) sigue en pie.
+---------------------------------------------------------------------------- */
+const crypto = require('crypto');
+const HANDOFF_TTL = 5 * 60 * 1000;
+const _handoffMem = new Map();
+
+function handoffValido(h) { return typeof h === 'string' && /^[a-f0-9]{32,64}$/.test(h); }
+function handoffId(h) { return crypto.createHash('sha256').update('yh-id:' + h).digest('hex').slice(0, 40); }
+function handoffKey(h) { return crypto.createHash('sha256').update('yh-key:' + h).digest(); }
+function handoffStore() {
+  if (process.env.YAHOO_HANDOFF_STORE === 'local') return 'file';
+  return process.env.BLOB_READ_WRITE_TOKEN ? 'blob' : 'file';
+}
+function handoffFile(id) { return require('path').join(require('os').tmpdir(), 'yahoo-handoff-' + id + '.json'); }
+
+function handoffSeal(h, token) {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', handoffKey(h), iv);
+  const data = Buffer.concat([c.update(JSON.stringify(token), 'utf8'), c.final()]);
+  return { iv: iv.toString('base64'), tag: c.getAuthTag().toString('base64'), data: data.toString('base64'), exp: Date.now() + HANDOFF_TTL };
+}
+function handoffOpen(h, doc) {
+  const d = crypto.createDecipheriv('aes-256-gcm', handoffKey(h), Buffer.from(doc.iv, 'base64'));
+  d.setAuthTag(Buffer.from(doc.tag, 'base64'));
+  const raw = Buffer.concat([d.update(Buffer.from(doc.data, 'base64')), d.final()]).toString('utf8');
+  return JSON.parse(raw);
+}
+
+async function handoffPut(h, token) {
+  const id = handoffId(h);
+  const doc = handoffSeal(h, token);
+  _handoffMem.set(id, doc);
+  if (handoffStore() === 'blob') {
+    const { put, list, del } = require('@vercel/blob');
+    await put('yahoo-handoff/' + id + '.json', JSON.stringify(doc),
+      { access: 'public', addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 0 });
+    // Un relevo que nadie recogio (la app se cerro) no se queda para siempre:
+    // cada subida barre los que pasaron de diez minutos.
+    try {
+      const { blobs } = await list({ prefix: 'yahoo-handoff/', limit: 100 });
+      const viejos = blobs.filter(x => Date.now() - new Date(x.uploadedAt).getTime() > 2 * HANDOFF_TTL).map(x => x.url);
+      if (viejos.length) await del(viejos);
+    } catch (_) { }
+  } else {
+    try { require('fs').writeFileSync(handoffFile(id), JSON.stringify(doc)); } catch (_) { }
+  }
+}
+
+// Devuelve el token una sola vez, o null si todavia no llego (o ya caduco).
+async function handoffTake(h) {
+  const id = handoffId(h);
+  let doc = _handoffMem.get(id) || null;
+  let blobUrl = null;
+  if (!doc && handoffStore() === 'blob') {
+    const { list } = require('@vercel/blob');
+    const { blobs } = await list({ prefix: 'yahoo-handoff/' + id, limit: 1 });
+    if (blobs.length) {
+      blobUrl = blobs[0].url;
+      const r = await fetch(blobUrl + '?t=' + Date.now());
+      if (r.ok) doc = await r.json();
+    }
+  } else if (!doc) {
+    try { doc = JSON.parse(require('fs').readFileSync(handoffFile(id), 'utf8')); } catch (_) { }
+  }
+  if (!doc) return null;
+  // Un solo uso: se borra antes de devolver nada.
+  _handoffMem.delete(id);
+  if (handoffStore() === 'blob') {
+    try {
+      const { del, list } = require('@vercel/blob');
+      if (!blobUrl) { const { blobs } = await list({ prefix: 'yahoo-handoff/' + id, limit: 1 }); blobUrl = blobs[0] && blobs[0].url; }
+      if (blobUrl) await del(blobUrl);
+    } catch (_) { }
+  } else {
+    try { require('fs').unlinkSync(handoffFile(id)); } catch (_) { }
+  }
+  if (!doc.exp || Date.now() > doc.exp) return null;
+  try { return handoffOpen(h, doc); } catch (_) { return null; }
+}
+
+// La vuelta a la app, cuando no hay ventana que la abrio. Solo rutas propias:
+// un "//otro.com" aqui seria una redireccion abierta con un token encima.
+function retSeguro(r) {
+  return (typeof r === 'string' && /^\/[A-Za-z0-9_\-/?=&.%]*$/.test(r) && !r.startsWith('//') && r.length <= 200) ? r : null;
+}
+function packState(o) { return Buffer.from(JSON.stringify(o)).toString('base64url'); }
+function unpackState(s) {
+  try { const o = JSON.parse(Buffer.from(String(s || ''), 'base64url').toString('utf8')); return (o && typeof o === 'object') ? o : {}; }
+  catch (_) { return {}; }
+}
+
+function popupReply(res, payload, ret) {
+  // Los datos van en un bloque JSON inerte y la logica en /yahoo-done.js. El
+  // escapado de "<" impide cerrar el bloque desde un mensaje de error de Yahoo.
+  const datos = JSON.stringify({ p: payload, ret: retSeguro(ret) || '' }).replace(/</g, '\\u003c');
+  res.set('Content-Type', 'text/html').set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').send(
+    '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>Yahoo | Mac Draft</title></head>' +
+    '<body style="font-family:-apple-system,system-ui,sans-serif;background:#171614;color:#eee;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:0 20px">' +
+    '<div id="msg" style="text-align:center;max-width:320px;line-height:1.5">Finishing up...</div>' +
+    '<script type="application/json" id="yahoo-data">' + datos + '</script>' +
+    '<script src="/yahoo-done.js?v=2026091801"></script></body></html>'
   );
 }
 
@@ -136,6 +234,12 @@ router.get('/login', (req, res) => {
     language: 'en-us'
   });
   if (process.env.YAHOO_SCOPE) params.set('scope', process.env.YAHOO_SCOPE);
+  // El secreto del relevo (h) y la vuelta (r) viajan por state: Yahoo lo
+  // devuelve intacto al callback. Lo que no pasa la forma se ignora.
+  const st = {};
+  if (handoffValido(req.query.h)) st.h = req.query.h;
+  if (retSeguro(req.query.r)) st.r = req.query.r;
+  if (st.h || st.r) params.set('state', packState(st));
   res.redirect(`${YAHOO_AUTH}?${params}`);
 });
 
@@ -143,13 +247,15 @@ router.get('/login', (req, res) => {
 router.get('/callback', async (req, res) => {
   if (!configured()) return res.status(503).send('Yahoo login is not configured yet.');
   const { code, error, error_description } = req.query;
+  const st = unpackState(req.query.state);
+  const ret = retSeguro(st.r);
   if (error || !code) {
     const detail = error
       ? (String(error) + (error_description ? ': ' + error_description : ''))
       : (Object.keys(req.query).length
           ? 'Yahoo sent no login code (it returned: ' + Object.keys(req.query).join(', ') + '). This is usually a redirect URI mismatch in the Yahoo app.'
           : 'This page opened without a Yahoo login. Start from the "Sign in with Yahoo" button, do not open this link directly.');
-    return popupReply(res, { error: detail });
+    return popupReply(res, { error: detail }, ret);
   }
   try {
     const basic = Buffer.from(`${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`).toString('base64');
@@ -174,48 +280,22 @@ router.get('/callback', async (req, res) => {
         + (tokenData.error_description ? ' - ' + String(tokenData.error_description).slice(0, 140) : ''));
     }
     const token = tokenData.access_token;
-
-    // All of the user's NFL fantasy teams (any season Yahoo still exposes; nfl = current)
-    const teamsJson = await yahooGet('/users;use_login=1/games;game_keys=nfl/teams', token);
-    const rawTeams = deepCollect(teamsJson, 'team', []);
-    const teams = rawTeams.map(t => flattenEntity(t)).filter(t => t.team_key);
-    if (!teams.length) return popupReply(res, { error: 'No Yahoo fantasy football teams found on this account.' });
-
-    // Pull each roster (cap at 6 teams to keep the callback snappy)
-    const results = [];
-    for (const t of teams.slice(0, 6)) {
-      try {
-        const rosterJson = await yahooGet(`/team/${t.team_key}/roster`, token);
-        const rawPlayers = deepCollect(rosterJson, 'player', []);
-        const players = rawPlayers
-          .map(p => flattenEntity(p))
-          .filter(p => p.name && p.name.full)
-          .map(p => ({
-            name: p.name.full,
-            position: p.display_position || '',
-            team: p.editorial_team_abbr || ''
-          }));
-        if (players.length) {
-          results.push({
-            team_key: t.team_key,
-            team_name: (typeof t.name === 'object' ? t.name.full : t.name) || 'My Yahoo Team',
-            players
-          });
-        }
-      } catch (_) { /* skip teams whose roster call fails */ }
-    }
     // El token viaja al navegador del usuario, que es donde vive (ver la nota
-    // larga mas abajo). Sin esto, My Leagues tendria que mandarlo a loguearse
-    // otra vez en cada visita.
+    // larga mas abajo). Antes, aqui se bajaban hasta seis planteles uno por uno
+    // antes de contestar: varios segundos de "Finishing up..." para un dato que
+    // ya nadie usa, porque el cliente pide las ligas por /leagues con el token.
     const credenciales = {
       access_token: token,
       refresh_token: tokenData.refresh_token || null,
       expires_at: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000
     };
-    if (!results.length) return popupReply(res, { error: 'Could not read any rosters from Yahoo.', token: credenciales });
-    popupReply(res, { teams: results, token: credenciales });
+    // El relevo NO se deja aqui. Si el servidor lo guardara solo, cualquiera
+    // podria mandar a una victima un enlace de login con un h que el conoce y
+    // recoger el token de ella. La pagina lo sube solo si hace falta (otro
+    // almacenamiento) y solo despues de que la persona lo confirma con un toque.
+    popupReply(res, { token: credenciales, h: handoffValido(st.h) ? st.h : '' }, ret);
   } catch (e) {
-    popupReply(res, { error: e.message });
+    popupReply(res, { error: e.message }, ret);
   }
 });
 
@@ -606,6 +686,40 @@ router.get('/league/:key/free-agents', async (req, res) => {
   } catch (e) { respondeYahoo(res, e); }
 });
 
+// POST /api/yahoo/handoff {h, token} - la pagina de vuelta, tras el toque de
+// confirmacion, deja el token cifrado para la app que lo pidio. Sin el h
+// secreto de esa app nadie puede leerlo, y nadie puede meterle un token a una
+// app ajena sin conocer su h.
+router.post('/handoff', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const b = req.body || {};
+  const t = b.token || {};
+  const str = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
+  if (!handoffValido(b.h) || !str(t.access_token, 4096) || (t.refresh_token != null && !str(t.refresh_token, 1024))) {
+    return res.status(400).json({ error: 'bad handoff' });
+  }
+  try {
+    await handoffPut(b.h, { access_token: t.access_token, refresh_token: t.refresh_token || null,
+      expires_at: Number(t.expires_at) || (Date.now() + 3600 * 1000) });
+    res.json({ ok: true });
+  } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 160) }); }
+});
+
+// POST /api/yahoo/handoff/take {h} - la app recoge el token que dejo la
+// confirmacion. Todavia no llego = 200 {pending:true}: es el camino normal
+// mientras la persona teclea su clave, y un 404 ensuciaria la consola en cada
+// sondeo. Por POST para que el secreto no quede en los registros como URL.
+router.post('/handoff/take', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const h = req.body && req.body.h;
+  if (!handoffValido(h)) return res.status(400).json({ error: 'bad handoff' });
+  try {
+    const token = await handoffTake(h);
+    if (!token) return res.json({ pending: true });
+    res.json({ token });
+  } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 160) }); }
+});
+
 // POST /api/yahoo/refresh - un token de acceso dura una hora. El de refresco lo
 // guarda el navegador y se cambia aqui, que es donde vive el secreto de la app.
 router.post('/refresh', async (req, res) => {
@@ -620,7 +734,10 @@ router.post('/refresh', async (req, res) => {
       body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: rt, redirect_uri: redirectUri(req) })
     });
     const d = await r.json();
-    if (!d.access_token) return res.status(401).json({ error: 'refresh failed', expired: true });
+    // Solo un rechazo de Yahoo significa sesion muerta. Un 5xx suyo es un
+    // tropiezo: el cliente conserva la sesion y reintenta, no te desloguea.
+    const pasajero = r.status >= 500 || r.status === 429;
+    if (!d.access_token) return res.status(pasajero ? 502 : 401).json({ error: 'refresh failed', expired: !pasajero });
     res.json({ access_token: d.access_token, refresh_token: d.refresh_token || rt, expires_in: numY(d.expires_in, 3600) });
   } catch (e) { res.status(502).json({ error: String(e.message).slice(0, 200) }); }
 });
@@ -631,3 +748,6 @@ module.exports.rosterPositionsDeYahoo = rosterPositionsDeYahoo;
 module.exports.scoringDeYahoo = scoringDeYahoo;
 module.exports.flattenEntity = flattenEntity;
 module.exports.deepCollect = deepCollect;
+module.exports.retSeguro = retSeguro;
+module.exports.handoffSeal = handoffSeal;
+module.exports.handoffOpen = handoffOpen;

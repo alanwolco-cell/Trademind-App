@@ -1283,11 +1283,79 @@ function normalizeName(n){
   return n.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
 }
 
+// ── FAAB como activo del trade (2026-09-18) ─────────────────────────────────
+// Sleeper deja meter presupuesto de waivers en un trade, y 78 de ~4.000 trades
+// medidos lo hacen. Se valora con lo que el mercado de waivers REAL paga por
+// el, medido en scripts/faab-value-study.mjs: 7.976 pujas ganadas en 450 ligas
+// de Sleeper, semanas 1 y 2 de 2026, cada jugador en la escala de FantasyCalc
+// de su liga. Cuenta lo que el dinero AÑADE sobre una alta gratis (una alta de
+// $0 ya trae 148 en redraft y 369 en dynasty; pagar compra solo lo de encima):
+//   redraft 11 por cada 1% del bote [9-12], dynasty 21 [18-25].
+// Y vale lo que queda por comprar con el: la parte del gasto de FAAB de la
+// temporada que todavia esta por delante en cada semana (117 ligas de 2025),
+// dividida por 0.9 porque las tasas se midieron cuando quedaba ~90% del gasto.
+// Lo que NO se usa, y por que: los trades de FAAB por jugadores (18 en la
+// muestra, dispersion enorme) y las tasas que cuentan las altas de $0.
+var TM_FAAB_RE=/^\$(\d{1,5})\s*FAAB$/i;
+var TM_FAAB_RATE={redraft:11,dynasty:21};
+var TM_FAAB_AHEAD=[1,1,.84,.74,.66,.57,.48,.43,.38,.31,.26,.23,.18,.14,.10,.06,.02,.01,0];
+// La semana sale del calendario que initNflState() guarda en NFL_WEEK. Antes
+// de la temporada (y en el receso, cuando el bote se renueva) vale entero.
+function tmFaabWeek(){
+  var ty=(typeof NFL_SEASON_TYPE!=='undefined')?NFL_SEASON_TYPE:'';
+  var wk=(typeof NFL_WEEK!=='undefined')?parseInt(NFL_WEEK,10):0;
+  if(ty==='post')return TM_FAAB_AHEAD.length;
+  if(ty==='pre'||ty==='off'||!wk)return 1;
+  return Math.max(1,wk);
+}
+// Contexto de FAAB de la liga cargada, o null si en esa liga no se puja con
+// dinero (waivers por orden, Yahoo sin el dato, liga sin cargar).
+function tmFaabCtx(){
+  var w=window._leagueWaiver;
+  if(!w||w.type!==2||!(w.budget>0)||window.leaguePlatform==='yahoo')return null;
+  function left(r){
+    if(!r)return null;
+    var used=Number(r.settings&&r.settings.waiver_budget_used)||0;
+    // Sin tope por arriba: el FAAB se tradea y un equipo puede tener MAS que el
+    // bote (waiver_budget_used negativo). Ver CLAUDE.md, 2026-09-09.
+    return Math.max(0,w.budget-used);
+  }
+  var opp=null;try{var _os=document.getElementById('opp-select');opp=_os&&_os.value?_rosterForUser(_os.value):null;}catch(_){}
+  return {budget:w.budget,week:tmFaabWeek(),eje:leagueMode==='redraft'?'redraft':'dynasty',
+    give:left(_myRosterObj()),get:left(opp)};
+}
+function tmFaabValue(dollars){
+  var c=tmFaabCtx();
+  if(!c||!(dollars>0))return 0;
+  var ahead=Math.min(1,(TM_FAAB_AHEAD[Math.min(c.week,TM_FAAB_AHEAD.length-1)]||0)/0.9);
+  return Math.round(TM_FAAB_RATE[c.eje]*(dollars/c.budget*100)*ahead);
+}
+function _tmIsFaabInput(i){return TM_FAAB_RE.test(String(i&&i.value||'').trim());}
+function _tmNoFaab(els){return els.filter(function(i){return !_tmIsFaabInput(i);});}
+// La linea que explica de donde sale el numero. Sin ella, "$25 = 190" es un
+// numero magico.
+function tmFaabNote(){
+  var c=tmFaabCtx();if(!c)return '';
+  var parts=[];
+  ['give','get'].forEach(function(side){
+    document.querySelectorAll('#'+side+'-players input').forEach(function(i){
+      var m=String(i.value||'').trim().match(TM_FAAB_RE);
+      if(m)parts.push((side==='give'?'you send ':'you get ')+'$'+m[1]+' of $'+c.budget+' FAAB = '+tmFaabValue(parseInt(m[1],10)).toLocaleString());
+    });
+  });
+  if(!parts.length)return '';
+  return parts.join(', ')+'. That is what that much budget adds on waivers from week '+c.week
+    +' on, in this league\'s '+c.eje+' scale, measured over 7,976 winning bids in 450 Sleeper leagues. FAAB is worth less every week: less of the waiver market is left to buy.';
+}
+
 function getKtcValue(name, sleeperId){
   if(!name&&!sleeperId) return 0;
   // 1. Exact match by Sleeper ID (most accurate - no name ambiguity)
   if(sleeperId && ktcById[sleeperId]) return ktcById[sleeperId];
   if(!name) return 0;
+  // FAAB metido en el trade ("$25 FAAB"): se precia en la misma escala.
+  var _fm=String(name).match(TM_FAAB_RE);
+  if(_fm) return tmFaabValue(parseInt(_fm[1],10));
   // 2. Exact name match (lowercase)
   var key=name.toLowerCase();
   if(ktcValues[key]) return ktcValues[key];
@@ -1519,6 +1587,7 @@ function renderLeagues(leagues, autoSelectId){
   },100);}
   var list=document.getElementById("league-list");
   list.innerHTML="";
+  try{var _yb=document.querySelector('#yahoo-add-row .yahoo-add-btn');if(_yb)_yb.hidden=typeof mlYahooConectado==='function'&&mlYahooConectado();}catch(_){}
   // Todas las ligas de la cuenta tienen los trades apagados: decirlo. Un panel
   // vacio sin explicacion se lee como que el producto se rompio.
   if(!leagues.length){
@@ -1562,6 +1631,7 @@ function renderLeagues(leagues, autoSelectId){
 // historial de trades. Se dejan vacios y se DICE, en vez de valorar picks en
 // cero y ensenar "tendencias" calculadas sobre una lista vacia.
 async function loadYahooLeague(key,name,season){
+  window._leagueWaiver=null;   // Yahoo no entrega el FAAB de cada equipo: no se ofrece
   var _seq=++_leagueLoadSeq;
   resetTradeWorkspace();
   window.leaguePlatform='yahoo';
@@ -1660,6 +1730,9 @@ async function loadLeague(lid,name,rosters,season){
     return loadYahooLeague(lid,name||(_lg&&_lg.name),season||(_lg&&_lg.season));
   }
   window.leaguePlatform='sleeper';
+  // El reglamento de waivers de la liga ANTERIOR no puede preciar FAAB aqui
+  // mientras llega el de esta.
+  window._leagueWaiver=null;
   // Volver de una liga de Yahoo (o de un import de ESPN) deja userId con una
   // clave que no existe en Sleeper. Se devuelve al usuario su identidad de
   // Sleeper ANTES de buscar su roster.
@@ -1719,6 +1792,9 @@ async function loadLeague(lid,name,rosters,season){
   // tipico de best ball): el producto no ofrece tradear ahi (pedido del
   // dueno, 2026-09-12). Cada superficie de trades consulta esta bandera.
   window.leagueNoTrades=Number(leagueInfo&&leagueInfo.settings&&leagueInfo.settings.disable_trades)===1;
+  // Waivers de la liga: waiver_type 2 es FAAB. Lo lee tmFaabCtx().
+  try{var _ws=(leagueInfo&&leagueInfo.settings)||{};
+    window._leagueWaiver={type:Number(_ws.waiver_type),budget:Number(_ws.waiver_budget)||0};}catch(_){window._leagueWaiver=null;}
   var _ntb=document.getElementById('no-trades-banner');
   if(_ntb){_ntb.style.display=window.leagueNoTrades?'block':'none';
     if(window.leagueNoTrades)_ntb.innerHTML='<b>'+leagueName+'</b> has trades disabled in its league settings. You can still analyze hypotheticals here, but no trade you build can actually be made in that league.';}
@@ -2014,34 +2090,50 @@ function startYahooLogin(){
   // repetir OAuth. La ruta nueva de ligas es la fuente de verdad y no tiene el
   // tope viejo de seis planteles del callback.
   if(typeof mlYahooConectado==='function'&&mlYahooConectado()){
-    loadYahooImportChoices();return;
+    tmYahooAfterConnect();return;
   }
-  if(st)st.textContent='Waiting for Yahoo login...';
-  var w=520,h=680,x=(screen.width-w)/2,y=(screen.height-h)/2;
-  var popup=window.open('/api/yahoo/login','trademind-yahoo','width='+w+',height='+h+',left='+x+',top='+y);
-  if(!popup&&st)st.textContent='Allow pop-ups, then tap Yahoo again.';
+  // El login es UNO para todas las puertas (myleagues.js): popup, misma
+  // pestana si el popup no abre, y relevo por servidor en la app instalada.
+  if(typeof mlYahooStart!=='function'){if(st)st.textContent='Still loading. Tap Yahoo again in a second.';return;}
+  var modo=mlYahooStart();
+  if(st&&modo==='popup')st.textContent='Finish signing in on the Yahoo window. Your leagues load on their own.';
 }
+// Tras entrar con Yahoo desde el analizador. Con Sleeper ya cargado, las ligas
+// de Yahoo se suman a la MISMA lista (y al cambiador de liga) sin recargar
+// nada; el selector del panel de login se sigue llenando para quien entro solo
+// por Yahoo.
+async function tmYahooAfterConnect(){
+  var mias=window._myLeagues||[];
+  var conSleeper=mias.some(function(l){return !tmIsYahoo(l);});
+  if(conSleeper){
+    var y=await tmYahooLeagues();
+    var base=(window._myLeagues||[]).filter(function(l){return !tmIsYahoo(l);});
+    window._myLeagues=base.concat(y);
+    var lp=document.getElementById('league-panel');
+    if(lp&&lp.style.display!=='none'&&!leagueId){window._autoRestoring=true;renderLeagues(window._myLeagues);}
+    var dd=document.getElementById('lg-switch-dd');
+    if(dd&&dd.style.display==='block')_renderLeagueSwitcher('');
+    var _yb=document.querySelector('#yahoo-add-row .yahoo-add-btn');if(_yb)_yb.hidden=true;
+    var ya=document.getElementById('yahoo-add-status');
+    if(ya)ya.textContent=y.length?(y.length+' Yahoo league'+(y.length===1?'':'s')+' added. Find '+(y.length===1?'it':'them')+' under Change league.'):'Yahoo is connected, but no leagues came back. If you have some, try again in a minute.';
+  }
+  loadYahooImportChoices();
+}
+window.addEventListener('tm-yahoo-connected',function(){tmYahooAfterConnect();});
+window.addEventListener('tm-yahoo-failed',function(ev){
+  var st=document.getElementById('yahoo-status');
+  if(st)st.textContent='Yahoo sign-in failed: '+String(ev&&ev.detail||'try again');
+});
 window.addEventListener('message',function(ev){
-  // El mensaje solo puede venir de NUESTRA propia ventana emergente. Sin esta
-  // linea, cualquier pagina que nos tenga abiertos podia inyectar un roster
-  // falso, y desde que el mensaje lleva ademas un token de Yahoo, mucho peor.
+  // El mensaje solo puede venir de NUESTRA propia ventana emergente.
   if(ev.origin!==window.location.origin)return;
   var d=ev.data;
   if(!d||d.type!=='trademind-yahoo'||!d.payload)return;
-  // Las DOS puertas de Yahoo (esta y la de All Leagues) guardan la misma
-  // credencial en el mismo sitio. Que cada una hiciera lo suyo es como se
-  // separan dos caminos que deberian dar lo mismo, y este repo ya pago esa
-  // leccion con la subasta.
-  if(d.payload.token&&d.payload.token.access_token&&window.mlYahooSet){
-    try{ mlYahooSet(d.payload.token); }catch(_){}
-  }
+  // Token o error los atiende myleagues.js (mlYahooGot), que es la unica
+  // puerta que guarda la credencial y avisa con 'tm-yahoo-connected'. Aqui
+  // solo queda el molde viejo de planteles sueltos, sin token.
+  if(d.payload.token&&d.payload.token.access_token)return;
   var st=document.getElementById('yahoo-status');
-  // El callback viejo devuelve hasta seis planteles. Ya no se usa como fuente
-  // del import: con el token guardado pedimos todas las ligas al proxy y luego
-  // una liga completa, igual que la pantalla Leagues. Importante: el callback
-  // puede traer token Y el error viejo "Could not read any rosters". El token
-  // gana, porque /leagues es ahora quien sabe si la cuenta se puede importar.
-  if(d.payload.token&&d.payload.token.access_token){loadYahooImportChoices();return;}
   if(d.payload.error){if(st)st.textContent=d.payload.error;return;}
   _yahooTeams=d.payload.teams||[];
   if(!_yahooTeams.length){if(st)st.textContent='No fantasy football teams found on that Yahoo account.';return;}
@@ -3270,6 +3362,12 @@ function _renderLeagueSwitcher(q){
     html+='<div style="padding:11px 12px;font-size:11.5px;color:var(--muted)">'
       +(leagues.length?'No league matches that.':'No leagues loaded for this account.')+'</div>';
   }
+  // Quien ya tiene Sleeper no tenia por donde traer Yahoo: el boton vivia en
+  // el panel de login, que desaparece al conectar. Aqui, donde se eligen ligas.
+  if(typeof mlYahooConectado==='function'&&!mlYahooConectado()){
+    html+='<div class="ac-item" style="padding:9px 12px;cursor:pointer;border-top:1px solid var(--border);color:var(--accent-bright)" '
+      +'onclick="document.getElementById(\'lg-switch-dd\').style.display=\'none\';startYahooLogin()">+ Add your Yahoo leagues</div>';
+  }
   html+='<div style="border-top:1px solid var(--border);padding:8px 12px">'
     +'<span style="font-size:11px;color:var(--muted);cursor:pointer" onmousedown="document.getElementById(\'lg-switch-dd\').style.display=\'none\';resetAll();scrollToEl(document.getElementById(\'login-panel\'))">Use a different Sleeper account</span></div>';
   dd.innerHTML=html;
@@ -3582,6 +3680,7 @@ function clearTradeSide(cid,side){
   // Cleared by the user (not by a board sync): the board selection empties too
   if(!_syncingBoard&&typeof _boardSel!=='undefined'&&_boardSel[side]){
     _boardSel[side]={};
+    if(typeof _boardFaab!=='undefined')_boardFaab[side]=0;
     try{renderTradeBoards();}catch(_){}
   }
   updateKtcLive();
@@ -3606,6 +3705,7 @@ function resetYourQuestions(){
 // nothing stale carries across the switch.
 function resetTradeWorkspace(){
   _boardSel={give:{},get:{}};
+  _boardFaab={give:0,get:0};
   try{ clearTradeSide('give-players','give'); }catch(_){}
   try{ clearTradeSide('get-players','get'); }catch(_){}
   try{ resetYourQuestions(); }catch(_){}
@@ -3640,7 +3740,8 @@ function resetTradeWorkspace(){
 // write into the classic builder's (hidden) rows, so updateKtcLive, the value
 // bar, the 3-question reveal, analysis, share links and counters all work
 // exactly as before. The classic builder stays available behind a toggle.
-var _boardSel={give:{},get:{}};       // side -> {key: asset}
+var _boardSel={give:{},get:{}};
+var _boardFaab={give:0,get:0};        // side -> dolares de FAAB metidos en el trade       // side -> {key: asset}
 var _boardExpand={give:false,get:false};
 var _syncingBoard=false;              // guards clearTradeSide recursion
 var _BB_POS_COLORS={QB:POS_COLORS.QB,RB:POS_COLORS.RB,WR:POS_COLORS.WR,TE:POS_COLORS.TE,PK:'#8b6bff'};
@@ -3750,6 +3851,7 @@ function renderTradeBoards(){
   var _wrap=(boards.get||boards.give);
   _wrap=_wrap&&_wrap.closest('.bb-boards');
   if(_wrap)_wrap.classList.toggle('has-opp',_boardAssets('get').length>0);
+  try{_renderBoardFaab();}catch(_){}
 }
 function boardToggle(side,key){
   var asset=_boardAssets(side).find(function(a){return a.key===key;});
@@ -3779,20 +3881,69 @@ function _syncRowsFromBoard(side){
       var badge=input.closest('.player-row')&&input.closest('.player-row').querySelector('.pos-tag');
       if(badge){badge.textContent=a.kind==='k'?'PK':a.pos;badge.style.visibility='visible';}
     });
+    // El FAAB viaja como una fila mas ("$25 FAAB"), igual que un pick: asi el
+    // contador, el veredicto, el enlace compartido y el texto lo ven sin
+    // enseñarle a cada uno que existe.
+    var _f=_boardFaab[side]||0;
+    if(_f>0&&tmFaabCtx()){
+      var _in;
+      if(!sel.length)_in=c.querySelector('input');
+      else{addRow(cid,side);var _ins=c.querySelectorAll('input');_in=_ins[_ins.length-1];}
+      if(_in){
+        _in.value='$'+_f+' FAAB';_in.dataset.playerId='';_in.dataset.playerPos='';
+        var _bd=_in.closest('.player-row')&&_in.closest('.player-row').querySelector('.pos-tag');
+        if(_bd){_bd.textContent='$';_bd.style.visibility='visible';}
+      }
+    }
   }finally{_syncingBoard=false;}
   updateKtcLive();
+}
+// El usuario teclea cuanto FAAB entra en el trade de ese lado. Se acota a lo
+// que ese equipo tiene de verdad; NO se repinta el tablero (perderia el foco).
+function boardFaab(side,el){
+  var c=tmFaabCtx();if(!c)return;
+  var n=parseInt(String(el.value).replace(/[^0-9]/g,''),10)||0;
+  var tope=c[side];
+  var hint=document.getElementById('bb-faab-hint-'+side);
+  if(tope!=null&&n>tope){n=tope;el.value=String(tope);}
+  _boardFaab[side]=n;
+  if(hint)hint.textContent=_bbFaabHint(side,c,n);
+  _syncRowsFromBoard(side);
+}
+function _bbFaabHint(side,c,n){
+  var dueno=side==='give'?'You have':'They have';
+  var tiene=c[side]!=null?(dueno+' $'+c[side]+' of $'+c.budget):('Budget $'+c.budget);
+  return n>0?(tiene+'. $'+n+' is worth '+tmFaabValue(n).toLocaleString()+' in value.'):tiene+'.';
+}
+function _renderBoardFaab(){
+  var c=tmFaabCtx();
+  ['give','get'].forEach(function(side){
+    var box=document.getElementById('bb-faab-'+side);if(!box)return;
+    // Sin FAAB en la liga, o sin rival elegido todavia, no hay nada que ofrecer.
+    var hay=!!c&&(side==='give'?c.give!=null:c.get!=null);
+    box.hidden=!hay;
+    if(!hay){if(_boardFaab[side]){_boardFaab[side]=0;}return;}
+    var inp=box.querySelector('input');
+    if(inp&&document.activeElement!==inp)inp.value=_boardFaab[side]?String(_boardFaab[side]):'';
+    if(inp)inp.max=String(c[side]);
+    var hint=document.getElementById('bb-faab-hint-'+side);
+    if(hint)hint.textContent=_bbFaabHint(side,c,_boardFaab[side]||0);
+  });
 }
 function _boardSyncFromRows(side){
   // shared trade links and counters fill the classic rows: mirror them onto the board
   var c=document.getElementById(side+'-players');
   if(!c)return;
   _boardSel[side]={};
+  _boardFaab[side]=0;
   Array.from(c.querySelectorAll('input')).forEach(function(i){
     var v=i.value.trim(); if(!v)return;
     if(i.dataset.playerId){
       var p=allPlayers[i.dataset.playerId];
       _boardSel[side]['p'+i.dataset.playerId]={key:'p'+i.dataset.playerId,kind:'p',id:i.dataset.playerId,
         name:v,pos:(p||{}).pos||'?',team:(p||{}).team||'',val:getKtcValue(v,i.dataset.playerId)||0};
+    }else if(TM_FAAB_RE.test(v)){
+      _boardFaab[side]=parseInt(v.match(TM_FAAB_RE)[1],10)||0;
     }else if(/round|pick/i.test(v)){
       _boardSel[side]['k'+v]={key:'k'+v,kind:'k',name:v,pos:'PK',team:'',val:getKtcValue(v)||0};
     }
@@ -3818,7 +3969,7 @@ var _lastTradeSig='';
 function _tradeSigCheck(){
   // Signature only counts CONFIRMED players (picked from the dropdown), so typing doesn't trigger it
   var ids=Array.from(document.querySelectorAll('#give-players input,#get-players input'))
-    .map(function(i){return i.dataset.playerId||(/round|pick/i.test(i.value)?i.value.trim().toLowerCase():'');})
+    .map(function(i){return i.dataset.playerId||(/round|pick/i.test(i.value)?i.value.trim().toLowerCase():'')||(TM_FAAB_RE.test(i.value.trim())?'faab':'');})
     .filter(Boolean).join('|');
   if(ids!==_lastTradeSig){
     var changed=_lastTradeSig!=='';
@@ -4282,9 +4433,10 @@ function showYouVerdict(){
   var hasKtc=giveKtc>0||getKtc>0;
   // Same roster math the headline uses. Scoring this badge on the raw gap is
   // what made the two readouts contradict each other.
+  // El FAAB suma valor pero no ocupa plaza: fuera de la cuenta de cuerpos.
   var effGap=_tmEffGap(
-    giveEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
-    getEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    _tmNoFaab(giveEls).map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    _tmNoFaab(getEls).map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
     getKtc-giveKtc,hasKtc,(youAnswers?youAnswers[0]:null)).effGap;
   var r=tradeScore(effGap,giveKtc,getKtc,youAnswers,leagueMode,hasKtc);
   verdict=r.verdict;desc=r.desc;icon=r.icon;
@@ -4866,8 +5018,8 @@ async function runAnalysis(){
   // and BOTH incoming pieces have a real shot at outplaying the guy you send,
   // the two bites at the apple are worth more than the sheet says.
   var _eg=_tmEffGap(
-    giveInputEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
-    getInputEls.map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    _tmNoFaab(giveInputEls).map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
+    _tmNoFaab(getInputEls).map(function(i){return getKtcValue(i.value.trim(),i.dataset.playerId);}),
     ktcGap,hasKtc,sit);
   var effGap=_eg.effGap, _depthNote=_eg.note;
   var valueTier;
@@ -5065,7 +5217,9 @@ function sageStyleNote(valueTier){
   var styleHtml=""; // "For your style" block removed by request
   // Keep the verdict tight: headline + one-liner + profile chip. The reasoning
   // lives behind a small toggle so the read stays easy.
-  var depthHtml=_depthNote?"<div style='margin-top:8px;font-size:11px;color:var(--muted2);line-height:1.6'><strong style='color:var(--text)'>Roster math:</strong> "+_depthNote+"</div>":"";
+  var _faabNote='';try{_faabNote=tmFaabNote();}catch(_){}
+  var depthHtml=(_depthNote?"<div style='margin-top:8px;font-size:11px;color:var(--muted2);line-height:1.6'><strong style='color:var(--text)'>Roster math:</strong> "+_depthNote+"</div>":"")
+    +(_faabNote?"<div class='faab-note' style='margin-top:8px;font-size:11px;color:var(--muted2);line-height:1.6'><strong style='color:var(--text)'>FAAB:</strong> "+_faabNote+"</div>":"");
   var moreHtml=(whyHtml||styleHtml||depthHtml)
     ?"<button class='sage-more-toggle' onclick='toggleSageMore(this)'>Why Mac says this <span>&#9662;</span></button><div id='sage-more-detail'>"+whyHtml+depthHtml+styleHtml+"</div>"
     :"";

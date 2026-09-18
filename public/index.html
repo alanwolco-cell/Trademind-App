@@ -83,18 +83,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026091601">
+<link rel="stylesheet" href="/styles.css?v=2026091801">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026091601" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026091801" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026091601">
+<link rel="stylesheet" href="/theme.css?v=2026091801">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026091601">
+<link rel="stylesheet" href="/home.css?v=2026091801">
 <!-- v13 FLIGHT DECK, el vestido vivo desde el 2026-09-12 (direccion y acento
      cian elegidos por el dueno sobre el preview en vivo). Es una CAPA sobre
      v12 (el html lleva las dos clases arriba) y carga EL ULTIMO para ganar la
@@ -103,7 +103,7 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
      vuelo.mp4 y las imagenes fijas de iOS) sigue en los colores viejos A
      PROPOSITO: son un juego atado por la ley del primer fotograma identico y
      se regeneran JUNTOS en su propio commit. -->
-<link rel="stylesheet" href="/v13.css?v=2026091601">
+<link rel="stylesheet" href="/v13.css?v=2026091801">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -117,7 +117,7 @@ if(_skin){
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   document.querySelectorAll('link[href^="/v13.css"]').forEach(function(l){l.remove();});
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091601">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026091801">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -479,6 +479,12 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="card" id="league-panel" style="display:none">
             <div class="field-label">Your dynasty leagues</div>
             <div id="league-list"></div>
+            <!-- Con Sleeper conectado, el boton de Yahoo del panel de login ya no
+                 se ve. Esta es su puerta aqui; se esconde sola con Yahoo dentro. -->
+            <div id="yahoo-add-row" class="yahoo-add-row">
+              <button class="btn-sm yahoo-add-btn" onclick="startYahooLogin()"><span class="yahoo-mark">Y!</span> Add your Yahoo leagues</button>
+              <div id="yahoo-add-status" class="yahoo-add-status"></div>
+            </div>
           </div>
 
           <!-- TRADE BUILDER -->
@@ -522,10 +528,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
                 <div class="bb-board">
                   <div class="bb-head"><span><span class="you-dot"></span>You send</span><span class="bb-count" id="bb-count-give"></span></div>
                   <div class="bb-grid" id="board-mine"><div class="bb-empty">Connect a league to see your roster here.</div></div>
+                  <!-- FAAB en el trade: solo en ligas que pujan con dinero. Lo pinta _renderBoardFaab. -->
+                  <div class="bb-faab" id="bb-faab-give" hidden><label class="bb-faab-lbl" for="bb-faab-in-give">Add FAAB</label><span class="bb-faab-box">$<input id="bb-faab-in-give" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" autocomplete="off" oninput="boardFaab('give',this)"></span><span class="bb-faab-hint" id="bb-faab-hint-give"></span></div>
                 </div>
                 <div class="bb-board">
                   <div class="bb-head"><span><span class="them-dot"></span>You receive</span><span class="bb-count" id="bb-count-get"></span></div>
                   <div class="bb-grid" id="board-opp"><div class="bb-empty">Pick an opponent above to see their roster.</div></div>
+                  <div class="bb-faab" id="bb-faab-get" hidden><label class="bb-faab-lbl" for="bb-faab-in-get">Add FAAB</label><span class="bb-faab-box">$<input id="bb-faab-in-get" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" autocomplete="off" oninput="boardFaab('get',this)"></span><span class="bb-faab-hint" id="bb-faab-hint-get"></span></div>
                 </div>
               </div>
               
@@ -1973,13 +1982,13 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026091601"></script>
-<script src="/rankings.js?v=2026091601"></script>
-<script src="/weekly.js?v=2026091601"></script>
-<script src="/live.js?v=2026091601"></script>
-<script src="/myleagues.js?v=2026091601"></script>
-<script src="/push.js?v=2026091601" defer></script>
-<script src="/hub.js?v=2026091601"></script>
+<script src="/app.js?v=2026091801"></script>
+<script src="/rankings.js?v=2026091801"></script>
+<script src="/weekly.js?v=2026091801"></script>
+<script src="/live.js?v=2026091801"></script>
+<script src="/myleagues.js?v=2026091801"></script>
+<script src="/push.js?v=2026091801" defer></script>
+<script src="/hub.js?v=2026091801"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

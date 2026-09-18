@@ -9,7 +9,7 @@ Dominio: macdraft.app. Deploy en Vercel, proyecto `trademind-starter`.
 
 ## Gates obligatorios antes de cualquier deploy
 
-Esta lista decia OCHO y el repo tiene DIECISIETE (act. 2026-09-15). Llevaba
+Esta lista decia OCHO y el repo tiene DIECINUEVE (act. 2026-09-18). Llevaba
 meses sin actualizarse, asi que quien la leia creia estar corriendo la bateria
 entera con la mitad. Se actualiza AL AÑADIR un gate, no despues.
 
@@ -38,6 +38,8 @@ node scripts/qa-yahoo-parse.mjs  # SOLO si se toco el parseo de Yahoo (servidor)
 node scripts/qa-yahoo-analyzer.mjs # SOLO si se toco la lista de ligas del analizador
                                  #      o la carga de una liga de Yahoo (cliente)
 node scripts/qa-push.mjs         # SOLO si se tocaron las notificaciones
+node scripts/qa-yahoo-login.mjs  # SOLO si se toco el login de Yahoo (relevo, refresco, puertas)
+node scripts/qa-faab.mjs         # SOLO si se toco el FAAB del analizador o su valoracion
 ```
 
 **Intermitencia conocida, para no perseguir fantasmas:** qa-backlog y qa-hub
@@ -2777,3 +2779,73 @@ Gate: `qa-yahoo-analyzer` prueba el boton a 390px y el caso exacto token + error
 viejo. `qa-yahoo-analyzer`, `qa-backlog` y `qa-nav`: ALL GREEN, consola limpia.
 `node --check public/app.js` verde. Cache-bust `2026091601`. Sigue pendiente la
 primera corrida contra una cuenta Yahoo real; el gate usa el fixture del proxy.
+
+## Sesion 2026-09-18: login de Yahoo facil, y el FAAB entra al analizador
+
+Pedido del dueno: "make it easier to log in to your yahoo account, also add the
+faab factor into the trade analyzer".
+
+### Yahoo: por que costaba entrar, medido, no supuesto
+1. **Con Sleeper conectado no habia puerta.** El boton Y! vivia en el panel de
+   login del analizador, que desaparece al conectar Sleeper. Ahora: boton "Add
+   your Yahoo leagues" bajo la lista de ligas y una fila en "Change league". Al
+   conectar, las ligas de Yahoo se SUMAN a `window._myLeagues` sin recargar.
+2. **La app instalada del iPhone nunca recibia el token.** El login se abre en
+   una capa de Safari con OTRO almacenamiento; el callback guardaba el token ahi.
+   Arreglo: relevo cifrado. La app inventa un secreto `h` (128 bits), viaja en
+   el `state` del OAuth, y la capa, tras un TOQUE de confirmacion, sube el token
+   cifrado (AES-256-GCM, llave derivada de `h`) a `POST /api/yahoo/handoff`. La
+   app lo recoge con `POST /api/yahoo/handoff/take` (un solo uso, 5 min). El
+   token sigue viviendo en el navegador; el servidor solo guarda cifrado y breve.
+3. **Popup bloqueado = callejon.** Ahora el login cae a la misma pestana y el
+   callback vuelve a donde estabas (`r`, solo rutas propias).
+4. **Te deslogueaba un tropiezo de red.** El refresco borraba la sesion ante
+   cualquier fallo (502, sin senal, 429). Ahora solo ante un rechazo real de
+   Yahoo; un 401 en una llamada fuerza UN refresco y repite antes de rendirse.
+5. El callback ya no baja seis planteles antes de contestar (segundos de espera
+   para un dato que nadie usaba).
+
+Todo el login sale de UNA funcion (`mlYahooStart` en myleagues.js) y avisa con
+el evento `tm-yahoo-connected`; la pagina de vuelta es `public/yahoo-done.js`.
+
+**DOS AGUJEROS DE SEGURIDAD cerrados antes de desplegar, que no se reabren:**
+- **Robo de token por enlace armado.** La primera version dejaba el token en el
+  relevo desde el callback. Cualquiera podia mandar a una victima
+  `/api/yahoo/login?h=<suyo>` y recoger la sesion de ella. Lo vieron el revisor
+  de Opus y el agente de Codex por separado. Por eso el callback NO guarda nada:
+  el relevo solo arranca con el toque "Connect", que avisa "if someone sent you
+  this link, close it". Gate (2b2) y (3c2).
+- **Login CSRF (venia de antes).** Un enlace al callback con el codigo de otra
+  cuenta metia esa cuenta en el navegador de quien lo abria. Ahora el token
+  solo se guarda si ESTE navegador pidio ese login (`tm_yahoo_h` == `h`). (4c).
+
+**Codex NO opino**: limite de uso agotado hasta el 2026-09-21. Queda pendiente
+pasarle el relevo cuando vuelva.
+
+**SIN VERIFICAR en un iPhone real**: el relevo esta probado con dos contextos de
+navegador separados (qa-yahoo-login (3)), que es la simulacion honesta de la
+capa de Safari, pero la prueba final es el dueno desde la app instalada.
+
+### El FAAB en el analizador
+El FAAB entra como una fila mas del trade ("$25 FAAB"), igual que un pick, asi
+que contador, veredicto, texto y enlace compartido lo ven sin tocar cada uno.
+Se teclea en una casilla bajo cada tablero, solo en ligas de Sleeper con FAAB
+(`waiver_type` 2), acotada a lo que el equipo TIENE (que puede pasar del bote).
+No cuenta como cuerpo en la cuenta de plazas (`_tmNoFaab` en las dos llamadas a
+`_tmEffGap`). El veredicto lo explica en "Why Mac says this".
+
+**De donde sale el precio (scripts/faab-value-study.mjs, reproducible):** 7.976
+pujas ganadas en 450 ligas de Sleeper (semanas 1-2 de 2026), cada jugador en la
+escala FantasyCalc de su liga. Cuenta lo que el dinero anade SOBRE una alta
+gratis: redraft 11 por 1% del bote [9-12], dynasty 21 [18-25]. Decae con la
+parte del gasto de FAAB que queda por delante (117 ligas de 2025): semana 2 84%,
+semana 10 26%, playoffs 0. Escala real: $25 de $100 en redraft = ~260, o sea un
+jugador de banca. Lo que NO se uso: los 18 trades de FAAB por jugadores (muy
+dispersos) y las tasas que cuentan altas de $0. Yahoo no entrega el FAAB de cada
+equipo: ahi no se ofrece.
+
+Gates nuevos: `qa-yahoo-login` (32 checks, dos navegadores y un Yahoo de mentira
+en localhost via `YAHOO_TOKEN_URL`, que solo acepta localhost) y `qa-faab` (24).
+Verificado en rojo contra HEAD: 13 y 21 fallos. Un check de visibilidad pasaba
+sobre el bug de CSS (`display:flex` le gana a `[hidden]`): ahora todos miden el
+estilo computado, y se comprobo que se ponen rojos sin la regla.
