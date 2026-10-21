@@ -3809,3 +3809,42 @@ html.personal .user-dd-item[onclick*="openReferral"]{display:none!important}
    por renglon. Con 280 cabian tres a 390 y solo dos a 320: el mismo pie se
    repartia distinto por cuatro pixeles. */
 @media(max-width:480px){.footer-links{gap:10px 18px;max-width:230px;margin-left:auto;margin-right:auto}}
+
+/* TRADE GUARD (2026-10-21). La lectura del comisionado: nivel, a quien
+   favorece, 1 a 3 razones, los dos lados con record y puesto. Va debajo del
+   veredicto en el analizador y plegado dentro de cada tarjeta de League Trades.
+   Radios solo 6px y 999px. El color de nivel vive en la capsula y nada mas. */
+.tg-card{margin:0 0 12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.tg-card[hidden],.tg-why[hidden]{display:none}
+.tg-head,.tg-toggle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.tg-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tg-chip{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:700;
+  border:1px solid var(--border);color:var(--muted2);background:var(--surface2);white-space:nowrap}
+.tg-lv-even{color:var(--green);border-color:var(--green-dim,var(--border))}
+.tg-lv-lean{color:var(--text)}
+.tg-lv-lopsided{color:var(--yellow);border-color:var(--yellow-dim,var(--border))}
+.tg-lv-flag{color:var(--red);border-color:var(--red-dim,var(--border))}
+.tg-review{font-size:11px;color:var(--muted)}
+.tg-fav{font-size:12px;color:var(--text);font-weight:600;min-width:0;overflow-wrap:break-word}
+.tg-reasons{margin:10px 0 0;padding:0 0 0 18px;font-size:13px;line-height:1.5;color:var(--muted2)}
+.tg-reasons li+li{margin-top:4px}
+.tg-sides{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.tg-side{min-width:0;padding:8px 10px;background:var(--surface2);border-radius:6px}
+.tg-side-name{font-size:12px;font-weight:700;color:var(--text);overflow-wrap:break-word}
+.tg-side-meta{font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.tg-facts,.tg-league-facts{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+.tg-league-facts{margin:0 0 12px;padding:10px 12px;background:var(--surface2);border-radius:6px}
+.tg-league-facts .tg-title{margin-right:4px}
+/* En cada tarjeta de League Trades: toda la fila se toca (44px), no la capsula. */
+.tg-toggle{width:100%;min-height:44px;margin:0 0 8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tg-toggle .tg-fav{flex:1}
+.tg-caret{width:12px;height:12px;flex-shrink:0;color:var(--muted);transition:transform .15s ease}
+.tg-toggle[aria-expanded="true"] .tg-caret{transform:rotate(180deg)}
+.tg-why{margin:-2px 0 10px;padding:0 2px}
+.tg-why .tg-reasons{margin-top:4px}
+@media(max-width:360px){.tg-sides{grid-template-columns:1fr}}
+/* En el telefono la fila de cada trade suelta el rotulo: los hechos de arriba
+   ya dicen Trade Guard, y asi el nombre del favorecido cabe sin partirse. */
+@media(max-width:480px){.tg-toggle .tg-title{display:none}}
+@media(prefers-reduced-motion:reduce){.tg-caret{transition:none}}

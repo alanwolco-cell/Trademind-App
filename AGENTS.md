@@ -9,7 +9,7 @@ Dominio: macdraft.app. Deploy en Vercel, proyecto `trademind-starter`.
 
 ## Gates obligatorios antes de cualquier deploy
 
-Esta lista decia OCHO y el repo tiene DIECINUEVE (act. 2026-09-18). Llevaba
+Esta lista decia OCHO y el repo tiene VEINTE (act. 2026-10-21). Llevaba
 meses sin actualizarse, asi que quien la leia creia estar corriendo la bateria
 entera con la mitad. Se actualiza AL AÑADIR un gate, no despues.
 
@@ -40,6 +40,7 @@ node scripts/qa-yahoo-analyzer.mjs # SOLO si se toco la lista de ligas del anali
 node scripts/qa-push.mjs         # SOLO si se tocaron las notificaciones
 node scripts/qa-yahoo-login.mjs  # SOLO si se toco el login de Yahoo (relevo, refresco, puertas)
 node scripts/qa-faab.mjs         # SOLO si se toco el FAAB del analizador o su valoracion
+node scripts/qa-tradeguard.mjs   # SOLO si se toco Trade Guard (tradeguard.js, League Trades, records)
 ```
 
 **Intermitencia conocida, para no perseguir fantasmas:** qa-backlog y qa-hub
@@ -2884,3 +2885,75 @@ Cada lado ocupa como mucho la mitad menos el VS y parte a sus jugadores en
 filas; sin el escalon de 20px en filas partidas (la corona pisaba el nombre);
 el gap inline del lado le ganaba al row-gap, por eso va con !important; en 360
 o menos los circulos bajan a 50px. qa-faab (8), rojo sin el CSS.
+
+## Sesion 2026-10-21: Trade Guard
+
+Pedido del dueno, comisionado de Miami Boys Choir (Sleeper 1393450135224094720,
+redraft con 1 keeper, 12 equipos, half PPR, FAAB $1000, deadline semana 11,
+playoffs 6 desde la 15, veto 8 votos): detectar trades descompensados ANTES de
+que pasen y revisar los que ya pasaron, "basado en records, equipos, league
+format". SIN DESPLEGAR: el deploy lo decide el dueno.
+
+**Que es y donde vive.** `public/tradeguard.js` (modulo aparte, cargado detras
+de hub.js). `tgEvaluate(ctx, trade)` es PURA (sin DOM, sin fetch, sin
+Math.random); `tgCtxFromApp()` arma el ctx desde app.js. Dos superficies:
+- Analizador: `#trade-guard` debajo de `#verdict-card` (index.html), lo pinta
+  `tgPaintAnalyzer()` al final de runAnalysis y se esconde al empezar. NO toca
+  tradeScore ni el veredicto.
+- League Trades: hechos de la liga arriba y una fila plegable por trade de ESTA
+  temporada (`tgLeagueBlock`); los de la temporada anterior no se gradean.
+Estilos `.tg-*` al final de styles.css. Todo rotulado "for commissioner review":
+el guard da un nivel de riesgo con razones, decidir es del comisionado.
+
+**Decisiones (las del brief + los ajustes del principal tras Codex):**
+- Brecha = |in-out| / max(in,out): <15% even, 15-30% lean, 30%+ lopsided. Y un
+  PISO absoluto: si la brecha no llega a la mediana del valor de los titulares
+  de la liga (el mejor once de cada equipo; 2.946 en la semana 7), no pasa de
+  lean ("less than one typical starter").
+- 'flag' queda SOLO para el dumping de un equipo ELIMINADO (wins + semanas que
+  quedan < wins de la linea; remaining = playoff_week_start - week). Una brecha
+  de mas de 50% sola es 'lopsided' con su frase. Esto cambia la banda >50% =
+  flag del brief: lo pidio el principal (control: el 1-5 de la semana 7 no esta
+  eliminado y su trade no puede ser flag).
+- Status: contender (dentro o a <1 juego), bubble (1+), long_shot (a mas de la
+  mitad de lo que queda), out (eliminacion practica). long_shot con el patron =
+  lopsided, "Worth a look, not a veto".
+- El dumping no se marca si lo explica lo que recibe: keeper (joven, 24 o menos
+  o 2 temporadas o menos, Y un cuarto o mas del valor que manda: "barato" sin el
+  costo de keeper seria cualquier relleno), FAAB, o un hueco real (entra al once
+  en una casilla fija vacia o cubierta por menos de medio titular tipico). En
+  dynasty, rebuild que recibe picks o juventud por veteranos = venta normal.
+- Alineacion: mejor once por valor con roster_positions (K/DEF fuera); un lado
+  que pierde mas del 3% de su once sin recibir nada usable sube un escalon
+  (hasta lopsided). Out/IR/PUP/Sus/NA/Doubtful no cuentan como titulares
+  (mismo criterio que ML_NO_JUEGA); loadLeague ahora guarda `inj` en allPlayers.
+- Sin precio para algun jugador, pick o FAAB: 'unknown' y lo nombra. K y DEF
+  no tienen precio en FantasyCalc, asi que un trade con un pateador no se gradua.
+- Nunca numeros crudos en pantalla: porcentajes, palabras y records.
+- `window._leagueInfo` guarda el reglamento entero (Sleeper y un molde de Yahoo
+  con playoffs). Yahoo: loadYahooLeague ya mete wins/losses/fpts en settings.
+- Bug arreglado: runAnalysis y _timingSchedulePass leian rec.w/rec.l de
+  rosterRecord (son wins/losses): el record del rival nunca movia nada.
+
+**Gate: `scripts/qa-tradeguard.mjs`, 49 checks** (motor en vm sobre el fixture
+real `scripts/fixtures/miami-boys-choir-2026-wk7.json` + valores congelados en
+`...-wk7-values.json`, fixtures derivados de semana 11 y 13; navegador con
+/api/sleeper interceptado, League Trades por el cajon, analizador por Analyze).
+Contra HEAD 0cc8bc4 (worktree detached, puerto 3232): 42 de 49 en rojo; los 7
+que pasan son controles y guardas.
+
+**Pendiente:**
+- Proyecciones de lo que queda hasta la semana 14 (no entro en esta entrega):
+  `/api/sleeper/projections/:week` existe (Rotowire); sumar 8 semanas son 8
+  fetches. Hoy el guard mide valor de mercado, no puntos proyectados.
+- Byes: el maestro slim no trae bye_week; el guard lo declara ("Bye weeks not
+  counted") en vez de inventarlo.
+- Trades pendientes: Sleeper NO los expone. Medido en las 8 semanas de la liga
+  real: solo trades 'complete' (5) y ningun otro status; no se anadio ?all=1.
+- En cada tarjeta de League Trades conviven el "X won this trade" viejo (300 de
+  valor absoluto) y el chip del guard (porcentaje + piso): pueden no coincidir
+  (sem 5: "Miami Octins won" contra Even). Decidir si el viejo se va.
+- El rotulo de League Trades dice "FantasyCalc dynasty rankings" tambien en
+  ligas redraft (no se toco).
+- Los standings de un trade ya hecho son los de HOY, y el FAAB se precia en la
+  semana actual: se declara en los hechos.

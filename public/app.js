@@ -1689,8 +1689,13 @@ async function loadYahooLeague(key,name,season){
   leagueRosters=teams.map(function(t){
     var res=_resolveNames((t.players||[]).map(function(p){return p.name;}));
     noEncontrados+=res.missed.length;
+    // Los records de Yahoo van en settings con los nombres de Sleeper: asi
+    // rosterRecord y el Trade Guard los leen sin ramificar por plataforma.
+    var _pf=Number(t.points_for)||0;
     return {roster_id:t.team_id||0,owner_id:t.team_key,
-            players:res.players.map(function(p){return p.id;}),settings:{}};
+            players:res.players.map(function(p){return p.id;}),
+            settings:{wins:Number(t.wins)||0,losses:Number(t.losses)||0,ties:Number(t.ties)||0,
+              fpts:Math.floor(_pf),fpts_decimal:Math.round((_pf-Math.floor(_pf))*100)}};
   });
   leagueUsers=teams.map(function(t){
     return {user_id:t.team_key,display_name:t.name,metadata:{team_name:t.name}};
@@ -1707,6 +1712,12 @@ async function loadYahooLeague(key,name,season){
     scoring_settings:liga.scoring_settings||{},
     total_rosters:liga.num_teams||teams.length
   });
+  // Lo que Yahoo entrega del reglamento, en el molde de Sleeper. Sin fecha
+  // limite ni veto: Yahoo no los da por esta ruta y el guard no los inventa.
+  window._leagueInfo={settings:{type:0,playoff_teams:Number(liga.num_playoff_teams)||0,
+      playoff_week_start:Number(liga.playoff_start_week)||0},
+    roster_positions:liga.roster_positions||[],scoring_settings:liga.scoring_settings||{},
+    total_rosters:liga.num_teams||teams.length};
   // Yahoo no expone un equivalente a settings.type, y sus ligas son redraft en
   // su inmensa mayoria. Se declara redraft en vez de adivinar dynasty: con el
   // lente equivocado todos los precios salen mal.
@@ -1805,7 +1816,9 @@ async function loadLeague(lid,name,rosters,season){
     Object.keys(rawPlayers).forEach(function(id){
       var p=rawPlayers[id];
       if(p.fantasy_positions&&p.fantasy_positions.some(function(x){return["QB","RB","WR","TE","K","DEF"].indexOf(x)>=0;})){
-        allPlayers[id]={id:id,name:((p.first_name||"")+" "+(p.last_name||"")).trim(),pos:p.fantasy_positions[0]||"?",team:p.team||"FA",exp:p.years_exp!=null?p.years_exp:3,age:p.age||null};
+        // inj: el Trade Guard no cuenta como titular a un Out/IR/Doubtful (mismo
+        // campo que ya guarda la otra carga del maestro, mas abajo).
+        allPlayers[id]={id:id,name:((p.first_name||"")+" "+(p.last_name||"")).trim(),pos:p.fantasy_positions[0]||"?",team:p.team||"FA",exp:p.years_exp!=null?p.years_exp:3,age:p.age||null,inj:p.injury_status||null};
       }
     });
   }
@@ -1825,6 +1838,9 @@ async function loadLeague(lid,name,rosters,season){
   // Waivers de la liga: waiver_type 2 es FAAB. Lo lee tmFaabCtx().
   try{var _ws=(leagueInfo&&leagueInfo.settings)||{};
     window._leagueWaiver={type:Number(_ws.waiver_type),budget:Number(_ws.waiver_budget)||0};}catch(_){window._leagueWaiver=null;}
+  // El reglamento entero (settings y scoring_settings) para el Trade Guard:
+  // trade_deadline, playoff_teams, playoff_week_start, max_keepers, veto.
+  window._leagueInfo=leagueInfo||null;
   var _ntb=document.getElementById('no-trades-banner');
   if(_ntb){_ntb.style.display=window.leagueNoTrades?'block':'none';
     if(window.leagueNoTrades)_ntb.innerHTML='<b>'+leagueName+'</b> has trades disabled in its league settings. You can still analyze hypotheticals here, but no trade you build can actually be made in that league.';}
@@ -4748,8 +4764,18 @@ function renderLeagueTrades(){
   lbHtml+="</tbody></table></div>"
     +"<div style='font-size:10px;color:var(--muted);margin:8px 0 20px'>Trade W-L counts deals where a side came out 300+ market value ahead at today's prices. PF = points for.</div></div>";
 
+  // Trade Guard: la vista del comisionado. Un ctx para toda la lista (los
+  // rosters y la tabla de HOY), y los hechos de la liga una sola vez arriba.
+  var _tgCtx=null,_tgHechos='';
+  try{
+    if(typeof tgCtxFromApp==='function'){
+      _tgCtx=tgCtxFromApp();
+      var _tf=tgFacts(_tgCtx.league,_tgCtx.week);
+      if(_tf.lines.length)_tgHechos="<div class='tg-league-facts'><span class='tg-title'>Trade Guard</span> <span class='tg-review'>for commissioner review</span><br>"+_tf.lines.map(function(x){return String(x).replace(/</g,'&lt;');}).join(' \u00b7 ')+"</div>";
+    }
+  }catch(_){_tgCtx=null;}
   // Trade list HTML
-  var tradesHtml="<div style='font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>All trades (this season + last)</div><div style='display:grid;gap:10px'>";
+  var tradesHtml=_tgHechos+"<div style='font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>All trades (this season + last)</div><div style='display:grid;gap:10px'>";
   sorted.forEach(function(t){
     var rids=t.roster_ids||[];
     // 3+ team trades: the 1-vs-1 value math below only looks at rids[0]/rids[1],
@@ -4871,6 +4897,11 @@ function renderLeagueTrades(){
     if(winner!=="Even") tradesHtml+="<div style='font-size:11px;font-weight:600;color:var(--green)'>"+winner+" won this trade</div>";
     else tradesHtml+="<div style='font-size:11px;color:var(--muted)'>Even trade</div>";
     tradesHtml+="</div>";
+    // Solo los trades de ESTA temporada: los de la anterior se juzgarian con
+    // rosters y records que ya no son los suyos.
+    if(_tgCtx&&(!t._season||String(t._season)===String(leagueSeason))){
+      try{tradesHtml+=tgLeagueBlock(t,_tgCtx);}catch(_){}
+    }
     tradesHtml+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px'>";
     // n1 received = r2gave (v2 total), n2 received = r1gave (v1 total)
     tradesHtml+=sideHtml(n1,r2gave.map(function(x){return Object.assign({},x,{pid:x.pid});}),v2||null,r1won===r2won?null:r1won);
@@ -5022,6 +5053,9 @@ async function runAnalysis(){
     if(_vn0){_vn0.textContent='';_vn0.style.color='';}
     var _vs0=document.getElementById('vd-ring-sub');
     if(_vs0)_vs0.textContent='reading the trade';
+    // El Trade Guard del trade ANTERIOR no puede quedarse bajo el nuevo.
+    var _tg0=document.getElementById('trade-guard');
+    if(_tg0){_tg0.hidden=true;_tg0.innerHTML='';}
   }catch(_){}
   // Deduct BK (only if user is logged in)
   var bkOk=await chargeBK();
@@ -5099,9 +5133,11 @@ async function runAnalysis(){
   // A losing record makes people do things: urgency climbs when they're under .500,
   // and a manager who has already made 3+ trades this season is clearly hunting.
   try{
+    // rosterRecord devuelve wins/losses. Leia las claves cortas w y l, que no existen:
+    // NaN>=3 es false y el record nunca movia la urgencia (2026-10-21).
     var _rec=rosterRecord(oppRosterObj.roster_id);
-    if(_rec&&(_rec.w+_rec.l)>=3){
-      var _pct=_rec.w/(_rec.w+_rec.l);
+    if(_rec&&(_rec.wins+_rec.losses)>=3){
+      var _pct=_rec.wins/(_rec.wins+_rec.losses);
       if(_pct<0.4)_histUrg+=14; else if(_pct<0.5)_histUrg+=8; else if(_pct>0.7)_histUrg-=6;
     }
     if(_s&&_s.tradeCount>=3)_histUrg+=6;
@@ -5543,6 +5579,9 @@ function sageStyleNote(valueTier){
   if(shareBtn&&userId)shareBtn.style.display='flex';
   var ctxRow=document.getElementById('share-context-row');
   if(ctxRow&&userId)ctxRow.style.display='block';
+  // Trade Guard: lectura aparte para el comisionado (records, alineacion,
+  // formato). No toca tradeScore ni el veredicto de arriba.
+  try{if(typeof tgPaintAnalyzer==='function')tgPaintAnalyzer();}catch(_){}
 }
 
 // League settings snapshot attached to a published trade, so people who open the
@@ -5601,8 +5640,8 @@ async function _timingSchedulePass(getInputEls,oppRosterObj,valueTier){
   }
   try{
     var rec=oppRosterObj&&rosterRecord(oppRosterObj.roster_id);
-    if(rec&&(rec.w+rec.l)>=3&&rec.w/(rec.w+rec.l)<0.4){
-      extra+=' Their manager is '+rec.w+'-'+rec.l+': one more loss and they will take less. Waiting a week can also work in your favor.';
+    if(rec&&(rec.wins+rec.losses)>=3&&rec.wins/(rec.wins+rec.losses)<0.4){
+      extra+=' Their manager is '+rec.wins+'-'+rec.losses+': one more loss and they will take less. Waiting a week can also work in your favor.';
     }
   }catch(_){}
   if(extra)el.textContent=el.textContent+extra;
