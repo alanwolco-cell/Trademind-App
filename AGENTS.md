@@ -2889,7 +2889,7 @@ o menos los circulos bajan a 50px. qa-faab (8), rojo sin el CSS.
 ## Sesion 2026-10-21: Trade Guard
 
 Pedido del dueno, comisionado de Miami Boys Choir (Sleeper 1393450135224094720,
-redraft con 1 keeper, 12 equipos, half PPR, FAAB $1000, deadline semana 11,
+redraft (type 0; trae max_keepers 1, que NO la hace keeper), 12 equipos, half PPR, FAAB $1000, deadline semana 11,
 playoffs 6 desde la 15, veto 8 votos): detectar trades descompensados ANTES de
 que pasen y revisar los que ya pasaron, "basado en records, equipos, league
 format". SIN DESPLEGAR: el deploy lo decide el dueno.
@@ -2918,9 +2918,10 @@ el guard da un nivel de riesgo con razones, decidir es del comisionado.
 - Status: contender (dentro o a <1 juego), bubble (1+), long_shot (a mas de la
   mitad de lo que queda), out (eliminacion practica). long_shot con el patron =
   lopsided, "Worth a look, not a veto".
-- El dumping no se marca si lo explica lo que recibe: keeper (joven, 24 o menos
-  o 2 temporadas o menos, Y un cuarto o mas del valor que manda: "barato" sin el
-  costo de keeper seria cualquier relleno), FAAB, o un hueco real (entra al once
+- El dumping no se marca si lo explica lo que recibe: keeper (SOLO en ligas con
+  settings.type === 1; joven, 24 o menos o 2 temporadas o menos, Y un cuarto o
+  mas del valor que manda: "barato" sin el costo de keeper seria cualquier
+  relleno), FAAB, o un hueco real (entra al once
   en una casilla fija vacia o cubierta por menos de medio titular tipico). En
   dynasty, rebuild que recibe picks o juventud por veteranos = venta normal.
 - Alineacion: mejor once por valor con roster_positions (K/DEF fuera); un lado
@@ -2935,12 +2936,33 @@ el guard da un nivel de riesgo con razones, decidir es del comisionado.
 - Bug arreglado: runAnalysis y _timingSchedulePass leian rec.w/rec.l de
   rosterRecord (son wins/losses): el record del rival nunca movia nada.
 
-**Gate: `scripts/qa-tradeguard.mjs`, 49 checks** (motor en vm sobre el fixture
+**Arreglos tras el QA por navegador (mismo dia, segundo commit):**
+- Keeper SOLO con settings.type === 1 (regla de tmClasificarLiga / formato.js).
+  Sleeper pone max_keepers=1 por defecto en sus 7 ligas redraft: salia
+  "Redraft, 1 keeper" y "Keeper league: X could be worth more" en ligas sin
+  keepers. Ahora type 0 = "Redraft" a secas, sin razones ni excepcion de keeper.
+- Una sola frase cuando la brecha es grande en porcentaje pero no material:
+  "X gets back about 40% of what it sends, but the whole package is worth less
+  than one typical starter. Small stakes." (o "the difference is less than..."
+  si el paquete si vale un titular). Antes salian juntas "less than half" y
+  "real but small".
+- Liga con status 'complete' (temporadas cerradas, KVC 2.0 de 2025): sin
+  razones de carrera ni dumping, status 'final' ("final standings"), hechos en
+  pasado ("Season over", "Playoffs were 6 of 12 teams"), sin fecha limite.
+- Nombres de equipo recortados (trim y espacios dobles) antes de componer
+  frases; trade_review_days 0 dice "no review period".
+- NO se toco (viene de antes o es decision de Wolco): el "X won this trade"
+  viejo junto al chip, los "Why did X win?" de 14px y el ticker con
+  reduced-motion.
+
+**Gate: `scripts/qa-tradeguard.mjs`, 55 checks** (motor en vm sobre el fixture
 real `scripts/fixtures/miami-boys-choir-2026-wk7.json` + valores congelados en
 `...-wk7-values.json`, fixtures derivados de semana 11 y 13; navegador con
 /api/sleeper interceptado, League Trades por el cajon, analizador por Analyze).
-Contra HEAD 0cc8bc4 (worktree detached, puerto 3232): 42 de 49 en rojo; los 7
-que pasan son controles y guardas.
+Contra 0cc8bc4 (antes del Trade Guard, worktree detached, puerto 3232): 48 de
+55 en rojo; los 7 que pasan son controles y guardas. Contra 98b4b96 (el primer
+commit del guard): 8 en rojo, exactamente los del QA (s3, k1, q1a, q1b, q2,
+q3, q4a, q4b).
 
 **Pendiente:**
 - Proyecciones de lo que queda hasta la semana 14 (no entro en esta entrega):

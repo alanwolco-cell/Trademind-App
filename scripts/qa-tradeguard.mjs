@@ -152,7 +152,7 @@ if (cargo.tg) {
   const f = sandbox.tgFacts(FX.league, FX.week);
   ok('(s3) hechos de la liga para el comisionado: fecha limite, veto, playoffs, formato',
     f.deadline === 'Trade deadline week 11 (4 weeks left)' && f.veto === 'Veto needs 8 of 12 votes, 1-day review' &&
-    f.playoffs === 'Playoffs: 6 of 12 teams, from week 15' && f.format === 'Redraft, 1 keeper', JSON.stringify(f));
+    f.playoffs === 'Playoffs: 6 of 12 teams, from week 15' && f.format === 'Redraft', JSON.stringify(f));
 
   // (a) parejo: Zay Flowers (Alanta) por Drake London (Dallas Carbos), dos WR casi iguales
   const flowers = porNombre(1, 'Flowers'), london = porNombre(10, 'London');
@@ -194,7 +194,39 @@ if (cargo.tg) {
   const chico10 = rosterTop(10).slice(-1)[0];
   const rk = ev(ctxBase(), { sides: [sideP(4, [chico4]), sideP(10, [chico10])] });
   ok('(k1) ' + nombre(chico4) + ' por ' + nombre(chico10) + ': ' + rk.gapPct + '% de brecha pero menos que un titular tipico: lean como maximo, y lo dice',
-    rk.gapPct >= 50 && rk.level === 'lean' && (rk.reasons || []).some(t => /real but small/.test(t)), R(rk));
+    rk.gapPct >= 50 && rk.level === 'lean' && (rk.reasons || []).some(t => /Small stakes/.test(t)), R(rk));
+  ok('(q2) brecha grande pero chica en valor: UNA sola frase, sin "less than half" ni "real but small" al lado',
+    (rk.reasons || []).filter(t => /gets back/.test(t)).length === 1 && !(rk.reasons || []).some(t => /less than half|real but small/.test(t)), R(rk));
+
+  // (q1) keeper SOLO con type 1: Sleeper trae max_keepers=1 en ligas redraft
+  const joven3 = FX.rosters.find(r => r.roster_id === 3).players.find(id => {
+    const p = players[id], v = VAL.byId[id];
+    return p && v && ((p.age && p.age <= 24) || (p.years_exp != null && p.years_exp <= 2)) && v >= VAL.byId[jeanty] * 0.3 && v <= VAL.byId[jeanty] * 0.8;
+  });
+  const tradeQ = { sides: [sideP(1, [jeanty]), sideP(3, [joven3])] };
+  const rq0 = ev(ctxBase(), tradeQ);
+  const keepLeague = JSON.parse(JSON.stringify(FX.league)); keepLeague.settings.type = 1;
+  const rq1 = ev(ctxBase({ league: keepLeague }), tradeQ);
+  ok('(q1a) liga real (type 0, max_keepers 1): cero razones de keeper y el formato dice Redraft a secas (' + nombre(joven3) + ')',
+    !!joven3 && rq0.level !== 'unknown' && !(rq0.reasons || []).some(t => /keeper/i.test(t)) && rq0.facts.format === 'Redraft', R(rq0) + ' ' + rq0.facts.format);
+  ok('(q1b) CONTROL: el mismo trade en una liga keeper (type 1) si lo lee como keeper',
+    (rq1.reasons || []).some(t => /Keeper league: /.test(t)) && /^Keeper league/.test(rq1.facts.format), R(rq1) + ' ' + rq1.facts.format);
+
+  // (q3) temporada terminada: sin carrera ni dumping, hechos en pasado
+  const overLeague = JSON.parse(JSON.stringify(FX.league)); overLeague.status = 'complete';
+  const rq3 = ev(ctxBase(Object.assign({ league: overLeague }, W13)), tradeB);
+  ok('(q3) liga con status complete: cero razones de carrera o dumping, standings finales y "Season over"',
+    rq3.level !== 'flag' && !(rq3.reasons || []).some(t => /race|dump|long shot|contender|bubble/i.test(t)) &&
+    rq3.sides.every(x => x.status === 'final') && rq3.facts.lines.includes('Season over') && !rq3.facts.deadline,
+    R(rq3) + ' ' + JSON.stringify(rq3.facts.lines));
+
+  // (q4) nombres con espacios sobrantes y revision de 0 dias
+  const rq4 = ev(ctxBase(Object.assign({ nameOf: rid => '  ' + usuario(rid) + '  ' }, W13)), tradeB);
+  ok('(q4a) los nombres se recortan antes de componer frases (sin " \'s" ni espacios dobles)',
+    (rq4.reasons || []).length > 0 && !(rq4.reasons || []).some(t => /\s'|\s{2}|^\s/.test(t)) && rq4.sides[0].name === 'Alanta Falcons', R(rq4));
+  const sinRev = JSON.parse(JSON.stringify(FX.league)); sinRev.settings.trade_review_days = 0;
+  const fq = sandbox.tgFacts(sinRev, 7);
+  ok('(q4b) trade_review_days 0 dice "no review period", no "0-day review"', /no review period$/.test(fq.veto || '') && !/0-day/.test(fq.veto || ''), fq.veto);
   ok('(k2) CONTROL: la brecha grande en valor de verdad (semana 7) si pasa de lean', r7.level === 'lopsided', R(r7));
 
   // (m) un lesionado no cuenta como titular usable
@@ -257,7 +289,7 @@ if (cargo.tg) {
     conFaab >= 0 && reales[conFaab].r.sides.some(s => s.rosterId === 5 && s.valueOut > VAL.byId['8138']), JSON.stringify(reales[conFaab] && reales[conFaab].r.sides));
 
   // Regla del dueno: nada de numeros crudos del proveedor en las razones.
-  const todas = [ra, rb, rc, rl, rf, rfRed, r7, r11, rk, rm].concat(reales.map(x => x.r)).flatMap(r => r.reasons || []);
+  const todas = [ra, rb, rc, rl, rf, rfRed, r7, r11, rk, rm, rq0, rq1, rq3, rq4].concat(reales.map(x => x.r)).flatMap(r => r.reasons || []);
   ok('(n1) ninguna razon lleva un numero crudo de valor (4 cifras o mas)', todas.length > 5 && !todas.some(t => /\d[\d,.]{3,}/.test(t)),
     todas.filter(t => /\d[\d,.]{3,}/.test(t)).join(' | '));
   ok('(n2) determinismo: la misma entrada da la misma salida', JSON.stringify(ev(ctxBase(W13), tradeB)) === JSON.stringify(rb));
@@ -265,7 +297,7 @@ if (cargo.tg) {
     todas.filter(t => /\bveto\b/i.test(t)).join(' | '));
   ok('(n6) byes: el dato no esta en el maestro, y se declara en vez de inventarse', (rb.facts.lines || []).includes('Bye weeks not counted'), JSON.stringify(rb.facts.lines));
 } else {
-  for (const n of ['(s1)', '(s2)', '(s3)', '(a)', '(b)', '(b2)', '(c)', '(l1)', '(l2)', '(l3)', '(k1)', '(k2)', '(m)', '(d1)', '(d2)', '(e0)', '(e1)', '(e2)', '(e3)', '(f0)', '(f1)', '(f2)', '(g1)', '(g2)', '(n1)', '(n2)', '(n5)', '(n6)']) {
+  for (const n of ['(s1)', '(s2)', '(s3)', '(a)', '(b)', '(b2)', '(c)', '(l1)', '(l2)', '(l3)', '(k1)', '(q2)', '(q1a)', '(q1b)', '(q3)', '(q4a)', '(q4b)', '(k2)', '(m)', '(d1)', '(d2)', '(e0)', '(e1)', '(e2)', '(e3)', '(f0)', '(f1)', '(f2)', '(g1)', '(g2)', '(n1)', '(n2)', '(n5)', '(n6)']) {
     ok(n + ' motor del Trade Guard', false, 'sin tgEvaluate no hay nada que medir');
   }
 }

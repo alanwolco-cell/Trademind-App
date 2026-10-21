@@ -149,10 +149,20 @@ function tgFacts(league, week) {
   var S = (league && league.settings) || {};
   var n = _tgNum(league && league.total_rosters) || 0;
   var f = { lines: [] };
+  // Keeper SOLO con settings.type === 1 (regla canonica de tmClasificarLiga y
+  // server/lib/formato.js). Sleeper trae max_keepers=1 por defecto en ligas
+  // redraft (type 0): leerlo como keeper inventaba una liga que no existe.
   var type = _tgNum(S.type), mk = _tgNum(S.max_keepers);
-  f.format = type === 2 ? 'Dynasty' : type === 1 ? 'Keeper' :
-    ('Redraft' + (mk > 0 ? ', ' + _tgPlural(mk, 'keeper') : ''));
+  f.format = type === 2 ? 'Dynasty' : type === 1 ? ('Keeper league' + (mk > 0 ? ' (' + _tgPlural(mk, 'keeper') + ')' : '')) : 'Redraft';
   f.lines.push(f.format);
+  // Temporada terminada: los hechos van en pasado y sin fecha limite.
+  if (league && league.status === 'complete') {
+    f.seasonOver = true;
+    f.lines.push('Season over');
+    var ptF = _tgNum(S.playoff_teams);
+    if (ptF > 0) { f.playoffs = 'Playoffs were ' + ptF + (n ? ' of ' + n : '') + ' teams'; f.lines.push(f.playoffs); }
+    return f;
+  }
   var td = _tgNum(S.trade_deadline);
   if (td > 0 && td < 19 && week > 0) {
     var left = td - week;
@@ -167,7 +177,7 @@ function tgFacts(league, week) {
   if (veto > 0) {
     var rd = S.trade_review_days != null ? _tgNum(S.trade_review_days) : null;
     f.veto = 'Veto needs ' + veto + (n ? ' of ' + n : '') + ' votes' +
-      (rd != null ? ', ' + rd + '-day review' : '');
+      (rd == null ? '' : rd > 0 ? ', ' + rd + '-day review' : ', no review period');
     f.lines.push(f.veto);
   }
   var pt = _tgNum(S.playoff_teams), pws = _tgNum(S.playoff_week_start);
@@ -193,7 +203,9 @@ function tgEvaluate(ctx, trade) {
   var week = _tgNum(ctx.week);
   var type = _tgNum(S.type != null ? S.type : league.type);
   var dynasty = type === 2;
-  var keepers = type === 1 ? Math.max(1, _tgNum(S.max_keepers)) : _tgNum(S.max_keepers);
+  var keepers = type === 1 ? Math.max(1, _tgNum(S.max_keepers)) : 0;
+  // Temporada cerrada: no hay carrera que leer, solo la tabla final.
+  var terminada = league.status === 'complete';
   var valueOf = ctx.valueOf || function () { return null; };
   var posOf = ctx.posOf || function () { return null; };
   var ageOf = ctx.ageOf || function () { return null; };
@@ -201,7 +213,10 @@ function tgEvaluate(ctx, trade) {
   var injuryOf = ctx.injuryOf || function () { return null; };
   var noJuega = function (id) { var s = injuryOf(id); return !!(s && TG_NO_JUEGA[s]); };
   var pname = ctx.playerName || function (id) { return String(id); };
-  var nameOf = ctx.nameOf || function (rid) { return 'Team ' + rid; };
+  var nameRaw = ctx.nameOf || function (rid) { return 'Team ' + rid; };
+  // Los nombres de Sleeper traen espacios sobrantes ("A los Pitts  "): se
+  // recortan antes de componer frases, o salen "REBBUILD 's".
+  var nameOf = function (rid) { return String(nameRaw(rid) == null ? '' : nameRaw(rid)).trim().replace(/\s+/g, ' ') || ('Team ' + rid); };
   var slots = league.roster_positions || [];
 
   var res = { level: 'unknown', favors: null, gapPct: null, reasons: [],
@@ -242,6 +257,7 @@ function tgEvaluate(ctx, trade) {
       if (fv == null) faltan.push('$' + faab + ' FAAB'); else out += fv;
     }
     var st = tabla.byRid[s.rosterId] || { standing: null, status: 'contender', record: '', gb: 0 };
+    if (terminada) st = Object.assign({}, st, { status: 'final' });
     return { rosterId: s.rosterId, name: nameOf(s.rosterId), gives: gives, picks: picks,
       faab: faab, out: out, top: top, st: st };
   });
@@ -326,7 +342,11 @@ function tgEvaluate(ctx, trade) {
   if (idx > 0) { gana = A.inn > A.out ? A : B; pierde = gana === A ? B : A; }
   var vuelta = pierde ? Math.round(pierde.inn / pierde.out * 100) : null;
   var motivos = [];
+  // Una sola frase por brecha. Si no es material, lo dice ahi mismo en vez de
+  // sumar "less than half" y "real but small" que se leen como contradiccion.
   if (idx === 0) motivos.push({ p: 1, t: 'Both sides send close to the same value.' });
+  else if (!material && maxv < floor) motivos.push({ p: 2, t: pierde.name + ' gets back about ' + vuelta + '% of what it sends, but the whole package is worth less than one typical starter. Small stakes.' });
+  else if (!material) motivos.push({ p: 2, t: pierde.name + ' gets back about ' + vuelta + '% of what it sends, but the difference is less than one typical starter. Small stakes.' });
   else if (gap > TG_BAND_HALF) motivos.push({ p: 2, t: pierde.name + ' gets back less than half of the value it sends (' + vuelta + '%).' });
   else motivos.push({ p: 1, t: pierde.name + ' gets back ' + vuelta + '% of the value it sends.' });
 
@@ -354,7 +374,7 @@ function tgEvaluate(ctx, trade) {
   // 3. La carrera (records). El patron de dumping: un equipo ELIMINADO manda su
   // mayor valor a un contender por menos, y lo que recibe no lo explica.
   var dump = false;
-  if (gana && pierde && material && gap >= TG_BAND_LOPSIDED && gana.st.status === 'contender' &&
+  if (!terminada && gana && pierde && material && gap >= TG_BAND_LOPSIDED && gana.st.status === 'contender' &&
       (pierde.st.status === 'out' || pierde.st.status === 'long_shot') && pierde.rankTop >= 0 && pierde.rankTop <= 1) {
     var veteranos = pierde.gives.filter(function (id) { var g = ageOf(id); return g != null && g >= TG_VET_AGE; });
     var rebuild = dynasty && (pierde.recibePicks || pierde.jovenes.length > 0) && veteranos.length > 0;
@@ -377,16 +397,12 @@ function tgEvaluate(ctx, trade) {
     }
   }
   // Entre dos contenders una brecha grande es un mal trade, no colusion.
-  if (!dump && gana && A.st.status === 'contender' && B.st.status === 'contender' && idx >= 2) {
+  if (!terminada && !dump && gana && A.st.status === 'contender' && B.st.status === 'contender' && idx >= 2) {
     motivos.push({ p: 4, t: 'Both teams are in the playoff race, so this reads as a bad trade, not a dump.' });
   }
-  // El piso: una brecha que no llega a un titular tipico no pasa de 'lean'.
-  if (!material && idx > 1) {
-    idx = 1;
-    motivos.push({ p: 6, t: 'The gap is real but small: less than one typical starter.' });
-  } else if (!material && idx === 1) {
-    motivos.push({ p: 0, t: 'The gap is real but small: less than one typical starter.' });
-  }
+  // El piso: una brecha que no llega a un titular tipico no pasa de 'lean'
+  // (la frase ya lo dijo arriba, una sola vez).
+  if (!material && idx > 1) idx = 1;
 
   // 4. Formato: keeper (peso chico, solo texto), y solo para el lado que
   // recibe menos: es la unica lectura que puede explicar su lado del trade.
@@ -406,7 +422,7 @@ function tgEvaluate(ctx, trade) {
 // ─── Lo que pinta (navegador) ────────────────────────────────────────────────
 
 var TG_LABEL = { even: 'Even', lean: 'Lean', lopsided: 'Lopsided', flag: 'Flag', unknown: 'Not graded' };
-var TG_STATUS = { contender: 'in the race', bubble: 'on the bubble', long_shot: 'a long shot', out: 'out of the race' };
+var TG_STATUS = { contender: 'in the race', bubble: 'on the bubble', long_shot: 'a long shot', out: 'out of the race', final: 'final standings' };
 // El guard da un nivel de riesgo con sus razones; decidir es del comisionado.
 var TG_REVIEW = 'for commissioner review';
 
@@ -422,6 +438,7 @@ function tgCtxFromApp() {
   var info = window._leagueInfo || {};
   var lf = (typeof leagueFormat !== 'undefined' && leagueFormat) || {};
   var league = {
+    status: info.status || null,
     settings: info.settings || {},
     scoring_settings: info.scoring_settings || {},
     roster_positions: info.roster_positions || lf.rosterPositions || [],
