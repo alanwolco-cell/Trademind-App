@@ -337,11 +337,11 @@ const eva = async (pg, fn, arg) => { try { return await pg.evaluate(fn, arg); } 
 // La liga del fixture por la red de la pagina: nada de Sleeper de verdad.
 const trades = FX.trades.map((t, i) => Object.assign({ transaction_id: 'qa' + (i + 1), type: 'trade' }, t));
 const json = (route, body) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-async function servirLiga(ctx) {
+async function servirLiga(ctx, liga = FX.league) {
   await ctx.route(/\/api\/sleeper\/.*/, route => {
     const u = new URL(route.request().url());
     const p = u.pathname.replace('/api/sleeper', '');
-    if (p === '/league/' + LID) return json(route, FX.league);
+    if (p === '/league/' + LID) return json(route, liga);
     if (p === '/league/' + LID + '/rosters') return json(route, FX.rosters);
     if (p === '/league/' + LID + '/users') return json(route, FX.users);
     if (p === '/league/' + LID + '/traded_picks') return json(route, []);
@@ -487,6 +487,88 @@ try {
     await ctx.close();
   }
 
+  // (t) "Test a trade": el comisionado prueba un trade entre DOS equipos
+  // cualesquiera, sin ser uno de ellos. Telefono, llegando por el cajon.
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await servirLiga(ctx);
+    const pg = await ctx.newPage();
+    const errs = [];
+    pg.on('console', m => { if (m.type() === 'error' && !RUIDO.some(r => r.test(m.text()) || r.test((m.location() || {}).url || ''))) errs.push(m.text().slice(0, 160)); });
+    pg.on('pageerror', e => errs.push('PAGEERROR ' + String(e).slice(0, 200)));
+    await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await pg.waitForFunction(() => typeof loadLeague === 'function' && typeof mobGo === 'function', { timeout: 30000 });
+    await cargarLiga(pg);
+    await abrirTabGuard(pg, 'cajon');
+    const top3 = rosterTop(3)[0], bajo9 = rosterTop(9).slice(-1)[0];
+    const elegir = async (l, rid) => { try { await pg.locator('#tg-test-' + l).selectOption(String(rid), { timeout: 5000 }); } catch (_) { } await pg.waitForTimeout(200); };
+    const tocar = async (l, id) => { try { await pg.locator('#tg-test-grid-' + l + ' .bb-tile[data-id="' + id + '"]').tap({ timeout: 5000 }); } catch (_) { } await pg.waitForTimeout(150); };
+    const chequear = async () => { try { await pg.locator('#tg-test-go').tap({ timeout: 5000 }); } catch (_) { } await pg.waitForTimeout(300); };
+    const leerRes = () => eva(pg, () => {
+      const r = document.getElementById('tg-test-res');
+      return { hay: !!r, chip: r ? (r.querySelector('.tg-chip') || {}).textContent : null, fav: r ? (r.querySelector('.tg-fav') || {}).textContent : null,
+        lados: r ? [...r.querySelectorAll('.tg-side-name')].map(x => x.textContent) : [], favors: window.TGT_T && TGT_T.res ? TGT_T.res.favors : null,
+        nivel: window.TGT_T && TGT_T.res ? TGT_T.res.level : null, gap: window.TGT_T && TGT_T.res ? TGT_T.res.gapPct : null,
+        go: document.getElementById('tg-test-go') ? document.getElementById('tg-test-go').disabled : null };
+    });
+    await elegir('a', 3); await elegir('b', 9);
+    const antes = await leerRes();
+    await tocar('a', top3); await tocar('b', bajo9);
+    await chequear();
+    const r1 = await leerRes();
+    ok('(t1) dos equipos que NO son el del usuario (Nabers in Paris y Tommasse Titans): un jugador por lado, Check trade y sale el resultado con chip y los dos nombres',
+      antes.go === true && r1.hay && LEVELS.includes(String(r1.nivel)) && !!r1.chip && r1.lados.length === 2 &&
+      r1.lados.includes(usuario(3)) && r1.lados.includes(usuario(9)) && r1.favors != null, JSON.stringify({ antes: antes.go, r1 }));
+    // (t2) los mismos equipos al reves: mismo trade, mismo equipo favorecido y la
+    // misma brecha; lo que cambia es de que lado del panel queda.
+    await elegir('a', 9); await elegir('b', 3);
+    await tocar('a', bajo9); await tocar('b', top3);
+    await chequear();
+    const r2 = await leerRes();
+    ok('(t2) invertir los equipos de lado: el favorecido sigue siendo el mismo equipo (ahora del otro lado), misma brecha y mismo nivel',
+      r2.hay && r2.favors === r1.favors && r2.gap === r1.gap && r2.nivel === r1.nivel && r2.lados[0] === r1.lados[1], JSON.stringify({ r1, r2 }));
+    // (t3) el mismo equipo en los dos lados
+    await elegir('a', 3); await elegir('b', 3);
+    const r3 = await eva(pg, () => ({ aviso: ((document.querySelector('.tg-test-warn') || {}).textContent || ''), go: document.getElementById('tg-test-go').disabled,
+      res: !!document.getElementById('tg-test-res'), tiles: document.querySelectorAll('#tg-test .bb-tile').length }));
+    await chequear();
+    const r3b = await leerRes();
+    ok('(t3) mismo equipo en los dos lados: aviso, boton deshabilitado y sin resultado',
+      /two different teams/.test(r3.aviso) && r3.go === true && r3.res === false && r3.tiles === 0 && !r3b.hay, JSON.stringify({ r3, r3b: r3b.hay }));
+    // (t4) tocar dos veces lo saca
+    await elegir('b', 9);
+    await tocar('a', top3);
+    const on1 = await eva(pg, id => ({ on: (document.querySelector('#tg-test-grid-a .bb-tile[data-id="' + id + '"]') || {className:''}).className.includes(' on'), n: Object.keys(TGT_T.sel.a).length }), top3);
+    await tocar('a', top3);
+    const on2 = await eva(pg, id => ({ on: (document.querySelector('#tg-test-grid-a .bb-tile[data-id="' + id + '"]') || {className:''}).className.includes(' on'), n: Object.keys(TGT_T.sel.a).length }), top3);
+    ok('(t4) tocar un jugador lo marca y tocarlo otra vez lo saca', on1.on === true && on1.n === 1 && on2.on === false && on2.n === 0, JSON.stringify({ on1, on2 }));
+    // (t5) 390 sin desborde, 44px, consola limpia
+    const med = await eva(pg, () => ({ sw: document.documentElement.scrollWidth,
+      fuera: [...document.querySelectorAll('#tg-test *')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).length,
+      bajos: [...document.querySelectorAll('#tg-test .bb-tile, #tg-test select, #tg-test-go, #tg-test .tg-test-clear')].filter(e => e.getBoundingClientRect().height > 0 && e.getBoundingClientRect().height < 44).length,
+      apilados: (() => { const bs = [...document.querySelectorAll('#tg-test .bb-board')].map(x => x.getBoundingClientRect()); return bs.length === 2 && bs[1].top >= bs[0].bottom - 1; })() }));
+    ok('(t5) 390px: sin desborde, todo lo tocable de 44px o mas, los dos planteles apilados, consola limpia',
+      med.sw <= 390 && med.fuera === 0 && med.bajos === 0 && med.apilados === true && errs.length === 0, JSON.stringify(med) + ' ' + errs.join(' | '));
+    await ctx.close();
+  }
+  {
+    // (t6) dynasty (fixture derivado, type 2): los picks salen como opcion
+    const dyn = JSON.parse(JSON.stringify(FX.league)); dyn.settings.type = 2;
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 950 } });
+    await servirLiga(ctx, dyn);
+    const pg = await ctx.newPage();
+    await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await pg.waitForFunction(() => typeof loadLeague === 'function', { timeout: 30000 });
+    await cargarLiga(pg);
+    await eva(pg, () => { switchScreen('analyze'); showAnalyzeTab('guard'); });
+    try { await pg.locator('#tg-test-a').selectOption('3', { timeout: 5000 }); await pg.locator('#tg-test-b').selectOption('9', { timeout: 5000 }); } catch (_) { }
+    await pg.waitForTimeout(300);
+    const d = await eva(pg, () => ({ modo: leagueMode, picks: document.querySelectorAll('#tg-test-grid-a .bb-tile[data-kind="k"]').length,
+      lado: (() => { const bs = [...document.querySelectorAll('#tg-test .bb-board')].map(x => x.getBoundingClientRect()); return bs.length === 2 && Math.abs(bs[0].top - bs[1].top) < 2 && bs[1].left > bs[0].right - 1; })() }));
+    ok('(t6) liga dynasty: los picks aparecen como opcion del plantel (y en escritorio los dos lados van lado a lado)',
+      d.modo === 'dynasty' && d.picks > 0 && d.lado === true, JSON.stringify(d));
+    await ctx.close();
+  }
   // (j) el analizador: Analyze pinta el bloque Trade Guard; (h2) el record mueve la lectura
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });

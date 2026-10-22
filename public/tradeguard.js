@@ -46,6 +46,8 @@ function _tgOrd(n) {
 }
 function _tgPlural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 // "Alanta Falcons'" y no "Alanta Falcons's".
+// "under 1%" y no "0%": recibir casi nada no es recibir cero.
+function _tgPctTxt(v) { return v < 1 ? 'under 1%' : v + '%'; }
 function _tgPos(name) { return name + (/s$/i.test(name) ? '\'' : '\'s'); }
 
 // El mejor once por valor con las casillas de la liga. Codicioso: primero las
@@ -345,10 +347,10 @@ function tgEvaluate(ctx, trade) {
   // Una sola frase por brecha. Si no es material, lo dice ahi mismo en vez de
   // sumar "less than half" y "real but small" que se leen como contradiccion.
   if (idx === 0) motivos.push({ p: 1, t: 'Both sides send close to the same value.' });
-  else if (!material && maxv < floor) motivos.push({ p: 2, t: pierde.name + ' gets back about ' + vuelta + '% of what it sends, but the whole package is worth less than one typical starter. Small stakes.' });
-  else if (!material) motivos.push({ p: 2, t: pierde.name + ' gets back about ' + vuelta + '% of what it sends, but the difference is less than one typical starter. Small stakes.' });
-  else if (gap > TG_BAND_HALF) motivos.push({ p: 2, t: pierde.name + ' gets back less than half of the value it sends (' + vuelta + '%).' });
-  else motivos.push({ p: 1, t: pierde.name + ' gets back ' + vuelta + '% of the value it sends.' });
+  else if (!material && maxv < floor) motivos.push({ p: 2, t: pierde.name + ' gets back about ' + _tgPctTxt(vuelta) + ' of what it sends, but the whole package is worth less than one typical starter. Small stakes.' });
+  else if (!material) motivos.push({ p: 2, t: pierde.name + ' gets back about ' + _tgPctTxt(vuelta) + ' of what it sends, but the difference is less than one typical starter. Small stakes.' });
+  else if (gap > TG_BAND_HALF) motivos.push({ p: 2, t: pierde.name + ' gets back less than half of the value it sends (' + _tgPctTxt(vuelta) + ').' });
+  else motivos.push({ p: 1, t: pierde.name + ' gets back ' + _tgPctTxt(vuelta) + ' of the value it sends.' });
 
   // 2. La alineacion titular. Un lado cuyo once empeora y que no recibe nada
   // usable (ni un titular sano, ni picks en dynasty, ni un keeper) sube un
@@ -616,6 +618,7 @@ function tgRenderPane() {
   var el = document.getElementById('tg-pane');
   if (!el) return;
   var hay = typeof leagueRosters !== 'undefined' && leagueRosters && leagueRosters.length;
+  try { tgRenderTest(); } catch (_) { }
   if (!hay) {
     _tgPaneTry = 0;
     el.innerHTML = "<div class='empty-state'>Load a league to review its trades.<br>" +
@@ -666,6 +669,173 @@ function tgRenderPane() {
   el.innerHTML = h + '</div>';
 }
 
+// ─── "Test a trade": el comisionado prueba un trade entre DOS equipos ────────
+// Pedido del dueno: "quiero que puedas probar un trade en el trade guard a ver
+// si pasa o no... con todos los equipos y no solo con el tuyo". Estado en
+// memoria; las filas reusan el patron de los tableros del analizador (.bb-*).
+var TGT_T = { a: null, b: null, sel: { a: {}, b: {} }, faab: { a: 0, b: 0 }, res: null, pend: false };
+function _tgtRoster(rid) {
+  return (typeof leagueRosters !== 'undefined' ? leagueRosters : []).filter(function (r) { return String(r.roster_id) === String(rid); })[0] || null;
+}
+function _tgtDynasty() {
+  var S = (window._leagueInfo && window._leagueInfo.settings) || {};
+  return Number(S.type) === 2 || (typeof leagueMode !== 'undefined' && leagueMode === 'dynasty');
+}
+// Lo que tiene un equipo en FAAB (puede pasar del bote: el FAAB se tradea), o
+// null si en la liga no se puja con dinero.
+function _tgtFaabLeft(rid) {
+  var w = window._leagueWaiver;
+  if (!w || w.type !== 2 || !(w.budget > 0) || window.leaguePlatform === 'yahoo') return null;
+  var r = _tgtRoster(rid); if (!r) return null;
+  return Math.max(0, w.budget - (Number(r.settings && r.settings.waiver_budget_used) || 0));
+}
+function _tgtAssets(rid) {
+  var r = _tgtRoster(rid); if (!r) return [];
+  var ord = function (p) { return typeof po === 'function' ? po(p) : 9; };
+  var list = (r.players || []).map(function (id) {
+    id = String(id);
+    var p = (typeof allPlayers !== 'undefined' && allPlayers[id]) || null;
+    return { key: 'p' + id, kind: 'p', id: id, name: p ? p.name : 'Player ' + id, pos: p ? p.pos : '?', team: p ? p.team : '',
+      age: p && p.age ? p.age : null, val: (typeof ktcById !== 'undefined' && ktcById[id]) || 0 };
+  }).sort(function (x, y) { return ord(x.pos) - ord(y.pos) || y.val - x.val; });
+  if (_tgtDynasty() && typeof buildPicksForRoster === 'function') {
+    var picks = [];
+    try { picks = buildPicksForRoster(r, (typeof leaguePicks !== 'undefined' ? leaguePicks : []) || [], (typeof ACTIVE_SEASON !== 'undefined' ? ACTIVE_SEASON : 2026)); } catch (_) { picks = []; }
+    picks.forEach(function (k, i) {
+      list.push({ key: 'k' + k.season + 'r' + k.round + 'o' + (k.ownerRosterId != null ? k.ownerRosterId : 'own') + 'i' + i, kind: 'k',
+        name: k.season + ' Round ' + k.round, season: k.season, round: k.round, pos: 'PK', via: k.ownerName || '' });
+    });
+  }
+  return list;
+}
+function _tgtTile(lado, a) {
+  var on = !!TGT_T.sel[lado][a.key];
+  var col = (typeof _BB_POS_COLORS !== 'undefined' && _BB_POS_COLORS[a.pos]) || 'var(--muted)';
+  var partes = String(a.name).split(' ');
+  var cara = a.kind === 'p'
+    ? (a.pos === 'DEF'
+      ? "<img class='bb-def' src='https://sleepercdn.com/images/team_logos/nfl/" + _tgEsc(String(a.team || a.id).toLowerCase()) + ".png' alt='' loading='lazy' onerror='this.remove()'>"
+      : "<span class='bb-ini'>" + _tgEsc((partes[0].charAt(0) + (partes[1] ? partes[1].charAt(0) : '')).toUpperCase()) + '</span>' +
+        "<img src='https://sleepercdn.com/content/nfl/players/thumb/" + _tgEsc(a.id) + ".jpg' alt='' loading='lazy' onerror='this.remove()'>")
+    : "<span class='bb-ini bb-pick'>R" + _tgEsc(a.round) + '</span>';
+  return "<button type='button' class='bb-tile" + (on ? ' on' : '') + "' style='--bbp:" + col + "' data-kind='" + a.kind + "' data-id='" + _tgEsc(a.id || a.key) + "'" +
+    " aria-pressed='" + on + "' aria-label='" + _tgEsc(a.name) + "' onclick=\"tgtToggle('" + lado + "','" + a.key + "')\">" +
+    "<span class='bb-tick'><svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><path d='M4 12.5l5 5L20 6.5'/></svg></span>" +
+    "<span class='bb-face'>" + cara + '</span>' +
+    "<span class='bb-nm' title='" + _tgEsc(a.name) + "'>" + _tgEsc(a.kind === 'k' ? a.season : a.name) + '</span>' +
+    "<span class='bb-meta'><b style='color:" + col + "'>" + (a.kind === 'k' ? 'PICK' : _tgEsc(a.pos)) + '</b>' +
+    (a.kind === 'k' ? '<span>' + (a.via ? 'via ' + _tgEsc(a.via) : 'own pick') + '</span>' : '') +
+    (a.kind === 'p' && a.age ? "<span class='bb-age'>Age " + _tgEsc(a.age) + '</span>' : '') + '</span></button>';
+}
+function _tgtListo() {
+  if (!TGT_T.a || !TGT_T.b || String(TGT_T.a) === String(TGT_T.b)) return false;
+  var algo = function (l) { return Object.keys(TGT_T.sel[l]).length > 0 || TGT_T.faab[l] > 0; };
+  return algo('a') && algo('b');
+}
+function _tgtResultHtml() {
+  if (TGT_T.pend) return "<div class='tg-test-res'><div class='tm-skel' style='height:22px;width:55%;margin:0 0 10px'></div>" +
+    "<div class='tm-skel' style='height:14px;width:90%;margin:0 0 8px'></div><div class='tm-skel' style='height:52px;width:100%'></div></div>";
+  var r = TGT_T.res; if (!r) return '';
+  return "<div class='tg-test-res' id='tg-test-res'><div class='tg-head'>" + tgChipHtml(r) + "<span class='tg-fav'>" + _tgEsc(tgFavorsText(r)) + '</span></div>' + tgBodyHtml(r, false) + '</div>';
+}
+function tgRenderTest() {
+  var el = document.getElementById('tg-test');
+  if (!el) return;
+  var rs = (typeof leagueRosters !== 'undefined' ? leagueRosters : []) || [];
+  if (!rs.length || window.leagueNoTrades) { el.innerHTML = ''; el.hidden = true; return; }
+  el.hidden = false;
+  var ctx = tgCtxFromApp();
+  var tabla = tgStandings(rs, ctx.league.settings, ctx.week).byRid;
+  var opciones = function (cur) {
+    var o = "<option value=''>Pick a team</option>";
+    rs.slice().sort(function (x, y) { return ((tabla[x.roster_id] || {}).standing || 99) - ((tabla[y.roster_id] || {}).standing || 99); })
+      .forEach(function (r) {
+        var t = tabla[r.roster_id] || {};
+        o += "<option value='" + r.roster_id + "'" + (String(cur) === String(r.roster_id) ? ' selected' : '') + '>' +
+          _tgEsc(String(ctx.nameOf(r.roster_id)).trim()) + (t.record ? ' (' + _tgEsc(t.record) + ')' : '') + '</option>';
+      });
+    return o;
+  };
+  var mismo = TGT_T.a && TGT_T.b && String(TGT_T.a) === String(TGT_T.b);
+  var lado = function (l) {
+    var rid = TGT_T[l];
+    var n = Object.keys(TGT_T.sel[l]).length;
+    var h = "<div class='bb-board'><div class='bb-head'><span>" + (l === 'a' ? 'Team A sends' : 'Team B sends') + "</span><span class='bb-count' id='tg-test-n-" + l + "'>" + (n ? n + ' selected' : '') + '</span></div>' +
+      "<div class='tg-test-pick'><label class='tg-test-lbl' for='tg-test-" + l + "'>Team " + l.toUpperCase() + "</label>" +
+      "<select id='tg-test-" + l + "' class='opp-select' onchange=\"tgtTeam('" + l + "',this.value)\">" + opciones(rid) + '</select></div>';
+    if (!rid) return h + "<div class='bb-grid'><div class='bb-empty'>Pick a team to see its roster.</div></div></div>";
+    if (mismo) return h + "<div class='bb-grid'><div class='bb-empty'>Same team on both sides.</div></div></div>";
+    var as = _tgtAssets(rid);
+    h += "<div class='bb-grid' id='tg-test-grid-" + l + "'>" + (as.length ? as.map(function (a) { return _tgtTile(l, a); }).join('') : "<div class='bb-empty'>No players on this roster.</div>") + '</div>';
+    var left = _tgtFaabLeft(rid);
+    if (left != null) {
+      h += "<div class='bb-faab'><label class='bb-faab-lbl' for='tg-test-faab-" + l + "'>Add FAAB</label><span class='bb-faab-box'>$<input id='tg-test-faab-" + l +
+        "' type='text' inputmode='numeric' pattern='[0-9]*' maxlength='5' value='" + (TGT_T.faab[l] || '') + "' oninput=\"tgtFaab('" + l + "',this)\"></span>" +
+        "<span class='bb-faab-hint'>They have $" + left + '</span></div>';
+    }
+    return h + '</div>';
+  };
+  el.innerHTML = "<div class='tg-test'><div class='tg-test-title'>Test a trade</div>" +
+    "<div class='tg-test-sub'>Any two teams in the league. Tap what each side sends, then check it.</div>" +
+    (mismo ? "<div class='tg-test-warn' role='alert'>Pick two different teams.</div>" : '') +
+    "<div class='bb-boards tg-test-boards'>" + lado('a') + lado('b') + '</div>' +
+    "<div class='tg-test-acts'><button type='button' class='btn-load tg-test-go' id='tg-test-go' onclick='tgtCheck()'" + (_tgtListo() ? '' : ' disabled') + '>Check trade</button>' +
+    "<button type='button' class='btn-sm tg-test-clear' onclick='tgtClear()'>Clear</button></div>" +
+    "<div id='tg-test-out'>" + _tgtResultHtml() + '</div></div>';
+}
+function _tgtRefrescarBoton() {
+  var b = document.getElementById('tg-test-go'); if (b) b.disabled = !_tgtListo();
+}
+function tgtTeam(l, v) {
+  TGT_T[l] = v || null; TGT_T.sel[l] = {}; TGT_T.faab[l] = 0; TGT_T.res = null;
+  tgRenderTest();
+}
+function tgtToggle(l, key) {
+  if (TGT_T.sel[l][key]) delete TGT_T.sel[l][key];
+  else {
+    var a = _tgtAssets(TGT_T[l]).filter(function (x) { return x.key === key; })[0];
+    if (a) TGT_T.sel[l][key] = a;
+  }
+  TGT_T.res = null;
+  tgRenderTest();
+}
+function tgtFaab(l, inp) {
+  var n = parseInt(String(inp.value).replace(/\D/g, ''), 10) || 0;
+  var tope = _tgtFaabLeft(TGT_T[l]);
+  if (tope != null && n > tope) { n = tope; inp.value = String(n); }
+  TGT_T.faab[l] = n; TGT_T.res = null;
+  var out = document.getElementById('tg-test-out'); if (out) out.innerHTML = '';
+  _tgtRefrescarBoton();
+}
+var _tgtTry = 0;
+function tgtCheck() {
+  if (!_tgtListo()) return;
+  // Renderizado optimista: si los valores ya estan, el resultado sale al toque;
+  // el skeleton solo mientras el mercado todavia no llego.
+  if (!Object.keys((typeof ktcById !== 'undefined' && ktcById) || {}).length && _tgtTry < 30) {
+    _tgtTry++; TGT_T.pend = true;
+    var out0 = document.getElementById('tg-test-out'); if (out0) out0.innerHTML = _tgtResultHtml();
+    setTimeout(tgtCheck, 300);
+    return;
+  }
+  _tgtTry = 0; TGT_T.pend = false;
+  var lado = function (l) {
+    var s = { rosterId: _tgtRoster(TGT_T[l]).roster_id, gives: [], givesPicks: [], givesFaab: TGT_T.faab[l] || 0 };
+    Object.keys(TGT_T.sel[l]).forEach(function (k) {
+      var a = TGT_T.sel[l][k];
+      if (a.kind === 'k') s.givesPicks.push({ season: a.season, round: a.round, label: a.season + ' Round ' + a.round });
+      else s.gives.push(a.id);
+    });
+    return s;
+  };
+  TGT_T.res = tgEvaluate(tgCtxFromApp(), { sides: [lado('a'), lado('b')] });
+  var out = document.getElementById('tg-test-out'); if (out) out.innerHTML = _tgtResultHtml();
+}
+function tgtClear() {
+  TGT_T.sel = { a: {}, b: {} }; TGT_T.faab = { a: 0, b: 0 }; TGT_T.res = null; TGT_T.pend = false;
+  tgRenderTest();
+}
+
 if (typeof window !== 'undefined') {
   window.tgEvaluate = tgEvaluate;
   window.tgBestLineup = tgBestLineup;
@@ -677,4 +847,11 @@ if (typeof window !== 'undefined') {
   window.tgLeagueBlock = tgLeagueBlock;
   window.tgToggle = tgToggle;
   window.tgRenderPane = tgRenderPane;
+  window.tgRenderTest = tgRenderTest;
+  window.tgtTeam = tgtTeam;
+  window.tgtToggle = tgtToggle;
+  window.tgtFaab = tgtFaab;
+  window.tgtCheck = tgtCheck;
+  window.tgtClear = tgtClear;
+  window.TGT_T = TGT_T;
 }

@@ -2909,6 +2909,17 @@ Math.random); `tgCtxFromApp()` arma el ctx desde app.js. Dos superficies:
   el tab abierto, loadLeague lo repinta. Yahoo: lo dice (no da trades).
 - League Trades volvio a como estaba (sin hechos ni chips): asi el "X won this
   trade" viejo y el chip del guard ya no conviven en la misma tarjeta.
+- "Test a trade" arriba del tab (`#tg-test`, `tgRenderTest`, estado en memoria
+  `TGT_T`). Pedido textual: "quiero que puedas probar un trade en el trade guard
+  a ver si pasa o no... con todos los equipos y no solo con el tuyo". Dos
+  selectores con TODOS los equipos (nombre y record, ninguno por defecto), el
+  plantel de cada uno con las fichas `.bb-tile` del analizador (tocar marca,
+  tocar otra vez saca), picks si la liga es dynasty, FAAB acotado a lo que el
+  equipo tiene si la liga puja con dinero. "Check trade" deshabilitado hasta que
+  los dos lados tengan algo y sean equipos distintos; el resultado es el mismo
+  render del guard con tgEvaluate y el ctx real. Skeleton solo si los valores no
+  llegaron; "Clear" limpia lo elegido y conserva los equipos. 390 apilado,
+  escritorio lado a lado (la regla `.bb-boards` de siempre).
 Estilos `.tg-*` al final de styles.css. Todo rotulado "for commissioner review":
 el guard da un nivel de riesgo con razones, decidir es del comisionado.
 
@@ -2968,7 +2979,15 @@ Trade Analyzer > Trade Guard a 390, y rail > Trade Analyzer > Trade Guard a
 tocar, 44px, 390 sin desborde, consola limpia, y CONTROL de que League Trades
 ya no pinta chips. Contra 7e07c24: 8 de 59 en rojo (i1-i6, i9, i11).
 
-**Gate: `scripts/qa-tradeguard.mjs`, 59 checks** (motor en vm sobre el fixture
+**Test a trade (cuarto commit).** Checks (t1)-(t6): dos equipos que no son el
+del usuario (rosters 3 y 9) con resultado y sus dos nombres; los mismos equipos
+de lado cambiado dan el mismo favorecido y la misma brecha (el paquete va con su
+equipo, asi que "invertir" no puede cambiar quien gana: cambia de que lado del
+panel queda); mismo equipo en los dos lados = aviso sin resultado; doble toque
+saca; 390 sin desborde, 44px, apilados, consola limpia; dynasty con picks y
+lado a lado a 1440. Contra 645a552: fallan exactamente t1-t6.
+
+**Gate: `scripts/qa-tradeguard.mjs`, 65 checks** (motor en vm sobre el fixture
 real `scripts/fixtures/miami-boys-choir-2026-wk7.json` + valores congelados en
 `...-wk7-values.json`, fixtures derivados de semana 11 y 13; navegador con
 /api/sleeper interceptado, League Trades por el cajon, analizador por Analyze).

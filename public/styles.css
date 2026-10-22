@@ -3859,3 +3859,21 @@ html.personal .user-dd-item[onclick*="openReferral"]{display:none!important}
 .tg-deal{font-size:13px;color:var(--muted2);line-height:1.5;margin:0 0 4px;overflow-wrap:break-word}
 .tg-deal b{color:var(--text);font-weight:600}
 .tg-item .tg-toggle{margin-top:8px}
+/* "Test a trade" dentro del tab Trade Guard: dos equipos cualesquiera, los
+   tableros reusan .bb-* del analizador. En el telefono se apilan; en escritorio
+   van lado a lado (la regla .bb-boards de siempre). */
+#tg-test[hidden]{display:none}
+.tg-test{margin:0 0 18px;padding:0 0 18px;border-bottom:1px solid var(--border)}
+.tg-test-title{font-size:14px;font-weight:700;color:var(--text)}
+.tg-test-sub{font-size:12px;color:var(--muted);margin:2px 0 10px;line-height:1.5}
+.tg-test-warn{font-size:12px;color:var(--yellow);margin:0 0 10px}
+.tg-test-pick{display:flex;align-items:center;gap:8px;padding:8px 11px;border-bottom:1px solid var(--border)}
+.tg-test-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex:none}
+.tg-test-pick .opp-select{flex:1;min-width:0;min-height:44px}
+.tg-test-boards .bb-tile{min-height:44px}
+.tg-test-acts{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.tg-test-go{width:auto;min-height:44px;padding:10px 22px}
+.tg-test-go:disabled{opacity:.45;cursor:not-allowed}
+.tg-test-clear{min-height:44px;padding:0 16px}
+.tg-test-res{margin-top:12px;padding:12px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface)}
+
