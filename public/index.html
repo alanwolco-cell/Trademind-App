@@ -83,18 +83,18 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
 </style>
 <!-- The ?v=111 stamp cache-busts CSS/JS on deploy. Bump it whenever styles.css,
      v11/v12.css or app.js change, or returning visitors keep the old files. -->
-<link rel="stylesheet" href="/styles.css?v=2026102101">
+<link rel="stylesheet" href="/styles.css?v=2026102102">
 <!-- v12 (Apple design, Familjen Grotesk headings) is the live site. Applied by default via
      class="v12" on <html> above + this stylesheet. v12.css @imports v11.css. -->
-<link rel="stylesheet" href="/v12.css?v=2026102101" id="skin-default">
+<link rel="stylesheet" href="/v12.css?v=2026102102" id="skin-default">
 <!-- Loads last so the cross-screen consistency pass (radii, type scale, accent
      placement on Community/Research/My League) settles the cascade over both
      styles.css and the v11/v12 skin without needing !important. -->
-<link rel="stylesheet" href="/theme.css?v=2026102101">
+<link rel="stylesheet" href="/theme.css?v=2026102102">
 <!-- The marketing home (Apple-style light shell). Loads after theme.css so it
      settles the cascade for the .mk-* home sections and the global chrome
      (wordmark, footer) without touching the dark tool screens. -->
-<link rel="stylesheet" href="/home.css?v=2026102101">
+<link rel="stylesheet" href="/home.css?v=2026102102">
 <!-- v13 FLIGHT DECK, el vestido vivo desde el 2026-09-12 (direccion y acento
      cian elegidos por el dueno sobre el preview en vivo). Es una CAPA sobre
      v12 (el html lleva las dos clases arriba) y carga EL ULTIMO para ganar la
@@ -103,7 +103,7 @@ window.tmTrack=function(ev,props){try{if(window.posthog&&posthog.capture)posthog
      vuelo.mp4 y las imagenes fijas de iOS) sigue en los colores viejos A
      PROPOSITO: son un juego atado por la ley del primer fotograma identico y
      se regeneran JUNTOS en su propio commit. -->
-<link rel="stylesheet" href="/v13.css?v=2026102101">
+<link rel="stylesheet" href="/v13.css?v=2026102102">
 <script>
 // The older design concepts (v2-v11) stay previewable with ?vN for side-by-side
 // comparison. Loading one swaps out the default v12 baseline and shows a banner so
@@ -117,7 +117,7 @@ if(_skin){
   if(_base&&_base.parentNode)_base.parentNode.removeChild(_base); // and its stylesheet
   document.querySelectorAll('link[href^="/v13.css"]').forEach(function(l){l.remove();});
   _el.classList.add(_skin[1]);
-  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026102101">');
+  document.write('<link rel="stylesheet" href="/'+_skin[1]+'.css?v=2026102102">');
   window.addEventListener('DOMContentLoaded',function(){
     var pill=document.createElement('div');
     pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#131210;color:#f5efe3;font:700 12px sans-serif;padding:10px 18px;border-radius:100px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;gap:12px;align-items:center';
@@ -417,6 +417,7 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
       <div class="inner-tab active" id="atab-analyzer" onclick="showAnalyzeTab('analyzer')">Trade Analyzer</div>
       <div class="inner-tab" id="atab-ideas" onclick="showAnalyzeTab('ideas')">Trade Ideas</div>
       <div class="inner-tab" id="atab-desk" onclick="showAnalyzeTab('desk')">Trade Desk</div>
+      <div class="inner-tab" id="atab-guard" onclick="showAnalyzeTab('guard')">Trade Guard</div>
     </div>
     <div id="tab-analyzer" class="tab-content active">
       <!-- Liga con trades apagados (best ball): el analizador sigue vivo como
@@ -876,6 +877,19 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
           <div class="tgt-tagline">Tick who they asked for. If they already named a price, tick that too and we will tell you whether it is fair and what to send back.</div>
           <div id="ofr-panel"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- TRADE GUARD TAB (2026-10-21): la vista de comisionado. Los trades de la
+         liga cargada con su nivel y su porque; lo pinta tgRenderPane()
+         (tradeguard.js). League Trades queda como estaba. -->
+    <div id="tab-guard" class="tab-content" style="display:none">
+      <div class="card tg-pane">
+        <div class="tg-pane-head">
+          <div class="tg-pane-title">Trade Guard</div>
+          <div class="tg-pane-sub">Every trade in your league, read for commissioner review. The level is a risk read with its reasons; the call is yours.</div>
+        </div>
+        <div id="tg-pane"></div>
       </div>
     </div>
 
@@ -1986,14 +2000,14 @@ window.addEventListener('load',function(){window.scrollTo(0,0);});
   </div>
 </div>
 
-<script src="/app.js?v=2026102101"></script>
-<script src="/rankings.js?v=2026102101"></script>
-<script src="/weekly.js?v=2026102101"></script>
-<script src="/live.js?v=2026102101"></script>
-<script src="/myleagues.js?v=2026102101"></script>
-<script src="/push.js?v=2026102101" defer></script>
-<script src="/hub.js?v=2026102101"></script>
-<script src="/tradeguard.js?v=2026102101"></script>
+<script src="/app.js?v=2026102102"></script>
+<script src="/rankings.js?v=2026102102"></script>
+<script src="/weekly.js?v=2026102102"></script>
+<script src="/live.js?v=2026102102"></script>
+<script src="/myleagues.js?v=2026102102"></script>
+<script src="/push.js?v=2026102102" defer></script>
+<script src="/hub.js?v=2026102102"></script>
+<script src="/tradeguard.js?v=2026102102"></script>
 
 <script>
 // Marketing-home scroll reveal: sections fade + rise 16px as they enter the

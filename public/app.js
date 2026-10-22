@@ -1934,6 +1934,10 @@ async function loadLeague(lid,name,rosters,season){
   if(ip){ip.style.display="block";}
   var ph=document.getElementById("right-placeholder");if(ph)ph.style.display="none";
   setTimeout(generateTradeIdeas,300);
+  // El tab Trade Guard abierto se repinta con la liga nueva (no se queda en el
+  // "Load a league" ni con los trades de la liga anterior).
+  try{var _tgp=document.getElementById('tab-guard');
+    if(_tgp&&_tgp.style.display==='block'&&typeof tgRenderPane==='function')tgRenderPane();}catch(_){}
   if(window._autoRestoring){
     window._autoRestoring=false;
     // The league views may have painted their empty "connect" state before this
@@ -4764,18 +4768,8 @@ function renderLeagueTrades(){
   lbHtml+="</tbody></table></div>"
     +"<div style='font-size:10px;color:var(--muted);margin:8px 0 20px'>Trade W-L counts deals where a side came out 300+ market value ahead at today's prices. PF = points for.</div></div>";
 
-  // Trade Guard: la vista del comisionado. Un ctx para toda la lista (los
-  // rosters y la tabla de HOY), y los hechos de la liga una sola vez arriba.
-  var _tgCtx=null,_tgHechos='';
-  try{
-    if(typeof tgCtxFromApp==='function'){
-      _tgCtx=tgCtxFromApp();
-      var _tf=tgFacts(_tgCtx.league,_tgCtx.week);
-      if(_tf.lines.length)_tgHechos="<div class='tg-league-facts'><span class='tg-title'>Trade Guard</span> <span class='tg-review'>for commissioner review</span><br>"+_tf.lines.map(function(x){return String(x).replace(/</g,'&lt;');}).join(' \u00b7 ')+"</div>";
-    }
-  }catch(_){_tgCtx=null;}
   // Trade list HTML
-  var tradesHtml=_tgHechos+"<div style='font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>All trades (this season + last)</div><div style='display:grid;gap:10px'>";
+  var tradesHtml="<div style='font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>All trades (this season + last)</div><div style='display:grid;gap:10px'>";
   sorted.forEach(function(t){
     var rids=t.roster_ids||[];
     // 3+ team trades: the 1-vs-1 value math below only looks at rids[0]/rids[1],
@@ -4897,11 +4891,6 @@ function renderLeagueTrades(){
     if(winner!=="Even") tradesHtml+="<div style='font-size:11px;font-weight:600;color:var(--green)'>"+winner+" won this trade</div>";
     else tradesHtml+="<div style='font-size:11px;color:var(--muted)'>Even trade</div>";
     tradesHtml+="</div>";
-    // Solo los trades de ESTA temporada: los de la anterior se juzgarian con
-    // rosters y records que ya no son los suyos.
-    if(_tgCtx&&(!t._season||String(t._season)===String(leagueSeason))){
-      try{tradesHtml+=tgLeagueBlock(t,_tgCtx);}catch(_){}
-    }
     tradesHtml+="<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px'>";
     // n1 received = r2gave (v2 total), n2 received = r1gave (v1 total)
     tradesHtml+=sideHtml(n1,r2gave.map(function(x){return Object.assign({},x,{pid:x.pid});}),v2||null,r1won===r2won?null:r1won);
@@ -6470,7 +6459,7 @@ function _applyTabHash(){
   try{
     // every analyze sub-tab must be restorable, or back-navigation lands on a
     // screen that disagrees with the address bar
-    if(scr==='analyze'){showAnalyzeTab(token==='ideas'||token==='desk'?token:'analyzer');}
+    if(scr==='analyze'){showAnalyzeTab(token==='ideas'||token==='desk'||token==='guard'?token:'analyzer');}
     else if(scr==='league'||scr==='research'){
       if(document.getElementById(token)){
         var screen=document.getElementById('screen-'+scr);
@@ -16789,8 +16778,8 @@ function toggleUserDropdown(){
 }
 
 function showAnalyzeTab(tab){
-  // tab = 'analyzer' | 'ideas' | 'desk'
-  ['analyzer','ideas','desk'].forEach(function(t){
+  // tab = 'analyzer' | 'ideas' | 'desk' | 'guard'
+  ['analyzer','ideas','desk','guard'].forEach(function(t){
     var pane=document.getElementById('tab-'+t), btn=document.getElementById('atab-'+t);
     if(pane)pane.style.display=(tab===t?'block':'none');
     if(btn)btn.classList.toggle('active',tab===t);
@@ -16800,6 +16789,8 @@ function showAnalyzeTab(tab){
   // work with zero setup - this is the core "drop a trade, get an answer" flow.
   if(tab==='analyzer')_warmAnalyzerData();
   if(tab==='ideas')renderIdeasTab();
+  // Trade Guard: la vista de comisionado de la liga cargada (tradeguard.js).
+  if(tab==='guard'){_warmAnalyzerData();try{if(typeof tgRenderPane==='function')tgRenderPane();}catch(_){}}
   if(tab==='desk'){
     _warmAnalyzerData();
     var td=document.getElementById('tab-desk');

@@ -363,7 +363,52 @@ const cargarLiga = pg => eva(pg, async ([lid, me]) => {
 
 const b = await chromium.launch();
 try {
-  // (i) League Trades, a 390, llegando por el cajon
+  // (i) El tab Trade Guard del analizador. Telefono (390): cajon > Trade
+  // Analyzer > tab Trade Guard. Escritorio (1440, con sesion): rail > Trade
+  // Analyzer > tab Trade Guard. Y League Trades ya no pinta chips.
+  const abrirTabGuard = async (pg, via) => {
+    const r = await eva(pg, async (via) => {
+      const visible = e => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && !!e.offsetParent; };
+      if (via === 'rail') {
+        const it = [...document.querySelectorAll('#app-rail .rail-item')].find(x => /Trade Analyzer/.test(x.textContent) && visible(x));
+        if (!it) return 'sin fila del rail';
+        it.click(); await new Promise(r => setTimeout(r, 900));
+        return 'rail';
+      }
+      const bt = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'More' && visible(x))
+        || [...document.querySelectorAll('button')].find(x => /mobMenuToggle/.test(x.getAttribute('onclick') || '') && visible(x));
+      if (!bt) return 'sin boton del cajon';
+      bt.click(); await new Promise(r => setTimeout(r, 700));
+      for (const p of [...document.querySelectorAll('#mob-menu .mob-parent')]) {
+        const it = [...document.querySelectorAll('#mob-menu .mob-menu-item')].find(x => x.textContent.trim() === 'Trade Analyzer');
+        if (it && it.offsetParent) break;
+        p.click(); await new Promise(r => setTimeout(r, 260));
+      }
+      return 'cajon';
+    }, via);
+    if (via !== 'rail') {
+      try { await pg.locator('#mob-menu .mob-menu-item', { hasText: /^Trade Analyzer$/ }).first().click({ timeout: 5000 }); } catch (_) { }
+      await pg.waitForTimeout(1200);
+    }
+    try { await pg.locator('#atab-guard').click({ timeout: 5000 }); } catch (_) { }
+    await pg.waitForTimeout(500);
+    return r;
+  };
+  const leerPane = pg => eva(pg, () => {
+    const p = document.getElementById('tab-guard');
+    const pane = document.getElementById('tg-pane');
+    return {
+      pantalla: (document.querySelector('.screen.active') || {}).id,
+      visible: !!(p && getComputedStyle(p).display !== 'none' && p.getBoundingClientRect().height > 0),
+      ruta: location.pathname + location.hash,
+      tabActivo: !!(document.getElementById('atab-guard') || {classList:{contains:()=>false}}).classList.contains('active'),
+      vacio: pane ? !!pane.querySelector('.empty-state button') && /Load a league/.test(pane.textContent) : false,
+      chips: pane ? [...pane.querySelectorAll('.tg-toggle')].map(x => x.getAttribute('data-level')) : null,
+      hechos: ((pane && pane.querySelector('.tg-league-facts')) || {}).textContent || '',
+      head: ((document.querySelector('#tab-guard .tg-pane-sub')) || {}).textContent || '',
+      skel: pane ? pane.querySelectorAll('.tm-skel').length : 0
+    };
+  });
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     await servirLiga(ctx);
@@ -373,38 +418,23 @@ try {
     pg.on('pageerror', e => errs.push('PAGEERROR ' + String(e).slice(0, 200)));
     await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     await pg.waitForFunction(() => typeof loadLeague === 'function' && typeof mobGo === 'function', { timeout: 30000 });
+    // Sin liga: el tab lo dice y ofrece cargar una (sin callejon).
+    const via0 = await abrirTabGuard(pg, 'cajon');
+    const v0 = await leerPane(pg);
+    ok('(i1) se llega al tab Trade Guard clicando (cajon > Trade Analyzer > Trade Guard) y la URL lo refleja (' + via0 + ')',
+      v0.pantalla === 'screen-analyze' && v0.visible && v0.tabActivo && /#guard$/.test(v0.ruta), JSON.stringify(v0));
+    ok('(i2) sin liga cargada el tab lo dice y ofrece cargar una', v0.vacio === true, JSON.stringify(v0));
     const c = await cargarLiga(pg);
     ok('(i0) CONTROL: la liga del fixture cargo (12 rosters, 5 trades, valores, reglamento entero)',
       c.rosters === 12 && c.trades === 5 && c.valores > 100 && c.info === true, JSON.stringify(c));
-    // Abrir el cajon con el control visible y tocar "League Trades", como una persona.
-    const abrio = await eva(pg, async () => {
-      const visible = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !!e.offsetParent; };
-      const bt = Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'More' && visible(x))
-        || Array.from(document.querySelectorAll('button')).find(x => /mobMenuToggle/.test(x.getAttribute('onclick') || '') && visible(x));
-      if (!bt) return 'sin boton';
-      bt.click(); await new Promise(r => setTimeout(r, 700));
-      for (const p of Array.from(document.querySelectorAll('#mob-menu .mob-parent'))) {
-        const it = Array.from(document.querySelectorAll('#mob-menu .mob-menu-item')).find(x => x.textContent.trim() === 'League Trades');
-        if (it && it.offsetParent) break;
-        p.click(); await new Promise(r => setTimeout(r, 260));
-      }
-      return 'ok';
-    });
-    const item = pg.locator('#mob-menu .mob-menu-item', { hasText: /^League Trades$/ }).first();
-    try { await item.click({ timeout: 5000 }); } catch (_) { }
-    await pg.waitForTimeout(1500);
-    const vista = await eva(pg, () => ({
-      pantalla: (document.querySelector('.screen.active') || {}).id,
-      tab: (document.querySelector('#screen-league .tab-content.active') || {}).id,
-      chips: Array.from(document.querySelectorAll('#league-trades-list .tg-toggle')).map(x => x.getAttribute('data-level')),
-      hechos: ((document.querySelector('#league-trades-list .tg-league-facts') || {}).textContent || '').trim()
-    }));
-    ok('(i1) se llega a League Trades clicando el cajon (' + abrio + ')', vista.pantalla === 'screen-league' && vista.tab === 'tab-league-trades', JSON.stringify(vista));
-    ok('(i2) cada uno de los 5 trades lleva su chip del guard con nivel', Array.isArray(vista.chips) && vista.chips.length === 5 && vista.chips.every(l => LEVELS.includes(l)), JSON.stringify(vista.chips));
-    ok('(i3) los hechos de la liga arriba, rotulados "for commissioner review": fecha limite, veto y playoffs',
-      /for commissioner review/.test(vista.hechos || '') && /Trade deadline week 11 \(4 weeks left\)/.test(vista.hechos || '') && /Veto needs 8 of 12 votes/.test(vista.hechos || '') && /Playoffs: 6 of 12/.test(vista.hechos || ''), vista.hechos);
-    // Tocar la fila despliega el porque.
-    const fila = pg.locator('#league-trades-list .tg-toggle').first();
+    await pg.waitForTimeout(600);
+    const v1 = await leerPane(pg);
+    ok('(i3) con la liga, el tab abierto se repinta: un chip por cada uno de los 5 trades',
+      Array.isArray(v1.chips) && v1.chips.length === 5 && v1.chips.every(l => LEVELS.includes(l)) && v1.skel === 0, JSON.stringify(v1));
+    ok('(i4) hechos de la liga arriba (fecha limite, veto, playoffs) y rotulo "for commissioner review"',
+      /Trade deadline week 11 \(4 weeks left\)/.test(v1.hechos) && /Veto needs 8 of 12 votes/.test(v1.hechos) && /Playoffs: 6 of 12/.test(v1.hechos) && /for commissioner review/.test(v1.head),
+      JSON.stringify({ hechos: v1.hechos, head: v1.head }));
+    const fila = pg.locator('#tg-pane .tg-toggle').first();
     let antes = null, despues = null, alto = 0;
     try {
       await fila.scrollIntoViewIfNeeded({ timeout: 5000 });
@@ -415,18 +445,45 @@ try {
       despues = await fila.getAttribute('aria-expanded');
     } catch (_) { }
     const panel = await eva(pg, () => {
-      const t = document.querySelector('#league-trades-list .tg-toggle');
+      const t = document.querySelector('#tg-pane .tg-toggle');
       const p = t && document.getElementById(t.getAttribute('aria-controls'));
       return p ? { visible: getComputedStyle(p).display !== 'none' && p.getBoundingClientRect().height > 0, razones: p.querySelectorAll('.tg-reasons li').length, lados: p.querySelectorAll('.tg-side').length, texto: p.textContent.slice(0, 300) } : null;
     });
-    ok('(i4) tocar la fila del guard despliega el porque (razones y los dos lados con record)',
+    ok('(i5) tocar la fila despliega el porque (razones y los dos lados con record)',
       antes === 'false' && despues === 'true' && panel && panel.visible && panel.razones >= 1 && panel.lados === 2 && /\d-\d/.test(panel.texto), JSON.stringify({ antes, despues, panel }));
-    ok('(i5) la fila tactil mide 44px o mas', alto >= 44, 'alto ' + alto);
-    const ancho = await eva(pg, () => ({ sw: document.documentElement.scrollWidth, fuera: Array.from(document.querySelectorAll('#league-trades-list .tg-toggle, #league-trades-list .tg-why, .tg-league-facts')).filter(e => e.getBoundingClientRect().right > innerWidth + 1).length }));
-    ok('(i6) 390px sin desborde', ancho.sw <= 390 && ancho.fuera === 0, JSON.stringify(ancho));
-    const crudos = await eva(pg, () => Array.from(document.querySelectorAll('#league-trades-list .tg-toggle, #league-trades-list .tg-why')).map(e => e.textContent).filter(t => /\d[\d,.]{3,}/.test(t)));
-    ok('(i7) el guard no pinta numeros crudos del proveedor', Array.isArray(crudos) && crudos.length === 0, JSON.stringify(crudos).slice(0, 200));
-    ok('(i8) consola limpia', errs.length === 0, errs.join('\n      '));
+    ok('(i6) la fila tactil mide 44px o mas', alto >= 44, 'alto ' + alto);
+    const ancho = await eva(pg, () => ({ sw: document.documentElement.scrollWidth, fuera: [...document.querySelectorAll('#tab-guard *')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).length,
+      crudos: [...document.querySelectorAll('#tg-pane .tg-toggle, #tg-pane .tg-why')].map(e => e.textContent).filter(t => /\d[\d,.]{3,}/.test(t)) }));
+    ok('(i7) 390px sin desborde', ancho.sw <= 390 && ancho.fuera === 0, JSON.stringify(ancho));
+    ok('(i8) el guard no pinta numeros crudos del proveedor', Array.isArray(ancho.crudos) && ancho.crudos.length === 0, JSON.stringify(ancho.crudos).slice(0, 200));
+    // League Trades vuelve a como estaba: sin hechos ni chips del guard.
+    await eva(pg, () => { mobGo('league'); });
+    await pg.waitForTimeout(1200);
+    const lt = await eva(pg, () => ({ tab: (document.querySelector('#screen-league .tab-content.active') || {}).id,
+      tarjetas: document.querySelectorAll('#league-trades-list .stand-table').length,
+      chips: document.querySelectorAll('#league-trades-list .tg-toggle, #league-trades-list .tg-league-facts').length }));
+    ok('(i9) League Trades vuelve a como estaba: su lista se pinta y no lleva chips ni hechos del guard',
+      lt.tab === 'tab-league-trades' && lt.tarjetas === 1 && lt.chips === 0, JSON.stringify(lt));
+    ok('(i10) consola limpia (telefono)', errs.length === 0, errs.join('\n      '));
+    await ctx.close();
+  }
+  {
+    // Escritorio con sesion: el rail lleva al analizador, y de ahi el tab.
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 950 } });
+    await servirLiga(ctx);
+    const pg = await ctx.newPage();
+    await pg.addInitScript(() => { try { localStorage.setItem('tm_username', 'qa-tradeguard'); } catch (e) { } });
+    const errs = [];
+    pg.on('pageerror', e => errs.push('PAGEERROR ' + String(e).slice(0, 200)));
+    await pg.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await pg.waitForFunction(() => typeof loadLeague === 'function', { timeout: 30000 });
+    await cargarLiga(pg);
+    const via = await abrirTabGuard(pg, 'rail');
+    await pg.waitForTimeout(600);
+    const v = await leerPane(pg);
+    ok('(i11) escritorio: rail > Trade Analyzer > tab Trade Guard, con los 5 chips (' + via + ')',
+      via === 'rail' && v.pantalla === 'screen-analyze' && v.visible && Array.isArray(v.chips) && v.chips.length === 5, JSON.stringify(v));
+    ok('(i12) escritorio sin errores de pagina', errs.length === 0, errs.join('\n      '));
     await ctx.close();
   }
 

@@ -589,6 +589,83 @@ function tgToggle(btn) {
   btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
 }
 
+// ─── El tab Trade Guard del analizador (vista de comisionado) ───────────────
+// Hechos de la liga arriba y los trades de ESTA temporada con su chip y su
+// porque. Sin liga cargada lo dice y ofrece cargar una; mientras llegan los
+// valores de mercado, skeleton con la forma de la lista (nunca un spinner).
+var _tgPaneTry = 0;
+function _tgSkelPane() {
+  var fila = "<div class='tg-item'><div class='tm-skel' style='height:12px;width:30%;margin:0 0 10px'></div>" +
+    "<div class='tm-skel' style='height:14px;width:85%;margin:0 0 8px'></div>" +
+    "<div class='tm-skel' style='height:14px;width:70%;margin:0 0 12px'></div>" +
+    "<div class='tm-skel' style='height:44px;width:100%'></div></div>";
+  return "<div class='tm-skel' style='height:52px;width:100%;margin:0 0 12px'></div>" + fila + fila + fila;
+}
+function _tgRecibe(t, rid) {
+  var out = [];
+  Object.keys(t.adds || {}).forEach(function (pid) {
+    if (t.adds[pid] !== rid) return;
+    var p = (typeof allPlayers !== 'undefined' && allPlayers[pid]) || null;
+    out.push(p ? p.name : 'Player ' + pid);
+  });
+  (t.draft_picks || []).forEach(function (pk) { if (pk.owner_id === rid) out.push(pk.season + ' Round ' + pk.round); });
+  (t.waiver_budget || []).forEach(function (w) { if (w.receiver === rid) out.push('$' + w.amount + ' FAAB'); });
+  return out;
+}
+function tgRenderPane() {
+  var el = document.getElementById('tg-pane');
+  if (!el) return;
+  var hay = typeof leagueRosters !== 'undefined' && leagueRosters && leagueRosters.length;
+  if (!hay) {
+    _tgPaneTry = 0;
+    el.innerHTML = "<div class='empty-state'>Load a league to review its trades.<br>" +
+      "<button class='btn-load' style='width:auto;padding:11px 24px;margin-top:12px' onclick='goConnectLeague()'>Load your league</button></div>";
+    return;
+  }
+  if (window.leaguePlatform === 'yahoo') {
+    el.innerHTML = "<div class='empty-state'>Yahoo does not hand over past trades, so there is nothing to review here. " +
+      "The Trade Guard read under each analysis still works in this league.</div>";
+    return;
+  }
+  // Valores todavia en camino: skeleton y se reintenta (hasta ~9 s); despues se
+  // pinta igual y lo que no tenga precio sale como "Not graded", declarado.
+  if (!Object.keys(ktcById || {}).length && _tgPaneTry < 30) {
+    if (!el.querySelector('.tm-skel')) el.innerHTML = _tgSkelPane();
+    _tgPaneTry++;
+    setTimeout(function () {
+      var p = document.getElementById('tab-guard');
+      if (p && p.style.display === 'block') tgRenderPane();
+    }, 300);
+    return;
+  }
+  _tgPaneTry = 0;
+  var ctx = tgCtxFromApp();
+  var f = tgFacts(ctx.league, ctx.week);
+  var h = "<div class='tg-league-facts'>" + _tgEsc(f.lines.join(' · ')) + '</div>';
+  var temporada = (typeof leagueSeason !== 'undefined') ? String(leagueSeason) : '';
+  var lista = (typeof leagueTrades !== 'undefined' ? leagueTrades : []).filter(function (t) {
+    return !t._season || String(t._season) === temporada;
+  }).sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+  if (!lista.length) {
+    var ln = (typeof leagueName !== 'undefined' && leagueName) ? leagueName : 'this league';
+    el.innerHTML = h + "<div class='empty-state'>No trades in " + _tgEsc(ln) + ' this season yet.</div>';
+    return;
+  }
+  h += "<div class='tg-list'>";
+  lista.forEach(function (t) {
+    var fecha = t.created ? new Date(t.created).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    h += "<div class='tg-item'>" + (fecha ? "<div class='tg-date'>" + _tgEsc(fecha) + ((t.leg || t.week) ? ' \u00b7 week ' + _tgEsc(t.leg || t.week) : '') + '</div>' : '');
+    (t.roster_ids || []).forEach(function (rid) {
+      var got = _tgRecibe(t, rid);
+      var nm = ctx.nameOf(rid);
+      h += "<div class='tg-deal'><b>" + _tgEsc(String(nm).trim()) + '</b> gets ' + _tgEsc(got.length ? got.join(', ') : 'nothing') + '</div>';
+    });
+    try { h += tgLeagueBlock(t, ctx); } catch (_) { }
+    h += '</div>';
+  });
+  el.innerHTML = h + '</div>';
+}
+
 if (typeof window !== 'undefined') {
   window.tgEvaluate = tgEvaluate;
   window.tgBestLineup = tgBestLineup;
@@ -599,4 +676,5 @@ if (typeof window !== 'undefined') {
   window.tgTradeFromSleeper = tgTradeFromSleeper;
   window.tgLeagueBlock = tgLeagueBlock;
   window.tgToggle = tgToggle;
+  window.tgRenderPane = tgRenderPane;
 }

@@ -2892,7 +2892,8 @@ Pedido del dueno, comisionado de Miami Boys Choir (Sleeper 1393450135224094720,
 redraft (type 0; trae max_keepers 1, que NO la hace keeper), 12 equipos, half PPR, FAAB $1000, deadline semana 11,
 playoffs 6 desde la 15, veto 8 votos): detectar trades descompensados ANTES de
 que pasen y revisar los que ya pasaron, "basado en records, equipos, league
-format". SIN DESPLEGAR: el deploy lo decide el dueno.
+format". DESPLEGADO el 2026-10-21 por orden del dueno ("si dale push a
+produccion en un tab diferente dentro del analyzer").
 
 **Que es y donde vive.** `public/tradeguard.js` (modulo aparte, cargado detras
 de hub.js). `tgEvaluate(ctx, trade)` es PURA (sin DOM, sin fetch, sin
@@ -2900,8 +2901,14 @@ Math.random); `tgCtxFromApp()` arma el ctx desde app.js. Dos superficies:
 - Analizador: `#trade-guard` debajo de `#verdict-card` (index.html), lo pinta
   `tgPaintAnalyzer()` al final de runAnalysis y se esconde al empezar. NO toca
   tradeScore ni el veredicto.
-- League Trades: hechos de la liga arriba y una fila plegable por trade de ESTA
-  temporada (`tgLeagueBlock`); los de la temporada anterior no se gradean.
+- Tab propio "Trade Guard" en la barra del analizador (`#atab-guard`, panel
+  `#tab-guard`, URL `/analyze#guard`, restaurable por `_applyTabHash`): hechos
+  de la liga arriba, skeleton mientras llegan los valores, y los trades de ESTA
+  temporada con quien recibe que, su chip y la fila plegable del porque
+  (`tgRenderPane` + `tgLeagueBlock`). Sin liga: "Load a league" con boton. Con
+  el tab abierto, loadLeague lo repinta. Yahoo: lo dice (no da trades).
+- League Trades volvio a como estaba (sin hechos ni chips): asi el "X won this
+  trade" viejo y el chip del guard ya no conviven en la misma tarjeta.
 Estilos `.tg-*` al final de styles.css. Todo rotulado "for commissioner review":
 el guard da un nivel de riesgo con razones, decidir es del comisionado.
 
@@ -2955,7 +2962,13 @@ el guard da un nivel de riesgo con razones, decidir es del comisionado.
   viejo junto al chip, los "Why did X win?" de 14px y el ticker con
   reduced-motion.
 
-**Gate: `scripts/qa-tradeguard.mjs`, 55 checks** (motor en vm sobre el fixture
+**El tab (tercer commit).** Gate (i) reescrito: se llega CLICANDO (cajon >
+Trade Analyzer > Trade Guard a 390, y rail > Trade Analyzer > Trade Guard a
+1440 con sesion), vacio sin liga, repintado al cargar, 5 chips, el porque al
+tocar, 44px, 390 sin desborde, consola limpia, y CONTROL de que League Trades
+ya no pinta chips. Contra 7e07c24: 8 de 59 en rojo (i1-i6, i9, i11).
+
+**Gate: `scripts/qa-tradeguard.mjs`, 59 checks** (motor en vm sobre el fixture
 real `scripts/fixtures/miami-boys-choir-2026-wk7.json` + valores congelados en
 `...-wk7-values.json`, fixtures derivados de semana 11 y 13; navegador con
 /api/sleeper interceptado, League Trades por el cajon, analizador por Analyze).
@@ -2972,9 +2985,9 @@ q3, q4a, q4b).
   counted") en vez de inventarlo.
 - Trades pendientes: Sleeper NO los expone. Medido en las 8 semanas de la liga
   real: solo trades 'complete' (5) y ningun otro status; no se anadio ?all=1.
-- En cada tarjeta de League Trades conviven el "X won this trade" viejo (300 de
-  valor absoluto) y el chip del guard (porcentaje + piso): pueden no coincidir
-  (sem 5: "Miami Octins won" contra Even). Decidir si el viejo se va.
+- El "X won this trade" de League Trades (300 de valor absoluto) puede no
+  coincidir con el nivel del guard (sem 5: "Miami Octins won" contra Even);
+  ya no estan en la misma pantalla, pero los dos criterios siguen vivos.
 - El rotulo de League Trades dice "FantasyCalc dynasty rankings" tambien en
   ligas redraft (no se toco).
 - Los standings de un trade ya hecho son los de HOY, y el FAAB se precia en la
